@@ -37,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>net.maku</groupId>
-            <artifactId>follow-module-mascontrol</artifactId>
+            <artifactId>follow-order-mascontrol</artifactId>
             <version>${revision}</version>
         </dependency>
 <!--        <dependency>-->

@@ -23,6 +23,7 @@
         <module>follow-order-api</module>
         <module>follow-order-framework</module>
         <module>follow-order-server</module>
+        <module>follow-order-mascontrol</module>
     </modules>
 
     <properties>
