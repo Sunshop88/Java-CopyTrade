@@ -1,4 +1,4 @@
-package net.maku.mascontrol.entity;
+package net.maku.followcom.entity;
 
 import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
@@ -7,66 +7,36 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * vps列表
+ * 导入服务器列表
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_vps")
-public class FollowVpsEntity {
+@TableName("follow_broke_server")
+public class FollowBrokeServerEntity {
 	@TableId
 	@TableField(value = "id")
 	private Integer id;
 
 	/**
-	* 机器码
+	* 服务器名称
 	*/
-	@TableField(value = "client_id")
-	private String clientId;
+	@TableField(value = "server_name")
+	private String serverName;
 
 	/**
-	* 名称
+	* 服务器节点ip
 	*/
-	@TableField(value = "name")
-	private String name;
+	@TableField(value = "server_node")
+	private String serverNode;
 
 	/**
-	* ip地址
+	* 服务器节点端口
 	*/
-	@TableField(value = "ip_address")
-	private String ipAddress;
-
-	/**
-	* 到期时间
-	*/
-	@TableField(value = "expiry_date")
-	private Date expiryDate;
-
-	/**
-	* 备注
-	*/
-	@TableField(value = "remark")
-	private String remark;
-
-	/**
-	* 是否对外开放，0为否，1为是
-	*/
-	@TableField(value = "is_open")
-	private Integer isOpen;
-
-	/**
-	* 是否状态，0为停止，1为运行
-	*/
-	@TableField(value = "is_active")
-	private Integer isActive;
-
-	/**
-	* 连接状态，0为异常，1为正常
-	*/
-	@TableField(value = "connection_status")
-	private Integer connectionStatus;
+	@TableField(value = "server_port")
+	private String serverPort;
 
 	/**
 	* 版本号
@@ -75,7 +45,7 @@ public class FollowVpsEntity {
 	private Integer version;
 
 	/**
-	* 删除标识  0：正常   1：已删除
+	* 删除标识 0：正常 1：已删除
 	*/
 	@TableField(value = "deleted", fill = FieldFill.INSERT)
 	private Integer deleted;

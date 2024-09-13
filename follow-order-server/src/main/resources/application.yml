@@ -39,6 +39,7 @@ storage:
     domain: http://localhost:9000
   local:
     path: D://upload
+    linuxpath: /usr/local/ini
 
 maku:
   xss:

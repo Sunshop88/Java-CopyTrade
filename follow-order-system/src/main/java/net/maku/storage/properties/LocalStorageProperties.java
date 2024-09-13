@@ -14,6 +14,12 @@ public class LocalStorageProperties {
      * 本地存储路径
      */
     private String path;
+
+    /**
+     * 本地linux存储路径
+     */
+    private String linuxpath;
+
     /**
      * 资源起始路径
      */

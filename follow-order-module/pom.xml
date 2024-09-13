@@ -14,6 +14,6 @@
 		<module>follow-module-monitor</module>
 		<module>follow-module-member</module>
         <module>follow-module-iot</module>
-    </modules>
+	</modules>
 	
 </project>

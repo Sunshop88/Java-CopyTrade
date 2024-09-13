@@ -71,6 +71,17 @@ public class SwaggerConfig {
     }
 
     @Bean
+    public GroupedOpenApi mascontrolApi() {
+        String[] paths = {"/**"};
+        String[] packagedToMatch = {"net.maku.mascontrol"};
+        return GroupedOpenApi.builder()
+                .group("6")
+                .displayName("Mascontrol API")
+                .pathsToMatch(paths)
+                .packagesToScan(packagedToMatch).build();
+    }
+
+    @Bean
     public GroupedOpenApi otherApi() {
         String[] paths = {"/**"};
         String[] packagedToMatch = {"net.maku"};
@@ -89,8 +100,6 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI openApi() {
         Contact contact = new Contact();
-        contact.setName("阿沐 babamu@126.com");
-
         return new OpenAPI().info(new Info()
                 .title("Maku API")
                 .description("Maku API")

@@ -1,72 +1,61 @@
 package net.maku.mascontrol.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * vps列表
+ * 测速详情
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_vps")
-public class FollowVpsEntity {
+@TableName("follow_test_detail")
+public class FollowTestDetailEntity {
 	@TableId
 	@TableField(value = "id")
-	private Integer id;
+	private Long id;
 
 	/**
-	* 机器码
+	* 服务器id
 	*/
-	@TableField(value = "client_id")
-	private String clientId;
+	@TableField(value = "server_id")
+	private Integer serverId;
 
 	/**
-	* 名称
+	* 服务器名称
 	*/
-	@TableField(value = "name")
-	private String name;
+	@TableField(value = "server_name")
+	private String serverName;
 
 	/**
-	* ip地址
+	* 平台类型MT4/MT5
 	*/
-	@TableField(value = "ip_address")
-	private String ipAddress;
+	@TableField(value = "platform_type")
+	private String platformType;
 
 	/**
-	* 到期时间
+	* 测速id
 	*/
-	@TableField(value = "expiry_date")
-	private Date expiryDate;
+	@TableField(value = "test_id")
+	private Integer testId;
 
 	/**
-	* 备注
+	* 服务器节点
 	*/
-	@TableField(value = "remark")
-	private String remark;
+	@TableField(value = "sever_node")
+	private String severNode;
 
 	/**
-	* 是否对外开放，0为否，1为是
+	* 速度ms
 	*/
-	@TableField(value = "is_open")
-	private Integer isOpen;
-
-	/**
-	* 是否状态，0为停止，1为运行
-	*/
-	@TableField(value = "is_active")
-	private Integer isActive;
-
-	/**
-	* 连接状态，0为异常，1为正常
-	*/
-	@TableField(value = "connection_status")
-	private Integer connectionStatus;
+	@TableField(value = "speed")
+	private Integer speed;
 
 	/**
 	* 版本号

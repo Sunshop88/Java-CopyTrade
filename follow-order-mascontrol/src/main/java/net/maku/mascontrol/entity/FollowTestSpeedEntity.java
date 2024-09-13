@@ -1,72 +1,43 @@
 package net.maku.mascontrol.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * vps列表
+ * 测速记录
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_vps")
-public class FollowVpsEntity {
+@TableName("follow_test_speed")
+public class FollowTestSpeedEntity {
 	@TableId
 	@TableField(value = "id")
 	private Integer id;
 
 	/**
-	* 机器码
+	* 测速时间
 	*/
-	@TableField(value = "client_id")
-	private String clientId;
+	@TableField(value = "do_time")
+	private Date doTime;
 
 	/**
-	* 名称
+	* 测试状态0-失败 1-进行中 2-成功
 	*/
-	@TableField(value = "name")
-	private String name;
+	@TableField(value = "status")
+	private Integer status;
 
 	/**
-	* ip地址
+	* 测速人
 	*/
-	@TableField(value = "ip_address")
-	private String ipAddress;
-
-	/**
-	* 到期时间
-	*/
-	@TableField(value = "expiry_date")
-	private Date expiryDate;
-
-	/**
-	* 备注
-	*/
-	@TableField(value = "remark")
-	private String remark;
-
-	/**
-	* 是否对外开放，0为否，1为是
-	*/
-	@TableField(value = "is_open")
-	private Integer isOpen;
-
-	/**
-	* 是否状态，0为停止，1为运行
-	*/
-	@TableField(value = "is_active")
-	private Integer isActive;
-
-	/**
-	* 连接状态，0为异常，1为正常
-	*/
-	@TableField(value = "connection_status")
-	private Integer connectionStatus;
+	@TableField(value = "test_name")
+	private String testName;
 
 	/**
 	* 版本号

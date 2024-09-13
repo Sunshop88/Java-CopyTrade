@@ -39,7 +39,4 @@ public class FollowVpsExcelVO implements TransPojo {
 	@ExcelProperty("连接状态，0为异常，1为正常")
 	private Integer connectionStatus;
 
-	@ExcelProperty("租户ID")
-	private Long tenantId;
-
 }

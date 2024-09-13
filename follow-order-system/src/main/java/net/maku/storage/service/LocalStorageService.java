@@ -2,7 +2,9 @@ package net.maku.storage.service;
 
 import net.maku.framework.common.exception.ServerException;
 import net.maku.storage.properties.StorageProperties;
+import org.postgresql.util.OSUtil;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.util.SystemPropertyUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -32,7 +34,8 @@ public class LocalStorageService extends StorageService {
     public String upload(InputStream inputStream, String path) {
 
         try {
-            File file = new File(properties.getLocal().getPath() + File.separator + path);
+            String uppath=OSUtil.isWindows()?properties.getLocal().getPath():properties.getLocal().getLinuxpath();
+            File file = new File( uppath+ File.separator + path);
 
             // 没有目录，则自动创建目录
             File parent = file.getParentFile();

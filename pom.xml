@@ -24,6 +24,7 @@
         <module>follow-order-framework</module>
         <module>follow-order-server</module>
         <module>follow-order-mascontrol</module>
+        <module>follow-order-followcom</module>
     </modules>
 
     <properties>
@@ -231,6 +232,7 @@
                 <version>${spring-integration-mqtt.version}</version>
             </dependency>
         </dependencies>
+
     </dependencyManagement>
 
     <repositories>

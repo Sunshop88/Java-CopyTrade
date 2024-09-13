@@ -1,47 +1,36 @@
 package net.maku.mascontrol.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import net.maku.framework.common.utils.DateUtils;
 import java.util.Date;
 
 /**
- * vps列表
+ * 测速记录
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 @Data
-@Schema(description = "vps列表")
-public class FollowVpsVO implements Serializable {
+@Schema(description = "测速记录")
+public class FollowTestSpeedVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Integer id;
 
-	@Schema(description = "机器码")
-	private String clientId;
+	@Schema(description = "测速时间")
+	private Date doTime;
 
-	@Schema(description = "名称")
-	private String name;
+	@Schema(description = "测试状态0-失败 1-进行中 2-成功")
+	private Integer status;
 
-	@Schema(description = "ip地址")
-	private String ipAddress;
-
-	@Schema(description = "到期时间")
-	private Date expiryDate;
-
-	@Schema(description = "备注")
-	private String remark;
-
-	@Schema(description = "是否对外开放，0为否，1为是")
-	private Integer isOpen;
-
-	@Schema(description = "是否状态，0为停止，1为运行")
-	private Integer isActive;
-
-	@Schema(description = "连接状态，0为异常，1为正常")
-	private Integer connectionStatus;
+	@Schema(description = "测速人")
+	private String testName;
 
 	@Schema(description = "版本号")
 	private Integer version;
