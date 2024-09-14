@@ -1,72 +1,65 @@
-package net.maku.mascontrol.entity;
+package net.maku.followcom.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
-
-import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * vps列表
+ * 交易日志
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_vps")
-public class FollowVpsEntity {
+@TableName("follow_trader_log")
+public class FollowTraderLogEntity {
 	@TableId
 	@TableField(value = "id")
-	private Integer id;
+	private Long id;
 
 	/**
-	* 机器码
+	* 日志记录
 	*/
-	@TableField(value = "client_id")
-	private String clientId;
+	@TableField(value = "log_detail")
+	private String logDetail;
 
 	/**
-	* 名称
+	* vps名称
 	*/
-	@TableField(value = "name")
-	private String name;
+	@TableField(value = "vps_name")
+	private String vpsName;
 
 	/**
-	* ip地址
+	* vpsId
 	*/
-	@TableField(value = "ip_address")
-	private String ipAddress;
+	@TableField(value = "vps_id")
+	private Integer vpsId;
 
 	/**
-	* 到期时间
+	* 账号类型0-信号源 1-跟单者
 	*/
-	@TableField(value = "expiry_date")
-	private LocalDateTime expiryDate;
+	@TableField(value = "trader_type")
+	private Integer traderType;
 
 	/**
-	* 备注
+	* 类型0-新增 1-编辑 2-删除 3-下单 4-平仓 5-补单
 	*/
-	@TableField(value = "remark")
-	private String remark;
+	@TableField(value = "type")
+	private Integer type;
 
 	/**
-	* 是否对外开放，0为否，1为是
+	* 是否主动0-否 1-是
 	*/
-	@TableField(value = "is_open")
-	private Integer isOpen;
+	@TableField(value = "if_initiative")
+	private Integer ifInitiative;
 
 	/**
-	* 是否状态，0为停止，1为运行
+	* 单号
 	*/
-	@TableField(value = "is_active")
-	private Integer isActive;
-
-	/**
-	* 连接状态，0为异常，1为正常
-	*/
-	@TableField(value = "connection_status")
-	private Integer connectionStatus;
+	@TableField(value = "order_no")
+	private Integer orderNo;
 
 	/**
 	* 版本号
@@ -90,7 +83,7 @@ public class FollowVpsEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private LocalDateTime createTime;
+	private Date createTime;
 
 	/**
 	* 更新者
@@ -102,6 +95,6 @@ public class FollowVpsEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private LocalDateTime updateTim;
+	private Date updateTime;
 
 }

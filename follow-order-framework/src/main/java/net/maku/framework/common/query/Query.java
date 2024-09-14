@@ -29,4 +29,7 @@ public class Query {
 
     @Schema(description = "是否升序")
     boolean asc;
+
+    @Schema(description = "删除标识0-正常 1-已删除")
+    Integer deleted=0;
 }

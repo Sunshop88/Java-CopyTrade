@@ -17,6 +17,11 @@
         </dependency>
         <dependency>
             <groupId>net.maku</groupId>
+            <artifactId>follow-order-followcom</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.maku</groupId>
             <artifactId>follow-order-api</artifactId>
             <version>${revision}</version>
         </dependency>

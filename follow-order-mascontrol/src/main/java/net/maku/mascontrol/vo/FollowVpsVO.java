@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * vps列表
@@ -29,7 +30,7 @@ public class FollowVpsVO implements Serializable {
 	private String ipAddress;
 
 	@Schema(description = "到期时间")
-	private Date expiryDate;
+	private LocalDateTime expiryDate;
 
 	@Schema(description = "备注")
 	private String remark;
@@ -43,22 +44,10 @@ public class FollowVpsVO implements Serializable {
 	@Schema(description = "连接状态，0为异常，1为正常")
 	private Integer connectionStatus;
 
-	@Schema(description = "版本号")
-	private Integer version;
-
-	@Schema(description = "删除标识  0：正常   1：已删除")
-	private Integer deleted;
-
-	@Schema(description = "创建者")
-	private Long creator;
-
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;
 
-	@Schema(description = "更新者")
-	private Long updater;
-
-	@Schema(description = "更新时间")
-	private LocalDateTime updateTim;
+	@Schema(description = "剩余到期天数")
+	private Integer remainingDay;
 
 }

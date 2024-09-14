@@ -38,16 +38,6 @@ public class FollowVpsController {
         return Result.ok(page);
     }
 
-
-    @GetMapping("{id}")
-    @Operation(summary = "信息")
-    @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<FollowVpsVO> get(@PathVariable("id") Long id){
-        FollowVpsVO data = followVpsService.get(id);
-
-        return Result.ok(data);
-    }
-
     @PostMapping
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
@@ -72,18 +62,9 @@ public class FollowVpsController {
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> delete(@RequestBody List<Long> idList){
+    public Result<String> delete(@RequestBody List<Integer> idList){
         followVpsService.delete(idList);
-
         return Result.ok();
     }
 
-
-    @GetMapping("export")
-    @Operation(summary = "导出")
-    @OperateLog(type = OperateTypeEnum.EXPORT)
-    @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public void export() {
-        followVpsService.export();
-    }
 }

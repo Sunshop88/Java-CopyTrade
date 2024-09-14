@@ -25,7 +25,7 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
 
     void update(FollowVpsVO vo);
 
-    void delete(List<Long> idList);
+    void delete(List<Integer> idList);
 
 
     void export();

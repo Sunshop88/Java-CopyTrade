@@ -3,6 +3,8 @@ package net.maku.mascontrol.vo;
 import lombok.Data;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -25,7 +27,7 @@ public class FollowVpsExcelVO implements TransPojo {
 	private String ipAddress;
 
 	@ExcelProperty("到期时间")
-	private Date expiryDate;
+	private LocalDateTime expiryDate;
 
 	@ExcelProperty("备注")
 	private String remark;
