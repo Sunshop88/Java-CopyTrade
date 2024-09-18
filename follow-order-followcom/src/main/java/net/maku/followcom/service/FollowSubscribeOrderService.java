@@ -2,9 +2,9 @@ package net.maku.followcom.service;
 
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.business.vo.FollowSubscribeOrderVO;
-import net.maku.business.query.FollowSubscribeOrderQuery;
-import net.maku.business.entity.FollowSubscribeOrderEntity;
+import net.maku.followcom.vo.FollowSubscribeOrderVO;
+import net.maku.followcom.query.FollowSubscribeOrderQuery;
+import net.maku.followcom.entity.FollowSubscribeOrderEntity;
 import java.util.List;
 
 /**

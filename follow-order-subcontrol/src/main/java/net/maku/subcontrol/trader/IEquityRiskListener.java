@@ -14,6 +14,6 @@ public interface IEquityRiskListener {
      * @param apiTrader  跟单者对象
      * @param riskEquity 风控净值
      */
-    void onTriggered(AbstractApiTrader apiTrader, BigDecimal riskEquity);
+//    void onTriggered(AbstractApiTrader apiTrader, BigDecimal riskEquity);
 
 }

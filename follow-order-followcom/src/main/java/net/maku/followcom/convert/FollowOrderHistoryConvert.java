@@ -1,8 +1,8 @@
 package net.maku.followcom.convert;
 
-import net.maku.business.entity.FollowOrderHistoryEntity;
-import net.maku.business.vo.FollowOrderHistoryVO;
-import net.maku.business.vo.FollowOrderHistoryExcelVO;
+import net.maku.followcom.entity.FollowOrderHistoryEntity;
+import net.maku.followcom.vo.FollowOrderHistoryVO;
+import net.maku.followcom.vo.FollowOrderHistoryExcelVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

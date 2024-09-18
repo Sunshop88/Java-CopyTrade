@@ -1,4 +1,4 @@
-//package net.maku.subcontrol.trader;
+//package org.jeecg.modules.copytrade.manager.trade;
 //
 //import cn.hutool.core.date.DateUnit;
 //import cn.hutool.core.date.DateUtil;
@@ -12,13 +12,8 @@
 //import lombok.Getter;
 //import lombok.Setter;
 //import lombok.extern.slf4j.Slf4j;
-//import net.maku.followcom.entity.FollowTraderEntity;
 //import online.mtapi.mt4.*;
-//import online.mtapi.mt4.Exception.ConnectException;
-//import online.mtapi.mt4.Exception.InvalidSymbolException;
-//import online.mtapi.mt4.Exception.TimeoutException;
-//import org.jeecg.common.util.SpringContextUtils;
-//import org.jeecg.modules.blockchain.enums.TraderTypeEnum;
+//import online.mtapi.mt4.Exception.*;
 //import org.jeecg.modules.copytrade.entity.AotfxServer;
 //import org.jeecg.modules.copytrade.entity.AotfxTrader;
 //import org.jeecg.modules.copytrade.manager.ApiAnalysisCallable;
@@ -46,15 +41,22 @@
 //import java.util.stream.Collectors;
 //
 //
-//
+///**
+// * <a href="http://mtapi.online/">MT4基础类</a>
+// *
+// * @author hipil
+// */
 //@Slf4j
-//public abstract class AbstractApiTrader extends ApiTrader {
+//public abstract class Abstract4ApiTrader extends ApiTrader {
 //
 //    private final Object lock = new Object();
 //    public QuoteClient quoteClient;
 //    @Getter
 //    @Setter
-//    protected FollowTraderEntity trader;
+//    protected AotfxTrader trader4;
+//    @Setter
+//    @Getter
+//    protected IEquityRiskListener4 equityRiskListener;
 //    protected ScheduledFuture<?> updateTradeInfoFuture;
 //    protected ScheduledFuture<?> cycleFuture;
 //    @Getter
@@ -99,7 +101,7 @@
 //        availableException4.add("Trade is disabled");
 //    }
 //
-//    public AbstractApiTrader(AotfxTrader trader4, IKafkaProducer<String, Object> kafkaProducer, String host, int port) throws IOException {
+//    public Abstract4ApiTrader(AotfxTrader trader4, IKafkaProducer<String, Object> kafkaProducer, String host, int port) throws IOException {
 //        quoteClient = new QuoteClient(Integer.parseInt(trader4.getAccount()), trader4.getPassword(), host, port);
 //        this.trader4 = trader4;
 //        this.kafkaProducer = kafkaProducer;
@@ -108,7 +110,7 @@
 //        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader4.getId()));
 //    }
 //
-//    public AbstractApiTrader(AotfxTrader trader4, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
+//    public Abstract4ApiTrader(AotfxTrader trader4, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
 //        quoteClient = new QuoteClient(Integer.parseInt(trader4.getAccount()), trader4.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
 //        this.equityRiskListener = new EquityRiskListenerImpl4();
 //        this.trader4 = trader4;
@@ -599,17 +601,17 @@
 //
 //    }
 //
-////    /**
-////     * 判断当前账户净值是否小于设置的最小风控净值，
-////     * <p>
-////     * 1-如果是则进行风控干预
-////     * 2-如果不是则不干预
-////     */
-////    public void riskControl(AotfxTrader traderFromDb) {
-////        BigDecimal riskEquity = traderFromDb == null ? BigDecimal.ZERO : traderFromDb.getMinEquity();
-////        if (riskEquity != null && riskEquity.compareTo(BigDecimal.ZERO) != 0) {
-////            equityRiskListener.onTriggered(this, riskEquity);
-////            this.updateTraderInfo();
-////        }
-////    }
+//    /**
+//     * 判断当前账户净值是否小于设置的最小风控净值，
+//     * <p>
+//     * 1-如果是则进行风控干预
+//     * 2-如果不是则不干预
+//     */
+//    public void riskControl(AotfxTrader traderFromDb) {
+//        BigDecimal riskEquity = traderFromDb == null ? BigDecimal.ZERO : traderFromDb.getMinEquity();
+//        if (riskEquity != null && riskEquity.compareTo(BigDecimal.ZERO) != 0) {
+//            equityRiskListener.onTriggered(this, riskEquity);
+//            this.updateTraderInfo();
+//        }
+//    }
 //}

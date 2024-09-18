@@ -2,9 +2,9 @@ package net.maku.followcom.service;
 
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.business.vo.FollowTraderVO;
-import net.maku.business.query.FollowTraderQuery;
-import net.maku.business.entity.FollowTraderEntity;
+import net.maku.followcom.vo.FollowTraderVO;
+import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.entity.FollowTraderEntity;
 import java.util.List;
 
 /**

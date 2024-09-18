@@ -1,8 +1,8 @@
 package net.maku.followcom.convert;
 
-import net.maku.business.entity.FollowTraderLogEntity;
-import net.maku.business.vo.FollowTraderLogVO;
-import net.maku.business.vo.FollowTraderLogExcelVO;
+import net.maku.followcom.entity.FollowTraderLogEntity;
+import net.maku.followcom.vo.FollowTraderLogVO;
+import net.maku.followcom.vo.FollowTraderLogExcelVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
