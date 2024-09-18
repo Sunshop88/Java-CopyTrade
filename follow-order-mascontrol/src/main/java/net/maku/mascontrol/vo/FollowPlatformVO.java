@@ -43,7 +43,6 @@ public class FollowPlatformVO implements Serializable {
 	private Integer version;
 
 	@Schema(description = "删除标识 0：正常 1：已删除")
-	@TableLogic
 	private Integer deleted;
 
 	@Schema(description = "创建者")

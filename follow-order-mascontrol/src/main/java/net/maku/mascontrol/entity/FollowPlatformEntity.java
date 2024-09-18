@@ -64,7 +64,6 @@ public class FollowPlatformEntity {
 	 * 删除标识 0：正常 1：已删除
 	 */
 	@TableField(value = "deleted", fill = FieldFill.INSERT)
-	@TableLogic
 	private Integer deleted;
 
 	/**

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -45,8 +46,10 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return new PageResult<>(FollowPlatformConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
+    //查询功能
     private LambdaQueryWrapper<FollowPlatformEntity> getWrapper(FollowPlatformQuery query){
         LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(FollowPlatformEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
 
         return wrapper;
     }
@@ -84,7 +87,11 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        removeByIds(idList);
+        list(new LambdaQueryWrapper<FollowPlatformEntity>().in(FollowPlatformEntity::getId, idList)).forEach(entity -> {
+            // 删除
+            entity.setDeleted(CloseOrOpenEnum.OPEN.getValue());
+            updateById(entity);
+        });
     }
 
     @Override
