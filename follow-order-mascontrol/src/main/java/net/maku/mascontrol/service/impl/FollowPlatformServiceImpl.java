@@ -15,6 +15,7 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.mascontrol.convert.FollowPlatformConvert;
 import net.maku.mascontrol.dao.FollowPlatformDao;
 import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.eunm.PlatformType;
 import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.vo.FollowPlatformExcelVO;
@@ -57,6 +58,11 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowPlatformVO vo) {
+        // 检查平台类型是否为 "MT4" 或 "MT5"
+        if (!"MT4".equals(vo.getPlatformType()) && !"MT5".equals(vo.getPlatformType())) {
+            throw new RuntimeException("平台类型必须为 'MT4' 或 'MT5'");
+        }
+
         //查询输入的服务器是否存在
         if(ObjectUtil.isNotEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
                 .eq(FollowPlatformEntity::getServer,vo.getServer())))) {
@@ -67,6 +73,8 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         entity.setUpdateTime(LocalDateTime.now());
         baseMapper.insert(entity);
     }
+
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
