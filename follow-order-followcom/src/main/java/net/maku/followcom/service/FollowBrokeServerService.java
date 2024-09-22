@@ -5,6 +5,7 @@ import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowBrokeServerVO;
 import net.maku.followcom.query.FollowBrokeServerQuery;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
+
 import java.util.List;
 
 /**
@@ -30,4 +31,6 @@ public interface FollowBrokeServerService extends BaseService<FollowBrokeServerE
     void export();
 
     void saveList(List<FollowBrokeServerVO> list);
+
+    List<FollowBrokeServerEntity> listByServerName(String name);
 }

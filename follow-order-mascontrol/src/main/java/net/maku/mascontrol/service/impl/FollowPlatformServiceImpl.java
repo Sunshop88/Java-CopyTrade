@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -15,17 +16,14 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.mascontrol.convert.FollowPlatformConvert;
 import net.maku.mascontrol.dao.FollowPlatformDao;
 import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.eunm.PlatformType;
 import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.vo.FollowPlatformExcelVO;
 import net.maku.mascontrol.vo.FollowPlatformVO;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -60,17 +58,16 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     public void save(FollowPlatformVO vo) {
         // 检查平台类型是否为 "MT4" 或 "MT5"
         if (!"MT4".equals(vo.getPlatformType()) && !"MT5".equals(vo.getPlatformType())) {
-            throw new RuntimeException("平台类型必须为 'MT4' 或 'MT5'");
+            throw new ServerException("平台类型必须为 'MT4' 或 'MT5'");
         }
 
         //查询输入的服务器是否存在
         if(ObjectUtil.isNotEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
                 .eq(FollowPlatformEntity::getServer,vo.getServer())))) {
-            throw new RuntimeException("服务器 " + vo.getServer() + " 已存在");
+            throw new ServerException("服务器 " + vo.getServer() + " 已存在");
         }
         FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
         entity.setCreateTime(LocalDateTime.now());
-        entity.setUpdateTime(LocalDateTime.now());
         baseMapper.insert(entity);
     }
 
@@ -82,7 +79,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         //查询服务器是否存在如果不存在则返回服务器不存在
         if(ObjectUtil.isEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
                 .eq(FollowPlatformEntity::getId,vo.getId())))) {
-            throw new RuntimeException("服务器 " + vo.getServer() + " 不存在");
+            throw new ServerException("服务器 " + vo.getServer() + " 不存在");
         }
 
         FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);

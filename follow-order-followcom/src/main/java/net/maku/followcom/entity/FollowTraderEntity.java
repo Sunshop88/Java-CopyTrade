@@ -1,10 +1,11 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * mt4账号
@@ -39,10 +40,16 @@ public class FollowTraderEntity {
 	private String password;
 
 	/**
-	* 服务器id
+	* 平台id
 	*/
-	@TableField(value = "server_id")
-	private Integer serverId;
+	@TableField(value = "platform_id")
+	private Integer platformId;
+
+	/**
+	 * 平台服务器
+	 */
+	@Schema(description = "platform")
+	private String platform;
 
 	/**
 	* 状态0-正常 1-异常
@@ -63,64 +70,16 @@ public class FollowTraderEntity {
 	private String ipAddr;
 
 	/**
+	 * 服务器名称
+	 */
+	@TableField(value = "server_Id")
+	private Integer serverId;
+
+	/**
 	* 服务器名称
 	*/
 	@TableField(value = "server_name")
 	private String serverName;
-
-	/**
-	* 跟单状态0-未开启 1-已开启
-	*/
-	@TableField(value = "follow_status")
-	private Integer followStatus;
-
-	/**
-	* 喊单账号id
-	*/
-	@TableField(value = "follow_trader_id")
-	private Long followTraderId;
-
-	/**
-	* 下单模式0-固定手数 1-手数比例 2-净值比例
-	*/
-	@TableField(value = "follow_mode")
-	private Integer followMode;
-
-	/**
-	* 下单模式参数
-	*/
-	@TableField(value = "follow_param")
-	private BigDecimal followParam;
-
-	/**
-	* 下单类型0-全部 1-多单 2-空单
-	*/
-	@TableField(value = "follow_type")
-	private Integer followType;
-
-	/**
-	* 跟单开仓状态 0-未开启 1-开启
-	*/
-	@TableField(value = "follow_open")
-	private Integer followOpen;
-
-	/**
-	* 跟单平仓状态 0-未开启 1-开启
-	*/
-	@TableField(value = "follow_close")
-	private Integer followClose;
-
-	/**
-	* 跟单补单状态 0-未开启 1-开启
-	*/
-	@TableField(value = "follow_rep")
-	private Integer followRep;
-
-	/**
-	* 跟单方向0-正向1-反向
-	*/
-	@TableField(value = "follow_direction")
-	private Integer followDirection;
 
 	/**
 	* 备注
@@ -159,40 +118,22 @@ public class FollowTraderEntity {
 	private Integer leverage;
 
 	/**
-	* 订单量
-	*/
-	@TableField(value = "order_num")
-	private Integer orderNum;
-
-	/**
-	* 持仓手数
-	*/
-	@TableField(value = "order_size")
-	private BigDecimal orderSize;
-
-	/**
-	* 盈亏
-	*/
-	@TableField(value = "profit_loss")
-	private BigDecimal profitLoss;
-
-	/**
 	* 倍数
 	*/
 	@TableField(value = "multiple")
 	private BigDecimal multiple;
 
 	/**
-	* sell数量
-	*/
-	@TableField(value = "order_sell")
-	private Integer orderSell;
+	 * 账号的MT4/MT5服务器和北京时间的差
+	 */
+	@TableField(value = "diff")
+	private Integer diff;
 
 	/**
-	* buy数量
-	*/
-	@TableField(value = "order_buy")
-	private Integer orderBuy;
+	 * 是否demo
+	 */
+	@TableField(value = "is_demo")
+	private Boolean isDemo;
 
 	/**
 	* 版本号
@@ -216,7 +157,7 @@ public class FollowTraderEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -228,6 +169,6 @@ public class FollowTraderEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

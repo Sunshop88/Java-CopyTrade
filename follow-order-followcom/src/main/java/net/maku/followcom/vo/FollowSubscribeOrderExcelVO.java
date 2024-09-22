@@ -96,7 +96,7 @@ public class FollowSubscribeOrderExcelVO implements TransPojo {
 	private BigDecimal followParam;
 
 	@ExcelProperty("跟单者跟单方向")
-	private String direction;
+	private Integer direction;
 
 	@ExcelProperty("类型0-信号源 1-跟单者")
 	private Integer masterOrSlave;

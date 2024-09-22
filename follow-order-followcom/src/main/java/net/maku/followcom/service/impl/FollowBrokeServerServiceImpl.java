@@ -15,6 +15,7 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowBrokeServerExcelVO;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,6 +94,12 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
     public void saveList(List<FollowBrokeServerVO> list) {
         List<FollowBrokeServerEntity> entity = FollowBrokeServerConvert.INSTANCE.convertList2(list);
         baseMapper.insert(entity);
+    }
+
+    @Override
+    @Cacheable(value = "listByServerName" ,key = "#name")
+    public List<FollowBrokeServerEntity> listByServerName(String name) {
+        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name));
     }
 
 }

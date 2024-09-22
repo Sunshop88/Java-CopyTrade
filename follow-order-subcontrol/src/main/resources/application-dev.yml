@@ -4,7 +4,6 @@ spring:
       database: 1
       host: localhost
       port: 6379
-      password: 123456
       #timeout: 6000ms  # 连接超时时长（毫秒）
   datasource:
     dynamic:
@@ -29,3 +28,13 @@ spring:
     password: maku
     clientId: maku_boot_service_dev
     default-topic: topic_default
+
+cld:
+  kafka:
+    servers: 39.103.138.2:9092
+    partition: 1
+    replication: 1
+    maxIdle: 20
+    minIdle: 10
+    # block synchronous callback 三种发送模式
+    sendMode: callback

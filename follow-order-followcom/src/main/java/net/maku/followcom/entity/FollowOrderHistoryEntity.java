@@ -1,10 +1,9 @@
 package net.maku.followcom.entity;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 所有MT4账号的历史订单
@@ -39,13 +38,13 @@ public class FollowOrderHistoryEntity {
 	* 开仓时间
 	*/
 	@TableField(value = "open_time")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	/**
 	* 平仓时间
 	*/
 	@TableField(value = "close_time")
-	private Date closeTime;
+	private LocalDateTime closeTime;
 
 	/**
 	* 手数
@@ -165,7 +164,7 @@ public class FollowOrderHistoryEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -177,6 +176,6 @@ public class FollowOrderHistoryEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

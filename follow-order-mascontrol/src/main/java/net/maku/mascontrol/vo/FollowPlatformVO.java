@@ -1,14 +1,10 @@
 package net.maku.mascontrol.vo;
 
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
 * 平台管理

@@ -1,13 +1,10 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 订阅关系表
@@ -33,16 +30,16 @@ public class FollowSubscribeOrderVO implements Serializable {
 	private Integer masterType;
 
 	@Schema(description = "喊单者开仓时间(MT4时间)")
-	private Date masterOpenTime;
+	private LocalDateTime masterOpenTime;
 
 	@Schema(description = "侦测到开仓信号的时间")
-	private Date detectedOpenTime;
+	private LocalDateTime detectedOpenTime;
 
 	@Schema(description = "喊单者平仓时间(MT4时间)")
-	private Date masterCloseTime;
+	private LocalDateTime masterCloseTime;
 
 	@Schema(description = "侦测到平仓信号的时间(系统时间)")
-	private Date detectedCloseTime;
+	private LocalDateTime detectedCloseTime;
 
 	@Schema(description = "喊单者的开仓手数")
 	private BigDecimal masterLots;
@@ -66,25 +63,25 @@ public class FollowSubscribeOrderVO implements Serializable {
 	private Integer slaveType;
 
 	@Schema(description = "跟单者开仓时间(MT4时间)")
-	private Date slaveOpenTime;
+	private LocalDateTime slaveOpenTime;
 
 	@Schema(description = "跟单者收到喊单者开仓信号的时间")
-	private Date slaveReceiveTime;
+	private LocalDateTime slaveReceiveTime;
 
 	@Schema(description = "跟单者平仓时间(MT4时间)")
-	private Date slaveCloseTime;
+	private LocalDateTime slaveCloseTime;
 
 	@Schema(description = "跟单者平仓时间(MT4时间)")
-	private Date slaveReceiveCloseTime;
+	private LocalDateTime slaveReceiveCloseTime;
 
 	@Schema(description = "跟单者的开仓手数")
-	private Double slaveLots;
+	private BigDecimal slaveLots;
 
 	@Schema(description = "跟随者收益 swap commission profit的总和")
 	private BigDecimal slaveProfit;
 
 	@Schema(description = "跟单者开仓价格")
-	private Double slaveOpenPrice;
+	private BigDecimal slaveOpenPrice;
 
 	@Schema(description = "跟单者开仓的原始货币对")
 	private String slaveSymbol;
@@ -99,10 +96,16 @@ public class FollowSubscribeOrderVO implements Serializable {
 	private BigDecimal followParam;
 
 	@Schema(description = "跟单者跟单方向")
-	private String direction;
+	private Integer direction;
 
 	@Schema(description = "类型0-信号源 1-跟单者")
 	private Integer masterOrSlave;
+
+	@Schema(description = "附加信息")
+	private String extra;
+
+	@Schema(description = "标记信息")
+	private Integer flag;
 
 	@Schema(description = "版本号")
 	private Integer version;
@@ -114,12 +117,12 @@ public class FollowSubscribeOrderVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

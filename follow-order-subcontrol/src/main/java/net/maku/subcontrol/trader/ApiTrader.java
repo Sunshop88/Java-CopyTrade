@@ -5,10 +5,17 @@ import com.cld.message.pubsub.kafka.impl.CldKafkaConsumer;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.framework.common.utils.SpringContextUtils;
+import net.maku.followcom.service.FollowTraderSubscribeService;
+import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
+import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
+import net.maku.subcontrol.util.SpringContextUtils;
 
 import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.regex.Pattern;
 
 
@@ -32,9 +39,16 @@ public class ApiTrader {
     protected Map<String, String> correctSymbolMap = new HashMap<>();
     @Getter
     protected FollowTraderService traderService;
+    protected FollowBrokeServerService followBrokeServerService;
+
+    protected ScheduledExecutorService scheduledExecutorService;
+    protected FollowTraderSubscribeService followTraderSubscribeService;
 
     void initService() {
-        this.traderService = SpringContextUtils.getBean(FollowTraderService.class);
+        this.traderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
+        this.followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);
+        this.scheduledExecutorService = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
+        this.followTraderSubscribeService= SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
     }
 
 }

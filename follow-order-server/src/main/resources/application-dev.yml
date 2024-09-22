@@ -4,7 +4,6 @@ spring:
       database: 1
       host: localhost
       port: 6379
-      password: 123456
       #timeout: 6000ms  # 连接超时时长（毫秒）
   datasource:
     dynamic:

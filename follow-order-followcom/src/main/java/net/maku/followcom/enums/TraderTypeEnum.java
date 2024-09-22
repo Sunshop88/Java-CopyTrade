@@ -9,8 +9,8 @@ import lombok.Getter;
 @Getter
 public enum TraderTypeEnum implements IEnum<String> {
 
-    SLAVE_REAL(0,"SLAVE_REAL", "跟单者"),
-    MASTER_REAL(1,"MASTER_REAL", "喊单者");
+    SLAVE_REAL(1,"SLAVE_REAL", "跟单者"),
+    MASTER_REAL(0,"MASTER_REAL", "喊单者");
 
     private Integer type;
 

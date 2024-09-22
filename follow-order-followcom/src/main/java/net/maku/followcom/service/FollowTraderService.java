@@ -1,5 +1,8 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.vo.FollowOrderSendVO;
+import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowTraderVO;
@@ -28,4 +31,19 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
 
 
     void export();
+
+
+    /**
+     * 下单
+     * @param vo
+     * @return
+     */
+    boolean orderSend(FollowOrderSendVO vo);
+
+    /**
+     * 滑点分析列表
+     */
+    void orderSlipPoint();
+
+    PageResult<FollowOrderSlipPointVO>  pageSlipPoint(FollowOrderSpliListQuery query);
 }

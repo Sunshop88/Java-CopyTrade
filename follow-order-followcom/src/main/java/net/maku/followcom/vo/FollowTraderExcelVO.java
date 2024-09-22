@@ -7,7 +7,6 @@ import com.fhs.core.trans.vo.TransPojo;
 import com.fhs.core.trans.anno.Trans;
 import com.fhs.core.trans.constant.TransType;
 import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * mt4账号

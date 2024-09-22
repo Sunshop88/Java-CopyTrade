@@ -9,6 +9,7 @@ import me.zhyd.oauth.model.AuthResponse;
 import me.zhyd.oauth.model.AuthUser;
 import me.zhyd.oauth.request.AuthRequest;
 import me.zhyd.oauth.utils.AuthStateUtils;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
@@ -76,7 +77,7 @@ public class SysThirdLoginController {
 
         // 判断是否成功
         if (!response.ok()) {
-            throw new RuntimeException("第三方登录失败");
+            throw new ServerException("第三方登录失败");
         }
 
         // 绑定用户信息

@@ -1,10 +1,9 @@
 package net.maku.followcom.entity;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 订阅关系表
@@ -45,25 +44,31 @@ public class FollowSubscribeOrderEntity {
 	* 喊单者开仓时间(MT4时间)
 	*/
 	@TableField(value = "master_open_time")
-	private Date masterOpenTime;
+	private LocalDateTime masterOpenTime;
 
 	/**
 	* 侦测到开仓信号的时间
 	*/
 	@TableField(value = "detected_open_time")
-	private Date detectedOpenTime;
+	private LocalDateTime detectedOpenTime;
 
 	/**
 	* 喊单者平仓时间(MT4时间)
 	*/
 	@TableField(value = "master_close_time")
-	private Date masterCloseTime;
+	private LocalDateTime masterCloseTime;
 
 	/**
 	* 侦测到平仓信号的时间(系统时间)
 	*/
 	@TableField(value = "detected_close_time")
-	private Date detectedCloseTime;
+	private LocalDateTime detectedCloseTime;
+
+	/**
+	 * 当前持仓
+	 */
+	@TableField(value = "slave_position")
+	private BigDecimal slavePosition;
 
 	/**
 	* 喊单者的开仓手数
@@ -111,31 +116,31 @@ public class FollowSubscribeOrderEntity {
 	* 跟单者开仓时间(MT4时间)
 	*/
 	@TableField(value = "slave_open_time")
-	private Date slaveOpenTime;
+	private LocalDateTime slaveOpenTime;
 
 	/**
 	* 跟单者收到喊单者开仓信号的时间
 	*/
 	@TableField(value = "slave_receive_time")
-	private Date slaveReceiveTime;
+	private LocalDateTime slaveReceiveTime;
 
 	/**
 	* 跟单者平仓时间(MT4时间)
 	*/
 	@TableField(value = "slave_close_time")
-	private Date slaveCloseTime;
+	private LocalDateTime slaveCloseTime;
 
 	/**
 	* 跟单者平仓时间(MT4时间)
 	*/
 	@TableField(value = "slave_receive_close_time")
-	private Date slaveReceiveCloseTime;
+	private LocalDateTime slaveReceiveCloseTime;
 
 	/**
 	* 跟单者的开仓手数
 	*/
 	@TableField(value = "slave_lots")
-	private Double slaveLots;
+	private BigDecimal slaveLots;
 
 	/**
 	* 跟随者收益 swap commission profit的总和
@@ -147,7 +152,7 @@ public class FollowSubscribeOrderEntity {
 	* 跟单者开仓价格
 	*/
 	@TableField(value = "slave_open_price")
-	private Double slaveOpenPrice;
+	private BigDecimal slaveOpenPrice;
 
 	/**
 	* 跟单者开仓的原始货币对
@@ -177,13 +182,25 @@ public class FollowSubscribeOrderEntity {
 	* 跟单者跟单方向
 	*/
 	@TableField(value = "direction")
-	private String direction;
+	private Integer direction;
 
 	/**
 	* 类型0-信号源 1-跟单者
 	*/
 	@TableField(value = "master_or_slave")
 	private Integer masterOrSlave;
+
+	/**
+	 * 附加信息
+	 */
+	@TableField(value = "extra")
+	private String extra;
+
+	/**
+	 * 标记信息
+	 */
+	@TableField(value = "flag")
+	private Integer flag;
 
 	/**
 	* 版本号
@@ -207,7 +224,7 @@ public class FollowSubscribeOrderEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -219,6 +236,6 @@ public class FollowSubscribeOrderEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

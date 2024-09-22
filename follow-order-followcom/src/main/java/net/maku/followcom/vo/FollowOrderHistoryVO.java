@@ -2,12 +2,13 @@ package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * 所有MT4账号的历史订单
@@ -30,10 +31,10 @@ public class FollowOrderHistoryVO implements Serializable {
 	private Integer type;
 
 	@Schema(description = "开仓时间")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	@Schema(description = "平仓时间")
-	private Date closeTime;
+	private LocalDateTime closeTime;
 
 	@Schema(description = "手数")
 	private BigDecimal size;
@@ -93,12 +94,12 @@ public class FollowOrderHistoryVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }
