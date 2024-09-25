@@ -23,6 +23,9 @@ public class FollowOrderSendQuery extends Query {
     @Schema(description = "账户id")
     private Integer traderId;
 
+    @Schema(description = "是否滑点详情")
+    private Integer flag;
+
     @Schema(description = "账户")
     private String account;
 

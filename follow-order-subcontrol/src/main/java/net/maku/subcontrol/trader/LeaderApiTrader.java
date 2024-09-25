@@ -36,14 +36,14 @@ public class LeaderApiTrader extends AbstractApiTrader {
 
     @Override
     public Boolean startTrade(List<String> subscriptions) {
-        return startTrade(SpringContextUtils.getBean(CopierApiTradersAdmin.class).getKafkaConsumerCachedThreadPool(), subscriptions);
+        return startTrade(SpringContextUtils.getBean(LeaderApiTradersAdmin.class).getKafkaConsumerCachedThreadPool(), subscriptions);
     }
 
     @Override
     public Boolean startTrade() {
         //  订阅的喊单者主题
         List<String> subscriptions = Arrays.asList(KafkaTopicUtil.leaderAccountTopic(trader), KafkaTopicUtil.leaderTradeSignalTopic(trader));
-        Boolean start = startTrade(SpringContextUtils.getBean(CopierApiTradersAdmin.class).getKafkaConsumerCachedThreadPool(), subscriptions);
+        Boolean start = startTrade(SpringContextUtils.getBean(LeaderApiTradersAdmin.class).getKafkaConsumerCachedThreadPool(), subscriptions);
         if (!start) {
             log.error("喊单者账号:[{}-{}-{}],开始消费失败", trader.getId(), trader.getAccount(), trader.getServerName());
         } else {

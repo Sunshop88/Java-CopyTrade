@@ -99,7 +99,7 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
     @Override
     @Cacheable(value = "listByServerName" ,key = "#name")
     public List<FollowBrokeServerEntity> listByServerName(String name) {
-        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name));
+        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getCreateTime));
     }
 
 }

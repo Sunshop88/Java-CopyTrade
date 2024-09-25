@@ -17,7 +17,7 @@ public class SysThirdLoginConfigEntity {
     /**
      * id
      */
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**

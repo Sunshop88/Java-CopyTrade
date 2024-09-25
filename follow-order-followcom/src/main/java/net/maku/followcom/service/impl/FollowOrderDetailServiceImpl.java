@@ -3,7 +3,11 @@ package net.maku.followcom.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
@@ -33,7 +37,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDetailDao, FollowOrderDetailEntity> implements FollowOrderDetailService {
     private final TransService transService;
-
+    private final FollowOrderDetailDao followOrderDetailDao;
     @Override
     public PageResult<FollowOrderDetailVO> page(FollowOrderDetailQuery query) {
         IPage<FollowOrderDetailEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -90,6 +94,13 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
     List<FollowOrderDetailExcelVO> excelList = FollowOrderDetailConvert.INSTANCE.convertExcelList(list());
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowOrderDetailExcelVO.class, "订单详情", null, excelList);
+    }
+
+    @Override
+    public PageResult<FollowOrderSlipPointVO> listFollowOrderSlipPoint(FollowOrderSpliListQuery query) {
+        Page<?> pageRequest = new Page<>(query.getPage(), query.getLimit());
+        Page<FollowOrderSlipPointVO> page = followOrderDetailDao.getFollowOrderDetailStats(pageRequest,query);
+        return new PageResult<>(page.getRecords(), page.getTotal());
     }
 
 }

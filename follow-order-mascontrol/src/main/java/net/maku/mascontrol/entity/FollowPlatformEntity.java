@@ -20,7 +20,7 @@ public class FollowPlatformEntity {
 	/**
 	 * ID
 	 */
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 

@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -20,11 +22,16 @@ import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.vo.FollowPlatformExcelVO;
 import net.maku.mascontrol.vo.FollowPlatformVO;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.Future;
 
 /**
  * 平台管理
@@ -36,7 +43,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao, FollowPlatformEntity> implements FollowPlatformService {
     private final TransService transService;
-
 
     @Override
     public PageResult<FollowPlatformVO> page(FollowPlatformQuery query) {
@@ -69,9 +75,9 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
         entity.setCreateTime(LocalDateTime.now());
         baseMapper.insert(entity);
+
+
     }
-
-
 
     @Override
     @Transactional(rollbackFor = Exception.class)

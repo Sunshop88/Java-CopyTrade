@@ -170,7 +170,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         long start, end;
         start = System.currentTimeMillis();
         try {
-            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
+            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
             try {
                 log.error("[MT4账号：{}-{}-{}]在{}:{}掉线后立刻开始重连", trader.getId(), trader.getAccount(), trader.getServerName(), this.quoteClient.Host, this.quoteClient.Port);
                 AbstractApiTrader.this.connect2Broker();
@@ -178,10 +178,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 reconnectTimes = 0;
                 end = System.currentTimeMillis();
                 log.info("[MT4账号：{}-{}-{}]掉线后在{}:{}立刻重连成功,耗时{}秒", trader.getId(), trader.getAccount(), trader.getServerName(), this.quoteClient.Host, this.quoteClient.Port, (end - start) / 1000.0);
-                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId()));
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId()));
             } catch (Exception ex) {
                 log.error("", ex);
-                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
                 log.error("[MT4账号：{}-{}-{}]在{}:{}重连失败", trader.getId(), trader.getAccount(), trader.getServerName(), this.quoteClient.Host, this.quoteClient.Port);
             }
         } catch (Exception ex) {

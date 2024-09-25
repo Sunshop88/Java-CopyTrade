@@ -1,12 +1,10 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import java.util.List;
+
+import java.time.LocalDateTime;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
-import java.util.Date;
 
 /**
  * 品种规格
@@ -64,12 +62,12 @@ public class FollowSysmbolSpecificationVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

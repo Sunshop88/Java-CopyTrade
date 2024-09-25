@@ -21,7 +21,7 @@ public class FollowOrderActiveEntity {
 	/**
 	* 主键
 	*/
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 

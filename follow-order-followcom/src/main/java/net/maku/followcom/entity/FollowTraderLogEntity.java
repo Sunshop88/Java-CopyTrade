@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("follow_trader_log")
 public class FollowTraderLogEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 

@@ -17,7 +17,7 @@ public abstract class BaseEntity implements TransPojo {
     /**
      * id
      */
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**

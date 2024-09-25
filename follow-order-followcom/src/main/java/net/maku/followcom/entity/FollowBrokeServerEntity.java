@@ -16,7 +16,7 @@ import java.util.Date;
 @Data
 @TableName("follow_broke_server")
 public class FollowBrokeServerEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Integer id;
 
@@ -37,6 +37,12 @@ public class FollowBrokeServerEntity {
 	*/
 	@TableField(value = "server_port")
 	private String serverPort;
+
+	/**
+	 * 速度 毫秒
+	 */
+	@TableField(value = "speed")
+	private Integer speed;
 
 	/**
 	* 版本号

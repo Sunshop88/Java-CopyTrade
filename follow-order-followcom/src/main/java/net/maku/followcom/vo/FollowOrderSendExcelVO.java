@@ -50,7 +50,7 @@ public class FollowOrderSendExcelVO implements TransPojo {
 	private Integer status;
 
 	@ExcelProperty("间隔时间 秒")
-	private Integer interval;
+	private Integer intervalTime;
 
 	@ExcelProperty("完成时间")
 	private Date finishTime;

@@ -1,5 +1,7 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowOrderDetailVO;
@@ -28,4 +30,6 @@ public interface FollowOrderDetailService extends BaseService<FollowOrderDetailE
 
 
     void export();
+
+    PageResult<FollowOrderSlipPointVO> listFollowOrderSlipPoint(FollowOrderSpliListQuery query);
 }

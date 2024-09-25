@@ -3,6 +3,8 @@ package net.maku.followcom.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -15,7 +17,7 @@ import java.util.Date;
 @Data
 @TableName("follow_sysmbol_specification")
 public class FollowSysmbolSpecificationEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 
@@ -107,7 +109,7 @@ public class FollowSysmbolSpecificationEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -119,6 +121,6 @@ public class FollowSysmbolSpecificationEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

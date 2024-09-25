@@ -20,7 +20,7 @@ public class ScheduleJobEntity implements Serializable {
     /**
      * id
      */
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**

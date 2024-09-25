@@ -1,14 +1,12 @@
 package net.maku.followcom.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * 下单记录
@@ -25,6 +23,12 @@ public class FollowOrderSendVO implements Serializable {
 
 	@Schema(description = "品种类型")
 	private String symbol;
+
+	@Schema(description = "券商")
+	private String brokeName;
+
+	@Schema(description = "服务器")
+	private String platform;
 
 	@Schema(description = "账号id")
 	private Long traderId;
@@ -47,6 +51,9 @@ public class FollowOrderSendVO implements Serializable {
 	@Schema(description = "总手数")
 	private BigDecimal totalSzie;
 
+	@Schema(description = "实际下单手数")
+	private BigDecimal trueSzie;
+
 	@Schema(description = "开始手数范围from")
 	private BigDecimal startSize;
 
@@ -56,7 +63,19 @@ public class FollowOrderSendVO implements Serializable {
 	@Schema(description = "状态0-进行中 1-已完成")
 	private Integer status;
 
-	@Schema(description = "间隔时间 秒")
-	private Integer interval;
+	@Schema(description = "间隔时间 毫秒")
+	private Integer intervalTime;
+
+	@Schema(description = "备注")
+	private String remark;
+
+	@Schema(description = "创建者")
+	private Long creator;
+
+	@Schema(description = "创建时间")
+	private LocalDateTime createTime;
+
+	@Schema(description = "订单号")
+	private String orderNo;
 
 }

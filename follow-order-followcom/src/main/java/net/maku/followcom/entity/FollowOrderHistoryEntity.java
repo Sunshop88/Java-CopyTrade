@@ -18,7 +18,7 @@ public class FollowOrderHistoryEntity {
 	/**
 	* id
 	*/
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private String id;
 

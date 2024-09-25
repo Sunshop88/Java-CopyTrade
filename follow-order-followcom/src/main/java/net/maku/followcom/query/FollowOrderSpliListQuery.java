@@ -14,7 +14,7 @@ import net.maku.framework.common.query.Query;
 public class FollowOrderSpliListQuery extends Query {
 
     @Schema(description = "账户id")
-    private Integer traderId;
+    private String traderId;
 
     @Schema(description = "账户")
     private String account;
@@ -26,8 +26,8 @@ public class FollowOrderSpliListQuery extends Query {
     private String symbol;
 
     @Schema(description = "开仓时间-start")
-    private String start_time;
+    private String startTime;
 
     @Schema(description = "开仓时间-end")
-    private String end_time;
+    private String endTime;
 }

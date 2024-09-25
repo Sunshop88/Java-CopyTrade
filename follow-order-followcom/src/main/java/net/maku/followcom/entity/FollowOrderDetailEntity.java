@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -16,7 +17,7 @@ import java.util.Date;
 @Data
 @TableName("follow_order_detail")
 public class FollowOrderDetailEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 
@@ -25,6 +26,13 @@ public class FollowOrderDetailEntity {
 	*/
 	@TableField(value = "symbol")
 	private String symbol;
+
+	/**
+	 * 类型 0-bug 1-sell
+	 */
+	@TableField(value = "type")
+	private Integer type;
+
 
 	/**
 	* 订单号
@@ -47,20 +55,20 @@ public class FollowOrderDetailEntity {
 	/**
 	* 开仓请求时间
 	*/
-	@TableField(value = "request_time")
-	private Date requestTime;
+	@TableField(value = "request_open_time")
+	private LocalDateTime requestOpenTime;
 
 	/**
 	* 开仓请求价格
 	*/
-	@TableField(value = "request_price")
-	private BigDecimal requestPrice;
+	@TableField(value = "request_open_price")
+	private BigDecimal requestOpenPrice;
 
 	/**
 	* 开仓时间
 	*/
 	@TableField(value = "open_time")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	/**
 	* 开仓价格
@@ -69,10 +77,40 @@ public class FollowOrderDetailEntity {
 	private BigDecimal openPrice;
 
 	/**
-	* 开仓价格滑点
-	*/
+	 * 开仓价格滑点
+	 */
 	@TableField(value = "open_price_slip")
 	private BigDecimal openPriceSlip;
+
+	/**
+	 * 平仓请求时间
+	 */
+	@TableField(value = "request_close_time")
+	private LocalDateTime requestCloseTime;
+
+	/**
+	 * 平仓请求价格
+	 */
+	@TableField(value = "request_close_price")
+	private BigDecimal requestClosePrice;
+
+	/**
+	 * 平仓时间
+	 */
+	@TableField(value = "close_time")
+	private LocalDateTime closeTime;
+
+	/**
+	 * 平仓价格
+	 */
+	@TableField(value = "close_price")
+	private BigDecimal closePrice;
+
+	/**
+	 * 平仓价格滑点
+	 */
+	@TableField(value = "close_price_slip")
+	private BigDecimal closePriceSlip;
 
 	/**
 	* 手数
@@ -105,6 +143,13 @@ public class FollowOrderDetailEntity {
 	private BigDecimal swap;
 
 	/**
+	 * 下单号
+	 */
+	@TableField(value = "send_no")
+	private String sendNo;
+
+
+	/**
 	* 版本号
 	*/
 	@TableField(value = "version", fill = FieldFill.INSERT)
@@ -126,7 +171,7 @@ public class FollowOrderDetailEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -138,6 +183,41 @@ public class FollowOrderDetailEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
+	/**
+	 * 异常信息
+	 */
+	@TableField(value = "remark")
+	private String remark;
+
+	/**
+	 * 开仓时间差 毫秒
+	 */
+	@TableField(value = "open_time_difference")
+	private Integer openTimeDifference;
+
+	/**
+	 * 平仓时间差 毫秒
+	 */
+	@TableField(value = "close_time_difference")
+	private Integer closeTimeDifference;
+
+	/**
+	 * 开仓响应时间
+	 */
+	@TableField(value = "response_open_time")
+	private LocalDateTime responseOpenTime;
+
+	/**
+	 * 平仓响应时间
+	 */
+	@TableField(value = "response_close_time")
+	private LocalDateTime responseCloseTime;
+
+	/**
+	 * 盈亏
+	 */
+	@TableField(value = "profit")
+	private BigDecimal profit;
 }

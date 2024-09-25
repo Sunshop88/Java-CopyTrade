@@ -1,7 +1,10 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
@@ -25,6 +28,9 @@ public class FollowOrderDetailVO implements Serializable {
 	@Schema(description = "品种")
 	private String symbol;
 
+	@Schema(description = "类型")
+	private Integer type;
+
 	@Schema(description = "订单号")
 	private Integer orderNo;
 
@@ -35,10 +41,10 @@ public class FollowOrderDetailVO implements Serializable {
 	private String account;
 
 	@Schema(description = "开仓请求时间")
-	private Date requestTime;
+	private LocalDateTime requestOpenTime;
 
 	@Schema(description = "开仓请求价格")
-	private BigDecimal requestPrice;
+	private BigDecimal requestOpenPrice;
 
 	@Schema(description = "开仓时间")
 	private Date openTime;
@@ -48,6 +54,21 @@ public class FollowOrderDetailVO implements Serializable {
 
 	@Schema(description = "开仓价格滑点")
 	private BigDecimal openPriceSlip;
+
+	@Schema(description = "平仓请求时间")
+	private LocalDateTime requestCloseTime;
+
+	@Schema(description = "平仓请求价格")
+	private BigDecimal requestClosePrice;
+
+	@Schema(description = "平仓时间")
+	private LocalDateTime closeTime;
+
+	@Schema(description = "平仓价格")
+	private BigDecimal closePrice;
+
+	@TableField(value = "平仓价格滑点")
+	private BigDecimal closePriceSlip;
 
 	@Schema(description = "手数")
 	private BigDecimal size;
@@ -63,6 +84,9 @@ public class FollowOrderDetailVO implements Serializable {
 
 	@Schema(description = "利息")
 	private BigDecimal swap;
+
+	@Schema(description = "下单号")
+	private String sendNo;
 
 	@Schema(description = "版本号")
 	private Integer version;
@@ -82,4 +106,21 @@ public class FollowOrderDetailVO implements Serializable {
 	@Schema(description = "更新时间")
 	private Date updateTime;
 
+	@Schema(description = "异常信息")
+	private String remark;
+
+	@Schema(description = "开仓时间差 毫秒")
+	private Integer openTimeDifference;
+
+	@Schema(description = "平仓时间差 毫秒")
+	private Integer closeTimeDifference;
+
+	@Schema(description = "开仓响应时间")
+	private LocalDateTime responseOpenTime;
+
+	@Schema(description = "平仓响应时间")
+	private LocalDateTime responseCloseTime;
+
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
 }

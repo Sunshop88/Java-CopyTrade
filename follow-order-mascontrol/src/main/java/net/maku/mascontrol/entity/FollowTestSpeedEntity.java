@@ -17,7 +17,7 @@ import java.util.Date;
 @Data
 @TableName("follow_test_speed")
 public class FollowTestSpeedEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Integer id;
 

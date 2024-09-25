@@ -28,7 +28,7 @@ public class ${ClassName}Entity<#if baseClass??> extends ${baseClass.code}</#if>
 	*/
 	</#if>
 	<#if field.primaryPk>
-	@TableId
+	@TableId(type = IdType.AUTO)
 	</#if>
     <#if field.autoFill == "INSERT">
 	@TableField(value = "${field.fieldName}", fill = FieldFill.INSERT)

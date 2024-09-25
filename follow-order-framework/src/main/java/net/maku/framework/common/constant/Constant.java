@@ -49,4 +49,9 @@ public interface Constant {
      */
     String PGSQL_DRIVER = "org.postgresql.Driver";
 
+    /**
+     * 品种规格
+     */
+    String SYMBOL_SPECIFICATION="symbol:specification:";
+
 }

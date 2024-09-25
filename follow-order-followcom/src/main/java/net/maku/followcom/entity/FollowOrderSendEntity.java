@@ -1,9 +1,11 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -16,7 +18,7 @@ import java.util.Date;
 @Data
 @TableName("follow_order_send")
 public class FollowOrderSendEntity {
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
 
@@ -69,6 +71,12 @@ public class FollowOrderSendEntity {
 	private BigDecimal totalSzie;
 
 	/**
+	 * 实际下单手数
+	 */
+	@TableField(value = "true_size")
+	private BigDecimal trueSize;
+
+	/**
 	* 开始手数范围from
 	*/
 	@TableField(value = "start_size")
@@ -89,8 +97,8 @@ public class FollowOrderSendEntity {
 	/**
 	* 间隔时间 秒
 	*/
-	@TableField(value = "interval")
-	private Integer interval;
+	@TableField(value = "interval_time")
+	private Integer intervalTime;
 
 	/**
 	* 版本号
@@ -102,7 +110,7 @@ public class FollowOrderSendEntity {
 	* 完成时间
 	*/
 	@TableField(value = "finish_time")
-	private Date finishTime;
+	private LocalDateTime finishTime;
 
 	/**
 	* 删除标识 0：正常 1：已删除
@@ -120,7 +128,7 @@ public class FollowOrderSendEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -132,6 +140,17 @@ public class FollowOrderSendEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
+	/**
+	 * 订单号
+	 */
+	@TableField(value = "order_no")
+	private String orderNo;
+
+	/**
+	 * 备注
+	 */
+	@TableField(value = "remark")
+	private String remark;
 }

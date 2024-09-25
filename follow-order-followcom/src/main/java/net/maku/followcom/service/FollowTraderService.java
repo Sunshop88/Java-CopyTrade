@@ -1,13 +1,15 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.followcom.vo.FollowOrderSendVO;
-import net.maku.followcom.vo.FollowOrderSlipPointVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.entity.FollowTraderEntity;
+import online.mtapi.mt4.QuoteClient;
+
 import java.util.List;
 
 /**
@@ -23,7 +25,7 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     FollowTraderVO get(Long id);
 
 
-    void save(FollowTraderVO vo);
+    FollowTraderVO save(FollowTraderVO vo);
 
     void update(FollowTraderVO vo);
 
@@ -38,12 +40,30 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
      * @param vo
      * @return
      */
-    boolean orderSend(FollowOrderSendVO vo);
+    boolean orderSend(FollowOrderSendVO vo,QuoteClient quoteClient,FollowTraderVO followTraderVO);
 
     /**
      * 滑点分析列表
      */
-    void orderSlipPoint();
-
     PageResult<FollowOrderSlipPointVO>  pageSlipPoint(FollowOrderSpliListQuery query);
+
+    /**
+     * 订单详情
+     * @param query
+     * @return
+     */
+    PageResult<FollowOrderDetailVO> orderSlipDetail(FollowOrderSendQuery query);
+
+    /**
+     * 平仓
+     * @param vo
+     * @return
+     */
+    boolean orderClose(FollowOrderCloseVO vo,QuoteClient quoteClient);
+
+    QuoteClient tologin(String account, String password, String platform);
+
+    FollowOrderSendEntity orderDoing(Long traderId);
+
+    void saveQuo(QuoteClient quoteClient, FollowTraderEntity vo);
 }
