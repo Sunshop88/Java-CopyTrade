@@ -41,6 +41,7 @@ public class FollowOrderDetailVO implements Serializable {
 	private String account;
 
 	@Schema(description = "开仓请求时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime requestOpenTime;
 
 	@Schema(description = "开仓请求价格")
@@ -56,6 +57,7 @@ public class FollowOrderDetailVO implements Serializable {
 	private BigDecimal openPriceSlip;
 
 	@Schema(description = "平仓请求时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime requestCloseTime;
 
 	@Schema(description = "平仓请求价格")
@@ -116,9 +118,11 @@ public class FollowOrderDetailVO implements Serializable {
 	private Integer closeTimeDifference;
 
 	@Schema(description = "开仓响应时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime responseOpenTime;
 
 	@Schema(description = "平仓响应时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime responseCloseTime;
 
 	@Schema(description = "盈亏")
