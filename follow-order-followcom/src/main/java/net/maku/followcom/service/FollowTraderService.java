@@ -61,8 +61,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
      */
     boolean orderClose(FollowOrderCloseVO vo,QuoteClient quoteClient);
 
-    QuoteClient tologin(String account, String password, String platform);
-
     FollowOrderSendEntity orderDoing(Long traderId);
 
     void saveQuo(QuoteClient quoteClient, FollowTraderEntity vo);

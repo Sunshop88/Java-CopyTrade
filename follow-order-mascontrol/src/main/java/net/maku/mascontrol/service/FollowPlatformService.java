@@ -5,6 +5,7 @@ import net.maku.framework.mybatis.service.BaseService;
 import net.maku.mascontrol.entity.FollowPlatformEntity;
 import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.vo.FollowPlatformVO;
+import online.mtapi.mt4.QuoteClient;
 
 import java.util.List;
 
@@ -31,4 +32,5 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> getList();
 
 
+    QuoteClient tologin(String account, String password, String platform);
 }

@@ -34,4 +34,14 @@ public class FollowOrderSendQuery extends Query {
 
     @Schema(description = "品种名称")
     private String symbol;
+
+    @Schema(description = "订单号")
+    private String orderNo;
+
+    @Schema(description = "下单时间-开始")
+    private String startTime;
+
+    @Schema(description = "下单时间-结束")
+    private String endTime;
+
 }

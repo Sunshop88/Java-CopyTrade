@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -102,4 +103,12 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
         return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getCreateTime));
     }
 
+    @Override
+    public List<FollowBrokeServerEntity> listByServerNameGroup(String name) {
+        if (ObjectUtil.isNotEmpty(name)){
+            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).eq(FollowBrokeServerEntity::getServerName,name).groupBy(FollowBrokeServerEntity::getServerName).orderByAsc(FollowBrokeServerEntity::getCreateTime));
+        }else {
+            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).groupBy(FollowBrokeServerEntity::getServerName));
+        }
+    }
 }

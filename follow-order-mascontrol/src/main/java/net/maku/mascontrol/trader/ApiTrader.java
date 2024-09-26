@@ -11,6 +11,8 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
+import net.maku.mascontrol.service.FollowPlatformService;
+import net.maku.mascontrol.service.impl.FollowPlatformServiceImpl;
 import net.maku.mascontrol.util.SpringContextUtils;
 
 import java.util.HashMap;
@@ -46,12 +48,14 @@ public class ApiTrader {
 
     protected ScheduledExecutorService scheduledExecutorService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
+    protected FollowPlatformService followPlatformService;
 
     void initService() {
         this.traderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
         this.followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);
         this.scheduledExecutorService = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
         this.followTraderSubscribeService= SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
+        this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     }
 
 }

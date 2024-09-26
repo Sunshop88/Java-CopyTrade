@@ -42,7 +42,7 @@ public class FollowPlatformVO implements Serializable {
 	private Integer deleted;
 
 	@Schema(description = "创建者")
-	private Long creator;
+	private String creator;
 
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;

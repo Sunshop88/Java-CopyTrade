@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.maku.api.module.system.UserApi;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
@@ -22,7 +24,9 @@ import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.vo.FollowPlatformExcelVO;
 import net.maku.mascontrol.vo.FollowPlatformVO;
+//import net.maku.system.service.SysUserService;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,21 +45,27 @@ import java.util.concurrent.Future;
  */
 @Service
 @AllArgsConstructor
+@Slf4j
 public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao, FollowPlatformEntity> implements FollowPlatformService {
     private final TransService transService;
+    private final FollowBrokeServerService followBrokeServerService;
+    private final UserApi userApi;
 
     @Override
     public PageResult<FollowPlatformVO> page(FollowPlatformQuery query) {
         IPage<FollowPlatformEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        List<FollowPlatformVO> followPlatformVOS = FollowPlatformConvert.INSTANCE.convertList(page.getRecords());
+        followPlatformVOS.forEach(o->{
+            o.setCreator(userApi.getUserById(o.getCreator()).getUsername());
+        });
 
-        return new PageResult<>(FollowPlatformConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+        return new PageResult<>(followPlatformVOS, page.getTotal());
     }
 
     //查询功能
     private LambdaQueryWrapper<FollowPlatformEntity> getWrapper(FollowPlatformQuery query){
         LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowPlatformEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
-
         return wrapper;
     }
 
@@ -74,9 +84,8 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         }
         FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
         entity.setCreateTime(LocalDateTime.now());
+        entity.setCreator(SecurityUser.getUserId());
         baseMapper.insert(entity);
-
-
     }
 
     @Override
@@ -98,11 +107,12 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        list(new LambdaQueryWrapper<FollowPlatformEntity>().in(FollowPlatformEntity::getId, idList)).forEach(entity -> {
-            // 删除
-            entity.setDeleted(CloseOrOpenEnum.OPEN.getValue());
-            updateById(entity);
-        });
+        removeByIds(idList);
+//        list(new LambdaQueryWrapper<FollowPlatformEntity>().in(FollowPlatformEntity::getId, idList)).forEach(entity -> {
+//            // 删除
+//            entity.setDeleted(CloseOrOpenEnum.OPEN.getValue());
+//            updateById(entity);
+//        });
     }
 
     @Override
@@ -119,6 +129,49 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         List<FollowPlatformEntity> list = baseMapper.selectList(getWrapper(query));
 
         return FollowPlatformConvert.INSTANCE.convertList(list);
+    }
+
+    @Override
+    public QuoteClient tologin(String account, String password, String platform) {
+        try {
+            //优先查看平台默认节点
+            FollowPlatformEntity followPlatformServiceOne = this.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform));
+            if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
+                //处理节点格式
+                String[] split = followPlatformServiceOne.getServerNode().split(":");
+                QuoteClient quoteClient = new QuoteClient(Integer.parseInt(account), password,  split[0], Integer.valueOf(split[1]));
+                try {
+                    quoteClient.Connect();
+                }catch (Exception e){
+                    if (e.getMessage().contains("Invalid account")){
+                        log.info("账号密码错误");
+                        throw new ServerException("账号密码错误");
+                    }
+                }
+            }else {
+                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(platform);
+                for (FollowBrokeServerEntity address : serverEntityList) {
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(account), password, address.getServerNode(), Integer.valueOf(address.getServerPort()));
+                    try {
+                        quoteClient.Connect();
+                    }catch (Exception e){
+                        if (e.getMessage().contains("Invalid account")){
+                            log.info("账号密码错误");
+                            throw new ServerException("账号密码错误");
+                        }else{
+                            log.info("重试"+e);
+                            continue;
+                        }
+                    }
+                    if (quoteClient.Connected()) {
+                        return quoteClient;
+                    }
+                }
+            }
+        }catch (Exception e){
+            log.error("登录有误",e);
+        }
+        return null;
     }
 
 //    @Override

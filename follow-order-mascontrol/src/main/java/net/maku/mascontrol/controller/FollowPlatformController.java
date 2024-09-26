@@ -3,6 +3,7 @@ package net.maku.mascontrol.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
@@ -40,7 +41,6 @@ import java.util.concurrent.Future;
 public class FollowPlatformController {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
-
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:platform')")
@@ -137,7 +137,13 @@ public class FollowPlatformController {
     @Operation(summary = "查询列表")
     public Result<List<FollowPlatformVO>> list(){
         List<FollowPlatformVO> list = followPlatformService.getList();
+        return Result.ok(list);
+    }
 
+    @GetMapping("listServer")
+    @Operation(summary = "查询服务商列表")
+    public Result<List<FollowBrokeServerEntity>> listServer(@Parameter(description = "name") String name){
+        List<FollowBrokeServerEntity> list = followBrokeServerService.listByServerNameGroup(name);
         return Result.ok(list);
     }
 }

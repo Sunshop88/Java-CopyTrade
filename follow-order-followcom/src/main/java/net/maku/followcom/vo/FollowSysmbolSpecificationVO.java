@@ -70,4 +70,21 @@ public class FollowSysmbolSpecificationVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "保证金计算模式")
+	private String marginMode;
+
+	@Schema(description = "交易货币")
+	private String currency;
+
+	@Schema(description = "止损/止盈水平")
+	private Integer stopsLevel;
+
+	@Schema(description = "点差")
+	private Integer spread;
+
+	@Schema(description = "冻结水平")
+	private Integer freezeLevel;
+
+	@Schema(description = "保证金除数")
+	private Double marginDivider;
 }

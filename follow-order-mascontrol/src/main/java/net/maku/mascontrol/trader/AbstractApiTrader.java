@@ -2,6 +2,7 @@ package net.maku.mascontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.Getter;
@@ -11,6 +12,11 @@ import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.framework.common.exception.ServerException;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.even.OnQuoteHandler;
+import net.maku.mascontrol.even.OnQuoteTraderHandler;
+import net.maku.mascontrol.service.FollowPlatformService;
 import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -65,6 +71,8 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public static List<String> availableException4 = new LinkedList<>();
     protected Map<LocalDate, BigDecimal> equityMap = new HashMap<>(1);
     private Date apiAnalysisBeginDate = null;
+    OnQuoteTraderHandler onQuoteHandler;
+
     static {
         availableException4.add("Market is closed");
         availableException4.add("Invalid volume");
@@ -94,6 +102,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
         this.quoteClient.Connect();
         if (quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
+        }
+        if (this.onQuoteHandler==null){
+            //订单监听
+            this.quoteClient.OnQuote.addListener(new OnQuoteTraderHandler(this));
         }
 
     }
@@ -273,37 +285,42 @@ public abstract class AbstractApiTrader extends ApiTrader {
             if (!connected) {
                 log.info("进行重连");
                 throw new ConnectException("Not Connected.", quoteClient.Log);
-            } else {
-                this.quoteClient.Subscribe(eurusd);
-                while (quoteEventArgs == null && quoteClient.Connected()) {
-                    quoteEventArgs = this.quoteClient.GetQuote(eurusd);
-                    if (++loopTimes > 20) {
-                        break;
-                    } else {
-                        Thread.sleep(500);
-                    }
-                }
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
             log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), trader.getPassword(), eurusd, e.getMessage());
             traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
-            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
-            if (ObjectUtil.isEmpty(serverEntityList)) {
-                log.error("server is null");
-                return;
-            }
-            serverEntityList.stream().anyMatch(address->{
+            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
+            if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
                 try {
-                    this.quoteClient.Disconnect();
-                    this.quoteClient.Password = trader.getPassword();
-                    this.quoteClient.Host = address.getServerNode();
-                    this.quoteClient.Port = Integer.valueOf(address.getServerPort());
-                } catch (Exception ex) {
-                    log.error("连接失败", ex);
+                    //处理节点格式
+                    String[] split = followPlatformServiceOne.getServerNode().split(":");
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
+                    quoteClient.Connect();
+                }catch (Exception e1){
+                    if (e.getMessage().contains("Invalid account")){
+                        log.info("账号密码错误");
+                        throw new ServerException("账号密码错误");
+                    }
                 }
-                return reconnect();
-            });
+            }else {
+                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
+                if (ObjectUtil.isEmpty(serverEntityList)) {
+                    log.error("server is null");
+                    return;
+                }
+                serverEntityList.stream().anyMatch(address->{
+                    try {
+                        this.quoteClient.Disconnect();
+                        this.quoteClient.Password = trader.getPassword();
+                        this.quoteClient.Host = address.getServerNode();
+                        this.quoteClient.Port = Integer.valueOf(address.getServerPort());
+                    } catch (Exception ex) {
+                        log.error("连接失败", ex);
+                    }
+                    return reconnect();
+                });
+            }
         }
     }
 

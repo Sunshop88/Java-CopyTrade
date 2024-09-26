@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -54,6 +55,10 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
         }
         if (ObjectUtil.isNotEmpty(query.getSymbol())) {
             wrapper.eq(FollowOrderSendEntity::getSymbol,query.getSymbol());
+        }
+        if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
+            wrapper.ge(FollowOrderSendEntity::getCreateTime, query.getStartTime());  // 大于或等于开始时间
+            wrapper.le(FollowOrderSendEntity::getCreateTime, query.getEndTime());    // 小于或等于结束时间
         }
         return wrapper;
     }

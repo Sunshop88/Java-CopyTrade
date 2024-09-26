@@ -13,6 +13,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>net.maku</groupId>
+			<artifactId>follow-order-framework</artifactId>
+			<version>${revision}</version>
+		</dependency>
 	</dependencies>
 
 </project>

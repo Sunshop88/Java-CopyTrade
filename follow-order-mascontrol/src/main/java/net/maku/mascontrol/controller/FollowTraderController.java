@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
@@ -102,6 +103,8 @@ public class FollowTraderController {
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
+                vo.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                followTraderService.removeById(vo);
                 return Result.error();
             }
             ThreadPoolUtils.execute(()->{
@@ -178,7 +181,7 @@ public class FollowTraderController {
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
         QuoteClient quoteClient=leaderApiTrader.quoteClient;
         if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
-            quoteClient = followTraderService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
+            quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException("账号无法登录");
             }
@@ -257,7 +260,7 @@ public class FollowTraderController {
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
         QuoteClient quoteClient=leaderApiTrader.quoteClient;
         if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
-            quoteClient = followTraderService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
+            quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException("账号无法登录");
             }

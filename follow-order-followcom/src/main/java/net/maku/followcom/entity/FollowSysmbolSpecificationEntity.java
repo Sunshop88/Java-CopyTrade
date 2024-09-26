@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -122,5 +123,23 @@ public class FollowSysmbolSpecificationEntity {
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
+
+	@TableField(value = "margin_mode")
+	private String marginMode;
+
+	@TableField(value = "currency")
+	private String currency;
+
+	@TableField(value = "stops_level")
+	private Integer stopsLevel;
+
+	@TableField(value = "spread")
+	private Integer spread;
+
+	@TableField(value = "freeze_level")
+	private Integer freezeLevel;
+
+	@TableField(value = "margin_divider")
+	private Double marginDivider;
 
 }

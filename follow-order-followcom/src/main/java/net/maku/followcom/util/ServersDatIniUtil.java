@@ -56,9 +56,10 @@ public class ServersDatIniUtil {
 
     public boolean ExportServersIni(String url) throws IOException {
         List<Servers> serversList = QuoteClient.LoadServersIni(url);
-        List<FollowBrokeServerVO> followBrokeServerVOList = new LinkedList<>();
         UserDetail user = SecurityUser.getUser();
-        for (Servers servers : serversList) {
+        serversList.parallelStream().forEach(servers->{
+            List<FollowBrokeServerVO> followBrokeServerVOList = new LinkedList<>();
+            log.info("11111111"+servers.PrimaryServer.name);
             PrimaryServer primaryServer = servers.PrimaryServer;
             FollowBrokeServerVO followBrokeServerVO = new FollowBrokeServerVO();
             followBrokeServerVO.setServerName(primaryServer.name);
@@ -91,8 +92,9 @@ public class ServersDatIniUtil {
                             (existing, replacement) -> replacement // 如果有重复的键，保留替换的值（你也可以根据需要选择保留 existing）
                     ))
                     .values());// 收集去重后的结果
+            log.info("111"+servers.PrimaryServer.name+"size++++++"+collect.size());
             followBrokeServerService.saveList(collect);
-        }
+        });
         return Boolean.TRUE;
     }
 }
