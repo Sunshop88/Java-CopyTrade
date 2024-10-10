@@ -2,6 +2,7 @@ package net.maku.mascontrol.trader;
 
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.mascontrol.even.OnQuoteHandler;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -29,4 +30,17 @@ public class LeaderApiTrader extends AbstractApiTrader {
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateLeaderTraderInfoTask(this), 6, 10, TimeUnit.SECONDS);
     }
 
+    @Override
+    public void addOnQuoteHandler(OnQuoteHandler onQuoteHandler) {
+        super.addOnQuoteHandler(onQuoteHandler);
+    }
+
+    public OnQuoteHandler getQuoteHandler() {
+        return super.getQuoteHandler();
+    }
+
+    @Override
+    public void removeOnQuoteHandler() {
+        super.removeOnQuoteHandler();
+    }
 }

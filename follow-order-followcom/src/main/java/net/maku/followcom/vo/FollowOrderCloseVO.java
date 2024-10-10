@@ -37,8 +37,10 @@ public class FollowOrderCloseVO implements Serializable {
 	@Schema(description = "间隔时间 毫秒")
 	private Integer intervalTime;
 
-
 	@Schema(description = "是否全平")
 	private Integer flag;
+
+	@Schema(description = "订单号")
+	private String orderNo;
 
 }

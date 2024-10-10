@@ -1,4 +1,4 @@
-package net.maku.mascontrol.util;
+package net.maku.followcom.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

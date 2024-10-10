@@ -3,6 +3,7 @@ package net.maku.followcom.entity;
 import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -15,7 +16,10 @@ import java.util.Date;
 
 @Data
 @TableName("follow_broke_server")
-public class FollowBrokeServerEntity {
+public class FollowBrokeServerEntity  implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
 	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Integer id;

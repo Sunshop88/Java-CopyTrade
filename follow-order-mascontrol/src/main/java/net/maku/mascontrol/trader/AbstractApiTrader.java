@@ -71,8 +71,8 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public static List<String> availableException4 = new LinkedList<>();
     protected Map<LocalDate, BigDecimal> equityMap = new HashMap<>(1);
     private Date apiAnalysisBeginDate = null;
-    OnQuoteTraderHandler onQuoteHandler;
-
+    OnQuoteTraderHandler onQuoteTraderHandler;
+    OnQuoteHandler onQuoteHandler;
     static {
         availableException4.add("Market is closed");
         availableException4.add("Invalid volume");
@@ -103,12 +103,14 @@ public abstract class AbstractApiTrader extends ApiTrader {
         if (quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
         }
-        if (this.onQuoteHandler==null){
+        if (this.onQuoteTraderHandler==null){
             //订单监听
-            this.quoteClient.OnQuote.addListener(new OnQuoteTraderHandler(this));
+            onQuoteTraderHandler=new OnQuoteTraderHandler(this);
+            this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
         }
 
     }
+
 
     public SymbolInfo GetSymbolInfo(String symbol) throws InvalidSymbolException, ConnectException {
         boolean anyMatch;
@@ -301,7 +303,11 @@ public abstract class AbstractApiTrader extends ApiTrader {
                     if (e.getMessage().contains("Invalid account")){
                         log.info("账号密码错误");
                         throw new ServerException("账号密码错误");
+                    }else {
+                        //重连失败
+                        log.info("重连失败{}",trader.getId());
                     }
+
                 }
             }else {
                 List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
@@ -366,6 +372,21 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 }
             }
         }
+    }
+
+    public void addOnQuoteHandler(OnQuoteHandler hander) {
+        if (ObjectUtil.isEmpty(onQuoteHandler)){
+            onQuoteHandler=hander;
+            this.quoteClient.OnQuote.addListener(hander);
+        }
+    }
+
+    protected OnQuoteHandler getQuoteHandler() {
+       return onQuoteHandler;
+    }
+
+    protected void removeOnQuoteHandler() {
+        onQuoteHandler=null;
     }
 //    /**
 //     * 判断当前账户净值是否小于设置的最小风控净值，

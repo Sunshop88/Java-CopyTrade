@@ -1,17 +1,12 @@
-package net.maku.mascontrol.util;
+package net.maku.followcom.util;
 
-import com.cld.message.pubsub.kafka.impl.CldKafkaProducer;
-import com.cld.message.pubsub.kafka.properties.Ks;
-import com.cld.utils.thread.ThreeStrategyThreadPoolExecutor;
-import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
-import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Configuration
 public class CtAppConfig {
@@ -28,7 +23,7 @@ public class CtAppConfig {
 
     @Bean("scheduledExecutorService")
     ScheduledExecutorService scheduledExecutorService() {
-        return Executors.newScheduledThreadPool(1000, new CustomizableThreadFactory("定时任务线程池-"));
+        return Executors.newScheduledThreadPool(200, new CustomizableThreadFactory("定时任务线程池-"));
     }
 
     @Bean("commonThreadPool")

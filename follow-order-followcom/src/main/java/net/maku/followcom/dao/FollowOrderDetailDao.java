@@ -24,17 +24,25 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "symbol,"+
             "ROUND(AVG(open_time_difference),0) AS meanOpenTimeDifference, " +
             "ROUND(AVG(close_time_difference),0) AS meanCloseTimeDifference, " +
-            "ROUND(AVG(open_price - request_open_price),5) AS meanOpenPriceDifference, " +
-            "ROUND(AVG(close_price - request_close_price),5) AS meanClosePriceDifference, " +
-            "ROUND(AVG(open_price_slip),0) AS meanOpenPriceSlip, " +
-            "ROUND(AVG(close_price_slip),0) AS meanClosePriceSlip ," +
+            "ROUND(AVG(open_price - request_open_price),7) AS meanOpenPriceDifference, " +
+            "ROUND(AVG(close_price - request_close_price),7) AS meanClosePriceDifference, " +
+            "ROUND(AVG(open_price_slip),2) AS meanOpenPriceSlip, " +
+            "ROUND(AVG(close_price_slip),2) AS meanClosePriceSlip ," +
             "count(1) AS symbolNum " +
             "FROM follow_order_detail " +
             "<where>" +
             " AND order_no is not null" +
-            "<if test='query.traderId != null'> AND trader_id in (#{query.traderId}) </if>" +
+            "<if test='query.traderIdList != null and query.traderIdList.size > 0'> AND trader_id in \n" +
+            "  <foreach collection='query.traderIdList' item='item' open='(' separator=',' close=')'>\n" +
+            "    #{item}\n" +
+            "  </foreach>\n" +
+            "</if>" +
             "<if test='query.account != null and query.account != \"\"'> AND account = #{query.account} </if>" +
-            "<if test='query.symbol != null and query.symbol != \"\"'> AND symbol in (#{query.symbol}) </if>" +
+            "<if test='query.symbolList != null and query.symbolList.size > 0'> AND symbol in \n" +
+            "  <foreach collection='query.symbolList' item='item' open='(' separator=',' close=')'>\n" +
+            "    #{item}\n" +
+            "  </foreach>\n" +
+            "</if>" +
             "<if test='query.startTime != null and query.startTime != \"\"'> AND open_time &gt;= #{query.startTime} </if>" +
             "<if test='query.endTime != null and query.endTime != \"\"'> AND open_time &lt;= #{query.endTime} </if>" +
             "</where>" +

@@ -5,8 +5,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.metadata.OrderItem;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fhs.trans.service.impl.TransService;
@@ -15,15 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.dao.FollowOrderDetailDao;
 import net.maku.followcom.dao.FollowTraderDao;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
@@ -44,14 +41,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * mt4账号
@@ -73,8 +67,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
-
-        return new PageResult<>(FollowTraderConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+        List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
+        followTraderVOS.parallelStream().forEach(o->{
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER+o.getId()))){
+                FollowRedisTraderVO followRedisTraderVO =(FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+                o.setBalance(followRedisTraderVO.getBalance());
+                o.setEuqit(followRedisTraderVO.getEuqit());
+                o.setFreeMargin(followRedisTraderVO.getFreeMargin());
+                o.setMarginProportion(followRedisTraderVO.getMarginProportion());
+                o.setTotal(followRedisTraderVO.getTotal());
+                o.setBuyNum(followRedisTraderVO.getBuyNum());
+                o.setSellNum(followRedisTraderVO.getSellNum());
+            }
+        });
+        return new PageResult<>(followTraderVOS, page.getTotal());
     }
 
 
@@ -193,36 +199,25 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     @Override
     public boolean orderSend(FollowOrderSendVO vo,QuoteClient quoteClient,FollowTraderVO followTraderVO) {
-        try {
-            //买入、卖出价格
-            quoteClient.Subscribe(vo.getSymbol());
-            while (quoteClient.GetQuote(vo.getSymbol()) == null);
-            //创建下单记录
-            String orderNo = RandomStringUtil.generateNumeric(13);
-            vo.setCreator(SecurityUser.getUserId());
-            vo.setCreateTime(LocalDateTime.now());
-            vo.setAccount(followTraderVO.getAccount());
-            vo.setOrderNo(orderNo);
-            //根据情况进行下单
-            if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isEmpty(vo.getStartSize())&&ObjectUtil.isEmpty(vo.getEndSize())){
-                //情况一  总手数+订单数量情况 填写 范围未填写
-                executeOrdersFixedQuantity(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalSzie().doubleValue(), vo.getTotalNum(),vo.getIntervalTime(),orderNo);
-            }else if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
-                //情况二  区间随机下单，订单数量不固定，总手数不超过设定值
-                executeOrdersRandomTotalLots(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
-            }else if (ObjectUtil.isEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
-                //情况三  区间随机下单，订单数量固定，总手数不限制
-                executeOrdersRandomFixedCount(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
-            }else if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
-                //区间随机下单，总手数和订单数量都受限制
-                executeOrdersRandomLimited(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
-            }
-        } catch (InvalidSymbolException e) {
-            throw new ServerException("此品种不支持下单");
-        } catch (TimeoutException e) {
-            throw new ServerException("下单超时，请稍后再试");
-        } catch (ConnectException e) {
-            throw new ServerException("账号连接异常,请稍后再试");
+        //创建下单记录
+        String orderNo = RandomStringUtil.generateNumeric(13);
+        vo.setCreator(SecurityUser.getUserId());
+        vo.setCreateTime(LocalDateTime.now());
+        vo.setAccount(followTraderVO.getAccount());
+        vo.setOrderNo(orderNo);
+        //根据情况进行下单
+        if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isEmpty(vo.getStartSize())&&ObjectUtil.isEmpty(vo.getEndSize())){
+            //情况一  总手数+订单数量情况 填写 范围未填写
+            executeOrdersFixedQuantity(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalSzie().doubleValue(), vo.getTotalNum(),vo.getIntervalTime(),orderNo);
+        }else if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
+            //情况二  区间随机下单，订单数量不固定，总手数不超过设定值
+            executeOrdersRandomTotalLots(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
+        }else if (ObjectUtil.isEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
+            //情况三  区间随机下单，订单数量固定，总手数不限制
+            executeOrdersRandomFixedCount(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
+        }else if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
+            //区间随机下单，总手数和订单数量都受限制
+            executeOrdersRandomLimited(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
         }
         return true;
     }
@@ -235,7 +230,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public PageResult<FollowOrderDetailVO> orderSlipDetail(FollowOrderSendQuery query) {
         LambdaQueryWrapper<FollowOrderDetailEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.eq(FollowOrderDetailEntity::getTraderId,query.getTraderId());
+        if (ObjectUtil.isNotEmpty(query.getTraderId())){
+            wrapper.like(FollowOrderDetailEntity::getTraderId,query.getTraderId());
+        }
+
+        if (ObjectUtil.isNotEmpty(query.getTraderIdList())){
+            wrapper.in(FollowOrderDetailEntity::getTraderId,query.getTraderIdList());
+        }
         //滑点分析筛选成功的数据
         if (query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
@@ -244,8 +245,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
         }
+        if (ObjectUtil.isNotEmpty(query.getCloseStartTime())&&ObjectUtil.isNotEmpty(query.getCloseEndTime())){
+            wrapper.ge(FollowOrderDetailEntity::getCloseTime, query.getCloseStartTime());  // 大于或等于开始时间
+            wrapper.le(FollowOrderDetailEntity::getCloseTime, query.getCloseEndTime());    // 小于或等于结束时间
+        }
         if (ObjectUtil.isNotEmpty(query.getOrderNo())){
             wrapper.eq(FollowOrderDetailEntity::getSendNo,query.getOrderNo());
+        }
+        if (ObjectUtil.isNotEmpty(query.getSymbol())){
+            wrapper.like(FollowOrderDetailEntity::getSymbol,query.getSymbol());
+        }
+        if (ObjectUtil.isNotEmpty(query.getPlacedType())){
+            wrapper.eq(FollowOrderDetailEntity::getPlacedType,query.getPlacedType());
         }
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
@@ -266,6 +277,17 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         Integer orderCount;
         //查看目前未平仓订单
         List<FollowOrderDetailEntity> list ;
+        if (ObjectUtil.isNotEmpty(vo.getOrderNo())){
+            //指定平仓
+            FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, vo.getOrderNo()));
+            if (ObjectUtil.isNotEmpty(detailServiceOne)){
+                updateCloseOrder(detailServiceOne, quoteClient, oc);
+                ThreadPoolUtils.execute(()->{
+                    //进行平仓滑点分析
+                    updateCloseSlip(vo.getTraderId(), vo.getSymbol());
+                });
+            }
+        }
         if (vo.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
             orderCount=list.size();
@@ -280,7 +302,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             list = followOrderDetailService.list(followOrderDetailw);
         }
-        if (ObjectUtil.isEmpty(orderCount)||orderCount==0){
+        if (ObjectUtil.isEmpty(orderCount)||orderCount==0||list.size()==0){
             throw new ServerException("暂无可平仓订单");
         }
         // 无间隔时间下单时并发执行
@@ -292,8 +314,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 int finalI = i;
                 executor.submit(() -> {
                     //平仓数据处理
-                    updateCloseOrder(list.get(finalI),quoteClient,oc);
-                    latch.countDown();  // 每当一个任务完成，计数器减1
+                    try{
+                        updateCloseOrder(list.get(finalI),quoteClient,oc);
+                    } finally {
+                        latch.countDown();  // 每当一个任务完成，计数器减1
+                    }
                 });
             }
             // 等待所有任务完成
@@ -315,10 +340,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             ThreadPoolUtils.execute(()-> {
                 for (int i = 0; i < orderCount; i++) {
                     try {
-                        Thread.sleep(interval);
                         updateCloseOrder(list.get(i), quoteClient, oc);
                         //进行平仓滑点分析
                         updateCloseSlip(vo.getTraderId(), vo.getSymbol());
+                        Thread.sleep(interval);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -355,7 +380,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             entity.setServerId(followVpsEntity.getId());
             entity.setFreeMargin(BigDecimal.valueOf(quoteClient.AccountFreeMargin()));
             //预付款比例:账户的净值÷已用预付款
-            entity.setMarginProportion(BigDecimal.valueOf(quoteClient.AccountMargin()).divide(BigDecimal.valueOf(quoteClient.AccountEquity()),2, RoundingMode.HALF_UP));
+            if (BigDecimal.valueOf(quoteClient.AccountMargin()).compareTo(BigDecimal.ZERO)!=0){
+                entity.setMarginProportion(BigDecimal.valueOf(quoteClient.AccountEquity()).divide(BigDecimal.valueOf(quoteClient.AccountMargin()),4, RoundingMode.HALF_UP));
+            }else {
+                entity.setMarginProportion(BigDecimal.ZERO);
+            }
             entity.setLeverage(quoteClient.AccountLeverage());
             entity.setIsDemo(quoteClient._IsDemo);
             entity.setCreator(SecurityUser.getUserId());
@@ -368,11 +397,39 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
     }
 
+    @Override
+    public TraderOverviewVO traderOverview() {
+        //查看所有账号
+        TraderOverviewVO traderOverviewVO = new TraderOverviewVO();
+        List<FollowTraderEntity> list = this.list();
+        traderOverviewVO.setTraderTotal(list.size());
+        Integer total=0;
+        Integer buyNum=0;
+        Integer sellNum=0;
+        for (FollowTraderEntity traderEntity:list){
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER+traderEntity.getId()))){
+                FollowRedisTraderVO followRedisTraderVO =(FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + traderEntity.getId());
+                total+=followRedisTraderVO.getTotal();
+                buyNum+=followRedisTraderVO.getBuyNum();
+                sellNum+=followRedisTraderVO.getSellNum();
+            }
+        }
+        traderOverviewVO.setOrderTotal(total);
+        traderOverviewVO.setBuyNum(buyNum);
+        traderOverviewVO.setSellNum(sellNum);
+        return traderOverviewVO;
+    }
+
     private void updateCloseSlip(long traderId,String symbol) {
+        LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
+                .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .isNull(FollowOrderDetailEntity::getClosePriceSlip);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
-        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, traderId)
-                .eq(FollowOrderDetailEntity::getSymbol, symbol).isNotNull(FollowOrderDetailEntity::getClosePrice)
-                .isNull(FollowOrderDetailEntity::getClosePriceSlip));
+        if (ObjectUtil.isNotEmpty(symbol)){
+            followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);
+        }
+        List<FollowOrderDetailEntity> list=followOrderDetailService.list(followLambdaQueryWrapper);
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
@@ -383,26 +440,26 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
         }
         Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationEntityList.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
-        FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(symbol);
-        BigDecimal hd;
-        if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")){
-            //如果forex 并包含JPY 也是100
-            if (symbol.contains("JPY")){
-                hd=new BigDecimal("100");
+        //开始平仓
+        list.parallelStream().forEach(o->{
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+            BigDecimal hd;
+            if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")){
+                //如果forex 并包含JPY 也是100
+                if (o.getSymbol().contains("JPY")){
+                    hd=new BigDecimal("100");
+                }else {
+                    hd=new BigDecimal("10000");
+                }
             }else {
-                hd=new BigDecimal("10000");
+                //如果非forex 都是 100
+                hd=new BigDecimal("100");
             }
-        }else {
-            //如果非forex 都是 100
-            hd=new BigDecimal("100");
-        }
-        list.forEach(o->{
             long seconds = DateUtil.between(DateUtil.date(o.getResponseCloseTime()), DateUtil.date(o.getRequestCloseTime()), DateUnit.MS);
             o.setCloseTimeDifference((int) seconds);
             o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
             followOrderDetailService.updateById(o);
         });
-
     }
 
     private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity,QuoteClient quoteClient,OrderClient oc) {
@@ -412,7 +469,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double  bid = quoteClient.GetQuote(symbol).Bid;
             double  ask = quoteClient.GetQuote(symbol).Ask;
             LocalDateTime nowdate = LocalDateTime.now();
-            log.info("订单 " + orderNo + ": 平仓 ");
             Order orderResult;
             if (followOrderDetailEntity.getType()==Op.Buy.getValue()){
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
@@ -421,6 +477,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 orderResult = oc.OrderClose(symbol, orderNo,followOrderDetailEntity.getSize().doubleValue(), ask, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
+            log.info("订单 " + orderNo + ": 平仓 "+orderResult);
             //保存平仓信息
             followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
             followOrderDetailEntity.setRequestCloseTime(nowdate);
@@ -431,6 +488,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
             followOrderDetailService.updateById(followOrderDetailEntity);
         } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
+            log.info("平仓出错"+e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -438,13 +496,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     // 示例 1: 每笔订单的下单数量为 总手数/订单数量
     public void executeOrdersFixedQuantity(FollowOrderSendVO vo,long traderId,String account,Integer type,QuoteClient quoteClient,String symbol,double totalLots, int orderCount,Integer interval,String orderNo) {
         double lotsPerOrder = roundToTwoDecimal(totalLots / orderCount);
+        //判断是否超过总手数
         log.info("执行固定订单数量的下单操作，共" + orderCount + "笔订单，每笔手数: " + lotsPerOrder);
         followOrderSendService.save(vo);
+        //删除缓存
+        redisCache.delete(Constant.TRADER_ORDER+traderId);
         // 使用线程池进行并发下单
-        exeutorSend(traderId,account,quoteClient,orderCount,interval,symbol,type,lotsPerOrder,orderNo);
+        exeutorSend(traderId,account,quoteClient,orderCount,interval,symbol,type,lotsPerOrder,orderNo,totalLots,vo.getPlacedType());
     }
 
-    private void exeutorSend(long traderId,String account, QuoteClient quoteClient,Integer orderCount,Integer interval,String symbol,Integer type,double lotsPerOrder,String orderNo) {
+    private void exeutorSend(long traderId,String account, QuoteClient quoteClient,Integer orderCount,Integer interval,String symbol,Integer type,double lotsPerOrder,String orderNo,double totalLots,Integer placedType) {
         OrderClient oc;
         if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)){
             oc=quoteClient.OrderClient;
@@ -452,26 +513,47 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             oc = new OrderClient(quoteClient);
         }        // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
+            double accumulatedLots = 0.0; // 累计手数
             ExecutorService executor = Executors.newFixedThreadPool(orderCount);
             CountDownLatch latch = new CountDownLatch(orderCount);  // 初始化一个计数器，数量为任务数
             for (int i = 0; i < orderCount; i++) {
+                if (accumulatedLots + lotsPerOrder > totalLots) {
+                    lotsPerOrder = totalLots - accumulatedLots; // 调整为剩余的手数
+                }
+                // 如果是最后一笔订单，确保精确匹配总手数
+                if (i == orderCount - 1) {
+                    lotsPerOrder = totalLots - accumulatedLots; // 最后一笔直接分配剩余手数
+                }
+                lotsPerOrder = Math.round(lotsPerOrder * 100) / 100.0; // 保留两位小数
                 final int orderId = i + 1;
+                double finalLotsPerOrder = lotsPerOrder;
+                int flag=0;
+                if (accumulatedLots >= totalLots) {
+                    int remaining = orderCount - i;  // 剩余未执行的任务数
+                    for (int j = 0; j < remaining; j++) {
+                        latch.countDown();  // 提前减少 CountDownLatch 的计数，避免死锁
+                    }
+                    flag=1;
+                }
+                accumulatedLots=accumulatedLots+lotsPerOrder;
                 executor.submit(() -> {
                     try {
                         double ask = quoteClient.GetQuote(symbol).Ask;
                         double bid = quoteClient.GetQuote(symbol).Bid;
                         LocalDateTime nowdate = LocalDateTime.now();
-                    try {
-                        log.info("订单 " + orderId + ": 并发下单手数为 " + lotsPerOrder);
-                        ordersends(traderId, account, quoteClient, symbol, type, oc, lotsPerOrder, orderId, ask, bid, nowdate, orderNo);
-                        //推送信息
-                    } finally {
-                        latch.countDown();  // 每当一个任务完成，计数器减1
-                    }
-                    } catch (InvalidSymbolException e) {
-                        throw new RuntimeException(e);
+                        try {
+                            log.info("订单 " + orderId + ": 并发下单手数为 " + finalLotsPerOrder);
+                            ordersends(traderId, account, quoteClient, symbol, type, oc, finalLotsPerOrder, orderId, ask, bid, nowdate, orderNo,placedType);
+                        } finally {
+                            latch.countDown();  // 每当一个任务完成，计数器减1
+                        }
+                    }  catch (InvalidSymbolException |NullPointerException e) {
+                        log.info("订单交易异常&获取价格异常"+traderId+e.getMessage());
                     }
                 });
+                if (flag==1) {
+                    break;
+                }
             }
             // 等待所有任务完成
             try {
@@ -479,7 +561,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 log.info("所有订单任务已完成");
                 Thread.sleep(1000);
                 ThreadPoolUtils.execute(()->{
-                    updateSendOrder(traderId,orderNo);
+                    updateSendOrder(traderId,orderNo,0);
                 });
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -487,30 +569,82 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             // 关闭线程池，等待所有任务完成
             executor.shutdown();
         } else {
-            // 有间隔时间的下单，依次执行并等待
-            ThreadPoolUtils.execute(()-> {
-                for (int i = 0; i < orderCount; i++) {
+            // 计算每笔订单的手数列表
+            double[] lotsArray = new double[orderCount];
+            double accumulatedLots = 0.0;
+            Integer trueNum=0;
+            for (int i = 0; i < orderCount; i++) {
+                double lotsPerOrder1 = lotsPerOrder;
+
+                // 校验前面的累计手数，防止超过总手数
+                if (accumulatedLots + lotsPerOrder1 > totalLots) {
+                    lotsPerOrder1 = totalLots - accumulatedLots; // 调整为剩余的手数
+                }
+
+                // 如果是最后一笔订单，确保精确匹配总手数
+                if (i == orderCount - 1) {
+                    lotsPerOrder1 = totalLots - accumulatedLots; // 最后一笔直接分配剩余手数
+                }
+
+                lotsPerOrder1 = Math.round(lotsPerOrder1 * 100) / 100.0; // 保留两位小数
+
+                // 存储到手数数组
+                lotsArray[i] = lotsPerOrder1;
+                accumulatedLots += lotsPerOrder1;
+                trueNum+=1;
+                // 如果手数已经达到或超过总手数，停止分配后续订单手数
+                if (accumulatedLots >= totalLots) {
+                    break;
+                }
+            }
+            followOrderSendService.update(Wrappers.<FollowOrderSendEntity>lambdaUpdate().eq(FollowOrderSendEntity::getTraderId,traderId).set(FollowOrderSendEntity::getTotalNum,trueNum));
+            redisCache.delete(Constant.TRADER_ORDER +traderId);
+            // 创建线程池执行下单
+            Integer finalTrueNum = trueNum;
+            ScheduledThreadPoolExecutor scheduledThreadPoolExecutor=SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
+
+            scheduledThreadPoolExecutor.execute(()->{
+                for (int i = 0; i < finalTrueNum; i++) {
+                    final double finalLotsPerOrder = lotsArray[i];
                     final int orderId = i + 1;
-                    log.info("订单 " + orderId + ": 下单手数为 " + lotsPerOrder);
+                    ThreadPoolUtils.execute(() -> {
+                        try {
+                            log.info("订单 " + orderId + ": 下单手数为 " + finalLotsPerOrder);
+                            double ask = quoteClient.GetQuote(symbol).Ask;
+                            double bid = quoteClient.GetQuote(symbol).Bid;
+                            LocalDateTime nowdate = LocalDateTime.now();
+                            ordersends(traderId, account, quoteClient, symbol, type, oc, finalLotsPerOrder, orderId, ask, bid, nowdate, orderNo,placedType);
+                            // 更新已发送订单
+                            updateSendOrder(traderId, orderNo,1);
+                        } catch (InvalidSymbolException |NullPointerException e) {
+                            log.info("订单交易异常&获取价格异常"+traderId+e.getMessage());
+                            //直接结束订单
+                            FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
+                            //查看下单所有数据
+                            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+                            //保存真实下单手数
+                            sendServiceOne.setTrueSize(list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add));
+                            sendServiceOne.setSuccessNum((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
+                            sendServiceOne.setFailNum((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
+                            sendServiceOne.setFinishTime(LocalDateTime.now());
+                            sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                            followOrderSendService.updateById(sendServiceOne);
+                            //删除缓存
+                            redisCache.delete(Constant.TRADER_ORDER + traderId);
+                        }
+                    });
                     try {
+                        // 模拟下单间隔
                         Thread.sleep(interval);
-                        double ask = quoteClient.GetQuote(symbol).Ask;
-                        double bid = quoteClient.GetQuote(symbol).Bid;
-                        LocalDateTime nowdate = LocalDateTime.now();
-                        ordersends(traderId, account, quoteClient, symbol, type, oc, lotsPerOrder, orderId, ask, bid, nowdate, orderNo);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        Thread.currentThread().interrupt(); // 恢复中断状态
-                    } catch (InvalidSymbolException e) {
                         throw new RuntimeException(e);
                     }
-                    updateSendOrder(traderId, orderNo);
                 }
             });
         }
     }
 
-    private void updateSendOrder(long traderId,String orderNo) {
+    private void updateSendOrder(long traderId,String orderNo,Integer flag) {
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
@@ -524,22 +658,33 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         if (ObjectUtil.isNotEmpty(sendServiceOne)){
-            //查看下单数据
-            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo).isNotNull(FollowOrderDetailEntity::getOrderNo));
+            //查看下单所有数据
+            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
             //保存修改信息
             //保存真实下单数
-            List<FollowOrderDetailEntity> trueList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
-            sendServiceOne.setTotalNum(trueList.size());
+//            List<FollowOrderDetailEntity> trueList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+//            sendServiceOne.setTotalNum(trueList.size());
             //保存真实下单手数
-            sendServiceOne.setTrueSize(list.stream().map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO,BigDecimal::add));
-            sendServiceOne.setSuccessNum(list.size());
-            sendServiceOne.setFailNum(sendServiceOne.getTotalNum()-list.size());
-            sendServiceOne.setFinishTime(LocalDateTime.now());
-            sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            sendServiceOne.setTrueSize(list.stream().filter(o->ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO,BigDecimal::add));
+            sendServiceOne.setSuccessNum((int)list.stream().filter(o->ObjectUtil.isNotEmpty(o.getOpenTime())).count());
+            sendServiceOne.setFailNum((int)list.stream().filter(o->ObjectUtil.isNotEmpty(o.getRemark())).count());
+            if (flag==1){
+                //间隔下单判断
+                if (sendServiceOne.getTotalNum()==list.size()){
+                    sendServiceOne.setFinishTime(LocalDateTime.now());
+                    sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                }
+            }else {
+                //同步下单直接结束
+                sendServiceOne.setFinishTime(LocalDateTime.now());
+                sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            }
 
             followOrderSendService.updateById(sendServiceOne);
+            //删除缓存
+            redisCache.delete(Constant.TRADER_ORDER+traderId);
             //进行滑点分析
-            list.parallelStream().forEach(o->{
+            list.stream().filter(o->ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).parallelStream().forEach(o->{
                 FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
                 BigDecimal hd;
                 if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")){
@@ -563,7 +708,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
     }
 
-    private void ordersends(long traderId,String account,QuoteClient quoteClient,String symbol,Integer type,OrderClient oc,double lotsPerOrder,Integer orderId,double ask,double bid,LocalDateTime nowdate,String orderNo) {
+    private void ordersends(long traderId,String account,QuoteClient quoteClient,String symbol,Integer type,OrderClient oc,double lotsPerOrder,Integer orderId,double ask,double bid,LocalDateTime nowdate,String orderNo,Integer placedType) {
         //插入订单详情记录
         FollowOrderDetailEntity followOrderDetailEntity=new FollowOrderDetailEntity();
         followOrderDetailEntity.setTraderId(traderId);
@@ -573,6 +718,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         followOrderDetailEntity.setCreateTime(LocalDateTime.now());
         followOrderDetailEntity.setSendNo(orderNo);
         followOrderDetailEntity.setType(type);
+        followOrderDetailEntity.setPlacedType(placedType);
         try {
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
@@ -587,7 +733,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
             log.info("订单"+orderId+"开仓时刻数据价格:"+order.OpenPrice+" 时间"+order.OpenTime);
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
-            followOrderDetailEntity.setOpenTime(order.OpenTime);
+            followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),-8)));
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
@@ -598,24 +744,24 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailService.save(followOrderDetailEntity);
         } catch (TimeoutException e) {
             log.info("下单超时");
-            followOrderDetailEntity.setRemark("下单超时");
+            followOrderDetailEntity.setRemark("下单超时"+e.getMessage());
             followOrderDetailService.save(followOrderDetailEntity);
-            throw new RuntimeException(e);
         } catch (ConnectException e) {
             log.info("连接异常");
-            followOrderDetailEntity.setRemark("连接异常");
+            followOrderDetailEntity.setRemark("连接异常"+e.getMessage());
             followOrderDetailService.save(followOrderDetailEntity);
-            throw new RuntimeException(e);
         } catch (TradeException e) {
             log.info("交易异常"+e);
-            followOrderDetailEntity.setRemark("交易异常");
+            followOrderDetailEntity.setRemark("交易异常"+e.getMessage());
             followOrderDetailService.save(followOrderDetailEntity);
-            throw new RuntimeException(e);
         } catch (InvalidSymbolException e) {
             log.info("无效symbol");
-            followOrderDetailEntity.setRemark("无效symbol");
+            followOrderDetailEntity.setRemark("无效symbol"+e.getMessage());
             followOrderDetailService.save(followOrderDetailEntity);
-            throw new RuntimeException(e);
+        }catch (RuntimeException e) {
+            log.info("交易异常"+e);
+            followOrderDetailEntity.setRemark("交易异常"+e.getMessage());
+            followOrderDetailService.save(followOrderDetailEntity);
         }
     }
 
@@ -642,7 +788,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         vo.setTotalNum(orderCount);
         followOrderSendService.save(vo);
-        executeOrder(interval,orderCount,orders,traderId,account,quoteClient,symbol,type,orderNo);
+        redisCache.delete(Constant.TRADER_ORDER +traderId);
+        executeOrder(interval,orderCount,orders,traderId,account,quoteClient,symbol,type,orderNo,vo.getPlacedType());
     }
 
 
@@ -657,7 +804,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         log.info("执行固定订单数量随机下单操作，共" + orderCount + "笔订单。");
         followOrderSendService.save(vo);
-        executeOrder(interval,orderCount,orders,traderId,account,quoteClient,symbol,type,orderNo);
+        redisCache.delete(Constant.TRADER_ORDER +traderId);
+        executeOrder(interval,orderCount,orders,traderId,account,quoteClient,symbol,type,orderNo,vo.getPlacedType());
     }
 
     // 示例 4: 每笔订单的下单数量为 区间内的随机值，总手数和订单数量都受限制
@@ -695,9 +843,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         // 保存实际下单的订单数量
         vo.setTotalNum(orderCountNum);
         followOrderSendService.save(vo);
-
+        redisCache.delete(Constant.TRADER_ORDER +traderId);
         // 执行订单操作
-        executeOrder(interval, orderCountNum, orders, traderId, account, quoteClient, symbol, type, orderNo);
+        executeOrder(interval, orderCountNum, orders, traderId, account, quoteClient, symbol, type, orderNo,vo.getPlacedType());
     }
 
     // 保留两位小数的方法
@@ -705,7 +853,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return Math.round(value * 100.0) / 100.0;
     }
 
-    private void executeOrder(Integer interval,Integer orderCount,List<Double> orders,long traderId,String account,QuoteClient quoteClient,String symbol,Integer type,String orderNo) {
+    private void executeOrder(Integer interval,Integer orderCount,List<Double> orders,long traderId,String account,QuoteClient quoteClient,String symbol,Integer type,String orderNo,Integer placedType) {
         OrderClient oc;
         if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)){
             oc=quoteClient.OrderClient;
@@ -724,9 +872,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         double bid = quoteClient.GetQuote(symbol).Bid;
                         LocalDateTime nowdate = LocalDateTime.now();
                         log.info("订单 " + orderId + ": 并发下单手数为 " + orders.get(finalI));
-                        ordersends(traderId,account,quoteClient,symbol,type,oc,orders.get(finalI),orderId,ask,bid,nowdate,orderNo);
+                        ordersends(traderId,account,quoteClient,symbol,type,oc,orders.get(finalI),orderId,ask,bid,nowdate,orderNo,placedType);
                     } catch (InvalidSymbolException e) {
-                        throw new RuntimeException(e);
+                        log.info("订单交易异常"+traderId);
                     }finally {
                         latch.countDown();  // 每当一个任务完成，计数器减1
                     }
@@ -738,7 +886,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 log.info("所有订单任务已完成");
                 Thread.sleep(1000);
                 ThreadPoolUtils.execute(()->{
-                    updateSendOrder(traderId,orderNo);
+                    updateSendOrder(traderId,orderNo,0);
                 });
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -747,24 +895,42 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             executor.shutdown();
         }else {
             // 有间隔时间的下单，依次执行并等待
-            ThreadPoolUtils.execute(()-> {
+            ScheduledThreadPoolExecutor scheduledThreadPoolExecutor=SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
+            scheduledThreadPoolExecutor.execute(()-> {
                 for (int i = 0; i < orderCount; i++) {
-                    final int orderId = i + 1;
-                    log.info("订单 " + orderId + ": 下单手数为 " + orders.get(i));
+                    int finalI = i;
+                    ThreadPoolUtils.execute(() -> {
+                        final int orderId = finalI + 1;
+                        log.info("订单 " + orderId + ": 下单手数为 " + orders.get(finalI));
+                        try {
+                            // 将 interval 从秒转换为毫秒
+                            double ask = quoteClient.GetQuote(symbol).Ask;
+                            double bid = quoteClient.GetQuote(symbol).Bid;
+                            LocalDateTime nowdate = LocalDateTime.now();
+                            ordersends(traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo,placedType);
+                            updateSendOrder(traderId, orderNo,1);
+                        } catch (InvalidSymbolException |NullPointerException e) {
+                            log.info("订单交易异常&获取价格异常"+traderId+e.getMessage());
+                            //直接结束订单
+                            FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
+                            //查看下单所有数据
+                            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+                            //保存真实下单手数
+                            sendServiceOne.setTrueSize(list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add));
+                            sendServiceOne.setSuccessNum((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
+                            sendServiceOne.setFailNum((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
+                            sendServiceOne.setFinishTime(LocalDateTime.now());
+                            sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                            followOrderSendService.updateById(sendServiceOne);
+                            //删除缓存
+                            redisCache.delete(Constant.TRADER_ORDER + traderId);
+                        }
+                    });
                     try {
-                        // 将 interval 从秒转换为毫秒
                         Thread.sleep(interval);
-                        double ask = quoteClient.GetQuote(symbol).Ask;
-                        double bid = quoteClient.GetQuote(symbol).Bid;
-                        LocalDateTime nowdate = LocalDateTime.now();
-                        ordersends(traderId, account, quoteClient, symbol, type, oc, orders.get(i), orderId, ask, bid, nowdate, orderNo);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        Thread.currentThread().interrupt(); // 恢复中断状态
-                    } catch (InvalidSymbolException e) {
                         throw new RuntimeException(e);
                     }
-                    updateSendOrder(traderId, orderNo);
                 }
             });
         }

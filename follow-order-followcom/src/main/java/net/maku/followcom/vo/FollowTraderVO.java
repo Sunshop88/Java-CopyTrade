@@ -96,5 +96,14 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "总持仓订单数量")
+	private Integer total;
+
+	@Schema(description = "做空订单数量")
+	private Integer sellNum;
+
+	@Schema(description = "做多订单数量")
+	private Integer buyNum;
+
 
 }

@@ -220,4 +220,10 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "profit")
 	private BigDecimal profit;
+
+	/**
+	 * 下单方式
+	 */
+	@TableField(value = "下单方式")
+	private Integer placedType;
 }

@@ -7,9 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
@@ -27,8 +25,8 @@ import net.maku.mascontrol.entity.FollowPlatformEntity;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
+import net.maku.followcom.vo.TraderOverviewVO;
 import online.mtapi.mt4.QuoteClient;
-import org.bouncycastle.cms.PasswordRecipientId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -36,9 +34,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.FutureTask;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -103,8 +99,7 @@ public class FollowTraderController {
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
-                vo.setStatus(CloseOrOpenEnum.OPEN.getValue());
-                followTraderService.removeById(vo);
+                followTraderService.removeById(followTraderVO.getId());
                 return Result.error();
             }
             ThreadPoolUtils.execute(()->{
@@ -209,8 +204,8 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public  Result<PageResult<FollowOrderSlipPointVO>>  orderSlipPoint(@ParameterObject @Valid FollowOrderSpliListQuery query) {
         //处理平台查询逻辑，找出相关账号查询
-        if (ObjectUtil.isNotEmpty(query.getPlatForm())){
-            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatForm()));
+        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
             List<String> collect = list.stream().map(entity -> String.valueOf(entity.getId())).collect(Collectors.toList());
             String traderId = collect.stream().collect(Collectors.joining(","));
             if (ObjectUtil.isEmpty(query.getTraderId())){
@@ -218,6 +213,12 @@ public class FollowTraderController {
             }else {
                 query.setTraderId(traderId+","+query.getTraderId());
             }
+        }
+        if (ObjectUtil.isNotEmpty(query.getSymbol())) {
+            query.setSymbolList(Arrays.asList(query.getSymbol().split(",")));
+        }
+        if (ObjectUtil.isNotEmpty(query.getTraderIdList())) {
+            query.setTraderIdList(Arrays.asList(query.getTraderId().split(",")));
         }
         PageResult<FollowOrderSlipPointVO> followOrderSlipPointVOPageResult = followTraderService.pageSlipPoint(query);
         followOrderSlipPointVOPageResult.getList().stream().forEach(o->{
@@ -239,6 +240,38 @@ public class FollowTraderController {
     @Operation(summary = "订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderDetailVO>>  orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
+        //处理平台查询逻辑，找出相关账号查询
+        List<Long> collectPlat=new ArrayList<>() ;
+        List<Long> collectBroke=new ArrayList<>() ;
+        //处理券商查询逻辑，找出相关账号查询
+        if (ObjectUtil.isNotEmpty(query.getBrokeName())){
+            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(query.getBrokeName());
+            if (ObjectUtil.isNotEmpty(serverEntityList)){
+                List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, serverEntityList.stream().map(FollowBrokeServerEntity::getServerName).collect(Collectors.toList())));
+                collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
+            }
+        }
+        if (ObjectUtil.isNotEmpty(query.getPlatForm())){
+            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatForm()));
+            collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
+        }
+        // 计算交集
+        if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
+        }else  if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat=collectBroke;
+        }
+        if (ObjectUtil.isNotEmpty(collectPlat)){
+            query.setTraderIdList(collectPlat);
+        }
+
+        PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
+        //查看券商和服务器
+        followOrderDetailVOPageResult.getList().parallelStream().forEach(o->{
+            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getId()).getPlatformId());
+            o.setBrokeName(followPlatform.getBrokerName());
+            o.setPlatform(followPlatform.getServer());
+        });
         return  Result.ok(followTraderService.orderSlipDetail(query));
     }
 
@@ -257,6 +290,7 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(followTraderVO)){
             throw new ServerException("账号不存在");
         }
+
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
         QuoteClient quoteClient=leaderApiTrader.quoteClient;
         if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
@@ -269,4 +303,10 @@ public class FollowTraderController {
         return Result.ok(result);
     }
 
+    @GetMapping("traderOverview")
+    @Operation(summary = "数据概览")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<TraderOverviewVO>  traderOverview() {
+        return  Result.ok(followTraderService.traderOverview());
+    }
 }

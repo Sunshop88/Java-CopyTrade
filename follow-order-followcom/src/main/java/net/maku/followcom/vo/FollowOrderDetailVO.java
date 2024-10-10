@@ -127,4 +127,10 @@ public class FollowOrderDetailVO implements Serializable {
 
 	@Schema(description = "盈亏")
 	private BigDecimal profit;
+
+	@Schema(description = "券商")
+	private String brokeName;
+
+	@Schema(description = "服务器")
+	private String platform;
 }

@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -18,6 +20,7 @@ import java.util.Date;
 @Data
 @TableName("follow_order_send")
 public class FollowOrderSendEntity {
+
 	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Long id;
@@ -153,4 +156,10 @@ public class FollowOrderSendEntity {
 	 */
 	@TableField(value = "remark")
 	private String remark;
+
+	/**
+	 * 下单方式
+	 */
+	@TableField(value = "下单方式")
+	private Integer placedType;
 }

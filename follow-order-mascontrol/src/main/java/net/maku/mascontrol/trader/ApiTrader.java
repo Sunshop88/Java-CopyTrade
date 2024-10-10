@@ -13,7 +13,7 @@ import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.mascontrol.service.FollowPlatformService;
 import net.maku.mascontrol.service.impl.FollowPlatformServiceImpl;
-import net.maku.mascontrol.util.SpringContextUtils;
+import net.maku.followcom.util.SpringContextUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;

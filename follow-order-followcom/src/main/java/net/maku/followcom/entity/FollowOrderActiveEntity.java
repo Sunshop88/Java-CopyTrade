@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("follow_order_active")
 public class FollowOrderActiveEntity {
+
 	/**
 	* 主键
 	*/

@@ -54,4 +54,14 @@ public interface Constant {
      */
     String SYMBOL_SPECIFICATION="symbol:specification:";
 
+    /**
+     * 订单信息
+     */
+    String TRADER_ORDER="trader:order:";
+
+    /**
+     * 账户信息
+     */
+    String TRADER_USER="trader:user:";
+
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
 * 平台管理
@@ -52,5 +53,8 @@ public class FollowPlatformVO implements Serializable {
 
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
+
+	@Schema(description = "服务名称集合")
+	private List<String> platformList;
 
 }

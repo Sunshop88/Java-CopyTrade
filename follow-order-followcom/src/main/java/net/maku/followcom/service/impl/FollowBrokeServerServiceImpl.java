@@ -32,7 +32,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeServerDao, FollowBrokeServerEntity> implements FollowBrokeServerService {
     private final TransService transService;
-
     @Override
     public PageResult<FollowBrokeServerVO> page(FollowBrokeServerQuery query) {
         IPage<FollowBrokeServerEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -98,7 +97,6 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
     }
 
     @Override
-    @Cacheable(value = "listByServerName" ,key = "#name")
     public List<FollowBrokeServerEntity> listByServerName(String name) {
         return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getCreateTime));
     }
@@ -106,7 +104,7 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
     @Override
     public List<FollowBrokeServerEntity> listByServerNameGroup(String name) {
         if (ObjectUtil.isNotEmpty(name)){
-            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).eq(FollowBrokeServerEntity::getServerName,name).groupBy(FollowBrokeServerEntity::getServerName).orderByAsc(FollowBrokeServerEntity::getCreateTime));
+            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).like(FollowBrokeServerEntity::getServerName,name).groupBy(FollowBrokeServerEntity::getServerName));
         }else {
             return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).groupBy(FollowBrokeServerEntity::getServerName));
         }

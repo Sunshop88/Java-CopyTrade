@@ -8,6 +8,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 下单记录查询
@@ -43,5 +44,20 @@ public class FollowOrderSendQuery extends Query {
 
     @Schema(description = "下单时间-结束")
     private String endTime;
+
+    @Schema(description = "券商")
+    private String brokeName;
+
+    @Schema(description = "平仓时间-开始")
+    private String closeStartTime;
+
+    @Schema(description = "平仓时间-结束")
+    private String closeEndTime;
+
+    @Schema(description = "账户集合")
+    private List<Long> traderIdList;
+
+    @Schema(description = "下单方式")
+    private Integer placedType;
 
 }

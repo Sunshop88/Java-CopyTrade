@@ -78,4 +78,7 @@ public class FollowOrderSendVO implements Serializable {
 	@Schema(description = "订单号")
 	private String orderNo;
 
+	@Schema(description = "下单方式")
+	private Integer placedType;
+
 }
