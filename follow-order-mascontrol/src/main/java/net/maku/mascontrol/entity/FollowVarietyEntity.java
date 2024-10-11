@@ -3,6 +3,8 @@ package net.maku.mascontrol.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -18,7 +20,7 @@ public class FollowVarietyEntity {
 	/**
 	* ID
 	*/
-	@TableId
+	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
 	private Integer id;
 
@@ -62,7 +64,7 @@ public class FollowVarietyEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -74,6 +76,6 @@ public class FollowVarietyEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }
