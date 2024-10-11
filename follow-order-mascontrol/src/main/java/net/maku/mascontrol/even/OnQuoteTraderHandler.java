@@ -20,8 +20,10 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -35,11 +37,10 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     protected Boolean running = Boolean.TRUE;
     protected RedisCache redisCache;
 
-    private final AtomicBoolean isInvokeAllowed = new AtomicBoolean(true); // 使用AtomicBoolean，保证线程安全
     private final FollowRedisTraderVO followRedisTraderVO=new FollowRedisTraderVO();
+    // 用于存储每个Symbol的锁
+    private static final ConcurrentHashMap<String, Lock> symbolLockMap = new ConcurrentHashMap<>();
 
-    // 记录上次执行时间
-    private long lastInvokeTime = 0;
     // 设定时间间隔，单位为毫秒
     private final long interval = 5000; // 5秒间隔
 
@@ -47,6 +48,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     private long lastInvokeTimeTrader = 0;
     // 设定时间间隔，单位为毫秒
     private final long intervalTrader = 300000; // 五分钟间隔
+    // 用于存储每个 symbol 上次执行时间
+    private static final ConcurrentHashMap<String, Long> symbolLastInvokeTimeMap = new ConcurrentHashMap<>();
+
 
     public OnQuoteTraderHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
@@ -58,38 +62,49 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 
     public void invoke(Object sender, QuoteEventArgs quote) {
 
-        // 获取当前系统时间
-        long currentTime = System.currentTimeMillis();
-        // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-        if (currentTime - lastInvokeTime >= interval) {
-            // 更新上次执行时间为当前时间
-            lastInvokeTime = currentTime;
-            QuoteClient qc = (QuoteClient) sender;
-            try {
-                //缓存经常变动的三个值信息
-                followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
-                followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
-                followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
-                followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
-                if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
-                    followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
-                }else {
-                    followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
+        // 获取当前的symbol
+        String symbol = quote.Symbol;
+        // 获取该symbol的锁对象
+        Lock lock = getLock(symbol);
+        lock.lock();
+        try {
+            // 获取当前系统时间
+            long currentTime = System.currentTimeMillis();
+            // 获取该symbol上次执行时间
+            long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(symbol, 0L);
+            if (currentTime - lastSymbolInvokeTime  >= interval) {
+                // 更新该symbol的上次执行时间为当前时间
+                symbolLastInvokeTimeMap.put(symbol, currentTime);
+                QuoteClient qc = (QuoteClient) sender;
+                try {
+                    //缓存经常变动的三个值信息
+                    followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
+                    followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
+                    followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
+                    followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
+                    if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
+                        followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
+                    }else {
+                        followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
+                    }
+                    followRedisTraderVO.setTotal((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy||order.Type == Sell).count());
+                    followRedisTraderVO.setBuyNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy).count());
+                    followRedisTraderVO.setSellNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Sell).count());
+                    redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
+                } catch (Exception e) {
+                    System.err.println("Error during quote processing: " + e.getMessage());
+                    e.printStackTrace();
                 }
-                followRedisTraderVO.setTotal((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy||order.Type == Sell).count());
-                followRedisTraderVO.setBuyNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy).count());
-                followRedisTraderVO.setSellNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Sell).count());
-                redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
-            } catch (Exception e) {
-                System.err.println("Error during quote processing: " + e.getMessage());
-                e.printStackTrace();
             }
-        }
-        // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-        if (currentTime - lastInvokeTimeTrader >= intervalTrader) {
-            // 更新上次执行时间为当前时间
-            lastInvokeTimeTrader = currentTime;
-            updateTraderInfo();
+            // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
+            if (currentTime - lastInvokeTimeTrader >= intervalTrader) {
+                // 更新上次执行时间为当前时间
+                lastInvokeTimeTrader = currentTime;
+                updateTraderInfo();
+            }
+        } finally {
+            // 确保释放锁
+            lock.unlock();
         }
     }
 
@@ -110,5 +125,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         } catch (Exception e) {
             log.error("Error updating trader info: {}", e.getMessage(), e);
         }
+    }
+    private Lock getLock(String symbol) {
+        // 如果没有锁对象，使用ReentrantLock创建一个新的锁
+        return symbolLockMap.computeIfAbsent(symbol, k -> new ReentrantLock());
     }
 }

@@ -20,7 +20,7 @@ import java.util.Date;
  */
 @Data
 @Schema(description = "订单详情")
-public class FollowOrderDetailVO implements Serializable {
+public class FollowOrderDetailVO  implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Long id;
@@ -69,7 +69,7 @@ public class FollowOrderDetailVO implements Serializable {
 	@Schema(description = "平仓价格")
 	private BigDecimal closePrice;
 
-	@TableField(value = "平仓价格滑点")
+	@Schema(description = "平仓价格滑点")
 	private BigDecimal closePriceSlip;
 
 	@Schema(description = "手数")

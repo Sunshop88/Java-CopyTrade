@@ -66,4 +66,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     void saveQuo(QuoteClient quoteClient, FollowTraderEntity vo);
 
     TraderOverviewVO traderOverview();
+
+    Boolean stopOrder(Integer type,Long traderId);
 }

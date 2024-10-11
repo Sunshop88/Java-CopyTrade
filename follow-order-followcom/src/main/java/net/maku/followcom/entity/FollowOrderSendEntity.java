@@ -160,6 +160,6 @@ public class FollowOrderSendEntity {
 	/**
 	 * 下单方式
 	 */
-	@TableField(value = "下单方式")
+	@TableField(value = "placed_type")
 	private Integer placedType;
 }

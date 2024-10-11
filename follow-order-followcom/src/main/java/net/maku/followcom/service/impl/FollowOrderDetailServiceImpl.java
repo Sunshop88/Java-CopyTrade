@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderHistoryConvert;
 import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.vo.FollowOrderHistoryExcelVO;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -90,10 +92,18 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
 
 
     @Override
-    public void export() {
-    List<FollowOrderDetailExcelVO> excelList = FollowOrderDetailConvert.INSTANCE.convertExcelList(list());
+    public void export(List<FollowOrderDetailVO> followOrderDetailVOList) {
+        List<FollowOrderDetailExcelVO> excelList = FollowOrderDetailConvert.INSTANCE.convertExcelList3(followOrderDetailVOList);
+        excelList.parallelStream().forEach(o->{
+            //设置类型
+            if (o.getType()==0){
+                o.setTypeName("BUY");
+            }else{
+                o.setTypeName("SELL");
+            }
+        });
         transService.transBatch(excelList);
-        ExcelUtils.excelExport(FollowOrderDetailExcelVO.class, "订单详情", null, excelList);
+        ExcelUtils.excelExport(FollowOrderDetailExcelVO.class, "订单列表", null, excelList);
     }
 
     @Override

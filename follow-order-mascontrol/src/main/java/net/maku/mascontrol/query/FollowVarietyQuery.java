@@ -18,4 +18,5 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "品种匹配查询")
 public class FollowVarietyQuery extends Query {
+    private String StdSymbol;
 }
