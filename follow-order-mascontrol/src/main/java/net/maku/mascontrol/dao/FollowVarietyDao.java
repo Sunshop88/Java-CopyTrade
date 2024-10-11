@@ -2,6 +2,8 @@ package net.maku.mascontrol.dao;
 
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.mascontrol.entity.FollowVarietyEntity;
+import net.maku.mascontrol.vo.FollowVarietyExcelVO;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -23,4 +25,13 @@ public interface FollowVarietyDao extends BaseDao<FollowVarietyEntity> {
     //根据品种名称来查询券商名称和券商对应的品种名称
     @Select("select broker_name,broker_symbol from follow_variety where std_symbol=#{symbol} ")
     List<FollowVarietyEntity> getlist();
+
+    @Insert("INSERT INTO follow_variety_excel (std_symbol, broker_name, broker_symbol) VALUES (#{stdSymbol}, #{brokerName}, #{brokerSymbol})")
+    void save(FollowVarietyExcelVO brokerData);
+
+
+//    void saveAll(List<FollowVarietyExcelVO> brokerDataList);
+
+//    @Insert("INSERT INTO follow_variety_excel (std_symbol, broker_name, broker_symbol) VALUES (#{stdSymbol}, #{brokerName}, #{brokerSymbol})")
+//    void save(FollowVarietyExcelVO vo);
 }

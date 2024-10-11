@@ -10,6 +10,7 @@ import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.mascontrol.service.FollowVarietyService;
 import net.maku.mascontrol.query.FollowVarietyQuery;
+import net.maku.mascontrol.vo.FollowVarietyExcelVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -96,7 +97,7 @@ public class FollowVarietyController {
             }
 
             // 导入文件
-            followVarietyService.importByExcel(file);
+            List<FollowVarietyExcelVO> dataList = followVarietyService.importByExcel(file);
 
             return Result.ok("文件导入成功");
         } catch (Exception e) {
@@ -146,8 +147,8 @@ public class FollowVarietyController {
     @GetMapping("list")
     @Operation(summary = "根据标准品种查询其他信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<List<FollowVarietyVO>> list(){
-        List<FollowVarietyVO> list = followVarietyService.getlist();
+    public Result<List<FollowVarietyVO>> list(@RequestParam("stdSymbol") String stdSymbol){
+        List<FollowVarietyVO> list = followVarietyService.getlist(stdSymbol);
 
         return Result.ok(list);
     }

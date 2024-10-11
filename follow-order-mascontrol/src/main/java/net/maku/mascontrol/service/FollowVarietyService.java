@@ -3,6 +3,7 @@ package net.maku.mascontrol.service;
 import jakarta.servlet.http.HttpServletResponse;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
+import net.maku.mascontrol.vo.FollowVarietyExcelVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
 import net.maku.mascontrol.query.FollowVarietyQuery;
 import net.maku.mascontrol.entity.FollowVarietyEntity;
@@ -30,13 +31,16 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     void delete(List<Long> idList);
 
-    void importByExcel(MultipartFile file)throws Exception;
+
 
     void export();
 
     void download(HttpServletResponse response)throws Exception;
-
-    List<FollowVarietyVO> getlist();
+    
 
     List<String> listSymbol();
+
+    List<FollowVarietyExcelVO> importByExcel(MultipartFile file)throws Exception;
+
+    List<FollowVarietyVO> getlist(String stdSymbol);
 }

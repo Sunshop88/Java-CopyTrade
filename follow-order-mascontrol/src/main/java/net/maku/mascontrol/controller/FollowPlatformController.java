@@ -194,15 +194,6 @@ public class FollowPlatformController {
 
 
 
-//    此处统一管理所有平台的品种匹配关系
-//如果跟单账号里面没有设置对应的精准匹配规则，则对应使用此次的默认设置的规则
-//品种匹配可以设置多个不同的template，每个template都有对应所有平台匹配数
-//    @GetMapping("match")
-//    @Operation(summary = "品种匹配")
-//    public Result<List<FollowPlatformMatchVO>> match(@Parameter(description = "symbol") String symbol){
-//        List<FollowPlatformMatchVO> list = followPlatformService.match(symbol);
-//        return Result.ok(list);
-//    }
 
 
 

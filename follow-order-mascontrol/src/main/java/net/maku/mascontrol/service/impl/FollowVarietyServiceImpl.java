@@ -21,6 +21,11 @@ import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
@@ -51,6 +56,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     private final TransService transService;
     @Autowired
     private ResourceLoader resourceLoader;
+    @Autowired
+    private FollowVarietyDao followVarietyDao;
+
     @Override
     public PageResult<FollowVarietyVO> page(FollowVarietyQuery query) {
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -102,66 +110,105 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public  void importByExcel(MultipartFile file) throws Exception{
-//        ExcelUtils.readAnalysis(file, FollowVarietyExcelVO.class, new ExcelFinishCallBack<>() {
-//            @Override
-//            public void doSaveBatch(List<FollowVarietyExcelVO> resultList) {
-//                ExcelUtils.parseDict(resultList);
-//                saveBatch(FollowVarietyConvert.INSTANCE.convertExcelList2(resultList));
-//            }
-//        });
+//    public  void importByExcel(MultipartFile file) throws Exception{
+////        List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
+////
+////        try (CSVReader csvReader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+////            String[] headers = csvReader.readNext(); // 读取表头
+////            String[] row;
+////
+////            while ((row = csvReader.readNext()) != null) {
+////                String stdSymbol = row[0];
+////
+////                for (int i = 1; i < headers.length; i++) {
+////                    String brokerName = headers[i];
+////                    String brokerSymbol = row[i];
+////
+////                    // 处理 brokerSymbol 中的 /
+////                    if (brokerSymbol.contains("/")) {
+////                        String[] symbols = brokerSymbol.split("/");
+////                        for (String symbol : symbols) {
+////                            brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, brokerName, symbol.trim()));
+////                        }
+////                    } else {
+////                        brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, brokerName, brokerSymbol.trim()));
+////                    }
+////                }
+////
+////                // 处理 brokerName 中的 /
+////                if (brokerName.contains("/")) {
+////                    String[] names = brokerName.split("/");
+////                    for (String name : names) {
+////                        String brokerSymbol = row[i]; // 取最后一个 brokerSymbol
+////                        brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, name.trim(), brokerSymbol.trim()));
+////                    }
+////                }
+////            }
+////        }
+////
+////        return brokerDataList;
+//
 //        List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
-//
-//        try (CSVReader csvReader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-//            String[] headers = csvReader.readNext(); // 读取表头
-//            String[] row;
-//
-//            while ((row = csvReader.readNext()) != null) {
-//                String stdSymbol = row[0];
-//
-//                for (int i = 1; i < headers.length; i++) {
-//                    String brokerName = headers[i];
-//                    String brokerSymbol = row[i];
-//
-//                    // 处理 brokerSymbol 中的 /
-//                    if (brokerSymbol.contains("/")) {
-//                        String[] symbols = brokerSymbol.split("/");
-//                        for (String symbol : symbols) {
-//                            brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, brokerName, symbol.trim()));
+//        // 读取CSV文件
+//        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+//            List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
+//            // 从第二行开始，处理每个stdSymbol及其对应的brokerSymbol
+//            for (CSVRecord record : csvParser) {
+//                String stdSymbol = record.get(0);
+//                // 遍历每个brokerName列
+//                for (int i = 1; i < record.size(); i++) {
+//                    String[] brokerNameParts = brokerNames.get(i).split("/"); // 处理 brokerName 中的 '/'
+//                    String brokerSymbol = record.get(i);
+//                    // 处理 brokerSymbol 中的 '/'
+//                    String[] brokerSymbolParts = brokerSymbol.split("/");
+//                    // 生成所有组合
+//                    for (String name : brokerNameParts) {
+//                        for (String symbol : brokerSymbolParts) {
+//                            FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
+//                            brokerData.setStdSymbol(stdSymbol);
+//                            brokerData.setBrokerName(name.trim());
+//                            brokerData.setBrokerSymbol(symbol.trim());
+//                            brokerDataList.add(brokerData);
 //                        }
-//                    } else {
-//                        brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, brokerName, brokerSymbol.trim()));
-//                    }
-//                }
-//
-//                // 处理 brokerName 中的 /
-//                if (brokerName.contains("/")) {
-//                    String[] names = brokerName.split("/");
-//                    for (String name : names) {
-//                        String brokerSymbol = row[i]; // 取最后一个 brokerSymbol
-//                        brokerDataList.add(new FollowVarietyExcelVO(stdSymbol, name.trim(), brokerSymbol.trim()));
 //                    }
 //                }
 //            }
 //        }
+////        return brokerDataList;
 //
-//        return brokerDataList;
-
+//    }
+    public  List<FollowVarietyExcelVO> importByExcel(MultipartFile file) throws Exception {
+        String fileName = file.getOriginalFilename();
         List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
-        // 读取CSV文件
+
+        if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
+            // 处理CSV文件
+            importCsv(file, brokerDataList);
+        } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
+            // 处理Excel文件
+            importExcel(file, brokerDataList);
+        } else {
+            throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
+        }
+        // 将处理后的数据brokerDataList保存数据到数据库
+        List <FollowVarietyEntity> brokerDataList2 = FollowVarietyConvert.INSTANCE.convertExcelList2(brokerDataList);
+        this.saveBatch(brokerDataList2);
+        return brokerDataList;
+    }
+
+    private void importCsv(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-            // 从第二行开始，处理每个stdSymbol及其对应的brokerSymbol
+
             for (CSVRecord record : csvParser) {
                 String stdSymbol = record.get(0);
-                // 遍历每个brokerName列
                 for (int i = 1; i < record.size(); i++) {
-                    String[] brokerNameParts = brokerNames.get(i).split("/"); // 处理 brokerName 中的 '/'
+                    String[] brokerNameParts = brokerNames.get(i).split("/");
                     String brokerSymbol = record.get(i);
-                    // 处理 brokerSymbol 中的 '/'
                     String[] brokerSymbolParts = brokerSymbol.split("/");
-                    // 生成所有组合
+
                     for (String name : brokerNameParts) {
                         for (String symbol : brokerSymbolParts) {
                             FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
@@ -169,15 +216,51 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             brokerData.setBrokerName(name.trim());
                             brokerData.setBrokerSymbol(symbol.trim());
                             brokerDataList.add(brokerData);
+//                            // 将处理后的数据brokerDataList保存数据到数据库
+//                            baseMapper.save(brokerData);
                         }
                     }
                 }
             }
         }
-//        return brokerDataList;
-
     }
 
+    private void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            List<String> brokerNames = new ArrayList<>();
+
+            Row headerRow = sheet.getRow(0);
+            for (Cell cell : headerRow) {
+                brokerNames.add(cell.getStringCellValue());
+            }
+
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) continue;
+                String stdSymbol = row.getCell(0).getStringCellValue();
+
+                for (int i = 1; i < row.getPhysicalNumberOfCells(); i++) {
+                    String[] brokerNameParts = brokerNames.get(i).split("/");
+                    String brokerSymbol = row.getCell(i).getStringCellValue();
+                    String[] brokerSymbolParts = brokerSymbol.split("/");
+
+                    for (String name : brokerNameParts) {
+                        for (String symbol : brokerSymbolParts) {
+                            FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
+                            brokerData.setStdSymbol(stdSymbol);
+                            brokerData.setBrokerName(name.trim());
+                            brokerData.setBrokerSymbol(symbol.trim());
+                            brokerDataList.add(brokerData);
+//                            baseMapper.save(brokerData);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @Override
     public void export() {
@@ -201,7 +284,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public List<FollowVarietyVO> getlist() {
+    public List<FollowVarietyVO> getlist(String stdSymbol) {
         //根据品种名称来查询券商名称和券商对应的品种名称
         return FollowVarietyConvert.INSTANCE.convertList(baseMapper.getlist());
     }
