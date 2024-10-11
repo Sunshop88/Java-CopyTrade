@@ -44,6 +44,8 @@ import java.util.stream.Collectors;
 public class FollowPlatformController {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
+
+
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:platform')")
@@ -163,6 +165,7 @@ public class FollowPlatformController {
     }
 
 
+
 //    @GetMapping("/brokeName")
 //    @Operation(summary = "查询券商名称" )
 //    @PreAuthorize("hasAuthority('mascontrol:platform')")
@@ -171,7 +174,6 @@ public class FollowPlatformController {
 //        List<String> list = followPlatformService.getBrokeName(idList);
 //        return Result.ok(list);
 //    }
-
 
     @GetMapping("list")
     @Operation(summary = "查询列表")
@@ -189,4 +191,21 @@ public class FollowPlatformController {
         List<FollowBrokeServerEntity> followList = list.stream().filter(o -> !collect.contains(o.getServerName())).collect(Collectors.toList());
         return Result.ok(followList);
     }
+
+
+
+//    此处统一管理所有平台的品种匹配关系
+//如果跟单账号里面没有设置对应的精准匹配规则，则对应使用此次的默认设置的规则
+//品种匹配可以设置多个不同的template，每个template都有对应所有平台匹配数
+//    @GetMapping("match")
+//    @Operation(summary = "品种匹配")
+//    public Result<List<FollowPlatformMatchVO>> match(@Parameter(description = "symbol") String symbol){
+//        List<FollowPlatformMatchVO> list = followPlatformService.match(symbol);
+//        return Result.ok(list);
+//    }
+
+
+
+
+
 }

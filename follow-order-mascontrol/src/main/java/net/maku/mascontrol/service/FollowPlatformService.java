@@ -6,6 +6,7 @@ import net.maku.mascontrol.entity.FollowPlatformEntity;
 import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.vo.FollowPlatformVO;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -33,4 +34,5 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
 
 
     QuoteClient tologin(String account, String password, String platform);
+
 }

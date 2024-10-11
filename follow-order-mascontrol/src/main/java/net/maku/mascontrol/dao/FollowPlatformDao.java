@@ -15,5 +15,7 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface FollowPlatformDao extends BaseDao<FollowPlatformEntity> {
 
-
+    //根据id修改备注,时间
+    @Update("update follow_platform set remark = #{remark}, update_time = #{updateTime},updater = #{updater} where id = #{id}")
+    void updateByRemark(FollowPlatformEntity entity);
 }

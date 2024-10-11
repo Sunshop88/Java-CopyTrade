@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.api.module.system.UserApi;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.framework.common.exception.ServerException;
@@ -37,7 +36,6 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 /**
  * 平台管理
@@ -68,38 +66,42 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     private LambdaQueryWrapper<FollowPlatformEntity> getWrapper(FollowPlatformQuery query){
         LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowPlatformEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
-        wrapper.orderByDesc(FollowPlatformEntity::getBrokerName);
-        wrapper.orderByDesc(FollowPlatformEntity::getCreateTime);
         return wrapper;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowPlatformVO vo) {
-        //查询输入的服务器是否存在
-        if(ObjectUtil.isEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
-                .eq(FollowPlatformEntity::getServer,vo.getServer())))) {
-            FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
-            entity.setCreateTime(LocalDateTime.now());
-            entity.setCreator(SecurityUser.getUserId());
-            baseMapper.insert(entity);
+        // 检查平台类型是否为 "MT4" 或 "MT5"
+        if (!"MT4".equals(vo.getPlatformType()) && !"MT5".equals(vo.getPlatformType())) {
+            throw new ServerException("平台类型必须为 'MT4' 或 'MT5'");
         }
 
+        //查询输入的服务器是否存在
+        if(ObjectUtil.isNotEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
+                .eq(FollowPlatformEntity::getServer,vo.getServer())))) {
+            throw new ServerException("服务器 " + vo.getServer() + " 已存在");
+        }
+        FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setCreator(SecurityUser.getUserId());
+        baseMapper.insert(entity);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowPlatformVO vo) {
         //查询服务器是否存在如果不存在则返回服务器不存在
-        FollowPlatformEntity followPlatformEntity = baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
-                .eq(FollowPlatformEntity::getId, vo.getId()));
-        baseMapper.update((Wrappers.<FollowPlatformEntity>lambdaUpdate().set(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
-                .set(FollowPlatformEntity::getRemark, vo.getRemark())
-                .set(FollowPlatformEntity::getUpdateTime,LocalDateTime.now())
-                .set(FollowPlatformEntity::getUpdater,SecurityUser.getUserId())
-                .eq(FollowPlatformEntity::getBrokerName, followPlatformEntity.getBrokerName())));
+        if(ObjectUtil.isEmpty(baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
+                .eq(FollowPlatformEntity::getId,vo.getId())))) {
+            throw new ServerException("服务器 " + vo.getServer() + " 不存在");
+        }
 
-
+        FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
+        //根据服务器修改备注内容
+        entity.setUpdateTime(LocalDateTime.now());
+        entity.setUpdater(SecurityUser.getUserId());
+        baseMapper.updateByRemark(entity);
     }
 
     @Override
@@ -124,11 +126,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     @Override
     public List<FollowPlatformVO> getList() {
         FollowPlatformQuery query = new FollowPlatformQuery();
-        List<FollowPlatformEntity> list = baseMapper.selectList(getWrapper(query)).stream().collect(Collectors.toMap(
-                FollowPlatformEntity::getServer, // 以 server 字段为 key
-                entity -> entity,                // 以 entity 自身为 value
-                (existing, replacement) -> existing // 如果遇到重复 key，则保留原有值
-        )).values().stream().collect(Collectors.toList());
+        List<FollowPlatformEntity> list = baseMapper.selectList(getWrapper(query));
 
         return FollowPlatformConvert.INSTANCE.convertList(list);
     }

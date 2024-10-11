@@ -221,8 +221,8 @@ public class FollowTraderController {
             query.setTraderIdList(Arrays.asList(query.getTraderId().split(",")));
         }
         PageResult<FollowOrderSlipPointVO> followOrderSlipPointVOPageResult = followTraderService.pageSlipPoint(query);
+        Integer total = followOrderSlipPointVOPageResult.getList().stream().mapToInt(FollowOrderSlipPointVO::getSymbolNum).sum();;
         followOrderSlipPointVOPageResult.getList().stream().forEach(o->{
-            Integer total = followOrderSlipPointVOPageResult.getList().stream().filter(order->o.getTraderId()==order.getTraderId()).mapToInt(FollowOrderSlipPointVO::getSymbolNum).sum();;
             FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, o.getTraderId()));
             o.setAccount(followTraderEntity.getAccount());
             o.setPlatform(followTraderEntity.getPlatform());
