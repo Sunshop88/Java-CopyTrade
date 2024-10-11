@@ -1,12 +1,11 @@
 package net.maku.followcom.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
-import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
-import com.fhs.core.trans.anno.Trans;
-import com.fhs.core.trans.constant.TransType;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -17,10 +16,16 @@ import java.util.Date;
  */
 @Data
 public class FollowOrderDetailExcelVO implements TransPojo {
+
 	private Long id;
 
 	@ExcelProperty("品种")
 	private String symbol;
+
+	private Integer type;
+
+	@ExcelProperty("类型")
+	private String typeName;
 
 	@ExcelProperty("订单号")
 	private Integer orderNo;
@@ -32,10 +37,11 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 	private String account;
 
 	@ExcelProperty("开仓请求时间")
-	private Date requestTime;
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	private LocalDateTime requestOpenTime;
 
 	@ExcelProperty("开仓请求价格")
-	private BigDecimal requestPrice;
+	private BigDecimal requestOpenPrice;
 
 	@ExcelProperty("开仓时间")
 	private Date openTime;
@@ -45,6 +51,22 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 
 	@ExcelProperty("开仓价格滑点")
 	private BigDecimal openPriceSlip;
+
+	@ExcelProperty("平仓请求时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	private LocalDateTime requestCloseTime;
+
+	@ExcelProperty("平仓请求价格")
+	private BigDecimal requestClosePrice;
+
+	@ExcelProperty("平仓时间")
+	private LocalDateTime closeTime;
+
+	@ExcelProperty("平仓价格")
+	private BigDecimal closePrice;
+
+	@ExcelProperty(value = "平仓价格滑点")
+	private BigDecimal closePriceSlip;
 
 	@ExcelProperty("手数")
 	private BigDecimal size;
@@ -60,5 +82,35 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 
 	@ExcelProperty("利息")
 	private BigDecimal swap;
+
+	@ExcelProperty("下单号")
+	private String sendNo;
+
+	@ExcelProperty("异常信息")
+	private String remark;
+
+	@ExcelProperty("开仓时间差 毫秒")
+	private Integer openTimeDifference;
+
+	@ExcelProperty("平仓时间差 毫秒")
+	private Integer closeTimeDifference;
+
+	@ExcelProperty("开仓响应时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	private LocalDateTime responseOpenTime;
+
+	@ExcelProperty("平仓响应时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	private LocalDateTime responseCloseTime;
+
+	@ExcelProperty("盈亏")
+	private BigDecimal profit;
+
+	@ExcelProperty("券商")
+	private String brokeName;
+
+	@ExcelProperty("服务器")
+	private String platform;
+
 
 }

@@ -64,4 +64,13 @@ public interface Constant {
      */
     String TRADER_USER="trader:user:";
 
+    /**
+     * 账户下单标识
+     */
+    String TRADER_SEND="trader:send:";
+
+    /**
+     * 账户平仓标识
+     */
+    String TRADER_CLOSE="trader:close:";
 }

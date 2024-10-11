@@ -22,10 +22,13 @@ import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.entity.FollowVarietyEntity;
 import net.maku.mascontrol.service.FollowPlatformService;
+import net.maku.mascontrol.service.FollowVarietyService;
 import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
 import net.maku.followcom.vo.TraderOverviewVO;
+import net.maku.mascontrol.vo.FollowVarietyVO;
 import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +60,8 @@ public class FollowTraderController {
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
     private final FollowOrderDetailService detailService;
     private final FollowBrokeServerService followBrokeServerService;
+    private final FollowVarietyService followVarietyService;
+
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -181,7 +186,19 @@ public class FollowTraderController {
                 throw new ServerException("账号无法登录");
             }
         }
+
+        //查询平台信息
+        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
+        //查看品种列表
+        List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()));
+        if (ObjectUtil.isNotEmpty(list)){
+            vo.setSymbol(list.get(0).getBrokerSymbol());
+        }
+
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
+        if (!result){
+            return Result.error(followTraderVO.getAccount());
+        }
         return Result.ok(result);
     }
 
@@ -251,8 +268,8 @@ public class FollowTraderController {
                 collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
             }
         }
-        if (ObjectUtil.isNotEmpty(query.getPlatForm())){
-            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatForm()));
+        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
             collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
         }
         // 计算交集
@@ -268,11 +285,11 @@ public class FollowTraderController {
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
         //查看券商和服务器
         followOrderDetailVOPageResult.getList().parallelStream().forEach(o->{
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getId()).getPlatformId());
+            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getTraderId()).getPlatformId());
             o.setBrokeName(followPlatform.getBrokerName());
             o.setPlatform(followPlatform.getServer());
         });
-        return  Result.ok(followTraderService.orderSlipDetail(query));
+        return  Result.ok(followOrderDetailVOPageResult);
     }
 
     @GetMapping("orderDoing/{traderId}")
@@ -308,5 +325,56 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<TraderOverviewVO>  traderOverview() {
         return  Result.ok(followTraderService.traderOverview());
+    }
+
+
+    @GetMapping("exportOrderDetail")
+    @Operation(summary = "导出订单")
+    @OperateLog(type = OperateTypeEnum.EXPORT)
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public void exportOrderDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
+        //设置查询数量最高100000条
+        query.setPage(1);
+        query.setLimit(100000);
+        //处理平台查询逻辑，找出相关账号查询
+        List<Long> collectPlat=new ArrayList<>() ;
+        List<Long> collectBroke=new ArrayList<>() ;
+        //处理券商查询逻辑，找出相关账号查询
+        if (ObjectUtil.isNotEmpty(query.getBrokeName())){
+            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(query.getBrokeName());
+            if (ObjectUtil.isNotEmpty(serverEntityList)){
+                List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, serverEntityList.stream().map(FollowBrokeServerEntity::getServerName).collect(Collectors.toList())));
+                collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
+            }
+        }
+        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
+            collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
+        }
+        // 计算交集
+        if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
+        }else  if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat=collectBroke;
+        }
+        if (ObjectUtil.isNotEmpty(collectPlat)){
+            query.setTraderIdList(collectPlat);
+        }
+
+        PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
+        //查看券商和服务器
+        followOrderDetailVOPageResult.getList().parallelStream().forEach(o->{
+            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getTraderId()).getPlatformId());
+            o.setBrokeName(followPlatform.getBrokerName());
+            o.setPlatform(followPlatform.getServer());
+        });
+        detailService.export(followOrderDetailVOPageResult.getList());
+    }
+
+    @GetMapping("stopOrder/{type}/{traderId}")
+    @Operation(summary = "停止下单/平仓")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> stopOrder(@PathVariable("type") Integer type,@PathVariable("traderId") Long traderId) {
+        return Result.ok(followTraderService.stopOrder(type,traderId));
     }
 }

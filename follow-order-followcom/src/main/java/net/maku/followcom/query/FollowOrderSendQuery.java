@@ -31,7 +31,7 @@ public class FollowOrderSendQuery extends Query {
     private String account;
 
     @Schema(description = "平台名称")
-    private String platForm;
+    private String platform;
 
     @Schema(description = "品种名称")
     private String symbol;

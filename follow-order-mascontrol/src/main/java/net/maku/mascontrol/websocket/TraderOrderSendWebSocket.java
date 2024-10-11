@@ -71,7 +71,13 @@ public class TraderOrderSendWebSocket {
             sessionPool.put(traderId+symbol, sessionSet);
             LeaderApiTrader leaderApiTrader = SpringContextUtils.getBean(LeaderApiTradersAdmin.class).getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("订阅该品种{}+++{}",symbol,traderId);
-            leaderApiTrader.quoteClient.Subscribe(symbol);
+            try {
+                leaderApiTrader.quoteClient.Subscribe(symbol);
+            }catch (Exception e) {
+                log.error("订阅失败: " + e.getMessage());
+                onClose();
+                throw new RuntimeException();
+            }
             leaderApiTrader.addOnQuoteHandler(new OnQuoteHandler(leaderApiTrader));
             // 设置超时查询机制，避免死循环
             QuoteEventArgs eventArgs = null;
@@ -81,9 +87,11 @@ public class TraderOrderSendWebSocket {
             } catch (TimeoutException e) {
                 log.error("获取报价超时 关闭socket");
                 onClose();
+                throw new RuntimeException();
             } catch (Exception e) {
                 log.error("获取报价失败 关闭socket: " + e.getMessage());
                 onClose();
+                throw new RuntimeException();
             }
             if (eventArgs != null) {
                 //立即查询
@@ -115,6 +123,7 @@ public class TraderOrderSendWebSocket {
             log.info("连接异常"+e);
             onClose();
             e.printStackTrace();
+            throw new RuntimeException();
         }
     }
 

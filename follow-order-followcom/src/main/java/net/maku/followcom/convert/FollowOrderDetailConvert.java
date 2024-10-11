@@ -29,4 +29,7 @@ public interface FollowOrderDetailConvert {
     List<FollowOrderDetailExcelVO> convertExcelList(List<FollowOrderDetailEntity> list);
 
     List<FollowOrderDetailEntity> convertExcelList2(List<FollowOrderDetailExcelVO> list);
+
+    List<FollowOrderDetailExcelVO> convertExcelList3(List<FollowOrderDetailVO> list);
+
 }

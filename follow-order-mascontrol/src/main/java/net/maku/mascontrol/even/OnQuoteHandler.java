@@ -23,11 +23,12 @@ import online.mtapi.mt4.QuoteEventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -37,26 +38,27 @@ public class OnQuoteHandler implements QuoteEventHandler {
     private static final Logger log = LoggerFactory.getLogger(OnQuoteHandler.class);
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
-    protected ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
     protected FollowSubscribeOrderService followSubscribeOrderService;
 
     protected Boolean running = Boolean.TRUE;
 
-    private final AtomicBoolean isInvokeAllowed = new AtomicBoolean(true); // 使用AtomicBoolean，保证线程安全
     private TraderOrderSendWebSocket traderOrderSendWebSocket;
     private FollowOrderSendService followOrderSendService;
     private RedisCache redisCache;
     private final FollowOrderSendSocketVO followOrderSendSocketVO = new FollowOrderSendSocketVO();
 
-    // 记录上次执行时间
-    private long lastInvokeTime = 0;
+    // 用于存储每个Symbol的锁
+    private static final ConcurrentHashMap<String, Lock> symbolLockMap = new ConcurrentHashMap<>();
+    private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
+
     // 设定时间间隔，单位为毫秒
     private final long interval = 3000; // 3秒间隔
+    // 用于存储每个 symbol 上次执行时间
+    private static final ConcurrentHashMap<String, Long> symbolLastInvokeTimeMap = new ConcurrentHashMap<>();
 
     public OnQuoteHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
-        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         traderOrderSendWebSocket=SpringContextUtils.getBean(TraderOrderSendWebSocket.class);
         followOrderSendService=SpringContextUtils.getBean(FollowOrderSendService.class);
@@ -65,19 +67,32 @@ public class OnQuoteHandler implements QuoteEventHandler {
 
 
     public void invoke(Object sender, QuoteEventArgs quote) {
-        // 获取当前系统时间
-        long currentTime = System.currentTimeMillis();
+
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-        if (currentTime - lastInvokeTime >= interval) {
-            // 更新上次执行时间为当前时间
-            lastInvokeTime = currentTime;
-            QuoteClient qc = (QuoteClient) sender;
-            try {
-                handleQuote(qc, quote);
-            } catch (Exception e) {
-                System.err.println("Error during quote processing: " + e.getMessage());
-                e.printStackTrace();
+        // 获取当前的symbol
+        String symbol = quote.Symbol;
+        // 获取该symbol的锁对象
+        Lock lock = getLock(symbol);
+        lock.lock();
+        try {
+            // 获取当前系统时间
+            long currentTime = System.currentTimeMillis();
+            // 获取该symbol上次执行时间
+            long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(symbol, 0L);
+            if (currentTime - lastSymbolInvokeTime  >= interval) {
+                // 更新该symbol的上次执行时间为当前时间
+                symbolLastInvokeTimeMap.put(symbol, currentTime);
+                QuoteClient qc = (QuoteClient) sender;
+                try {
+                    handleQuote(qc, quote);
+                } catch (Exception e) {
+                    System.err.println("Error during quote processing: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
+        } finally {
+            // 确保释放锁
+            lock.unlock();
         }
     }
 
@@ -100,6 +115,7 @@ public class OnQuoteHandler implements QuoteEventHandler {
         followOrderSendSocketVO.setBuyPrice(quote.Ask);
         followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
         followOrderSendSocketVO.setOrderActiveInfoList(orderActiveInfoList);
+
         if (ObjectUtil.isNotEmpty(list)) {
             List<FollowOrderSendEntity> collect = list.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).collect(Collectors.toList());
             if (ObjectUtil.isNotEmpty(collect)) {
@@ -112,27 +128,48 @@ public class OnQuoteHandler implements QuoteEventHandler {
             }
             collect.clear();
         }
+        openedOrders=null;
+        orderActiveInfoList=null;
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
-    private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders,String account) {
-        return openedOrders.parallelStream().map(o->{
-            OrderActiveInfoVO orderActiveInfoVO = new OrderActiveInfoVO();
-            orderActiveInfoVO.setAccount(account);
-            orderActiveInfoVO.setLots(o.Lots);
-            orderActiveInfoVO.setComment(o.Comment);
-            orderActiveInfoVO.setOrderNo(o.Ticket);
-            orderActiveInfoVO.setCommission(o.Commission);
-            orderActiveInfoVO.setSwap(o.Swap);
-            orderActiveInfoVO.setProfit(o.Profit);
-            orderActiveInfoVO.setSymbol(o.Symbol);
-            orderActiveInfoVO.setOpenPrice(o.OpenPrice);
-            orderActiveInfoVO.setMagicNumber(o.MagicNumber);
-            orderActiveInfoVO.setType(o.Type.name());
-            orderActiveInfoVO.setOpenTime(o.OpenTime);
-            orderActiveInfoVO.setStopLoss(o.StopLoss);
-            orderActiveInfoVO.setTakeProfit(o.TakeProfit);
-            return orderActiveInfoVO;
+    private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
+        List<OrderActiveInfoVO> collect = openedOrders.stream().map(o -> {
+            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoVOPool.borrowObject();
+            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account);  // 重用并重置对象
+            return reusableOrderActiveInfoVO;
         }).collect(Collectors.toList());
+        // 将对象归还到池中（假设在调用完毕后做这个操作
+        ThreadPoolUtils.execute(()->{
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            collect.forEach(orderActiveInfoVOPool::returnObject);
+        });
+        return collect;
+    }
+
+    private void resetOrderActiveInfoVO(OrderActiveInfoVO vo, Order order, String account) {
+        vo.setAccount(account);
+        vo.setLots(order.Lots);
+        vo.setComment(order.Comment);
+        vo.setOrderNo(order.Ticket);
+        vo.setCommission(order.Commission);
+        vo.setSwap(order.Swap);
+        vo.setProfit(order.Profit);
+        vo.setSymbol(order.Symbol);
+        vo.setOpenPrice(order.OpenPrice);
+        vo.setMagicNumber(order.MagicNumber);
+        vo.setType(order.Type.name());
+        vo.setOpenTime(order.OpenTime);
+        vo.setStopLoss(order.StopLoss);
+        vo.setTakeProfit(order.TakeProfit);
+    }
+
+    private Lock getLock(String symbol) {
+        // 如果没有锁对象，使用ReentrantLock创建一个新的锁
+        return symbolLockMap.computeIfAbsent(symbol, k -> new ReentrantLock());
     }
 }

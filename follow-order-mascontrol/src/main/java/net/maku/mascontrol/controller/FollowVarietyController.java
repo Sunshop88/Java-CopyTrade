@@ -11,6 +11,7 @@ import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.mascontrol.service.FollowVarietyService;
 import net.maku.mascontrol.query.FollowVarietyQuery;
 import net.maku.mascontrol.vo.FollowVarietyExcelVO;
+import net.maku.mascontrol.vo.FollowVarietySymbolVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 品种匹配
@@ -139,17 +142,16 @@ public class FollowVarietyController {
     @GetMapping("listSmybol")
     @Operation(summary = "查询标准品种")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<List<String>> listSmybol(){
-        List<String> list = followVarietyService.listSymbol();
-
+    public Result<PageResult<FollowVarietyVO>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
+        PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
         return Result.ok(list);
     }
-    @GetMapping("list")
+
+    @GetMapping("listBySymbol")
     @Operation(summary = "根据标准品种查询其他信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<List<FollowVarietyVO>> list(@RequestParam("stdSymbol") String stdSymbol){
-        List<FollowVarietyVO> list = followVarietyService.getlist(stdSymbol);
-
+    public Result<PageResult<FollowVarietyVO>> listBySymbol(@ParameterObject @Valid FollowVarietyQuery query){
+        PageResult<FollowVarietyVO> list = followVarietyService.pageSmybolList(query);
         return Result.ok(list);
     }
 }

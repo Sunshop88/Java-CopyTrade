@@ -29,7 +29,7 @@ public interface FollowOrderDetailService extends BaseService<FollowOrderDetailE
     void delete(List<Long> idList);
 
 
-    void export();
+    void export(List<FollowOrderDetailVO> followOrderDetailVOList);
 
     PageResult<FollowOrderSlipPointVO> listFollowOrderSlipPoint(FollowOrderSpliListQuery query);
 }

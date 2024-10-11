@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.mascontrol.convert.FollowVarietyConvert;
@@ -286,9 +287,24 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     @Override
     public List<FollowVarietyVO> getlist(String stdSymbol) {
         //根据品种名称来查询券商名称和券商对应的品种名称
-        return FollowVarietyConvert.INSTANCE.convertList(baseMapper.getlist());
+        return FollowVarietyConvert.INSTANCE.convertList(baseMapper.getlist(stdSymbol));
     }
 
+    @Override
+    public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
+        LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowVarietyEntity::getStdSymbol).groupBy(FollowVarietyEntity::getStdSymbol);
+        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query),wrapper);
+        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+    }
+
+    @Override
+    public PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query) {
+        LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
+        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query),wrapper);
+        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+    }
 
     @Override
     public List<String> listSymbol() {

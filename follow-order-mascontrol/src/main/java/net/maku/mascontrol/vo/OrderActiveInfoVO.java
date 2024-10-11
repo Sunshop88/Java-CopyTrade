@@ -4,6 +4,7 @@ import com.fhs.core.trans.vo.TransPojo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Schema(description = "持仓订单")
-public class OrderActiveInfoVO implements TransPojo {
+public class OrderActiveInfoVO implements Serializable {
 
 	@Schema(description = "订单号")
 	private Integer orderNo;

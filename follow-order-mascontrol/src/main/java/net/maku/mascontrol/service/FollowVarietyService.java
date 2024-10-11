@@ -43,4 +43,8 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     List<FollowVarietyExcelVO> importByExcel(MultipartFile file)throws Exception;
 
     List<FollowVarietyVO> getlist(String stdSymbol);
+
+    PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query);
+
+    PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query);
 }
