@@ -202,21 +202,27 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
 
             for (CSVRecord record : csvParser) {
+                if (ObjectUtil.isEmpty(record.get(0)))continue;
                 String stdSymbol = record.get(0);
                 for (int i = 1; i < record.size(); i++) {
+                    if (ObjectUtil.isEmpty(record.get(i)))continue;
+
                     String[] brokerNameParts = brokerNames.get(i).split("/");
                     String brokerSymbol = record.get(i);
                     String[] brokerSymbolParts = brokerSymbol.split("/");
 
                     for (String name : brokerNameParts) {
                         for (String symbol : brokerSymbolParts) {
-                            FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
+                            FollowVarietyVO brokerData = new FollowVarietyVO();
                             brokerData.setStdSymbol(stdSymbol);
                             brokerData.setBrokerName(name.trim());
                             brokerData.setBrokerSymbol(symbol.trim());
-                            brokerDataList.add(brokerData);
-//                            // 将处理后的数据brokerDataList保存数据到数据库
-//                            baseMapper.save(brokerData);
+                            try {
+                                baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
+                            }catch (Exception e){
+                                log.error("Error inserting data: ", e);
+                                log.error(e.getMessage());
+                            }
                         }
                     }
                 }

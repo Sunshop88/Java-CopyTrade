@@ -334,7 +334,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             list = followOrderDetailService.list(followOrderDetailw);
         }
         if (ObjectUtil.isEmpty(orderCount)||orderCount==0||list.size()==0){
-            throw new ServerException("暂无可平仓订单");
+            throw new ServerException(vo.getAccount()+"暂无可平仓订单");
         }
         // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {

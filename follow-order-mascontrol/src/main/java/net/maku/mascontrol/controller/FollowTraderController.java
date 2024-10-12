@@ -202,7 +202,7 @@ public class FollowTraderController {
         }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
-            return Result.error(followTraderVO.getAccount());
+            return Result.error(followTraderVO.getAccount()+"下单失败");
         }
         return Result.ok(result);
     }
@@ -321,7 +321,17 @@ public class FollowTraderController {
                 throw new ServerException("账号无法登录");
             }
         }
+        if (ObjectUtil.isNotEmpty(vo.getSymbol())){
+            try {
+                double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+            } catch (InvalidSymbolException e) {
+                throw new ServerException(followTraderVO.getAccount()+"品种不正确,请先配置品种");
+            }
+        }
         boolean result = followTraderService.orderClose(vo,quoteClient);
+        if (!result){
+            return Result.error(followTraderVO.getAccount()+"平仓失败");
+        }
         return Result.ok(result);
     }
 
