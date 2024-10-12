@@ -88,7 +88,7 @@ public class FollowVarietyController {
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> importExcel(@RequestParam("file") MultipartFile file) throws Exception {
+    public Result<String> importExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
@@ -102,7 +102,7 @@ public class FollowVarietyController {
             // 导入文件
             followVarietyService.importByExcel(file);
 
-            return Result.ok("文件导入成功，导入了 " + dataList.size() + " 条数据");
+            return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }

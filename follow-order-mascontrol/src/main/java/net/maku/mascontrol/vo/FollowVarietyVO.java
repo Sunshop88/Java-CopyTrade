@@ -2,8 +2,6 @@ package net.maku.mascontrol.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
@@ -43,12 +41,12 @@ public class FollowVarietyVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private LocalDateTime createTime;
+	private Date createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private LocalDateTime updateTime;
+	private Date updateTime;
 
 }
