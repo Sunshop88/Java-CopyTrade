@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -14,10 +15,16 @@ import net.maku.mascontrol.vo.FollowVarietyExcelVO;
 import net.maku.mascontrol.vo.FollowVarietySymbolVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -88,7 +95,7 @@ public class FollowVarietyController {
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> importExcel(@RequestParam("file") MultipartFile file) {
+    public Result<String> importExcel(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
@@ -126,8 +133,21 @@ public class FollowVarietyController {
     @Operation(summary = "数据导出")
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public void export() {
-        followVarietyService.export();
+    public ResponseEntity<byte[]> export() {
+        try {
+            // 使用 ByteArrayOutputStream 来生成 CSV 数据
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            followVarietyService.exportCsv(outputStream);
+
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Disposition", "attachment; filename=export.csv");
+            headers.add("Content-Type", "text/csv");
+
+            return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("导出CSV时出错".getBytes());
+        }
     }
 
     @GetMapping("download")

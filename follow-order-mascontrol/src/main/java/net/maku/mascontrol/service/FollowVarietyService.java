@@ -9,6 +9,7 @@ import net.maku.mascontrol.query.FollowVarietyQuery;
 import net.maku.mascontrol.entity.FollowVarietyEntity;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -47,4 +48,7 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query);
 
     PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query);
+
+
+    void exportCsv(ByteArrayOutputStream outputStream) throws IOException;
 }

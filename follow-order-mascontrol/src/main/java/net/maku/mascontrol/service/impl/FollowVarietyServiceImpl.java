@@ -22,6 +22,7 @@ import net.maku.mascontrol.vo.FollowVarietyExcelVO;
 import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -34,14 +35,10 @@ import cn.hutool.core.util.ObjectUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
 
 /**
  * 品种匹配
@@ -230,6 +227,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
+
     private void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
         try (InputStream inputStream = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(inputStream)) {
@@ -278,9 +276,10 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     @Override
     public void export() {
-    List<FollowVarietyExcelVO> excelList = FollowVarietyConvert.INSTANCE.convertExcelList(list());
-        transService.transBatch(excelList);
-        ExcelUtils.excelExport(FollowVarietyExcelVO.class, "品种匹配", null, excelList);
+//    List<FollowVarietyExcelVO> excelList = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+//        transService.transBatch(excelList);
+//        ExcelUtils.excelExport(FollowVarietyExcelVO.class, "品种匹配", null, excelList);
+
     }
 
     @Override
@@ -318,6 +317,55 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query),wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
+
+    @Override
+    public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {
+        //查询数据库所有数据
+        List<FollowVarietyExcelVO> data = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+
+        Set<String> stdSymbols = new LinkedHashSet<>();
+        Set<String> brokerNames = new LinkedHashSet<>();
+        Map<String, Map<String, String>> symbolBrokerMap = new HashMap<>();
+
+        for (FollowVarietyExcelVO record : data) {
+            String stdSymbol = record.getStdSymbol();
+            String brokerName = record.getBrokerName();
+            String brokerSymbol = record.getBrokerSymbol();
+
+            stdSymbols.add(stdSymbol);
+            brokerNames.add(brokerName);
+
+            symbolBrokerMap
+                    .computeIfAbsent(stdSymbol, k -> new HashMap<>())
+                    .put(brokerName, brokerSymbol);
+        }
+
+        try (CSVPrinter csvPrinter = new CSVPrinter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+
+            List<String> header = new ArrayList<>();
+            header.add("symbol");
+            header.addAll(brokerNames);
+            csvPrinter.printRecord(header);
+
+            for (String stdSymbol : stdSymbols) {
+                List<String> row = new ArrayList<>();
+                row.add(stdSymbol);
+
+                for (String brokerName : brokerNames) {
+                    Map<String, String> brokerMap = symbolBrokerMap.get(stdSymbol);
+                    String brokerSymbol = brokerMap != null ? brokerMap.get(brokerName) : "";
+                    row.add(brokerSymbol != null ? brokerSymbol : "");
+                }
+
+                csvPrinter.printRecord(row);
+            }
+
+        } catch (IOException e) {
+            throw new IOException(e);
+        }
+    }
+
+
 
     @Override
     public List<String> listSymbol() {
