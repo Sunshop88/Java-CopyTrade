@@ -29,6 +29,7 @@ import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
 import net.maku.followcom.vo.TraderOverviewVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
+import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -191,10 +192,14 @@ public class FollowTraderController {
         FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
         //查看品种列表
         List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()));
-        if (ObjectUtil.isNotEmpty(list)){
+        if (ObjectUtil.isNotEmpty(list)&&ObjectUtil.isNotEmpty(list.get(0).getBrokerSymbol())){
             vo.setSymbol(list.get(0).getBrokerSymbol());
         }
-
+        try {
+            double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+        } catch (InvalidSymbolException e) {
+            throw new ServerException("品种不正确,请先配置品种");
+        }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
             return Result.error(followTraderVO.getAccount());
