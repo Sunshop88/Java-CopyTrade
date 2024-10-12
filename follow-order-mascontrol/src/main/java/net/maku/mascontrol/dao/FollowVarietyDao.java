@@ -27,9 +27,6 @@ public interface FollowVarietyDao extends BaseDao<FollowVarietyEntity> {
     @Select("select broker_name,broker_symbol from follow_variety where std_symbol=#{symbol} ")
     List<FollowVarietyEntity> getlist(@Param("symbol") String symbol);
 
-    @Insert("INSERT INTO follow_variety_excel (std_symbol, broker_name, broker_symbol) VALUES (#{stdSymbol}, #{brokerName}, #{brokerSymbol})")
-    void save(FollowVarietyExcelVO brokerData);
-
 
 //    void saveAll(List<FollowVarietyExcelVO> brokerDataList);
 

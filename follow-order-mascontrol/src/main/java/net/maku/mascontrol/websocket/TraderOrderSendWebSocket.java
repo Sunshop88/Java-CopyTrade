@@ -8,14 +8,22 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowOrderSendService;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
+import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.entity.FollowVarietyEntity;
 import net.maku.mascontrol.even.OnQuoteHandler;
+import net.maku.mascontrol.service.impl.FollowPlatformServiceImpl;
+import net.maku.mascontrol.service.impl.FollowVarietyServiceImpl;
 import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
 import net.maku.followcom.util.SpringContextUtils;
@@ -23,6 +31,7 @@ import net.maku.mascontrol.vo.FollowOrderSendSocketVO;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -44,15 +53,18 @@ public class TraderOrderSendWebSocket {
     private String symbol;
 
     private OnQuoteHandler onQuoteHandler;
+    private FollowVarietyServiceImpl followVarietyService= SpringContextUtils.getBean( FollowVarietyServiceImpl.class);
+    private FollowPlatformServiceImpl followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+    private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
     /**
      * marketAccountId->SessionSet
      */
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
 
-
-    private  RedisUtil redisUtil;
-    private FollowOrderSendService followOrderSendService;
+    private  RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
+    private FollowOrderSendService followOrderSendService=SpringContextUtils.getBean(FollowOrderSendServiceImpl.class);
+    private LeaderApiTradersAdmin leaderApiTradersAdmin= SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "symbol") String symbol) {
         try {
@@ -65,12 +77,19 @@ public class TraderOrderSendWebSocket {
             } else {
                 sessionSet = new HashSet<>();
             }
-            redisUtil=SpringContextUtils.getBean(RedisUtil.class);
-            followOrderSendService=SpringContextUtils.getBean(FollowOrderSendServiceImpl.class);
             sessionSet.add(session);
             sessionPool.put(traderId+symbol, sessionSet);
-            LeaderApiTrader leaderApiTrader = SpringContextUtils.getBean(LeaderApiTradersAdmin.class).getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("订阅该品种{}+++{}",symbol,traderId);
+            //查询平台信息
+            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, traderId));
+            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
+            //查看品种列表
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
+            if (ObjectUtil.isNotEmpty(followVarietyEntityList)&&ObjectUtil.isNotEmpty(followVarietyEntityList.get(0).getBrokerSymbol())){
+                symbol=followVarietyEntityList.get(0).getBrokerSymbol();
+            }
+            this.symbol = symbol;
             try {
                 leaderApiTrader.quoteClient.Subscribe(symbol);
             }catch (Exception e) {
@@ -83,7 +102,7 @@ public class TraderOrderSendWebSocket {
             QuoteEventArgs eventArgs = null;
             try {
                 // 使用 ExecutorService 和 Future 来处理超时机制
-                eventArgs = getQuoteWithTimeout(symbol, 10,leaderApiTrader);  // 设置超时时间为5秒
+                eventArgs = getQuoteWithTimeout(symbol, 3,leaderApiTrader);  // 设置超时时间为5秒
             } catch (TimeoutException e) {
                 log.error("获取报价超时 关闭socket");
                 onClose();
@@ -131,7 +150,7 @@ public class TraderOrderSendWebSocket {
     public void onClose() {
         try {
             sessionPool.get(traderId+symbol).remove(session);
-            LeaderApiTrader leaderApiTrader = SpringContextUtils.getBean(LeaderApiTradersAdmin.class).getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
             leaderApiTrader.removeOnQuoteHandler();
             leaderApiTrader.quoteClient.Unsubscribe(symbol);

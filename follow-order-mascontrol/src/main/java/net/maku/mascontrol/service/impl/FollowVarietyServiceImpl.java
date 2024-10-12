@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -22,10 +23,7 @@ import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
@@ -53,6 +51,7 @@ import java.util.Set;
  */
 @Service
 @AllArgsConstructor
+@Slf4j
 public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, FollowVarietyEntity> implements FollowVarietyService {
     private final TransService transService;
     @Autowired
@@ -193,8 +192,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
         }
         // 将处理后的数据brokerDataList保存数据到数据库
-        List <FollowVarietyEntity> brokerDataList2 = FollowVarietyConvert.INSTANCE.convertExcelList2(brokerDataList);
-        this.saveBatch(brokerDataList2);
+//        List <FollowVarietyEntity> brokerDataList2 = FollowVarietyConvert.INSTANCE.convertExcelList2(brokerDataList);
         return brokerDataList;
     }
 
@@ -234,6 +232,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             List<String> brokerNames = new ArrayList<>();
 
             Row headerRow = sheet.getRow(0);
+
             for (Cell cell : headerRow) {
                 brokerNames.add(cell.getStringCellValue());
             }
@@ -241,21 +240,29 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
+                if (ObjectUtil.isEmpty(row.getCell(0)))continue;
                 String stdSymbol = row.getCell(0).getStringCellValue();
 
                 for (int i = 1; i < row.getPhysicalNumberOfCells(); i++) {
+                    Cell currentCell = row.getCell(i);
+                    if (currentCell == null || currentCell.getCellType() != CellType.STRING) continue;
+
                     String[] brokerNameParts = brokerNames.get(i).split("/");
                     String brokerSymbol = row.getCell(i).getStringCellValue();
                     String[] brokerSymbolParts = brokerSymbol.split("/");
 
                     for (String name : brokerNameParts) {
                         for (String symbol : brokerSymbolParts) {
-                            FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
+                            FollowVarietyVO brokerData = new FollowVarietyVO();
                             brokerData.setStdSymbol(stdSymbol);
                             brokerData.setBrokerName(name.trim());
                             brokerData.setBrokerSymbol(symbol.trim());
-                            brokerDataList.add(brokerData);
-//                            baseMapper.save(brokerData);
+                            try {
+                                baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
+                            }catch (Exception e){
+                                log.error("Error inserting data: ", e);
+                                log.error(e.getMessage());
+                            }
                         }
                     }
                 }

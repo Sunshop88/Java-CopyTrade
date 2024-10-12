@@ -100,7 +100,7 @@ public class FollowVarietyController {
             }
 
             // 导入文件
-            List<FollowVarietyExcelVO> dataList = followVarietyService.importByExcel(file);
+            followVarietyService.importByExcel(file);
 
             return Result.ok("文件导入成功，导入了 " + dataList.size() + " 条数据");
         } catch (Exception e) {
