@@ -91,10 +91,10 @@ public class OnQuoteHandler implements QuoteEventHandler {
     private void handleQuote(QuoteClient qc, QuoteEventArgs quote) {
         //所有持仓
         List<Order> openedOrders = Arrays.stream(qc.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
-        List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,qc.AccountName());
-
         //账户信息
         log.info("OnQuote监听：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
+        List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,abstractApiTrader.getTrader().getAccount());
+
         List<FollowOrderSendEntity> list;
         if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId()))){
             list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,abstractApiTrader.getTrader().getId()));
@@ -127,19 +127,11 @@ public class OnQuoteHandler implements QuoteEventHandler {
 
     private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
         List<OrderActiveInfoVO> collect = openedOrders.stream().map(o -> {
-            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoVOPool.borrowObject();
+            OrderActiveInfoVO reusableOrderActiveInfoVO = new OrderActiveInfoVO();
             resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account);  // 重用并重置对象
             return reusableOrderActiveInfoVO;
         }).collect(Collectors.toList());
-        // 将对象归还到池中（假设在调用完毕后做这个操作
-        ThreadPoolUtils.execute(()->{
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            collect.forEach(orderActiveInfoVOPool::returnObject);
-        });
+
         return collect;
     }
 

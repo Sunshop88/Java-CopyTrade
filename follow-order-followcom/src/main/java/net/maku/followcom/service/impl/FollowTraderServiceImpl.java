@@ -405,7 +405,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         try {
                             int finalI = i;
                             if (finalI >list.size()) {
-                                updateCloseOrder(list.get(finalI), quoteClient, oc);
                                 log.warn("索引超出范围: finalI = " + finalI + ", list.size() = " + list.size());
                             }
                             ThreadPoolUtils.execute(()-> {

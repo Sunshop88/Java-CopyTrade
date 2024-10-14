@@ -297,15 +297,23 @@ public class FollowTraderController {
                 List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatformId, serverEntityList.stream().map(FollowPlatformEntity::getId).collect(Collectors.toList())));
                 collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
             }
+            if (ObjectUtil.isEmpty(collectBroke)) {
+                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
+            }
         }
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
             String[] split = query.getPlatform().split(",");
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, Arrays.asList(split)));
             collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
+            if (ObjectUtil.isEmpty(collectPlat)) {
+                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
+            }
         }
         // 计算交集
         if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
             collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
+        }else if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat=collectBroke;
         }
         if (ObjectUtil.isNotEmpty(collectPlat)){
             query.setTraderIdList(collectPlat);
@@ -338,22 +346,31 @@ public class FollowTraderController {
         }
 
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-        QuoteClient quoteClient=leaderApiTrader.quoteClient;
-        if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
+        QuoteClient quoteClient = null;
+        if (ObjectUtil.isEmpty(leaderApiTrader)||ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
             quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException("账号无法登录");
             }
+        }else {
+            quoteClient=leaderApiTrader.quoteClient;
         }
+
         if (ObjectUtil.isNotEmpty(vo.getSymbol())){
-            try {
-                if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
-                    //订阅
-                    quoteClient.Subscribe(vo.getSymbol());
+            String symbol=vo.getSymbol();  //查询平台信息
+            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
+            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
+            for (FollowVarietyEntity o:followVarietyEntityList){
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                    symbol=o.getBrokerSymbol();
                 }
-                double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-            }  catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
-                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+                try {
+                    quoteClient.Subscribe(symbol);
+                    break;
+                }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+                    throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+                }
             }
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);

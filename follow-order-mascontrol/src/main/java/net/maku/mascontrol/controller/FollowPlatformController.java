@@ -200,5 +200,9 @@ public class FollowPlatformController {
         return Result.ok(list);
     }
 
-
+    @GetMapping("listServerOrder")
+    @Operation(summary = "查询当前存在服务商列表")
+    public Result<List<FollowPlatformEntity>> listServerOrder(){
+        return Result.ok(followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getCreateTime)));
+    }
 }
