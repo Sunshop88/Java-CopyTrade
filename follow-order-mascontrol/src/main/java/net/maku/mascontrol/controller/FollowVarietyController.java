@@ -42,7 +42,7 @@ import java.util.stream.Stream;
 public class FollowVarietyController {
     private final FollowVarietyService followVarietyService;
 
-    @GetMapping("page")
+    @GetMapping("pageSymbol")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<FollowVarietyVO>> page(@ParameterObject @Valid FollowVarietyQuery query){

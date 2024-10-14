@@ -1,5 +1,6 @@
 package net.maku.mascontrol.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -64,9 +65,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
 
-    private LambdaQueryWrapper<FollowVarietyEntity> getWrapper(FollowVarietyQuery query){
+    private LambdaQueryWrapper<FollowVarietyEntity> getWrapper(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-
+        wrapper.like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         return wrapper;
     }
 
@@ -142,40 +143,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 ////                }
 ////            }
 ////        }
-////
+
 ////        return brokerDataList;
-//
-//        List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
-//        // 读取CSV文件
-//        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
-//            List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-//            // 从第二行开始，处理每个stdSymbol及其对应的brokerSymbol
-//            for (CSVRecord record : csvParser) {
-//                String stdSymbol = record.get(0);
-//                // 遍历每个brokerName列
-//                for (int i = 1; i < record.size(); i++) {
-//                    String[] brokerNameParts = brokerNames.get(i).split("/"); // 处理 brokerName 中的 '/'
-//                    String brokerSymbol = record.get(i);
-//                    // 处理 brokerSymbol 中的 '/'
-//                    String[] brokerSymbolParts = brokerSymbol.split("/");
-//                    // 生成所有组合
-//                    for (String name : brokerNameParts) {
-//                        for (String symbol : brokerSymbolParts) {
-//                            FollowVarietyExcelVO brokerData = new FollowVarietyExcelVO();
-//                            brokerData.setStdSymbol(stdSymbol);
-//                            brokerData.setBrokerName(name.trim());
-//                            brokerData.setBrokerSymbol(symbol.trim());
-//                            brokerDataList.add(brokerData);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-////        return brokerDataList;
-//
-//    }
-    public  List<FollowVarietyExcelVO> importByExcel(MultipartFile file) throws Exception {
+    public List<FollowVarietyExcelVO> importByExcel(MultipartFile file) throws Exception {
         String fileName = file.getOriginalFilename();
         List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
 
@@ -199,10 +169,10 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
 
             for (CSVRecord record : csvParser) {
-                if (ObjectUtil.isEmpty(record.get(0)))continue;
+                if (ObjectUtil.isEmpty(record.get(0))) continue;
                 String stdSymbol = record.get(0);
                 for (int i = 1; i < record.size(); i++) {
-                    if (ObjectUtil.isEmpty(record.get(i)))continue;
+                    if (ObjectUtil.isEmpty(record.get(i))) continue;
 
                     String[] brokerNameParts = brokerNames.get(i).split("/");
                     String brokerSymbol = record.get(i);
@@ -216,7 +186,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             brokerData.setBrokerSymbol(symbol.trim());
                             try {
                                 baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
-                            }catch (Exception e){
+                            } catch (Exception e) {
                                 log.info("插入失败"+brokerData.getBrokerName()+"-"+brokerData.getBrokerSymbol());
                             }
                         }
@@ -243,7 +213,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
-                if (ObjectUtil.isEmpty(row.getCell(0)))continue;
+                if (ObjectUtil.isEmpty(row.getCell(0))) continue;
                 String stdSymbol = row.getCell(0).getStringCellValue();
 
                 for (int i = 1; i < row.getPhysicalNumberOfCells(); i++) {
@@ -262,7 +232,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             brokerData.setBrokerSymbol(symbol.trim());
                             try {
                                 baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
-                            }catch (Exception e){
+                            } catch (Exception e) {
                                 log.info("插入失败"+brokerData.getBrokerName()+"-"+brokerData.getBrokerSymbol());
                             }
                         }
@@ -304,26 +274,73 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.select(FollowVarietyEntity::getStdSymbol).groupBy(FollowVarietyEntity::getStdSymbol);
-        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query),wrapper);
+        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
     @Override
     public PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
-        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query),wrapper);
+        wrapper.eq(FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
     @Override
+//    public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {
+//        //查询数据库所有数据
+//        List<FollowVarietyExcelVO> data = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+//
+//        Set<String> stdSymbols = new LinkedHashSet<>();
+//        Set<String> brokerNames = new LinkedHashSet<>();
+//        Map<String, Map<String, String>> symbolBrokerMap = new HashMap<>();
+//
+//        for (FollowVarietyExcelVO record : data) {
+//            String stdSymbol = record.getStdSymbol();
+//            String brokerName = record.getBrokerName();
+//            String brokerSymbol = record.getBrokerSymbol();
+//
+//            stdSymbols.add(stdSymbol);
+//            brokerNames.add(brokerName);
+//
+//            symbolBrokerMap
+//                    .computeIfAbsent(stdSymbol, k -> new HashMap<>())
+//                    .put(brokerName, brokerSymbol);
+//        }
+//
+//        try (CSVPrinter csvPrinter = new CSVPrinter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+//
+//            List<String> header = new ArrayList<>();
+//            header.add("symbol");
+//            header.addAll(brokerNames);
+//            csvPrinter.printRecord(header);
+//
+//            for (String stdSymbol : stdSymbols) {
+//                List<String> row = new ArrayList<>();
+//                row.add(stdSymbol);
+//
+//                for (String brokerName : brokerNames) {
+//                    Map<String, String> brokerMap = symbolBrokerMap.get(stdSymbol);
+//                    String brokerSymbol = brokerMap != null ? brokerMap.get(brokerName) : "";
+//                    row.add(brokerSymbol != null ? brokerSymbol : "");
+//                }
+//
+//                csvPrinter.printRecord(row);
+//            }
+//
+//        } catch (IOException e) {
+//            throw new IOException(e);
+//        }
+//    }
+
+
     public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {
-        //查询数据库所有数据
+        // 查询数据库所有数据
         List<FollowVarietyExcelVO> data = FollowVarietyConvert.INSTANCE.convertExcelList(list());
 
         Set<String> stdSymbols = new LinkedHashSet<>();
         Set<String> brokerNames = new LinkedHashSet<>();
-        Map<String, Map<String, String>> symbolBrokerMap = new HashMap<>();
+        Map<String, Map<String, List<String>>> symbolBrokerMap = new HashMap<>();
 
         for (FollowVarietyExcelVO record : data) {
             String stdSymbol = record.getStdSymbol();
@@ -333,9 +350,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             stdSymbols.add(stdSymbol);
             brokerNames.add(brokerName);
 
+            // 使用 List 来存储 BrokerSymbols
             symbolBrokerMap
                     .computeIfAbsent(stdSymbol, k -> new HashMap<>())
-                    .put(brokerName, brokerSymbol);
+                    .computeIfAbsent(brokerName, k -> new ArrayList<>())
+                    .add(brokerSymbol);
         }
 
         try (CSVPrinter csvPrinter = new CSVPrinter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
@@ -350,9 +369,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 row.add(stdSymbol);
 
                 for (String brokerName : brokerNames) {
-                    Map<String, String> brokerMap = symbolBrokerMap.get(stdSymbol);
-                    String brokerSymbol = brokerMap != null ? brokerMap.get(brokerName) : "";
-                    row.add(brokerSymbol != null ? brokerSymbol : "");
+                    Map<String, List<String>> brokerMap = symbolBrokerMap.get(stdSymbol);
+                    String brokerSymbol = brokerMap != null && brokerMap.containsKey(brokerName)
+                            ? String.join("/", brokerMap.get(brokerName)) // 用 / 连接多个 BrokerSymbols
+                            : "";
+                    row.add(brokerSymbol);
                 }
 
                 csvPrinter.printRecord(row);
@@ -362,8 +383,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new IOException(e);
         }
     }
-
-
 
     @Override
     public List<String> listSymbol() {
