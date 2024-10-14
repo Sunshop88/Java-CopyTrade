@@ -1,9 +1,12 @@
 package net.maku.followcom.query;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
+import org.hibernate.validator.constraints.Range;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -59,5 +62,6 @@ public class FollowOrderSendQuery extends Query {
 
     @Schema(description = "下单方式")
     private Integer placedType;
+
 
 }

@@ -86,17 +86,19 @@ public class TraderOrderSendWebSocket {
             FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
             //查看品种列表
             List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
-            if (ObjectUtil.isNotEmpty(followVarietyEntityList)&&ObjectUtil.isNotEmpty(followVarietyEntityList.get(0).getBrokerSymbol())){
-                symbol=followVarietyEntityList.get(0).getBrokerSymbol();
+            for (FollowVarietyEntity o:followVarietyEntityList){
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                    symbol=o.getBrokerSymbol();
+                }
+                try {
+                    leaderApiTrader.quoteClient.Subscribe(symbol);
+                    this.symbol = symbol;
+                    break;
+                }catch (Exception e) {
+                    log.error("订阅失败: " + e.getMessage());
+                }
             }
-            this.symbol = symbol;
-            try {
-                leaderApiTrader.quoteClient.Subscribe(symbol);
-            }catch (Exception e) {
-                log.error("订阅失败: " + e.getMessage());
-                onClose();
-                throw new RuntimeException();
-            }
+
             leaderApiTrader.addOnQuoteHandler(new OnQuoteHandler(leaderApiTrader));
             // 设置超时查询机制，避免死循环
             QuoteEventArgs eventArgs = null;

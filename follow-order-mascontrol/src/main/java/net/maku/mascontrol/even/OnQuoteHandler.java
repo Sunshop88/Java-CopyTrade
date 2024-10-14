@@ -1,5 +1,6 @@
 package net.maku.mascontrol.even;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import net.maku.followcom.entity.FollowOrderSendEntity;
@@ -154,7 +155,8 @@ public class OnQuoteHandler implements QuoteEventHandler {
         vo.setOpenPrice(order.OpenPrice);
         vo.setMagicNumber(order.MagicNumber);
         vo.setType(order.Type.name());
-        vo.setOpenTime(order.OpenTime);
+        //增加五小时
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),5)));
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
     }

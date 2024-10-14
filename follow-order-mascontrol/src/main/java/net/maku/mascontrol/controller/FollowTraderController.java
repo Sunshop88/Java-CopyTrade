@@ -197,9 +197,18 @@ public class FollowTraderController {
         FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
         //查看品种列表
         List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()));
-        if (ObjectUtil.isNotEmpty(list)&&ObjectUtil.isNotEmpty(list.get(0).getBrokerSymbol())){
-            vo.setSymbol(list.get(0).getBrokerSymbol());
+        for (FollowVarietyEntity o:list){
+            if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                try {
+                    quoteClient.Subscribe(o.getBrokerSymbol());
+                    vo.setSymbol(o.getBrokerSymbol());
+                    break;
+                }catch (Exception e) {
+                    log.error("订阅失败: " + e.getMessage());
+                }
+            }
         }
+
         try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
                 //订阅
@@ -283,9 +292,9 @@ public class FollowTraderController {
         //处理券商查询逻辑，找出相关账号查询
         if (ObjectUtil.isNotEmpty(query.getBrokeName())){
             String[] split = query.getBrokeName().split(",");
-            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(Arrays.asList(split));
+            List<FollowPlatformEntity> serverEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().in(FollowPlatformEntity::getBrokerName,Arrays.asList(split)));
             if (ObjectUtil.isNotEmpty(serverEntityList)){
-                List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, serverEntityList.stream().map(FollowBrokeServerEntity::getServerName).collect(Collectors.toList())));
+                List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatformId, serverEntityList.stream().map(FollowPlatformEntity::getId).collect(Collectors.toList())));
                 collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
             }
         }
@@ -297,8 +306,6 @@ public class FollowTraderController {
         // 计算交集
         if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
             collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
-        }else  if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
-            collectPlat=collectBroke;
         }
         if (ObjectUtil.isNotEmpty(collectPlat)){
             query.setTraderIdList(collectPlat);
