@@ -284,37 +284,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
-//        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
-        Map<String, List<String>> brokerMap = new HashMap<>();
-
-        // 遍历查询结果，将券商名称和品种名称存储到映射中
-        for (FollowVarietyEntity entity : page.getRecords()) {
-            String brokerName = entity.getBrokerName();
-            String varietyName = entity.getBrokerSymbol();
-
-            // 如果券商名称不存在，则添加
-            brokerMap.putIfAbsent(brokerName, new ArrayList<>());
-            brokerMap.get(brokerName).add(varietyName);
-        }
-        // 创建一个结果列表来存储最终的券商和品种字符串
-        List<FollowVarietyVO> result = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : brokerMap.entrySet()) {
-            String broker = entry.getKey();
-            List<String> varietiesList = entry.getValue();
-
-            // 根据品种数量生成字符串
-            String varieties;
-            if (varietiesList.size() > 1) {
-                varieties = String.join("/", varietiesList);
-            } else {
-                varieties = varietiesList.get(0);
-            }
-
-            result.add(new FollowVarietyVO(null,broker, varieties,null,null,null,null,null,null,null)); // 假设FollowVarietyVO有适当的构造函数
-        }
-        return new PageResult<>(result, page.getTotal());
+        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
-
 
     @Override
 //    public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {

@@ -5,12 +5,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import java.io.Serializable;
-
-import lombok.NoArgsConstructor;
 import net.maku.framework.common.utils.DateUtils;
 import java.util.Date;
 
@@ -20,8 +16,6 @@ import java.util.Date;
  * @author LLL babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
-@NoArgsConstructor
-@AllArgsConstructor
 @Data
 @Schema(description = "品种匹配")
 public class FollowVarietyVO implements Serializable {
@@ -56,8 +50,5 @@ public class FollowVarietyVO implements Serializable {
 
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
-
-	public FollowVarietyVO(String broker, String varieties) {
-	}
 
 }
