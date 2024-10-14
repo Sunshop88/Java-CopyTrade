@@ -242,7 +242,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             executeOrdersRandomLimited(vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
         }
         //只有间隔会创建下单标识
-        if (ObjectUtil.isNotEmpty(vo.getIntervalTime())){
+        if (vo.getIntervalTime()!=0){
             redisCache.set(Constant.TRADER_SEND+vo.getTraderId(),1);
         }
         return true;
@@ -284,6 +284,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getPlacedType())){
             wrapper.eq(FollowOrderDetailEntity::getPlacedType,query.getPlacedType());
         }
+        if (ObjectUtil.isNotEmpty(query.getAccount())){
+            wrapper.eq(FollowOrderDetailEntity::getAccount,query.getAccount());
+        }
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
@@ -316,11 +319,29 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     //进行平仓滑点分析
                     updateCloseSlip(vo.getTraderId(), vo.getSymbol());
                 });
+            }else {
+                try{
+                    if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
+                        //订阅
+                        quoteClient.Subscribe(vo.getSymbol());
+                    }
+                    //非平台平仓
+                    double  bid = quoteClient.GetQuote(vo.getSymbol()).Bid;
+                    double  ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+                    if (vo.getType()==Op.Buy.getValue()){
+                        oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
+                    }else {
+                        oc.OrderClose(vo.getSymbol(),  vo.getOrderNo(),vo.getSize(), ask, 0);
+                    }
+                } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
+                    log.info("平仓出错"+e.getMessage());
+                    throw new RuntimeException(e);
+                }
             }
             return true;
         }
         if (vo.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
-           list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
+            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
             orderCount=list.size();
         }else {
             orderCount = vo.getNum();
@@ -369,7 +390,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             commonThreadPool.execute(()-> {
                 CountDownLatch latch = new CountDownLatch(orderCount);  // 初始化一个计数器，数量为任务数
                 for (int i = 0; i < orderCount; i++) {
-                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))||redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()).equals("1")) {
+                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))||redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()).equals(1)) {
                         try {
                             int finalI = i;
                             ThreadPoolUtils.execute(()-> {
@@ -401,7 +422,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 });
             });
             //只有间隔会创建平仓标识
-            if (ObjectUtil.isNotEmpty(vo.getIntervalTime())){
+            if (vo.getIntervalTime()!=0){
                 redisCache.set(Constant.TRADER_CLOSE+vo.getTraderId(),1);
             }
         }
@@ -482,17 +503,19 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public Boolean stopOrder(Integer type,Long traderId) {
-        if (type==0){
-            //停止下单
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND+traderId))){
-                redisCache.set(Constant.TRADER_SEND+traderId,2);
+    public Boolean stopOrder(Integer type,String traderId) {
+        Arrays.asList(traderId.split(",")).forEach(o->{
+            if (type==0){
+                //停止下单
+                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND+o))){
+                    redisCache.set(Constant.TRADER_SEND+o,2);
+                }
+            }else {
+                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE+o))) {
+                    redisCache.set(Constant.TRADER_CLOSE + o, 2);
+                }
             }
-        }else {
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE+traderId))) {
-                redisCache.set(Constant.TRADER_CLOSE + traderId, 2);
-            }
-        }
+        });
         return true;
     }
 
@@ -542,9 +565,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         String symbol = followOrderDetailEntity.getSymbol();
         Integer orderNo = followOrderDetailEntity.getOrderNo();
         try {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))){
+                //订阅
+                quoteClient.Subscribe(symbol);
+            }
             double  bid = quoteClient.GetQuote(symbol).Bid;
             double  ask = quoteClient.GetQuote(symbol).Ask;
             LocalDateTime nowdate = LocalDateTime.now();
+            log.info("平仓信息{},{},{},{},{}",symbol,orderNo,followOrderDetailEntity.getSize(),bid,ask);
             Order orderResult;
             if (followOrderDetailEntity.getType()==Op.Buy.getValue()){
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
@@ -684,10 +712,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
             if (type.equals(Op.Buy.getValue())){
-                order=oc.OrderSend(symbol, Op.Buy,lotsPerOrder,asksub,0,0,0,"comment", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
+                order=oc.OrderSend(symbol, Op.Buy,lotsPerOrder,asksub,0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
             }else {
-                order=oc.OrderSend(symbol, Op.Sell,lotsPerOrder,bidsub, 0,0,0,"comment", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
+                order=oc.OrderSend(symbol, Op.Sell,lotsPerOrder,bidsub, 0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
@@ -884,7 +912,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             commonThreadPool.execute(()-> {
                 CountDownLatch latch = new CountDownLatch(orderCount);  // 初始化一个计数器，数量为任务数
                 for (int i = 0; i < orderCount; i++) {
-                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_SEND+traderId))||redisCache.get(Constant.TRADER_SEND+traderId).equals("1")) {
+                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_SEND+traderId))||redisCache.get(Constant.TRADER_SEND+traderId).equals(1)) {
                         int finalI = i;
                         ThreadPoolUtils.execute(() -> {
                             final int orderId = finalI + 1;
@@ -915,13 +943,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                 latch.countDown();  // 每当一个任务完成，计数器减1
                             }
                         });
+                        try {
+                            Thread.sleep(interval);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                     }else {
                         latch.countDown();
-                    }
-                    try {
-                        Thread.sleep(interval);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
                     }
                 }
                 ThreadPoolUtils.execute(()->{
@@ -929,8 +957,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     try {
                         latch.await();  // 这里会阻塞，直到计数器变为0，表示所有任务都已完成
                         log.info("所有间隔订单任务已完成");
+                        //更新状态
+                        FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
+                        sendServiceOne.setFinishTime(LocalDateTime.now());
+                        sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                        followOrderSendService.updateById(sendServiceOne);
                         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))){
                             redisCache.delete(Constant.TRADER_SEND + traderId);
+                        }
+                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
+                            redisCache.delete(Constant.TRADER_ORDER+traderId);
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();

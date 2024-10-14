@@ -35,4 +35,5 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
 
     QuoteClient tologin(String account, String password, String platform);
 
+    List<FollowPlatformVO> listBroke();
 }

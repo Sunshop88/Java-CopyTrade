@@ -133,4 +133,7 @@ public class FollowOrderDetailVO  implements Serializable {
 
 	@Schema(description = "服务器")
 	private String platform;
+
+	@Schema(description = "下单方式")
+	private Integer placedType;
 }

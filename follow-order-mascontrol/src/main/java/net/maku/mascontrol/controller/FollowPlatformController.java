@@ -193,10 +193,12 @@ public class FollowPlatformController {
     }
 
 
-
-
-
-
+    @GetMapping("listBroke")
+    @Operation(summary = "查询券商列表")
+    public Result<List<FollowPlatformVO>> listBroke(){
+        List<FollowPlatformVO> list = followPlatformService.listBroke();
+        return Result.ok(list);
+    }
 
 
 }

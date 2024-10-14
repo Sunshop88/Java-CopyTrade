@@ -217,8 +217,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             try {
                                 baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
                             }catch (Exception e){
-                                log.error("Error inserting data: ", e);
-                                log.error(e.getMessage());
+                                log.info("插入失败"+brokerData.getBrokerName()+"-"+brokerData.getBrokerSymbol());
                             }
                         }
                     }
@@ -264,8 +263,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             try {
                                 baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
                             }catch (Exception e){
-                                log.error("Error inserting data: ", e);
-                                log.error(e.getMessage());
+                                log.info("插入失败"+brokerData.getBrokerName()+"-"+brokerData.getBrokerSymbol());
                             }
                         }
                     }

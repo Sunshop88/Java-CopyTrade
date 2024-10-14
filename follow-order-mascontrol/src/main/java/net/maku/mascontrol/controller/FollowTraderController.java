@@ -3,6 +3,7 @@ package net.maku.mascontrol.controller;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
@@ -29,7 +30,9 @@ import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
 import net.maku.followcom.vo.TraderOverviewVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
+import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
+import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,12 +183,14 @@ public class FollowTraderController {
             throw new ServerException("账号不存在");
         }
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-        QuoteClient quoteClient=leaderApiTrader.quoteClient;
-        if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
+        QuoteClient quoteClient = null;
+        if (ObjectUtil.isEmpty(leaderApiTrader)||ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
             quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException("账号无法登录");
             }
+        }else {
+            quoteClient=leaderApiTrader.quoteClient;
         }
 
         //查询平台信息
@@ -196,9 +201,19 @@ public class FollowTraderController {
             vo.setSymbol(list.get(0).getBrokerSymbol());
         }
         try {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
+                //订阅
+                quoteClient.Subscribe(vo.getSymbol());
+            }
             double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
         } catch (InvalidSymbolException e) {
-            throw new ServerException("品种不正确,请先配置品种");
+            throw new ServerException(followTraderVO.getAccount()+"品种不正确,请先配置品种");
+        } catch (RuntimeException e) {
+            throw new ServerException(followTraderVO.getAccount()+"该品种未订阅成功");
+        } catch (TimeoutException e) {
+            throw new ServerException(followTraderVO.getAccount()+"订阅品种超时");
+        } catch (ConnectException e) {
+            throw new RuntimeException(followTraderVO.getAccount()+"订阅品种失败");
         }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
@@ -267,14 +282,16 @@ public class FollowTraderController {
         List<Long> collectBroke=new ArrayList<>() ;
         //处理券商查询逻辑，找出相关账号查询
         if (ObjectUtil.isNotEmpty(query.getBrokeName())){
-            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(query.getBrokeName());
+            String[] split = query.getBrokeName().split(",");
+            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(Arrays.asList(split));
             if (ObjectUtil.isNotEmpty(serverEntityList)){
                 List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, serverEntityList.stream().map(FollowBrokeServerEntity::getServerName).collect(Collectors.toList())));
                 collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
             }
         }
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
-            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
+            String[] split = query.getPlatform().split(",");
+            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, Arrays.asList(split)));
             collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
         }
         // 计算交集
@@ -323,9 +340,13 @@ public class FollowTraderController {
         }
         if (ObjectUtil.isNotEmpty(vo.getSymbol())){
             try {
+                if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
+                    //订阅
+                    quoteClient.Subscribe(vo.getSymbol());
+                }
                 double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-            } catch (InvalidSymbolException e) {
-                throw new ServerException(followTraderVO.getAccount()+"品种不正确,请先配置品种");
+            }  catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
             }
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);
@@ -386,10 +407,10 @@ public class FollowTraderController {
         detailService.export(followOrderDetailVOPageResult.getList());
     }
 
-    @GetMapping("stopOrder/{type}/{traderId}")
+    @GetMapping("stopOrder")
     @Operation(summary = "停止下单/平仓")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> stopOrder(@PathVariable("type") Integer type,@PathVariable("traderId") Long traderId) {
+    public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "traderId") String traderId) {
         return Result.ok(followTraderService.stopOrder(type,traderId));
     }
 }

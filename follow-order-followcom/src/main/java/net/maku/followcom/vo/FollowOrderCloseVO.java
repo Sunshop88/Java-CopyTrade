@@ -41,6 +41,10 @@ public class FollowOrderCloseVO implements Serializable {
 	private Integer flag;
 
 	@Schema(description = "订单号")
-	private String orderNo;
+	private Integer orderNo;
+
+	@Schema(description = "手数")
+	private double size;
+
 
 }

@@ -174,6 +174,12 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return null;
     }
 
+    @Override
+    public List<FollowPlatformVO> listBroke() {
+        List<FollowPlatformEntity> list = list(new LambdaQueryWrapper<FollowPlatformEntity>().select(FollowPlatformEntity::getBrokerName).groupBy(FollowPlatformEntity::getBrokerName));
+        return FollowPlatformConvert.INSTANCE.convertList(list);
+    }
+
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {
 //        if (idList.isEmpty()) {

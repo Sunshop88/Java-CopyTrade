@@ -69,30 +69,21 @@ public class OnQuoteHandler implements QuoteEventHandler {
     public void invoke(Object sender, QuoteEventArgs quote) {
 
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-        // 获取当前的symbol
-        String symbol = quote.Symbol;
-        // 获取该symbol的锁对象
-        Lock lock = getLock(symbol);
-        lock.lock();
-        try {
-            // 获取当前系统时间
-            long currentTime = System.currentTimeMillis();
-            // 获取该symbol上次执行时间
-            long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(symbol, 0L);
-            if (currentTime - lastSymbolInvokeTime  >= interval) {
-                // 更新该symbol的上次执行时间为当前时间
-                symbolLastInvokeTimeMap.put(symbol, currentTime);
-                QuoteClient qc = (QuoteClient) sender;
-                try {
-                    handleQuote(qc, quote);
-                } catch (Exception e) {
-                    System.err.println("Error during quote processing: " + e.getMessage());
-                    e.printStackTrace();
-                }
+
+        // 获取当前系统时间
+        long currentTime = System.currentTimeMillis();
+        // 获取该symbol上次执行时间
+        long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(quote.Symbol, 0L);
+        if (currentTime - lastSymbolInvokeTime  >= interval) {
+            // 更新该symbol的上次执行时间为当前时间
+            symbolLastInvokeTimeMap.put(quote.Symbol, currentTime);
+            QuoteClient qc = (QuoteClient) sender;
+            try {
+                handleQuote(qc, quote);
+            } catch (Exception e) {
+                System.err.println("Error during quote processing: " + e.getMessage());
+                e.printStackTrace();
             }
-        } finally {
-            // 确保释放锁
-            lock.unlock();
         }
     }
 

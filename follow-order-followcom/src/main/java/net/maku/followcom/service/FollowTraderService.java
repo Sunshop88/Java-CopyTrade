@@ -67,5 +67,5 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
 
     TraderOverviewVO traderOverview();
 
-    Boolean stopOrder(Integer type,Long traderId);
+    Boolean stopOrder(Integer type,String traderId);
 }
