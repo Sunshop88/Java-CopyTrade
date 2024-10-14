@@ -310,7 +310,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 varieties = varietiesList.get(0);
             }
 
-            result.add(new FollowVarietyVO(null, broker, varieties, null, null, null, null, null, null, null)); // 假设FollowVarietyVO有适当的构造函数
+            result.add(new FollowVarietyVO(null, null,broker, varieties,  null, null, null, null, null, null)); // 假设FollowVarietyVO有适当的构造函数
         }
         return new PageResult<>(result, page.getTotal());
     }
