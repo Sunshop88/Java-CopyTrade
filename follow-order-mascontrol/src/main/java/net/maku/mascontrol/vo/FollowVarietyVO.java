@@ -57,5 +57,7 @@ public class FollowVarietyVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	public FollowVarietyVO(String broker, String varieties) {
+	}
 
 }
