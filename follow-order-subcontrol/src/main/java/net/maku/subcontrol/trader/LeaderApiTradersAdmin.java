@@ -1,9 +1,8 @@
 package net.maku.subcontrol.trader;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.cld.message.pubsub.kafka.IKafkaProducer;
-import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,14 +15,12 @@ import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.subcontrol.constants.FollowConstant;
-import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
-import net.maku.subcontrol.util.KafkaTopicUtil;
-import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.common.KafkaFuture;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.service.FollowPlatformService;
+import net.maku.mascontrol.util.FollowConstant;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -35,11 +32,6 @@ import java.util.concurrent.*;
 @EqualsAndHashCode(callSuper = true)
 public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     /**
-     * 线程池对象
-     */
-    private final ScheduledExecutorService scheduledExecutorService;
-
-    /**
      * 信号量来控制，连接任务最多支持的并发数
      */
     private Semaphore semaphore;
@@ -49,15 +41,14 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     private Boolean launchOn = false;
 
+    private final ScheduledExecutorService scheduledExecutorService;
 
-    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService) {
+    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, ScheduledExecutorService scheduledExecutorService, FollowPlatformService followPlatformService) {
         this.followTraderService = eaTraderService;
         this.followBrokeServerService = eaBrokerService;
-        this.ks = ks;
-        this.adminClient = adminClient;
-        this.kafkaProducer = kafkaProducer;
         this.semaphore = new Semaphore(10);
         this.scheduledExecutorService = scheduledExecutorService;
+        this.followPlatformService=followPlatformService;
     }
 
     /**
@@ -75,31 +66,14 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity leader : leaders) {
             scheduledExecutorService.submit(() -> {
                 try {
-                    //这里需要删除主题，因为有可能主题的分区配置变化了
-                    ListTopicsResult listTopicsResult = adminClient.listTopics();
-                    Collection<String> hostTopicNames = listTopicsResult.names().get();
-
-                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader));
-                    hostTopicNames.retainAll(topics);
-                    if (!hostTopicNames.isEmpty()) {
-                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
-                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
-                        map.values().forEach(value -> {
-                            try {
-                                value.get();
-                            } catch (Exception ignored) {
-                            }
-                        });
-                    }
-
-
-                    ConCodeEnum conCodeEnum = addTrader(leader, kafkaProducer);
+                    ConCodeEnum conCodeEnum = addTrader(leader);
+                    LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
-                        log.error("[MT4喊单者:{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
+                        leader.setStatus(TraderStatusEnum.ERROR.getValue());
+                        followTraderService.updateById(leader);
+                        log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
-                        LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId());
-                        log.info("[MT4喊单者:{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
-                        //喊单者会订阅一个专门给他发送消息的主题：主格式为：LEADER_喊单者的主键
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -107,62 +81,64 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 } finally {
                     countDownLatch.countDown();
                 }
-
             });
         }
         //需要所有addLeader()函数执行完后才可以
         countDownLatch.await();
-
         log.info("所有的mt4喊单者结束连接服务器");
         this.launchOn = true;
     }
 
 
     @Override
-    public ConCodeEnum addTrader(FollowTraderEntity leader, IKafkaProducer<String, Object> kafkaProducer) {
-        List<NewTopic> newTopics = Arrays.asList(new NewTopic(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), ks.getPartition(), ks.getReplication()), new NewTopic(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader), ks.getPartition(), ks.getReplication()));
-
-        CreateTopicsResult createTopicsResult = adminClient.createTopics(newTopics);
-        try {
-            createTopicsResult.all().get();
-            log.debug("喊单者[{}-{}-{}]创建主题:{}成功", leader.getId(), leader.getAccount(), leader.getServerName(), newTopics);
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("喊单者[{}-{}-{}]创建主题:{}失败", leader.getId(), leader.getAccount(), leader.getServerName(), newTopics);
-        }
-        
+    public ConCodeEnum addTrader(FollowTraderEntity leader) {
         ConCodeEnum conCodeEnum=ConCodeEnum.TRADE_NOT_ALLOWED;
-        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
-        for (FollowBrokeServerEntity address : serverEntityList) {
-            try {
-                LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, kafkaProducer, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
-                FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) scheduledExecutorService.submit(connectionTask);
-                ConnectionResult result = submit.get();
-                FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
-                traderUpdateEn.setId(leader.getId());
-                // 判断连接结果是否成功
-                if (result.code == ConCodeEnum.SUCCESS) {
-                    leaderApiTrader.setTrader(leader);
-                    leader4ApiTraderConcurrentHashMap.put(String.valueOf(leader.getId()), leaderApiTrader);
-                    traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
-                    traderUpdateEn.setStatusExtra("启动成功");
-                    followTraderService.updateById(traderUpdateEn);
-                    conCodeEnum = ConCodeEnum.SUCCESS;
-                }else {
-                    traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
-                    traderUpdateEn.setStatusExtra("经纪商异常");
-                    conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+        //优先查看平台默认节点
+        FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
+        if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
+            //处理节点格式
+            String[] split = followPlatformServiceOne.getServerNode().split(":");
+            return connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
+        }else {
+            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
+            for (FollowBrokeServerEntity address : serverEntityList) {
+                // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                conCodeEnum=connectTrader(leader,conCodeEnum,address.getServerNode(),Integer.valueOf(address.getServerPort()));
+                if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                    break;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-            // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-            if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
-                break;
+            return conCodeEnum;
+        }
+    }
+
+    private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
+        try {
+            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
+            ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
+            FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) scheduledExecutorService.submit(connectionTask);
+            ConnectionResult result = submit.get();
+            FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
+            traderUpdateEn.setId(leader.getId());
+            // 判断连接结果是否成功
+            if (result.code == ConCodeEnum.SUCCESS) {
+                leaderApiTrader.setTrader(leader);
+                leader4ApiTraderConcurrentHashMap.put(String.valueOf(leader.getId()), leaderApiTrader);
+                traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
+                traderUpdateEn.setStatusExtra("启动成功");
+                followTraderService.updateById(traderUpdateEn);
+                conCodeEnum = ConCodeEnum.SUCCESS;
+            } else {
+                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                traderUpdateEn.setStatusExtra("经纪商异常");
+                conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
+        } catch (Exception e) {
+            log.info("重新连接" + e);
         }
         return conCodeEnum;
     }
+
 
     /**
      * @param id mt账户的id
@@ -174,10 +150,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
 
         boolean b = true;
         if (leader4Trader != null) {
-            b = leader4Trader.stopTrade();
-            if (b) {
-                this.leader4ApiTraderConcurrentHashMap.remove(id);
-            }
+            this.leader4ApiTraderConcurrentHashMap.remove(id);
         }
         return b;
     }

@@ -1,16 +1,18 @@
-package net.maku.mascontrol.controller;
+package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
+import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
@@ -22,15 +24,8 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
-import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.entity.FollowVarietyEntity;
-import net.maku.mascontrol.service.FollowPlatformService;
-import net.maku.mascontrol.service.FollowVarietyService;
-import net.maku.mascontrol.trader.LeaderApiTrader;
-import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
-import net.maku.followcom.vo.TraderOverviewVO;
-import net.maku.mascontrol.vo.FollowVarietyVO;
+import net.maku.subcontrol.trader.LeaderApiTrader;
+import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -38,13 +33,13 @@ import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
 
-import java.net.SocketException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +49,7 @@ import java.util.stream.Collectors;
  * <a href="https://maku.net">MAKU</a>
  */
 @RestController
-@RequestMapping("/mascontrol/trader")
+@RequestMapping("/subcontrol/trader")
 @Tag(name="mt4账号")
 @AllArgsConstructor
 public class FollowTraderController {

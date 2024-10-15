@@ -1,4 +1,4 @@
-package net.maku.subcontrol.constants;
+package net.maku.subcontrol.util;
 
 import lombok.extern.slf4j.Slf4j;
 

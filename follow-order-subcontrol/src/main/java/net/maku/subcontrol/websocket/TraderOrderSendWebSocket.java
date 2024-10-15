@@ -1,4 +1,4 @@
-package net.maku.mascontrol.websocket;
+package net.maku.subcontrol.websocket;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,14 +8,13 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowOrderSendService;
-import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
@@ -26,12 +25,10 @@ import net.maku.mascontrol.service.impl.FollowPlatformServiceImpl;
 import net.maku.mascontrol.service.impl.FollowVarietyServiceImpl;
 import net.maku.mascontrol.trader.LeaderApiTrader;
 import net.maku.mascontrol.trader.LeaderApiTradersAdmin;
-import net.maku.followcom.util.SpringContextUtils;
 import net.maku.mascontrol.vo.FollowOrderSendSocketVO;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;

@@ -1,16 +1,10 @@
 package net.maku.subcontrol.trader;
 
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.cld.message.pubsub.kafka.IKafkaProducer;
-import com.cld.message.pubsub.kafka.impl.CldKafkaConsumer;
-import com.cld.message.pubsub.kafka.properties.Ks;
-import com.cld.utils.HumpLine;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -18,14 +12,11 @@ import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
-import net.maku.subcontrol.eventHandler.OnQuoteHandler;
-import net.maku.subcontrol.util.SpringContextUtils;
-import net.maku.subcontrol.eventHandler.OrderUpdateHandler;
-import net.maku.subcontrol.eventHandler.impl.CopierOrderUpdateEventHandlerImpl;
-import net.maku.subcontrol.eventHandler.impl.LeaderOrderUpdateEventHandlerImpl;
-import net.maku.subcontrol.pojo.EaSymbolInfo;
-import net.maku.subcontrol.task.CycleCloseOrderTask;
-import net.maku.subcontrol.task.SyncLiveOrdersTask;
+import net.maku.framework.common.exception.ServerException;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+
+import net.maku.subcontrol.even.OnQuoteHandler;
+import net.maku.subcontrol.even.OnQuoteTraderHandler;
 import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -44,7 +35,6 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 
-
 @Slf4j
 public abstract class AbstractApiTrader extends ApiTrader {
 
@@ -55,8 +45,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
     protected FollowTraderEntity trader;
     protected ScheduledFuture<?> updateTradeInfoFuture;
     protected ScheduledFuture<?> cycleFuture;
-    @Getter
-    private volatile SyncLiveOrdersTask syncLiveOrdersTask = null;
 //    @Setter
 //    @Getter
 //    protected IEquityRiskListener equityRiskListener;
@@ -79,13 +67,11 @@ public abstract class AbstractApiTrader extends ApiTrader {
     protected int reconnectTimes = 0;
     private QuoteEventArgs quoteEventArgs;
     @Getter
-    protected Map<String, EaSymbolInfo> symbolInfoMap = new HashMap<>();
     public OrderClient orderClient;
     public static List<String> availableException4 = new LinkedList<>();
-    protected CycleCloseOrderTask cycleCloseOrderTask;
     protected Map<LocalDate, BigDecimal> equityMap = new HashMap<>(1);
     private Date apiAnalysisBeginDate = null;
-    OrderUpdateHandler orderUpdateHandler;
+    OnQuoteTraderHandler onQuoteTraderHandler;
     OnQuoteHandler onQuoteHandler;
     static {
         availableException4.add("Market is closed");
@@ -94,22 +80,18 @@ public abstract class AbstractApiTrader extends ApiTrader {
         availableException4.add("Trade is disabled");
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader, String host, int port) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port);
         this.trader = trader;
-        this.kafkaProducer = kafkaProducer;
 //        this.equityRiskListener = new EquityRiskListenerImpl();
         initService();
-        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
 //        this.equityRiskListener = new EquityRiskListenerImpl4();
         this.trader = trader;
-        this.kafkaProducer = kafkaProducer;
         initService();
-        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
     }
 
     /**
@@ -118,22 +100,17 @@ public abstract class AbstractApiTrader extends ApiTrader {
     protected void connect2Broker() throws Exception {
         this.initPrefixSuffix = Boolean.FALSE;
         this.quoteClient.Connect();
-        if (this.orderUpdateHandler == null) {
-            //事件监听
-            boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
-            this.orderUpdateHandler = isLeader ? new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer) : new CopierOrderUpdateEventHandlerImpl(this, kafkaProducer);
-            this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-        }
-        if (this.onQuoteHandler==null){
-            //订单监听
-            this.quoteClient.OnQuote.addListener(new OnQuoteHandler(this));
-        }
         if (quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
         }
-        //账号密码绑定成功后，立刻刷新前后缀,账户数据
-        updatePrefixSuffix();
+        if (this.onQuoteTraderHandler==null){
+            //订单监听
+            onQuoteTraderHandler=new OnQuoteTraderHandler(this);
+            this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
+        }
+
     }
+
 
     public SymbolInfo GetSymbolInfo(String symbol) throws InvalidSymbolException, ConnectException {
         boolean anyMatch;
@@ -234,16 +211,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
             FollowTraderEntity build = new FollowTraderEntity();
             build.setId(trader.getId());
-//            build.setPrefixSuffix(prefixSuffixList.isEmpty() ? EMPTY + StrUtil.COMMA + EMPTY : String.join("@", prefixSuffixList));
-//            prefixSuffix = build.getPrefixSuffix();
             traderService.updateById(build);
-
-            // 调整强制映射数据
-//            FollowTraderEntity eaTrader = traderService.getById(this.trader.getId());
-//            if (!ObjectUtils.isEmpty(eaTrader)) {
-//                List<String> oriSymbolList = Arrays.stream(this.quoteClient.Symbols()).collect(Collectors.toList());
-//                updateModSymbolMapping(getPrefixSuffixList(), oriSymbolList);
-//            }
         } else {
             log.info(" {}'s initPrefixSuffix is {}", trader.getAccount(), initPrefixSuffix);
         }
@@ -317,63 +285,63 @@ public abstract class AbstractApiTrader extends ApiTrader {
         try {
             boolean connected = quoteClient.Connected();
             if (!connected) {
+                log.info("进行重连");
                 throw new ConnectException("Not Connected.", quoteClient.Log);
-            } else {
-                this.quoteClient.Subscribe(eurusd);
-                while (quoteEventArgs == null && quoteClient.Connected()) {
-                    quoteEventArgs = this.quoteClient.GetQuote(eurusd);
-                    if (++loopTimes > 20) {
-                        break;
-                    } else {
-                        Thread.sleep(500);
-                    }
-                }
-//                try {
-//                    if (trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && quoteClient.AccountMode() != 1) {
-//                        this.orderClient.OrderSend(eurusd, Op.Buy, 0.0, quoteEventArgs == null ? 1.0 : quoteEventArgs.Ask, Integer.MAX_VALUE, 0, 0, "daW7iAEt", 0, null);
-//                    }
-//                } catch (Exception serverException) {
-//                    if (availableException4.contains(serverException.getMessage())) {
-//                        log.debug("[MT4{}:{}-{}-{}]抛出不需要重连的异常：{}", trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(), serverException.getMessage());
-//                    } else {
-//                        throw serverException;
-//                    }
-//                }
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
             log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), trader.getPassword(), eurusd, e.getMessage());
-            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
-            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
-            if (ObjectUtil.isEmpty(serverEntityList)) {
-                log.error("server is null");
-                return;
-            }
-            serverEntityList.stream().anyMatch(address->{
+            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
+            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
+            if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
                 try {
-                    this.quoteClient.Disconnect();
-                    this.quoteClient.Password = trader.getPassword();
-                    this.quoteClient.Host = address.getServerNode();
-                    this.quoteClient.Port = Integer.valueOf(address.getServerPort());
-                } catch (Exception ex) {
-                    log.error("连接失败", ex);
+                    //处理节点格式
+                    String[] split = followPlatformServiceOne.getServerNode().split(":");
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
+                    quoteClient.Connect();
+                }catch (Exception e1){
+                    if (e.getMessage().contains("Invalid account")){
+                        log.info("账号密码错误");
+                        throw new ServerException("账号密码错误");
+                    }else {
+                        //重连失败
+                        log.info("重连失败{}",trader.getId());
+                    }
+
                 }
-                return reconnect();
-            });
+            }else {
+                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
+                if (ObjectUtil.isEmpty(serverEntityList)) {
+                    log.error("server is null");
+                    return;
+                }
+                serverEntityList.stream().anyMatch(address->{
+                    try {
+                        this.quoteClient.Disconnect();
+                        this.quoteClient.Password = trader.getPassword();
+                        this.quoteClient.Host = address.getServerNode();
+                        this.quoteClient.Port = Integer.valueOf(address.getServerPort());
+                    } catch (Exception ex) {
+                        log.error("连接失败", ex);
+                    }
+                    return reconnect();
+                });
+            }
         }
     }
 
     void freshTimeWhenConnected() throws ConnectException, TimeoutException {
         LambdaUpdateWrapper<FollowTraderEntity> lambdaUpdateWrapper = Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getLeverage, quoteClient.AccountLeverage())
                 .set(FollowTraderEntity::getBalance, quoteClient.AccountBalance()).set(FollowTraderEntity::getIsDemo, quoteClient.IsDemoAccount())
-                .set(FollowTraderEntity::getEuqit,quoteClient.AccountEquity()).set(FollowTraderEntity::getStatus,  CloseOrOpenEnum.OPEN.getValue())
+                .set(FollowTraderEntity::getEuqit,quoteClient.AccountEquity())
+                .set(FollowTraderEntity::getStatus,  CloseOrOpenEnum.CLOSE.getValue())
                 .set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId());
-        Date apiAnalysisEndDate = new Date();
-        long between = apiAnalysisBeginDate == null ? 100 : DateUtil.between(apiAnalysisBeginDate, apiAnalysisEndDate, DateUnit.MINUTE, true);
-        if (between > 5) {
-            apiAnalysisBeginDate = new Date();
-//            analysisThreeStrategyThreadPoolExecutor.submit(new ApiAnalysisCallable(analysisThreeStrategyThreadPoolExecutor, trader, this, new SynInfo(trader.getId().toString(), false)));
-        }
+//        Date apiAnalysisEndDate = new Date();
+//        long between = apiAnalysisBeginDate == null ? 100 : DateUtil.between(apiAnalysisBeginDate, apiAnalysisEndDate, DateUnit.MINUTE, true);
+//        if (between > 5) {
+//            apiAnalysisBeginDate = new Date();
+////            analysisThreeStrategyThreadPoolExecutor.submit(new ApiAnalysisCallable(analysisThreeStrategyThreadPoolExecutor, trader, this, new SynInfo(trader.getId().toString(), false)));
+//        }
 
         //  此处加上try的原因是，某些经济商不支持读取服务器时间的获取。或者市场关闭(ERR_MARKET_CLOSED 132)。获取失败后会抛出异常。
         try {
@@ -382,152 +350,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
             log.error("读取Server时间失败", exception);
         } finally {
             traderService.update(lambdaUpdateWrapper);
-        }
-    }
-
-    private void updateEquity(LocalDate today, BigDecimal equity) {
-//        EaProfitLossDayEquity dayEquity = profitLossDayEquityService.getOne(Wrappers.<EaProfitLossDayEquity>lambdaUpdate()
-//                .eq(EaProfitLossDayEquity::getOfDate, today)
-//                .eq(EaProfitLossDayEquity::getAccount, trader.getAccount())
-//                .eq(EaProfitLossDayEquity::getServerName, trader.getServerName()));
-//        if (dayEquity == null || dayEquity.getEquity().compareTo(equity) > 0) {
-//            profitLossDayEquityService.saveOrUpdate(
-//                    EaProfitLossDayEquity.builder()
-//                            .ofDate(today)
-//                            .equity(equity)
-//                            .account(trader.getAccount()).serverName(trader.getServerName()).build(),
-//                    Wrappers.<EaProfitLossDayEquity>lambdaUpdate()
-//                            .eq(EaProfitLossDayEquity::getOfDate, today)
-//                            .eq(EaProfitLossDayEquity::getAccount, trader.getAccount())
-//                            .eq(EaProfitLossDayEquity::getServerName, trader.getServerName()));
-//            equityMap.put(today, equity);
-//        }
-
-    }
-
-    /**
-     * 开始交易
-     *
-     * @param subscriptions 订阅的主题
-     * @return Boolean
-     */
-    public abstract Boolean startTrade(List<String> subscriptions);
-
-    /**
-     * 开始执行相关业务操作：开始消费KAFKA数据，
-     *
-     * @return true-成功 false-失败
-     */
-    public abstract Boolean startTrade();
-
-    /**
-     * 停止交易
-     *
-     * @return Boolean
-     */
-    public Boolean stopTrade() {
-        if (orderUpdateHandler != null) {
-            try {
-                orderUpdateHandler.setRunning(Boolean.FALSE);
-            } catch (Exception e) {
-                log.error("设置orderUpdateHandler running 为false", e);
-            }
-        }
-        // 跟单者对象关闭定时任务
-        if (!ObjectUtils.isEmpty(updateTradeInfoFuture)) {
-            try {
-                updateTradeInfoFuture.cancel(Boolean.TRUE);
-            } catch (Exception e) {
-                log.error("updateTradeInfoFuture cancel", e);
-            }
-        }
-
-        if (!ObjectUtils.isEmpty(cycleCloseOrderTask)) {
-            try {
-                cycleCloseOrderTask.setRunning(Boolean.FALSE);
-            } catch (Exception e) {
-                log.error("cycleCloseOrderTask running false", e);
-            }
-        }
-        try {
-            quoteClient.OnOrderUpdate.removeAllListeners();
-            quoteClient.OnConnect.removeAllListeners();
-            quoteClient.OnDisconnect.removeAllListeners();
-            quoteClient.OnQuoteHistory.removeAllListeners();
-            quoteClient.OnDisconnect.removeAllListeners();
-            quoteClient.Disconnect();
-            log.info("关闭mtapi");
-        } catch (Exception e) {
-            log.error("", e);
-        }
-        return this.cldKafkaConsumer.stopConsume();
-    }
-
-    /**
-     * 获取MT4品种的信息
-     *
-     * @param symbol 品种
-     * @param cache  是否从缓存中获取
-     * @return EaSymbolInfo
-     */
-    public EaSymbolInfo symbolInfo(String symbol, boolean cache) throws InvalidSymbolException, ConnectException, TimeoutException {
-        EaSymbolInfo eaSymbolInfo;
-        if (cache) {
-            eaSymbolInfo = symbolInfoMap.get(symbol);
-            if (ObjectUtils.isEmpty(eaSymbolInfo)) {
-                eaSymbolInfo = symbolInfo(symbol);
-            }
-        } else {
-            eaSymbolInfo = symbolInfo(symbol);
-            symbolInfoMap.put(symbol, eaSymbolInfo);
-        }
-        return eaSymbolInfo;
-    }
-
-    private EaSymbolInfo symbolInfo(String symbol) throws InvalidSymbolException, ConnectException, TimeoutException {
-        EaSymbolInfo eaSymbolInfo;
-        boolean anyMatch = Arrays.stream(this.quoteClient.Symbols()).anyMatch((s) -> s.equalsIgnoreCase(symbol));
-        if (!anyMatch) {
-            throw new InvalidSymbolException(symbol, this.quoteClient.Log);
-        }
-        SymbolInfo symbolInfo = this.GetSymbolInfo(symbol);
-        ConGroupSec conGroupSec = this.quoteClient.GetSymbolGroupParams(symbol);
-        eaSymbolInfo = new EaSymbolInfo(symbolInfo, conGroupSec);
-        eaSymbolInfo.setTradeTickSize(this.quoteClient.GetTickSize(symbol));
-        eaSymbolInfo.setTradeTickValue(this.quoteClient.GetTickValue(symbol, 10000));
-        return eaSymbolInfo;
-    }
-
-    public Order[] downloadOrderHistory(LocalDateTime from, LocalDateTime to) throws Exception {
-        Order[] orders = quoteClient.DownloadOrderHistory(from, to);
-        return Arrays.stream(orders).filter(order -> !order.CloseTime.isBefore(from) && order.CloseTime.isBefore(to)).toArray(Order[]::new);
-    }
-
-    /**
-     * 开启定时任务——更新liveOrders数组（持仓订单的盈亏）
-     */
-    public void startSyncLiveOrders() {
-        if (null == syncLiveOrdersTask) {
-            synchronized (lock) {
-                if (null == syncLiveOrdersTask) {
-                    syncLiveOrdersTask = new SyncLiveOrdersTask(this);
-                    syncLiveOrdersTask.start();
-                }
-            }
-        }
-    }
-
-    /**
-     * 取消定时任务——更新liveOrders数组（持仓订单的盈亏）
-     */
-    public void cancelSyncLiveOrders() {
-        if (null != syncLiveOrdersTask) {
-            synchronized (lock) {
-                if (null != syncLiveOrdersTask) {
-                    syncLiveOrdersTask.cancel();
-                    syncLiveOrdersTask = null;
-                }
-            }
         }
     }
 
@@ -550,6 +372,21 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 }
             }
         }
+    }
+
+    public void addOnQuoteHandler(OnQuoteHandler hander) {
+        if (ObjectUtil.isEmpty(onQuoteHandler)){
+            onQuoteHandler=hander;
+            this.quoteClient.OnQuote.addListener(hander);
+        }
+    }
+
+    protected OnQuoteHandler getQuoteHandler() {
+       return onQuoteHandler;
+    }
+
+    protected void removeOnQuoteHandler() {
+        onQuoteHandler=null;
     }
 //    /**
 //     * 判断当前账户净值是否小于设置的最小风控净值，
