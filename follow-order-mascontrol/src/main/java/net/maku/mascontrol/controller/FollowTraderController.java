@@ -256,6 +256,9 @@ public class FollowTraderController {
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
             List<String> collect = list.stream().map(entity -> String.valueOf(entity.getId())).collect(Collectors.toList());
             String traderId = collect.stream().collect(Collectors.joining(","));
+            if (ObjectUtil.isEmpty(traderId)) {
+                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
+            }
             if (ObjectUtil.isEmpty(query.getTraderId())){
                 query.setTraderId(traderId);
             }else {
@@ -314,6 +317,9 @@ public class FollowTraderController {
         // 计算交集
         if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
             collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
+            if (ObjectUtil.isEmpty(collectPlat)) {
+                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
+            }
         }else if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
             collectPlat=collectBroke;
         }

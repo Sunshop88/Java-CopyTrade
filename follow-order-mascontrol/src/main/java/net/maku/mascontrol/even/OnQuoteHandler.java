@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -130,9 +131,16 @@ public class OnQuoteHandler implements QuoteEventHandler {
             resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
             collect.add(reusableOrderActiveInfoVO);
         }
-        for (OrderActiveInfoVO vo : collect) {
-            orderActiveInfoVOPool.returnObject(vo);  // 将对象归还池中
-        }
+        ThreadPoolUtils.execute(()->{
+            try {
+                Thread.sleep(100);
+                for (OrderActiveInfoVO vo : collect) {
+                    orderActiveInfoVOPool.returnObject(vo);  // 将对象归还池中
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
         return collect;
     }
 

@@ -14,6 +14,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.framework.security.user.SecurityUser;
 import net.maku.mascontrol.convert.FollowPlatformConvert;
 import net.maku.mascontrol.entity.FollowPlatformEntity;
 import net.maku.mascontrol.query.FollowPlatformQuery;
@@ -27,6 +28,7 @@ import jakarta.validation.Valid;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
@@ -114,6 +116,8 @@ public class FollowPlatformController {
                 vo.setId(null);
                 FollowPlatformVO followPlatformVO=vo;
                 followPlatformVO.setServer(bro);
+                followPlatformVO.setCreator(SecurityUser.getUserId().toString());
+                followPlatformVO.setCreateTime(LocalDateTime.now());
                 this.save(followPlatformVO);
                 //进行测速
                 List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
