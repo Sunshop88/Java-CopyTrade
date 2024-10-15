@@ -46,7 +46,6 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -60,7 +59,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, FollowTraderEntity> implements FollowTraderService {
     private final TransService transService;
-    private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderSendService followOrderSendService;

@@ -13,7 +13,7 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowPlatformEntity;
 
 import net.maku.subcontrol.even.OnQuoteHandler;
 import net.maku.subcontrol.even.OnQuoteTraderHandler;

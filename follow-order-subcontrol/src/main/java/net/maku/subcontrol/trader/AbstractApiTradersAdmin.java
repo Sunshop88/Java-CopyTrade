@@ -7,7 +7,7 @@ import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.mascontrol.service.FollowPlatformService;
+import net.maku.followcom.service.FollowPlatformService;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 

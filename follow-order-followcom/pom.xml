@@ -21,6 +21,7 @@
             <artifactId>follow-order-api</artifactId>
             <version>${revision}</version>
         </dependency>
+
     </dependencies>
 
 </project>

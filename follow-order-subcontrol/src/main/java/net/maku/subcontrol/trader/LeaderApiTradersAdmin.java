@@ -15,9 +15,9 @@ import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.service.FollowPlatformService;
-import net.maku.mascontrol.util.FollowConstant;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.util.FollowConstant;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

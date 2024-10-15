@@ -10,7 +10,7 @@ import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.mascontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import online.mtapi.mt4.QuoteEventHandler;

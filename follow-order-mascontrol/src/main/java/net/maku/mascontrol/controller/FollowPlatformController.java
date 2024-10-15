@@ -6,8 +6,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.api.module.system.UserApi;
+import net.maku.followcom.convert.FollowPlatformConvert;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.query.FollowPlatformQuery;
 import net.maku.followcom.service.FollowBrokeServerService;
+import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -38,14 +44,16 @@ import java.util.stream.Collectors;
 public class FollowPlatformController {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
-
+    private final UserApi userApi;
 
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<PageResult<FollowPlatformVO>> page(@ParameterObject @Valid FollowPlatformQuery query){
         PageResult<FollowPlatformVO> page = followPlatformService.page(query);
-
+        page.getList().forEach(o->{
+            o.setCreator(userApi.getUserById(o.getCreator()).getUsername());
+        });
         return Result.ok(page);
     }
 

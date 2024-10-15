@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.api.module.system.UserApi;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
@@ -42,16 +41,11 @@ import java.util.List;
 public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao, FollowPlatformEntity> implements FollowPlatformService {
     private final TransService transService;
     private final FollowBrokeServerService followBrokeServerService;
-    private final UserApi userApi;
 
     @Override
     public PageResult<FollowPlatformVO> page(FollowPlatformQuery query) {
         IPage<FollowPlatformEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowPlatformVO> followPlatformVOS = FollowPlatformConvert.INSTANCE.convertList(page.getRecords());
-        followPlatformVOS.forEach(o->{
-            o.setCreator(userApi.getUserById(o.getCreator()).getUsername());
-        });
-
         return new PageResult<>(followPlatformVOS, page.getTotal());
     }
 
