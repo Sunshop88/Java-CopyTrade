@@ -22,8 +22,6 @@ import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -38,9 +36,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     protected RedisCache redisCache;
 
     private final FollowRedisTraderVO followRedisTraderVO=new FollowRedisTraderVO();
-    // 用于存储每个Symbol的锁
-    private static final ConcurrentHashMap<String, Lock> symbolLockMap = new ConcurrentHashMap<>();
-
     // 设定时间间隔，单位为毫秒
     private final long interval = 5000; // 5秒间隔
 
@@ -115,9 +110,5 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         } catch (Exception e) {
             log.error("Error updating trader info: {}", e.getMessage(), e);
         }
-    }
-    private Lock getLock(String symbol) {
-        // 如果没有锁对象，使用ReentrantLock创建一个新的锁
-        return symbolLockMap.computeIfAbsent(symbol, k -> new ReentrantLock());
     }
 }

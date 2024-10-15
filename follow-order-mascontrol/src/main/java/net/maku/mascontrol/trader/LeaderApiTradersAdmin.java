@@ -74,9 +74,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
-                        log.error("单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
+                        log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {

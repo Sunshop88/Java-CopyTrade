@@ -120,18 +120,19 @@ public class OnQuoteHandler implements QuoteEventHandler {
             }
             collect.clear();
         }
-        openedOrders=null;
-        orderActiveInfoList=null;
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
     private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
-        List<OrderActiveInfoVO> collect = openedOrders.stream().map(o -> {
-            OrderActiveInfoVO reusableOrderActiveInfoVO = new OrderActiveInfoVO();
-            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account);  // 重用并重置对象
-            return reusableOrderActiveInfoVO;
-        }).collect(Collectors.toList());
-
+        List<OrderActiveInfoVO> collect = new ArrayList<>();
+        for (Order o : openedOrders) {
+            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoVOPool.borrowObject(); // 从对象池中借用对象
+            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
+            collect.add(reusableOrderActiveInfoVO);
+        }
+        for (OrderActiveInfoVO vo : collect) {
+            orderActiveInfoVOPool.returnObject(vo);  // 将对象归还池中
+        }
         return collect;
     }
 
@@ -153,8 +154,4 @@ public class OnQuoteHandler implements QuoteEventHandler {
         vo.setTakeProfit(order.TakeProfit);
     }
 
-    private Lock getLock(String symbol) {
-        // 如果没有锁对象，使用ReentrantLock创建一个新的锁
-        return symbolLockMap.computeIfAbsent(symbol, k -> new ReentrantLock());
-    }
 }

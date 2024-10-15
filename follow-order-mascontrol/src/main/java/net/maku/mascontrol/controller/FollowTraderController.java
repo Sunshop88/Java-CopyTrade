@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
@@ -37,6 +38,7 @@ import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -65,7 +67,6 @@ public class FollowTraderController {
     private final FollowOrderDetailService detailService;
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVarietyService followVarietyService;
-
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -436,5 +437,24 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "traderId") String traderId) {
         return Result.ok(followTraderService.stopOrder(type,traderId));
+    }
+
+    @GetMapping("reconnection")
+    @Operation(summary = "重连账号")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+        if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+            followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+            followTraderService.updateById(followTraderEntity);
+            log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+            throw new ServerException("重连失败");
+        } else {
+            log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+            leaderApiTrader.startTrade();
+        }
+        return Result.ok();
     }
 }
