@@ -1,11 +1,9 @@
-package net.maku.mascontrol.entity;
+package net.maku.followcom.entity;
 
-import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
-
+import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 平台管理

@@ -1,10 +1,9 @@
-package net.maku.mascontrol.vo;
+package net.maku.subcontrol.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**

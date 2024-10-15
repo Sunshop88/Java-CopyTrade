@@ -1,8 +1,7 @@
-package net.maku.mascontrol.dao;
+package net.maku.followcom.dao;
 
 import net.maku.framework.mybatis.dao.BaseDao;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.vo.FollowPlatformVO;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Update;
 

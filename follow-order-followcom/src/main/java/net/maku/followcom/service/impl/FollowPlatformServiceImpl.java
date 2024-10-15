@@ -1,4 +1,4 @@
-package net.maku.mascontrol.service.impl;
+package net.maku.followcom.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -16,25 +16,19 @@ import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.framework.security.user.SecurityUser;
-import net.maku.mascontrol.convert.FollowPlatformConvert;
-import net.maku.mascontrol.dao.FollowPlatformDao;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.query.FollowPlatformQuery;
-import net.maku.mascontrol.service.FollowPlatformService;
-import net.maku.mascontrol.vo.FollowPlatformExcelVO;
-import net.maku.mascontrol.vo.FollowPlatformVO;
-//import net.maku.system.service.SysUserService;
+import net.maku.followcom.convert.FollowPlatformConvert;
+import net.maku.followcom.dao.FollowPlatformDao;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.query.FollowPlatformQuery;
+import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.vo.FollowPlatformExcelVO;
+import net.maku.followcom.vo.FollowPlatformVO;
 import online.mtapi.mt4.QuoteClient;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.Future;
 
 /**
  * 平台管理

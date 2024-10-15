@@ -1,8 +1,8 @@
-package net.maku.mascontrol.vo;
+package net.maku.followcom.vo;
 
-import lombok.Data;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
+import lombok.Data;
 
 /**
  * 平台管理

@@ -15,6 +15,12 @@
             <artifactId>follow-order-framework</artifactId>
             <version>${revision}</version>
         </dependency>
+
+        <dependency>
+            <groupId>net.maku</groupId>
+            <artifactId>follow-order-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
 </project>

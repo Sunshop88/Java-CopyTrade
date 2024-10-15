@@ -1,12 +1,12 @@
-package net.maku.mascontrol.service;
+package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletResponse;
+import net.maku.followcom.entity.FollowVarietyEntity;
+import net.maku.followcom.query.FollowVarietyQuery;
+import net.maku.followcom.vo.FollowVarietyExcelVO;
+import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.mascontrol.vo.FollowVarietyExcelVO;
-import net.maku.mascontrol.vo.FollowVarietyVO;
-import net.maku.mascontrol.query.FollowVarietyQuery;
-import net.maku.mascontrol.entity.FollowVarietyEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;

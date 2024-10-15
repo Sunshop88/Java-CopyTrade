@@ -1,11 +1,9 @@
-package net.maku.mascontrol.entity;
+package net.maku.followcom.entity;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 品种匹配

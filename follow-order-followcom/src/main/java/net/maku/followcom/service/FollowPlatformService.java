@@ -1,12 +1,11 @@
-package net.maku.mascontrol.service;
+package net.maku.followcom.service;
 
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.query.FollowPlatformQuery;
-import net.maku.mascontrol.vo.FollowPlatformVO;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.query.FollowPlatformQuery;
+import net.maku.followcom.vo.FollowPlatformVO;
 import online.mtapi.mt4.QuoteClient;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 

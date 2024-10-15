@@ -1,7 +1,7 @@
-package net.maku.mascontrol.convert;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.vo.FollowPlatformExcelVO;
-import net.maku.mascontrol.vo.FollowPlatformVO;
+package net.maku.followcom.convert;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.vo.FollowPlatformExcelVO;
+import net.maku.followcom.vo.FollowPlatformVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

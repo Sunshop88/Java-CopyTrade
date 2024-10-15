@@ -1,40 +1,37 @@
-package net.maku.mascontrol.vo;
+package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import java.io.Serializable;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
-* 平台管理
-*
-* @author 阿沐 babamu@126.com
-* @since 1.0.0 2024-09-11
-*/
+ * 品种匹配
+ *
+ * @author LLL babamu@126.com
+ * <a href="https://maku.net">MAKU</a>
+ */
+@NoArgsConstructor
+@AllArgsConstructor
 @Data
-@Schema(description = "平台管理")
-public class FollowPlatformVO implements Serializable {
+@Schema(description = "品种匹配")
+public class FollowVarietyVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Schema(description = "ID")
-	private Long id;
+	private Integer id;
+
+	@Schema(description = "品种名称")
+	private String stdSymbol;
 
 	@Schema(description = "券商名称")
 	private String brokerName;
 
-	@Schema(description = "平台类型")
-	private String platformType;
-
-	@Schema(description = "服务器")
-	private String server;
-
-	@Schema(description = "服务器节点")
-	private String serverNode;
-
-	@Schema(description = "备注")
-	private String remark;
+	@Schema(description = "券商对应的品种名称")
+	private String brokerSymbol;
 
 	@Schema(description = "版本号")
 	private Integer version;
@@ -43,7 +40,7 @@ public class FollowPlatformVO implements Serializable {
 	private Integer deleted;
 
 	@Schema(description = "创建者")
-	private String creator;
+	private Long creator;
 
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;
@@ -53,8 +50,5 @@ public class FollowPlatformVO implements Serializable {
 
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
-
-	@Schema(description = "服务名称集合")
-	private List<String> platformList;
 
 }

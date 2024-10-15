@@ -2,18 +2,15 @@ package net.maku.mascontrol.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import net.maku.framework.common.utils.ExcelUtils;
+import net.maku.followcom.query.FollowVarietyQuery;
+import net.maku.followcom.service.FollowVarietyService;
+import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
-import net.maku.mascontrol.service.FollowVarietyService;
-import net.maku.mascontrol.query.FollowVarietyQuery;
-import net.maku.mascontrol.vo.FollowVarietyExcelVO;
-import net.maku.mascontrol.vo.FollowVarietySymbolVO;
-import net.maku.mascontrol.vo.FollowVarietyVO;
+
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,8 +24,6 @@ import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 品种匹配

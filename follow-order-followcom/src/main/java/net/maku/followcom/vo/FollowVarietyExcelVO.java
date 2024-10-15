@@ -1,15 +1,10 @@
-package net.maku.mascontrol.vo;
+package net.maku.followcom.vo;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
-import com.fhs.core.trans.anno.Trans;
-import com.fhs.core.trans.constant.TransType;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 /**
  * 品种匹配

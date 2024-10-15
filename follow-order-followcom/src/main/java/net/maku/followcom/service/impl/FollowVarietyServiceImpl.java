@@ -1,29 +1,24 @@
-package net.maku.mascontrol.service.impl;
+package net.maku.followcom.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fhs.trans.service.impl.TransService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
+import net.maku.followcom.convert.FollowVarietyConvert;
+import net.maku.followcom.dao.FollowVarietyDao;
+import net.maku.followcom.entity.FollowVarietyEntity;
+import net.maku.followcom.query.FollowVarietyQuery;
+import net.maku.followcom.service.FollowVarietyService;
+import net.maku.followcom.vo.FollowPlatformVO;
+import net.maku.followcom.vo.FollowVarietyExcelVO;
+import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
-import net.maku.mascontrol.convert.FollowVarietyConvert;
-import net.maku.mascontrol.entity.FollowPlatformEntity;
-import net.maku.mascontrol.entity.FollowVarietyEntity;
-import net.maku.mascontrol.query.FollowPlatformQuery;
-import net.maku.mascontrol.query.FollowVarietyQuery;
-import net.maku.mascontrol.vo.FollowPlatformVO;
-import net.maku.mascontrol.vo.FollowVarietyVO;
-import net.maku.mascontrol.dao.FollowVarietyDao;
-import net.maku.mascontrol.service.FollowVarietyService;
-import com.fhs.trans.service.impl.TransService;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.mascontrol.vo.FollowVarietyExcelVO;
-import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
@@ -33,16 +28,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
-import org.springframework.util.StreamUtils;
-import org.springframework.web.multipart.MultipartFile;
-import cn.hutool.core.util.ObjectUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**

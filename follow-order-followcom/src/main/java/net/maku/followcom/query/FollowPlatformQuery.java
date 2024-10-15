@@ -1,12 +1,9 @@
-package net.maku.mascontrol.query;
+package net.maku.followcom.query;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import java.util.Date;
 
 /**
  * 平台管理查询

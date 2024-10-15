@@ -1,8 +1,8 @@
-package net.maku.mascontrol.convert;
+package net.maku.followcom.convert;
 
-import net.maku.mascontrol.entity.FollowVarietyEntity;
-import net.maku.mascontrol.vo.FollowVarietyVO;
-import net.maku.mascontrol.vo.FollowVarietyExcelVO;
+import net.maku.followcom.entity.FollowVarietyEntity;
+import net.maku.followcom.vo.FollowVarietyExcelVO;
+import net.maku.followcom.vo.FollowVarietyVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
