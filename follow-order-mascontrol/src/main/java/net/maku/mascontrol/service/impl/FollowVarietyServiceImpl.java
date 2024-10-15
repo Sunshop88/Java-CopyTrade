@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,9 +12,11 @@ import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.mascontrol.convert.FollowVarietyConvert;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
 import net.maku.mascontrol.entity.FollowVarietyEntity;
 import net.maku.mascontrol.query.FollowPlatformQuery;
 import net.maku.mascontrol.query.FollowVarietyQuery;
+import net.maku.mascontrol.vo.FollowPlatformVO;
 import net.maku.mascontrol.vo.FollowVarietyVO;
 import net.maku.mascontrol.dao.FollowVarietyDao;
 import net.maku.mascontrol.service.FollowVarietyService;
@@ -39,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -56,6 +60,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     private ResourceLoader resourceLoader;
     @Autowired
     private FollowVarietyDao followVarietyDao;
+    @Autowired
+    private FollowPlatformServiceImpl followPlatformServiceImpl;
 
     @Override
     public PageResult<FollowVarietyVO> page(FollowVarietyQuery query) {
@@ -313,6 +319,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             result.add(new FollowVarietyVO(null, null,broker, varieties,  null, null, null, null, null, null)); // 假设FollowVarietyVO有适当的构造函数
         }
         return new PageResult<>(result, page.getTotal());
+
     }
 
     @Override
@@ -412,6 +419,45 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new IOException(e);
         }
     }
+
+    @Override
+    public byte[] generateCsv() throws IOException {
+        List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
+
+        // 获取券商名称列表
+        List<String> brokerNames = brokers.stream()
+                .map(FollowPlatformVO::getBrokerName)
+                .toList();
+
+        String inputFilePath = "D:\\code\\Java-CopyTrade\\follow-order-mascontrol\\src\\main\\resources\\template\\品种匹配导出模板 (1).csv";
+
+
+        // 读取 CSV 文件
+        Reader in = new FileReader(inputFilePath);
+        CSVParser parser = new CSVParser(in, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+        List<CSVRecord> records = parser.getRecords();
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        StringBuilder csvBuilder = new StringBuilder();
+
+        csvBuilder.append("stdSymbol");
+        for (String brokerName : brokerNames) {
+            csvBuilder.append(",").append(brokerName);
+        }
+        csvBuilder.append("\n");
+
+        // 写入原始数据
+        for (CSVRecord record : records) {
+            csvBuilder.append(record.get(0)); // stdSymbol
+            csvBuilder.append("\n");
+        }
+
+        // 转换为字节数组
+        outputStream.write(csvBuilder.toString().getBytes());
+        return outputStream.toByteArray();
+    }
+
+
 
     @Override
     public List<String> listSymbol() {
