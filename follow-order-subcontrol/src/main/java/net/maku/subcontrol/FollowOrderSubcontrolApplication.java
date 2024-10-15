@@ -8,7 +8,7 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan(basePackages = {"net.maku.followcom","net.maku.followcom.util",  "net.maku.subcontrol"})
+@ComponentScan(basePackages = {"net.maku.framework","net.maku.followcom", "net.maku.subcontrol"})
 @MapperScan(basePackages = "net.maku.followcom.dao")
 public class FollowOrderSubcontrolApplication extends SpringBootServletInitializer {
     public static void main(String[] args) {
