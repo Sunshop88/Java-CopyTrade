@@ -1,6 +1,7 @@
 package net.maku.mascontrol.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -287,39 +288,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     @Override
     public PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query) {
-        LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.eq(FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
-        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
-        //        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
-        Map<String, List<String>> brokerMap = new HashMap<>();
-
-        // 遍历查询结果，将券商名称和品种名称存储到映射中
-        for (FollowVarietyEntity entity : page.getRecords()) {
-            String brokerName = entity.getBrokerName();
-            String varietyName = entity.getBrokerSymbol();
-
-            // 如果券商名称不存在，则添加
-            brokerMap.putIfAbsent(brokerName, new ArrayList<>());
-            brokerMap.get(brokerName).add(varietyName);
-        }
-        // 创建一个结果列表来存储最终的券商和品种字符串
-        List<FollowVarietyVO> result = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : brokerMap.entrySet()) {
-            String broker = entry.getKey();
-            List<String> varietiesList = entry.getValue();
-
-            // 根据品种数量生成字符串
-            String varieties;
-            if (varietiesList.size() > 1) {
-                varieties = String.join("/", varietiesList);
-            } else {
-                varieties = varietiesList.get(0);
-            }
-
-            result.add(new FollowVarietyVO(null, null,broker, varieties,  null, null, null, null, null, null)); // 假设FollowVarietyVO有适当的构造函数
-        }
-        return new PageResult<>(result, page.getTotal());
-
+        Page<FollowVarietyEntity> page = new Page<>(query.getPage(), query.getLimit());
+        IPage<FollowVarietyEntity> resultPage = baseMapper.pageSymbolList(page, query.getStdSymbol());
+        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(resultPage.getRecords()), resultPage.getTotal());
     }
 
     @Override
@@ -421,40 +392,43 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public byte[] generateCsv() throws IOException {
+    public void generateCsv(ByteArrayOutputStream outputStream) throws IOException{
         List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
 
-        // 获取券商名称列表
+        // 获取券商名称
         List<String> brokerNames = brokers.stream()
                 .map(FollowPlatformVO::getBrokerName)
                 .toList();
 
         String inputFilePath = "D:\\code\\Java-CopyTrade\\follow-order-mascontrol\\src\\main\\resources\\template\\品种匹配导出模板 (1).csv";
 
-
         // 读取 CSV 文件
-        Reader in = new FileReader(inputFilePath);
-        CSVParser parser = new CSVParser(in, CSVFormat.DEFAULT.withFirstRecordAsHeader());
-        List<CSVRecord> records = parser.getRecords();
+        try (Reader in = new FileReader(inputFilePath);
+             CSVParser parser = new CSVParser(in, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+             CSVPrinter csvPrinter = new CSVPrinter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        StringBuilder csvBuilder = new StringBuilder();
+            List<CSVRecord> records = parser.getRecords();
 
-        csvBuilder.append("stdSymbol");
-        for (String brokerName : brokerNames) {
-            csvBuilder.append(",").append(brokerName);
+            // 写入表头
+            List<String> header = new ArrayList<>();
+            header.add("stdSymbol");
+            header.addAll(brokerNames);
+
+            csvPrinter.printRecord(header);
+
+            // 写入原始数据
+            for (CSVRecord record : records) {
+                List<String> row = new ArrayList<>();
+                row.add(record.get(0)); // stdSymbol
+                // 添加空白列以便后续券商数据填充
+                for (int i = 0; i < brokerNames.size(); i++) {
+                    row.add(""); // 填充空白列
+                }
+                csvPrinter.printRecord(row);
+            }
+        } catch (IOException e) {
+            throw new IOException("Error writing CSV", e);
         }
-        csvBuilder.append("\n");
-
-        // 写入原始数据
-        for (CSVRecord record : records) {
-            csvBuilder.append(record.get(0)); // stdSymbol
-            csvBuilder.append("\n");
-        }
-
-        // 转换为字节数组
-        outputStream.write(csvBuilder.toString().getBytes());
-        return outputStream.toByteArray();
     }
 
 

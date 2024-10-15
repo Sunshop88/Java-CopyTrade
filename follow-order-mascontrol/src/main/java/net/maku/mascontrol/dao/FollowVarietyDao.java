@@ -1,7 +1,11 @@
 package net.maku.mascontrol.dao;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.mascontrol.entity.FollowVarietyEntity;
+import net.maku.mascontrol.query.FollowVarietyQuery;
 import net.maku.mascontrol.vo.FollowVarietyExcelVO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -27,8 +31,8 @@ public interface FollowVarietyDao extends BaseDao<FollowVarietyEntity> {
     @Select("select broker_name,broker_symbol from follow_variety where std_symbol=#{symbol} ")
     List<FollowVarietyEntity> getlist(@Param("symbol") String symbol);
 
+    IPage<FollowVarietyEntity> pageSymbolList(Page<FollowVarietyEntity> page, String stdSymbol);
 
-//    void saveAll(List<FollowVarietyExcelVO> brokerDataList);
 
 //    @Insert("INSERT INTO follow_variety_excel (std_symbol, broker_name, broker_symbol) VALUES (#{stdSymbol}, #{brokerName}, #{brokerSymbol})")
 //    void save(FollowVarietyExcelVO vo);
