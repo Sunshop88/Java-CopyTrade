@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="net.maku.mascontrol.dao.FollowVarietyDao">
+
+    <select id="pageSymbolList" resultType="net.maku.mascontrol.entity.FollowVarietyEntity">
+        select
+        std_symbol,
+        broker_name,
+        group_concat(distinct broker_symbol separator '/') as broker_symbol
+        FROM
+        follow_variety
+        <where>
+            <if test="stdSymbol != null and stdSymbol != ''">
+                and std_symbol = #{stdSymbol}
+            </if>
+        </where>
+        group by
+        std_symbol, broker_name
+    </select>
+</mapper>
