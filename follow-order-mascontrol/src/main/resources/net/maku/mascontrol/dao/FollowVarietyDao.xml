@@ -17,5 +17,7 @@
         </where>
         group by
         std_symbol, broker_name
+        having
+        broker_symbol is not null and broker_symbol != ''
     </select>
 </mapper>
