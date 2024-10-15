@@ -17,6 +17,7 @@ import net.maku.mascontrol.vo.FollowVarietyVO;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -154,9 +155,21 @@ public class FollowVarietyController {
     @Operation(summary = "下载模板")
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public void exportData(HttpServletResponse response) throws Exception {
-        followVarietyService.download(response);
+    public ResponseEntity<byte[]> generateCsv() {
+        try {
+            byte[] csvData = followVarietyService.generateCsv();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Disposition", "attachment; filename=modified_template.csv");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(csvData);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
     }
+
 
 
     @GetMapping("listSmybol")
