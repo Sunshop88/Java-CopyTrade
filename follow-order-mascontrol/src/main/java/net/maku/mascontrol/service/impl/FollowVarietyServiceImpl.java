@@ -342,8 +342,21 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
 
     public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {
-        // 查询数据库所有数据
-        List<FollowVarietyExcelVO> data = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+//        // 查询数据库所有数据
+//        List<FollowVarietyExcelVO> data = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+        List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
+
+// 获取券商名称列表
+        List<String> brokerNamess = brokers.stream()
+                .map(FollowPlatformVO::getBrokerName)
+                .toList();
+
+        //查询数据库所有数据
+        List<FollowVarietyExcelVO> data1 = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+
+        List<FollowVarietyExcelVO> data = data1.stream()
+                .filter(record -> brokerNamess.contains(record.getBrokerName()))
+                .collect(Collectors.toList());
 
         Set<String> stdSymbols = new LinkedHashSet<>();
         Set<String> brokerNames = new LinkedHashSet<>();
