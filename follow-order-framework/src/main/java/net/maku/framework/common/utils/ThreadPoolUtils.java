@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPoolUtils {
 
     // 定义一个固定大小的线程池
-    private static final ExecutorService executorService = ThreadUtil.newExecutor(10, 20,1000);
+    private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(10,"POOLFIXED",true);
 
     // 定义一个固定大小的延时任务的线程池
     private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);

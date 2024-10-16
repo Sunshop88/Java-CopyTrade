@@ -1,6 +1,7 @@
 package net.maku.mascontrol.even;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import net.maku.followcom.entity.FollowOrderSendEntity;
@@ -110,16 +111,15 @@ public class OnQuoteHandler implements QuoteEventHandler {
         followOrderSendSocketVO.setOrderActiveInfoList(orderActiveInfoList);
 
         if (ObjectUtil.isNotEmpty(list)) {
-            List<FollowOrderSendEntity> collect = list.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).collect(Collectors.toList());
-            if (ObjectUtil.isNotEmpty(collect)) {
-                //是否存在正在执行 进度
-                FollowOrderSendEntity followOrderSendEntity = collect.get(0);
+            FollowOrderSendEntity followOrderSendEntity = list.stream()
+                    .filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()))
+                    .findFirst().orElse(null);
+            if (followOrderSendEntity != null) {
                 followOrderSendSocketVO.setStatus(followOrderSendEntity.getStatus());
                 followOrderSendSocketVO.setScheduleNum(followOrderSendEntity.getTotalNum());
                 followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
                 followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
             }
-            collect.clear();
         }
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }

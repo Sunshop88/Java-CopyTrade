@@ -392,7 +392,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public void generateCsv(ByteArrayOutputStream outputStream) throws IOException{
+    public void generateCsv(ByteArrayOutputStream outputStream) throws IOException {
         List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
 
         // 获取券商名称
@@ -400,12 +400,18 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 .map(FollowPlatformVO::getBrokerName)
                 .toList();
 
-        String inputFilePath = "D:\\code\\Java-CopyTrade\\follow-order-mascontrol\\src\\main\\resources\\template\\品种匹配导出模板 (1).csv";
+        // 使用相对路径替代绝对路径
+        String inputFilePath = "/template/品种匹配导出模板 (1).csv"; // 相对于 resources 目录的路径
 
         // 读取 CSV 文件
-        try (Reader in = new FileReader(inputFilePath);
+        try (InputStream inputStream = getClass().getResourceAsStream(inputFilePath);
+             Reader in = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
              CSVParser parser = new CSVParser(in, CSVFormat.DEFAULT.withFirstRecordAsHeader());
              CSVPrinter csvPrinter = new CSVPrinter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), CSVFormat.DEFAULT)) {
+
+            if (inputStream == null) {
+                throw new FileNotFoundException("未找到指定的模板文件：" + inputFilePath);
+            }
 
             List<CSVRecord> records = parser.getRecords();
 
@@ -413,7 +419,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             List<String> header = new ArrayList<>();
             header.add("stdSymbol");
             header.addAll(brokerNames);
-
             csvPrinter.printRecord(header);
 
             // 写入原始数据
@@ -427,10 +432,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 csvPrinter.printRecord(row);
             }
         } catch (IOException e) {
-            throw new IOException("Error writing CSV", e);
+            throw new IOException("写入 CSV 时出错", e);
         }
     }
-
 
 
     @Override
