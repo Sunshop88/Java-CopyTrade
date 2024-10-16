@@ -5,18 +5,20 @@
 
     <select id="pageSymbolList" resultType="net.maku.mascontrol.entity.FollowVarietyEntity">
         select
-        std_symbol,
-        broker_name,
-        group_concat(distinct broker_symbol separator '/') as broker_symbol
+        fv.std_symbol,
+        fv.broker_name,
+        group_concat(distinct fv.broker_symbol separator '/') as broker_symbol
         FROM
-        follow_variety
+        follow_variety fv
+        INNER JOIN
+        follow_platform fp ON fv.broker_name = fp.broker_name
         <where>
             <if test="stdSymbol != null and stdSymbol != ''">
-                and std_symbol = #{stdSymbol}
+                and fv.std_symbol = #{stdSymbol}
             </if>
         </where>
         group by
-        std_symbol, broker_name
+        fv.std_symbol, fv.broker_name
         having
         broker_symbol is not null and broker_symbol != ''
     </select>
