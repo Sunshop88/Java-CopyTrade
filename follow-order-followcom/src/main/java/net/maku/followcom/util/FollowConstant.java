@@ -13,14 +13,15 @@ import java.net.UnknownHostException;
 public class FollowConstant {
 
     /**
-     * 本机IP地址
+     * 本机外网IP地址
      */
     public static String LOCAL_HOST = "";
     static {
+        String hostname = "www.google.com";
         try {
-            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
+            LOCAL_HOST = InetAddress.getByName(hostname).getHostAddress();
         } catch (UnknownHostException e) {
-            log.error("获取本地IP异常",e);
+            e.printStackTrace();
         }
     }
 }

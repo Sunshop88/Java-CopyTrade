@@ -1,6 +1,7 @@
 package net.maku.followcom.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -14,8 +15,10 @@ import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowVpsExcelVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
+import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,17 +69,25 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowVpsVO vo) {
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
-
+        vo.setClientId(RandomStringUtil.generateUUIDClientId());
+        List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName,vo.getName()));
+        if (ObjectUtil.isNotEmpty(list)){
+            throw new ServerException("重复名称或ip地址,请重新输入");
+        }
         baseMapper.insert(entity);
-
-
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowVpsVO vo) {
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
-
+        FollowVpsVO followVpsVO = this.get(Long.valueOf(vo.getId()));
+        if (ObjectUtil.notEqual(vo.getName(),followVpsVO.getName())){
+            List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName,vo.getName()));
+            if (ObjectUtil.isNotEmpty(list)){
+                throw new ServerException("重复名称,请重新输入");
+            }
+        }
         updateById(entity);
 
 

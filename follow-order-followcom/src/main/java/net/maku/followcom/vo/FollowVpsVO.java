@@ -22,6 +22,9 @@ public class FollowVpsVO implements Serializable {
 	@Schema(description = "名称")
 	private String name;
 
+	@Schema(description = "机器码")
+	private String clientId;
+
 	@Schema(description = "ip地址")
 	private String ipAddress;
 

@@ -20,6 +20,7 @@ import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -104,6 +105,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         LambdaQueryWrapper<FollowTraderEntity> wrapper = Wrappers.lambdaQuery();
         //查询指定VPS下的账号
         wrapper.eq(FollowTraderEntity::getDeleted,query.getDeleted());
+        //根据vps地址查询
+        wrapper.eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST);
         return wrapper;
     }
 
@@ -120,7 +123,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Transactional(rollbackFor = Exception.class)
     public FollowTraderVO save(FollowTraderVO vo) {
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
-        FollowVpsEntity followVpsEntity = followVpsService.list().get(0);
+        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST));
         if (ObjectUtil.isEmpty(followVpsEntity)){
             throw new ServerException("请先添加VPS");
         }
