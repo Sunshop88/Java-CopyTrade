@@ -443,7 +443,12 @@ public class FollowTraderController {
     @Operation(summary = "停止下单/平仓")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "traderId") String traderId) {
-        return Result.ok(followTraderService.stopOrder(type,traderId));
+        Boolean result = followTraderService.stopOrder(type, traderId);
+        if (!result){
+            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            return Result.error(followTraderEntity.getAccount()+"暂无进行中平仓操作");
+        }
+        return Result.ok();
     }
 
     @GetMapping("reconnection")

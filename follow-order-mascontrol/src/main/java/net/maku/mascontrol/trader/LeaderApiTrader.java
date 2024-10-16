@@ -27,7 +27,7 @@ public class LeaderApiTrader extends AbstractApiTrader {
     }
 
     public void startTrade() {
-        super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateLeaderTraderInfoTask(this), 6, 10, TimeUnit.SECONDS);
+        super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateLeaderTraderInfoTask(this), 6, 30, TimeUnit.SECONDS);
     }
 
     @Override

@@ -515,19 +515,19 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     @Override
     public Boolean stopOrder(Integer type,String traderId) {
-        Arrays.asList(traderId.split(",")).forEach(o->{
-            if (type==0){
-                //停止下单
-                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND+o))){
-                    redisCache.set(Constant.TRADER_SEND+o,2);
-                }
-            }else {
-                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE+o))) {
-                    redisCache.set(Constant.TRADER_CLOSE + o, 2);
-                }
+        if (type==0){
+            //停止下单
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND+traderId))){
+                redisCache.set(Constant.TRADER_SEND+traderId,2);
+                return true;
             }
-        });
-        return true;
+        }else {
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE+traderId))) {
+                redisCache.set(Constant.TRADER_CLOSE + traderId, 2);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateCloseSlip(long traderId,String symbol) {

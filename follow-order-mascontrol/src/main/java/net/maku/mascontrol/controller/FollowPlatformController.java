@@ -116,9 +116,7 @@ public class FollowPlatformController {
                 vo.setId(null);
                 FollowPlatformVO followPlatformVO=vo;
                 followPlatformVO.setServer(bro);
-                followPlatformVO.setCreator(SecurityUser.getUserId().toString());
-                followPlatformVO.setCreateTime(LocalDateTime.now());
-                this.save(followPlatformVO);
+                followPlatformService.save(followPlatformVO);
                 //进行测速
                 List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
                 list.parallelStream().forEach(o->{

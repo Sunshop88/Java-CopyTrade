@@ -15,9 +15,6 @@ public class UpdateLeaderTraderInfoTask implements Runnable {
     AbstractApiTrader abstractApiTrader;
     FollowTraderEntity leader;
     FollowTraderService traderService;
-    int calledTimes = 0;
-
-    static int updateInfoEachTimes = 10;
 
     public UpdateLeaderTraderInfoTask(LeaderApiTrader abstractApiTrader) {
         this.abstractApiTrader = abstractApiTrader;
@@ -28,7 +25,6 @@ public class UpdateLeaderTraderInfoTask implements Runnable {
     @Override
     public void run() {
         try {
-            log.info("执行喊单+++{}",leader.getAccount());
             abstractApiTrader.updateTraderInfo();
         } catch (Exception e) {
             e.printStackTrace();

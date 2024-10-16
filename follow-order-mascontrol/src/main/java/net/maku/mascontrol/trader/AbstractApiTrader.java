@@ -281,12 +281,12 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public void updateTraderInfo() {
         adjust(trader);
         log.info("更新信息++++++{}",trader.getAccount());
-        int loopTimes = 0;
         try {
             boolean connected = quoteClient.Connected();
             if (!connected) {
                 log.info("进行重连");
-                throw new ConnectException("Not Connected.", quoteClient.Log);
+                reconnect();
+//                throw new ConnectException("Not Connected.", quoteClient.Log);
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
@@ -307,7 +307,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
                         //重连失败
                         log.info("重连失败{}",trader.getId());
                     }
-
                 }
             }else {
                 List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(trader.getPlatform());
