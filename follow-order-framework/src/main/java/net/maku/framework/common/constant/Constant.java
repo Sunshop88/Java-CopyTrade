@@ -73,4 +73,9 @@ public interface Constant {
      * 账户平仓标识
      */
     String TRADER_CLOSE="trader:close:";
+
+    /**
+     * 账户持仓订单缓存
+     */
+    String TRADER_ACTIVE="trader:active:";
 }

@@ -194,37 +194,16 @@ public class FollowTraderController {
         }else {
             quoteClient=leaderApiTrader.quoteClient;
         }
-
-        //查询平台信息
-        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
-        //查看品种列表
-        List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()));
-        for (FollowVarietyEntity o:list){
-            if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                try {
-                    quoteClient.Subscribe(o.getBrokerSymbol());
-                    vo.setSymbol(o.getBrokerSymbol());
-                    break;
-                }catch (Exception e) {
-                    log.error("订阅失败: " + e.getMessage());
-                }
-            }
-        }
-
+        String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
+        vo.setSymbol(symbol1);
         try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
                 //订阅
                 quoteClient.Subscribe(vo.getSymbol());
             }
             double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-        } catch (InvalidSymbolException e) {
-            throw new ServerException(followTraderVO.getAccount()+"品种不正确,请先配置品种");
-        } catch (RuntimeException e) {
-            throw new ServerException(followTraderVO.getAccount()+"该品种未订阅成功");
-        } catch (TimeoutException e) {
-            throw new ServerException(followTraderVO.getAccount()+"订阅品种超时");
-        } catch (ConnectException e) {
-            throw new RuntimeException(followTraderVO.getAccount()+"订阅品种失败");
+        }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+            throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
         }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
@@ -365,20 +344,12 @@ public class FollowTraderController {
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())){
-            String symbol=vo.getSymbol();  //查询平台信息
-            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
-            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
-            for (FollowVarietyEntity o:followVarietyEntityList){
-                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                    symbol=o.getBrokerSymbol();
-                }
-                try {
-                    quoteClient.Subscribe(symbol);
-                    break;
-                }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
-                    throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
-                }
+            String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
+            vo.setSymbol(symbol1);
+            try {
+                quoteClient.Subscribe(symbol1);
+            }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
             }
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);
@@ -472,5 +443,43 @@ public class FollowTraderController {
             throw new ServerException("请检查账号密码，稍后再试");
         }
         return Result.ok();
+    }
+
+    @GetMapping("traderSymbol")
+    @Operation(summary = "获取对应Symbol")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<String>  traderSymbol(@Parameter(description = "symbol") String symbol, @Parameter(description = "traderId") Long traderId) {
+        String symbol1 = getSymbol(traderId, symbol);
+        return  Result.ok(symbol1);
+    }
+
+    private String getSymbol(Long traderId,String symbol){
+        FollowTraderVO followTraderVO = followTraderService.get(traderId);
+        //查询平台信息
+        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
+        //获取symbol信息
+        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
+            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>)redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
+        }else {
+            //查询改账号的品种规格
+            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
+            redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
+        }
+
+        if (ObjectUtil.isNotEmpty(symbol)){
+            //查看品种列表
+            List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
+            for (FollowVarietyEntity o:list){
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                    //查看品种规格
+                    Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationEntityList.stream().filter(fl -> ObjectUtil.equals(o.getBrokerSymbol(), fl.getSymbol())).findFirst();
+                    if (specificationEntity.isPresent()){
+                        return o.getBrokerSymbol();
+                    }
+                }
+            }
+        }
+        return symbol;
     }
 }

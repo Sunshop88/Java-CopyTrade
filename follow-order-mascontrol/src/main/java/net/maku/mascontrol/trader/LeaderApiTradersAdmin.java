@@ -101,18 +101,20 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
             //处理节点格式
             String[] split = followPlatformServiceOne.getServerNode().split(":");
-            return connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
-        }else {
-            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
-            for (FollowBrokeServerEntity address : serverEntityList) {
-                // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                conCodeEnum=connectTrader(leader,conCodeEnum,address.getServerNode(),Integer.valueOf(address.getServerPort()));
-                if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
-                    break;
+            conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
+            if (conCodeEnum==ConCodeEnum.TRADE_NOT_ALLOWED){
+                //循环连接
+                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
+                for (FollowBrokeServerEntity address : serverEntityList) {
+                    // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                    conCodeEnum=connectTrader(leader,conCodeEnum,address.getServerNode(),Integer.valueOf(address.getServerPort()));
+                    if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                        break;
+                    }
                 }
             }
-            return conCodeEnum;
         }
+        return conCodeEnum;
     }
 
     private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
@@ -137,7 +139,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
         } catch (Exception e) {
-            log.info("重新连接" + e);
+            log.info("连接异常" + e);
         }
         return conCodeEnum;
     }
@@ -182,7 +184,6 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 aq = Boolean.TRUE;
                 this.leaderApiTrader.connect2Broker();
             } catch (Exception e) {
-                e.printStackTrace();
                 log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.PASSWORD_FAILURE);
             } finally {

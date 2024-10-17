@@ -63,5 +63,7 @@ public class FollowOrderSendQuery extends Query {
     @Schema(description = "下单方式")
     private Integer placedType;
 
+    @Schema(description = "订单号")
+    private String sendNo;
 
 }

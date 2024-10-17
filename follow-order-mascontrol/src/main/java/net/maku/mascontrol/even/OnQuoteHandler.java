@@ -30,6 +30,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -54,11 +56,13 @@ public class OnQuoteHandler implements QuoteEventHandler {
     // 用于存储每个Symbol的锁
     private static final ConcurrentHashMap<String, Lock> symbolLockMap = new ConcurrentHashMap<>();
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
+    private final ScheduledThreadPoolExecutor scheduler = ThreadPoolUtils.getScheduledExecute();
 
     // 设定时间间隔，单位为毫秒
     private final long interval = 3000; // 3秒间隔
     // 用于存储每个 symbol 上次执行时间
     private static final ConcurrentHashMap<String, Long> symbolLastInvokeTimeMap = new ConcurrentHashMap<>();
+    private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
 
     public OnQuoteHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
@@ -78,6 +82,8 @@ public class OnQuoteHandler implements QuoteEventHandler {
         // 获取该symbol上次执行时间
         long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(quote.Symbol, 0L);
         if (currentTime - lastSymbolInvokeTime  >= interval) {
+            // 回收对象
+            returnObjectsInBatch();
             // 更新该symbol的上次执行时间为当前时间
             symbolLastInvokeTimeMap.put(quote.Symbol, currentTime);
             QuoteClient qc = (QuoteClient) sender;
@@ -121,6 +127,8 @@ public class OnQuoteHandler implements QuoteEventHandler {
                 followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
             }
         }
+        //存入redis
+        redisCache.set(Constant.TRADER_ACTIVE+abstractApiTrader.getTrader().getId().toString(),orderActiveInfoList);
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
@@ -131,16 +139,10 @@ public class OnQuoteHandler implements QuoteEventHandler {
             resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
             collect.add(reusableOrderActiveInfoVO);
         }
-        ThreadPoolUtils.execute(()->{
-            try {
-                Thread.sleep(100);
-                for (OrderActiveInfoVO vo : collect) {
-                    orderActiveInfoVOPool.returnObject(vo);  // 将对象归还池中
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        // 将所有借用的对象添加到待归还列表中
+        synchronized (pendingReturnObjects) {
+            pendingReturnObjects.addAll(collect);
+        }
         return collect;
     }
 
@@ -160,6 +162,22 @@ public class OnQuoteHandler implements QuoteEventHandler {
         vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),5)));
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
+    }
+
+    private void returnObjectsInBatch() {
+        synchronized (pendingReturnObjects) {
+            if (pendingReturnObjects.isEmpty()) {
+                return; // 如果没有待归还的对象，直接返回
+            }
+
+            // 归还所有对象
+            for (OrderActiveInfoVO vo : pendingReturnObjects) {
+                orderActiveInfoVOPool.returnObject(vo);
+            }
+
+            // 清空待归还列表
+            pendingReturnObjects.clear();
+        }
     }
 
 }
