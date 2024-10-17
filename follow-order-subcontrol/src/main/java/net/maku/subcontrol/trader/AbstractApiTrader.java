@@ -318,27 +318,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
             boolean connected = quoteClient.Connected();
             if (!connected) {
                 throw new ConnectException("Not Connected.", quoteClient.Log);
-            } else {
-                this.quoteClient.Subscribe(eurusd);
-                while (quoteEventArgs == null && quoteClient.Connected()) {
-                    quoteEventArgs = this.quoteClient.GetQuote(eurusd);
-                    if (++loopTimes > 20) {
-                        break;
-                    } else {
-                        Thread.sleep(500);
-                    }
-                }
-//                try {
-//                    if (trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && quoteClient.AccountMode() != 1) {
-//                        this.orderClient.OrderSend(eurusd, Op.Buy, 0.0, quoteEventArgs == null ? 1.0 : quoteEventArgs.Ask, Integer.MAX_VALUE, 0, 0, "daW7iAEt", 0, null);
-//                    }
-//                } catch (Exception serverException) {
-//                    if (availableException4.contains(serverException.getMessage())) {
-//                        log.debug("[MT4{}:{}-{}-{}]抛出不需要重连的异常：{}", trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(), serverException.getMessage());
-//                    } else {
-//                        throw serverException;
-//                    }
-//                }
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
