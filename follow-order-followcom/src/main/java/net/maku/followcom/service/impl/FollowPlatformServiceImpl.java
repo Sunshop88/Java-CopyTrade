@@ -66,7 +66,6 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 .eq(FollowPlatformEntity::getServer,vo.getServer())))) {
             FollowPlatformEntity entity = FollowPlatformConvert.INSTANCE.convert(vo);
             entity.setCreateTime(LocalDateTime.now());
-            entity.setCreator(SecurityUser.getUserId());
             baseMapper.insert(entity);
         }
 
@@ -125,29 +124,29 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 QuoteClient quoteClient = new QuoteClient(Integer.parseInt(account), password,  split[0], Integer.valueOf(split[1]));
                 try {
                     quoteClient.Connect();
-                }catch (Exception e){
-                    if (e.getMessage().contains("Invalid account")){
+                }catch (Exception e1){
+                    if (e1.getMessage().contains("Invalid account")){
                         log.info("账号密码错误");
                         throw new ServerException("账号密码错误");
-                    }
-                }
-            }else {
-                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(platform);
-                for (FollowBrokeServerEntity address : serverEntityList) {
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(account), password, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                    try {
-                        quoteClient.Connect();
-                    }catch (Exception e){
-                        if (e.getMessage().contains("Invalid account")){
-                            log.info("账号密码错误");
-                            throw new ServerException("账号密码错误");
-                        }else{
-                            log.info("重试"+e);
-                            continue;
+                    }else {
+                        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(platform);
+                        for (FollowBrokeServerEntity address : serverEntityList) {
+                             quoteClient = new QuoteClient(Integer.parseInt(account), password, address.getServerNode(), Integer.valueOf(address.getServerPort()));
+                            try {
+                                quoteClient.Connect();
+                            }catch (Exception e){
+                                if (e.getMessage().contains("Invalid account")){
+                                    log.info("账号密码错误");
+                                    throw new ServerException("账号密码错误");
+                                }else{
+                                    log.info("重试"+e);
+                                    continue;
+                                }
+                            }
+                            if (quoteClient.Connected()) {
+                                return quoteClient;
+                            }
                         }
-                    }
-                    if (quoteClient.Connected()) {
-                        return quoteClient;
                     }
                 }
             }

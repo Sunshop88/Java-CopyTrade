@@ -151,17 +151,32 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public ResponseEntity<byte[]> generateCsv() {
+//        try {
+//            byte[] csvData = followVarietyService.generateCsv();
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.add("Content-Disposition", "attachment; filename=modified_template.csv");
+//            headers.add("Content-Type", "text/csv");
+//            return ResponseEntity.ok()
+//                    .headers(headers)
+//                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+//                    .body(csvData);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(500).body(null);
+//        }
         try {
-            byte[] csvData = followVarietyService.generateCsv();
+            // 使用 ByteArrayOutputStream 来生成 CSV 数据
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            followVarietyService.generateCsv(outputStream);
+
+            // 设置响应头
             HttpHeaders headers = new HttpHeaders();
-            headers.add("Content-Disposition", "attachment; filename=modified_template.csv");
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(csvData);
+            headers.add("Content-Disposition", "attachment; filename=export.csv");
+            headers.add("Content-Type", "text/csv");
+
+            return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
         } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("导出CSV时出错".getBytes());
         }
     }
 

@@ -1,8 +1,8 @@
-package net.maku.subcontrol.trader;
+package net.maku.mascontrol.trader;
 
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.subcontrol.even.OnQuoteHandler;
+import net.maku.mascontrol.even.OnQuoteHandler;
 
 import java.io.IOException;
 import java.time.LocalDateTime;

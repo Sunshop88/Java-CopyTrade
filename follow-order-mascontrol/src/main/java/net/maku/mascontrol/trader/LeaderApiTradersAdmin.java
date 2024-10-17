@@ -1,8 +1,10 @@
-package net.maku.subcontrol.trader;
+package net.maku.mascontrol.trader;
 
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.cld.message.pubsub.kafka.IKafkaProducer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,9 +17,10 @@ import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.util.FollowConstant;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.service.FollowPlatformService;
+import net.maku.mascontrol.util.FollowConstant;
+import org.apache.kafka.clients.admin.*;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

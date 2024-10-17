@@ -52,7 +52,8 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     void exportCsv(ByteArrayOutputStream outputStream) throws IOException;
 
+    void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
 
 
-    byte[] generateCsv() throws IOException;
+//   void byte[] generateCsv() throws IOException;
 }

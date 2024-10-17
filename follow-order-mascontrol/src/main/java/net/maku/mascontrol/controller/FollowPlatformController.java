@@ -19,6 +19,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.framework.security.user.SecurityUser;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -71,10 +72,12 @@ public class FollowPlatformController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<String> save(@RequestBody FollowPlatformVO vo){
+        Long userId = SecurityUser.getUserId();
         //判断是否已存在服务名称
         vo.getPlatformList().forEach(bro->{
             FollowPlatformVO followPlatformVO=vo;
             followPlatformVO.setServer(bro);
+            followPlatformVO.setCreator(userId.toString());
             followPlatformService.save(followPlatformVO);
             //进行测速
             List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
@@ -110,13 +113,15 @@ public class FollowPlatformController {
     @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<String> update(@RequestBody @Valid FollowPlatformVO vo){
         followPlatformService.update(vo);
+        Long userId = SecurityUser.getUserId();
         //保存服务数据
         ThreadPoolUtils.execute(()->{
             vo.getPlatformList().forEach(bro->{
                 vo.setId(null);
                 FollowPlatformVO followPlatformVO=vo;
                 followPlatformVO.setServer(bro);
-                this.save(followPlatformVO);
+                followPlatformVO.setCreator(userId.toString());
+                followPlatformService.save(followPlatformVO);
                 //进行测速
                 List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
                 list.parallelStream().forEach(o->{

@@ -1,5 +1,7 @@
 package net.maku.followcom.dao;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import org.apache.ibatis.annotations.Mapper;
@@ -25,6 +27,7 @@ public interface FollowVarietyDao extends BaseDao<FollowVarietyEntity> {
     @Select("select broker_name,broker_symbol from follow_variety where std_symbol=#{symbol} ")
     List<FollowVarietyEntity> getlist(@Param("symbol") String symbol);
 
+    IPage<FollowVarietyEntity> pageSymbolList(Page<FollowVarietyEntity> page, String stdSymbol);
 
 //    void saveAll(List<FollowVarietyExcelVO> brokerDataList);
 

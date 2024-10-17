@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, FollowTraderEntity> implements FollowTraderService {
     private final TransService transService;
+    private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderSendService followOrderSendService;
@@ -815,53 +816,61 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         int orderCountNum = 0;       // 已下单的订单数量
         List<Double> orders = new ArrayList<>();
 
+
+
+        // 随机生成订单手数
         while (true) {
-            // 根据 minLots 和 maxLots 之间的范围生成随机手数
+            // 在 minLots 和 maxLots 范围内生成随机手数
             double randomLots = roundToTwoDecimal(minLots.doubleValue() + (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
 
-            // 如果下单的随机手数加上已下手数大于 totalLots，则直接下剩余的手数
+            // 如果当前生成的手数加上已分配的手数超过 totalLots，则将剩余手数分配给当前订单
             if (totalPlacedLots + randomLots > totalLots) {
                 randomLots = roundToTwoDecimal(totalLots - totalPlacedLots);
             }
 
-            // 将生成的随机手数加入订单列表
+            // 将生成的手数加入订单列表
             orders.add(randomLots);
             totalPlacedLots += randomLots;
             orderCountNum++;
 
-            // 判断是否达到了总手数或总订单数的限制
+            // 如果已分配的手数达到 totalLots 或下单数量达到 orderCount，则停止
             if (totalPlacedLots >= totalLots || orderCountNum >= orderCount) {
                 break;
             }
         }
-        // 检查并分配剩余手数
+
+        // 检查并分配剩余手数，如果存在浮动精度问题
         double remainingLots = roundToTwoDecimal(totalLots - totalPlacedLots);
         if (remainingLots > 0) {
             double lotsToAddPerOrder = roundToTwoDecimal(remainingLots / orderCountNum);
 
+            // 遍历订单，按比例分配剩余手数
             for (int i = 0; i < orders.size(); i++) {
                 double updatedOrder = roundToTwoDecimal(orders.get(i) + lotsToAddPerOrder);
-
-                if (updatedOrder > maxLots.doubleValue()) {
-                    remainingLots += updatedOrder - maxLots.doubleValue();
-                    orders.set(i, maxLots.doubleValue());
-                } else {
-                    orders.set(i, updatedOrder);
-                    remainingLots -= lotsToAddPerOrder;
-                }
+                orders.set(i, updatedOrder);
             }
 
-            // 分配超出 maxLots 的剩余部分
+            // 如果仍有剩余手数，将其均匀分配到所有订单中，防止遗漏
+            remainingLots = roundToTwoDecimal(totalLots - orders.stream().mapToDouble(Double::doubleValue).sum());
             if (remainingLots > 0) {
-                for (int i = 0; i < orders.size(); i++) {
-                    double updatedOrder = roundToTwoDecimal(orders.get(i) + remainingLots);
+                for (int i = 0; i < orders.size() && remainingLots > 0; i++) {
+                    double updatedOrder = roundToTwoDecimal(orders.get(i) + remainingLots / orderCountNum);
                     orders.set(i, updatedOrder);
-                    remainingLots -= (updatedOrder - orders.get(i));
-                    if (remainingLots <= 0) break;
+                    remainingLots -= remainingLots / orderCountNum;
                 }
             }
         }
+        // 最终确认总手数是否等于 totalLots
+        double finalTotal = roundToTwoDecimal(orders.stream().mapToDouble(Double::doubleValue).sum());
 
+        if (Math.abs(finalTotal - totalLots) > 0) {
+            // 计算需要分配的差值
+            double remainingDiff = roundToTwoDecimal(totalLots - finalTotal);
+
+            // 将差值加到第一个订单中
+            double firstOrder = orders.get(0);
+            orders.set(0, roundToTwoDecimal(firstOrder + remainingDiff));
+        }
         log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orderCountNum);
 
         if (orderCountNum == 0) {

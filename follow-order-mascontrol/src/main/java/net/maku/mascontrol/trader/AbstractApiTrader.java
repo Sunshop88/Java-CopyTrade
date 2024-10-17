@@ -1,4 +1,4 @@
-package net.maku.subcontrol.trader;
+package net.maku.mascontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,9 +13,10 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.subcontrol.even.OnQuoteHandler;
-import net.maku.subcontrol.even.OnQuoteTraderHandler;
+import net.maku.mascontrol.entity.FollowPlatformEntity;
+import net.maku.mascontrol.even.OnQuoteHandler;
+import net.maku.mascontrol.even.OnQuoteTraderHandler;
+import net.maku.mascontrol.service.FollowPlatformService;
 import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
