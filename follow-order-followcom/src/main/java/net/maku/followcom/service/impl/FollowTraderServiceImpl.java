@@ -264,7 +264,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.in(FollowOrderDetailEntity::getTraderId,query.getTraderIdList());
         }
         //滑点分析筛选成功的数据
-        if (query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
+        if (ObjectUtil.isNotEmpty(query.getFlag())&&query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
         if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
