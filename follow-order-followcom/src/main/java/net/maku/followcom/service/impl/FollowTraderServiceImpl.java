@@ -277,8 +277,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.ge(FollowOrderDetailEntity::getCloseTime, query.getCloseStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderDetailEntity::getCloseTime, query.getCloseEndTime());    // 小于或等于结束时间
         }
+        if (ObjectUtil.isNotEmpty(query.getSendNo())){
+            wrapper.eq(FollowOrderDetailEntity::getSendNo,query.getSendNo());
+        }
         if (ObjectUtil.isNotEmpty(query.getOrderNo())){
-            wrapper.eq(FollowOrderDetailEntity::getSendNo,query.getOrderNo());
+            wrapper.eq(FollowOrderDetailEntity::getOrderNo,query.getOrderNo());
         }
         if (ObjectUtil.isNotEmpty(query.getSymbol())){
             wrapper.like(FollowOrderDetailEntity::getSymbol,query.getSymbol());
@@ -493,8 +496,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         List<FollowTraderEntity> list = this.list();
         traderOverviewVO.setTraderTotal(list.size());
         Integer total=0;
-        Integer buyNum=0;
-        Integer sellNum=0;
+        double buyNum=0;
+        double sellNum=0;
         for (FollowTraderEntity traderEntity:list){
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER+traderEntity.getId()))){
                 FollowRedisTraderVO followRedisTraderVO =(FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + traderEntity.getId());
@@ -770,23 +773,44 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public  void executeOrdersRandomTotalLots(FollowOrderSendVO vo,long traderId,String account,Integer type,QuoteClient quoteClient,String symbol,double totalLots, BigDecimal minLots,BigDecimal maxLots,Integer interval,String orderNo) {
         Random rand = new Random();
         double totalPlacedLots = 0;
-        int orderCount = 0;
         List<Double> orders = new ArrayList<>();
 
+        // 随机生成订单，直到接近 totalLots
         while (totalPlacedLots < totalLots) {
-            double randomLots = roundToTwoDecimal(minLots.doubleValue() + (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
+            double randomLots = roundToTwoDecimal(minLots.doubleValue() +
+                    (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
+
+            // 检查是否会超出总手数，如果是，跳出循环
             if (totalPlacedLots + randomLots > totalLots) {
                 break;
             }
             orders.add(randomLots);
             totalPlacedLots += randomLots;
-            orderCount++;
         }
-        log.info("执行随机下单操作，总手数不超过" + totalLots + "，实际下单订单数: " + orderCount);
-        if (orderCount==0){
-            //下单异常
+
+        // 计算总手数差值
+        double remainingDiff = roundToTwoDecimal(totalLots - totalPlacedLots);
+        if (remainingDiff > 0 && !orders.isEmpty()) {
+            // 找到订单列表中最小的订单手数
+            int minOrderIndex = 0;
+            double minOrder = orders.get(0);
+            for (int i = 1; i < orders.size(); i++) {
+                if (orders.get(i) < minOrder) {
+                    minOrder = orders.get(i);
+                    minOrderIndex = i;
+                }
+            }
+            // 将差值加到最小的订单上，确保总手数完全分配
+            orders.set(minOrderIndex, roundToTwoDecimal(minOrder + remainingDiff));
+        }
+        int orderCount = orders.size();
+        log.info("执行随机下单操作，总手数不超过 " + totalLots + "，实际下单订单数: " + orderCount);
+
+        if (orderCount == 0) {
+            // 若订单数为 0，抛出异常
             throw new ServerException("请重新下单");
         }
+
         vo.setTotalNum(orderCount);
         followOrderSendService.save(vo);
         redisCache.delete(Constant.TRADER_ORDER +traderId);
@@ -867,9 +891,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             // 计算需要分配的差值
             double remainingDiff = roundToTwoDecimal(totalLots - finalTotal);
 
-            // 将差值加到第一个订单中
-            double firstOrder = orders.get(0);
-            orders.set(0, roundToTwoDecimal(firstOrder + remainingDiff));
+            // 将差值加到最小订单中
+            int minOrderIndex = 0;
+            double minOrder = orders.get(0);
+            for (int i = 1; i < orders.size(); i++) {
+                if (orders.get(i) < minOrder) {
+                    minOrder = orders.get(i);
+                    minOrderIndex = i;
+                }
+            }
+            // 将差值加到最小订单中
+            double updatedOrder = roundToTwoDecimal(orders.get(minOrderIndex) + remainingDiff);
+            orders.set(minOrderIndex, updatedOrder);
         }
         log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orderCountNum);
 

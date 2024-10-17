@@ -11,6 +11,7 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import online.mtapi.mt4.QuoteEventHandler;
@@ -76,9 +77,10 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 }else {
                     followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
                 }
-                followRedisTraderVO.setTotal((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy||order.Type == Sell).count());
-                followRedisTraderVO.setBuyNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Buy).count());
-                followRedisTraderVO.setSellNum((int)Arrays.stream(qc.GetOpenedOrders()).filter(order ->order.Type == Sell).count());
+                Order[] orders = qc.GetOpenedOrders();
+                followRedisTraderVO.setTotal((int)Arrays.stream(orders).filter(order ->order.Type == Buy||order.Type == Sell).count());
+                followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
+                followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
                 redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
