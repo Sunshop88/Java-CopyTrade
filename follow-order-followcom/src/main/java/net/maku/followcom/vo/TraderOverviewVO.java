@@ -20,9 +20,9 @@ public class TraderOverviewVO implements Serializable {
 	private Integer orderTotal;
 
 	@Schema(description = "做空订单数量")
-	private Integer sellNum;
+	private double sellNum;
 
 	@Schema(description = "做多订单数量")
-	private Integer buyNum;
+	private double buyNum;
 
 }

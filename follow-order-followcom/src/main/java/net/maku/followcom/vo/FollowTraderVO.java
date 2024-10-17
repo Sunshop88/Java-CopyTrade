@@ -99,11 +99,11 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "总持仓订单数量")
 	private Integer total;
 
-	@Schema(description = "做空订单数量")
-	private Integer sellNum;
+	@Schema(description = "做空订单手数数量")
+	private double sellNum;
 
-	@Schema(description = "做多订单数量")
-	private Integer buyNum;
+	@Schema(description = "做多订单手数数量")
+	private double buyNum;
 
 
 }

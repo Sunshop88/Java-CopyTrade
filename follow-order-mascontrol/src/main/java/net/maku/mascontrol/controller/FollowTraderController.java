@@ -202,8 +202,10 @@ public class FollowTraderController {
                 quoteClient.Subscribe(vo.getSymbol());
             }
             double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-        }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+        }catch (InvalidSymbolException | TimeoutException | ConnectException  e ) {
             throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+        }catch (NullPointerException e){
+            throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
         }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
@@ -347,9 +349,15 @@ public class FollowTraderController {
             String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
             vo.setSymbol(symbol1);
             try {
+                if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
+                    //订阅
+                    quoteClient.Subscribe(vo.getSymbol());
+                }
                 quoteClient.Subscribe(symbol1);
             }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
                 throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+            }catch (NullPointerException e){
+                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
             }
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);
