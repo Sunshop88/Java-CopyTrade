@@ -1,6 +1,6 @@
 package net.maku.mascontrol.even;
 
-import net.maku.mascontrol.vo.OrderActiveInfoVO;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;

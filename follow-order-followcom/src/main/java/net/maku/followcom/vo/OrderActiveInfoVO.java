@@ -1,6 +1,5 @@
-package net.maku.mascontrol.vo;
+package net.maku.followcom.vo;
 
-import com.fhs.core.trans.vo.TransPojo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

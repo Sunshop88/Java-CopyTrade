@@ -343,10 +343,30 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             return true;
         }
+        List<Integer> orderActive;
+        List<OrderActiveInfoVO> orderActiveInfoVOS = List.of();
+        //获取所有正在持仓订单
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ACTIVE + vo.getTraderId()))){
+            orderActiveInfoVOS = (List<OrderActiveInfoVO>) redisCache.get(Constant.TRADER_ACTIVE + vo.getTraderId());
+        }
         if (vo.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
+            //全平
+            orderActive=orderActiveInfoVOS.stream().map(o->o.getOrderNo()).collect(Collectors.toList());
             list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
-            orderCount=list.size();
+            // 提取 list 中的订单号
+            List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
+            log.info("持仓数量{},平台持仓数量{}",orderActive.size(),listOrderNos.size());
+            orderActive.retainAll(listOrderNos);
+            orderCount=orderActive.size();
+            log.info("可平仓数量{}",orderActive.size());
         }else {
+            //指定平仓
+            if (vo.getType()==2){
+                //平仓buy和sell
+                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())).map(o->o.getOrderNo()).collect(Collectors.toList());
+            }else {
+                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())&&o.getType().equals(Op.forValue(vo.getType()).name())).map(o->o.getOrderNo()).collect(Collectors.toList());
+            }
             orderCount = vo.getNum();
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
@@ -356,25 +376,30 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 followOrderDetailw.eq(FollowOrderDetailEntity::getType,vo.getType());
             }
             list = followOrderDetailService.list(followOrderDetailw);
-            log.info("平仓单数{}++所有单数{}",orderCount,list.size());
+            // 提取 list 中的订单号
+            List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
+            log.info("持仓数量{},平台持仓数量{}",orderActive.size(),listOrderNos.size());
+            orderActive.retainAll(listOrderNos);
+            log.info("可平仓数量{}",orderActive.size());
+            if (orderCount>orderActive.size()){
+                //不超过可平仓总数
+                orderCount=orderActive.size();
+            }
         }
-        if (ObjectUtil.isEmpty(orderCount)||orderCount==0||list.size()==0){
+        if (ObjectUtil.isEmpty(orderCount)||orderCount==0||list.size()==0||orderActive.size()==0){
             throw new ServerException(vo.getAccount()+"暂无可平仓订单");
         }
         // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderCount);  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderCount; i++) {
+                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
+                for (int i = 0; i < orderActive.size(); i++) {
                     //平仓数据处理
                     try {
                         int finalI = i;
-                        if (finalI >list.size()) {
-                            updateCloseOrder(list.get(finalI), quoteClient, oc);
-                            log.warn("索引超出范围: finalI = " + finalI + ", list.size() = " + list.size());
-                        }
                         ThreadPoolUtils.execute(() -> {
-                            updateCloseOrder(list.get(finalI), quoteClient, oc);
+                            //判断是否存在指定数据
+                            updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo,orderActive.get(finalI))), quoteClient, oc);
                         });
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -402,16 +427,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             // 有间隔时间的下单，依次执行并等待
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderCount);  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderCount; i++) {
+                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
+                for (int i = 0; i < orderActive.size(); i++) {
                     if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))||redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()).equals(1)) {
                         try {
                             int finalI = i;
-                            if (finalI >list.size()) {
-                                log.warn("索引超出范围: finalI = " + finalI + ", list.size() = " + list.size());
-                            }
                             ThreadPoolUtils.execute(()-> {
-                                updateCloseOrder(list.get(finalI), quoteClient, oc);
+                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo,orderActive.get(finalI))), quoteClient, oc);
                                 //进行平仓滑点分析
                                 updateCloseSlip(vo.getTraderId(), vo.getSymbol());
                             });
@@ -591,10 +613,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             log.info("平仓信息{},{},{},{},{}",symbol,orderNo,followOrderDetailEntity.getSize(),bid,ask);
             Order orderResult;
             if (followOrderDetailEntity.getType()==Op.Buy.getValue()){
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
+                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), 0.0, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             }else {
-                orderResult = oc.OrderClose(symbol, orderNo,followOrderDetailEntity.getSize().doubleValue(), ask, 0);
+                orderResult = oc.OrderClose(symbol, orderNo,followOrderDetailEntity.getSize().doubleValue(), 0.0, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
             log.info("订单 " + orderNo + ": 平仓 "+orderResult);
