@@ -24,6 +24,9 @@ public class FollowVarietyVO implements Serializable {
 	@Schema(description = "ID")
 	private Integer id;
 
+	@Schema(description = "标准合约")
+	private Integer stdContract;
+
 	@Schema(description = "品种名称")
 	private String stdSymbol;
 

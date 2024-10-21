@@ -23,6 +23,12 @@ public class FollowVarietyEntity {
 	private Integer id;
 
 	/**
+	 * 标准合约
+	 */
+	@TableField(value = "std_contract")
+	private Integer stdContract;
+
+	/**
 	* 品种名称
 	*/
 	@TableField(value = "std_symbol")

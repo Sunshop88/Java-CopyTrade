@@ -19,6 +19,9 @@ public class FollowVarietyExcelVO implements TransPojo {
 	@ExcelProperty("ID")
 	private Integer id;
 
+	@ExcelProperty("标准合约")
+	private Integer stdContract;
+
 	@ExcelProperty("品种名称")
 	private String stdSymbol;
 
