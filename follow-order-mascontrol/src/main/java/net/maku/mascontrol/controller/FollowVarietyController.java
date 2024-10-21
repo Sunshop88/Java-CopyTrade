@@ -183,7 +183,7 @@ public class FollowVarietyController {
 
 
     @GetMapping("listSmybol")
-    @Operation(summary = "查询标准品种")
+    @Operation(summary = "查询标准品种，标准合约")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<FollowVarietyVO>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
