@@ -193,15 +193,27 @@ public class FollowTraderController {
                 //订阅
                 quoteClient.Subscribe(vo.getSymbol());
             }
+            Thread.sleep(100);
             double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
         }catch (InvalidSymbolException | TimeoutException | ConnectException  e ) {
             throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+        }catch (InterruptedException e1) {
+            throw new ServerException(followTraderVO.getAccount()+"失败");
         }catch (NullPointerException e){
-            throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
+            //重试获取
+            try {
+                quoteClient.Subscribe(vo.getSymbol());
+                Thread.sleep(100);
+                double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+            }catch (InvalidSymbolException | TimeoutException | ConnectException  e1) {
+                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+            }catch (InterruptedException |NullPointerException e1) {
+                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
+            }
         }
         boolean result = followTraderService.orderSend(vo,quoteClient,followTraderVO);
         if (!result){
-            return Result.error(followTraderVO.getAccount()+"下单失败");
+            return Result.error(followTraderVO.getAccount()+"下单失败,该账号正在下单中");
         }
         return Result.ok(result);
     }
@@ -345,11 +357,23 @@ public class FollowTraderController {
                     //订阅
                     quoteClient.Subscribe(vo.getSymbol());
                 }
-                quoteClient.Subscribe(symbol1);
-            }catch (InvalidSymbolException | TimeoutException | ConnectException  e) {
+                Thread.sleep(100);
+                double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+            }catch (InvalidSymbolException | TimeoutException | ConnectException  e ) {
                 throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+            }catch (InterruptedException e1) {
+                throw new ServerException(followTraderVO.getAccount()+"失败");
             }catch (NullPointerException e){
-                throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
+                //重试获取
+                try {
+                    quoteClient.Subscribe(vo.getSymbol());
+                    Thread.sleep(100);
+                    double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+                }catch (InvalidSymbolException | TimeoutException | ConnectException  e1) {
+                    throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
+                }catch (InterruptedException |NullPointerException e1) {
+                    throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
+                }
             }
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);

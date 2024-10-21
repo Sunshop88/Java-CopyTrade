@@ -59,19 +59,6 @@ public class InitRunner implements ApplicationRunner {
 
 
     private void mt4TraderStartup() throws Exception {
-
-        // 2.启动喊单者和跟单者
-        // mt4账户
-        List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
-                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
-                .in(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType())
-                .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
-                .orderByAsc(FollowTraderEntity::getCreateTime));
-        // 分类MASTER和SLAVE
-        long masters = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
-        log.info("===============喊单者{}", masters);
-        leaderApiTradersAdmin.startUp();
-
         //重新测速已有账号平台
         List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,followPlatformService.list().stream().map(FollowPlatformEntity::getServer).collect(Collectors.toList())));
         //进行测速
@@ -97,5 +84,17 @@ public class InitRunner implements ApplicationRunner {
             //修改所有用户连接节点
             followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
         });
+
+        // 2.启动喊单者和跟单者
+        // mt4账户
+        List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
+                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
+                .in(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType())
+                .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
+                .orderByAsc(FollowTraderEntity::getCreateTime));
+        // 分类MASTER和SLAVE
+        long masters = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
+        log.info("===============喊单者{}", masters);
+        leaderApiTradersAdmin.startUp();
     }
 }

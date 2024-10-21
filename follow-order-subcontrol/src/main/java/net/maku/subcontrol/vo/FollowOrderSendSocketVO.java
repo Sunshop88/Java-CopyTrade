@@ -2,6 +2,7 @@ package net.maku.subcontrol.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 
 import java.io.Serializable;
 import java.util.List;

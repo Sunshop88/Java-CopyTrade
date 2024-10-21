@@ -1,4 +1,4 @@
-package net.maku.subcontrol.vo;
+package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
