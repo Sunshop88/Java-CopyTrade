@@ -391,9 +391,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
+            Integer finalOrderCount = orderCount;
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderActive.size(); i++) {
+                CountDownLatch latch = new CountDownLatch(finalOrderCount);  // 初始化一个计数器，数量为任务数
+                for (int i = 0; i < finalOrderCount; i++) {
                     //平仓数据处理
                     try {
                         int finalI = i;
@@ -426,9 +427,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 redisCache.set(Constant.TRADER_CLOSE+vo.getTraderId(),1);
             }
             // 有间隔时间的下单，依次执行并等待
+            Integer finalOrderCount1 = orderCount;
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderActive.size(); i++) {
+                CountDownLatch latch = new CountDownLatch(finalOrderCount1);  // 初始化一个计数器，数量为任务数
+                for (int i = 0; i < finalOrderCount1; i++) {
                     if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))||redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()).equals(1)) {
                         try {
                             int finalI = i;
