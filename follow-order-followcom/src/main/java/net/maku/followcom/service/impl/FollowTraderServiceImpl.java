@@ -20,8 +20,6 @@ import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
