@@ -24,4 +24,7 @@ public class FollowConstant {
             e.printStackTrace();
         }
     }
+    public static void main(String[] args) {
+        System.out.println("Local host IP: " + LOCAL_HOST);
+    }
 }

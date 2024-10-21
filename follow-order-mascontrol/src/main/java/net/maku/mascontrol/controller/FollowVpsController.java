@@ -1,9 +1,12 @@
 package net.maku.mascontrol.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.FollowVpsQuery;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.utils.PageResult;
@@ -28,13 +31,17 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowVpsController {
     private final FollowVpsService followVpsService;
+    private final FollowTraderService followTraderService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query){
         PageResult<FollowVpsVO> page = followVpsService.page(query);
-
+        //策略数量
+        page.getList().forEach(o->{
+            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+        });
         return Result.ok(page);
     }
 

@@ -12,6 +12,7 @@ import net.maku.followcom.dao.FollowVpsDao;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.query.FollowVpsQuery;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowVpsExcelVO;
 import net.maku.followcom.vo.FollowVpsVO;

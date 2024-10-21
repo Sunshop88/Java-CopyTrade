@@ -66,4 +66,5 @@ public class FollowOrderSendQuery extends Query {
     @Schema(description = "订单号")
     private String sendNo;
 
+    private String serverIp;
 }

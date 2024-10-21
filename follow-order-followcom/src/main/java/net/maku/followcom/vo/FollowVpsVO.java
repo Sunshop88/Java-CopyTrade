@@ -49,4 +49,6 @@ public class FollowVpsVO implements Serializable {
 	@Schema(description = "剩余到期天数")
 	private Integer remainingDay;
 
+	@Schema(description = "策略数量")
+	private Integer traderNum;
 }

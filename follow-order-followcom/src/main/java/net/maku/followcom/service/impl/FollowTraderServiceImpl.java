@@ -60,7 +60,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, FollowTraderEntity> implements FollowTraderService {
     private final TransService transService;
-    private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderSendService followOrderSendService;
@@ -104,10 +103,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     private LambdaQueryWrapper<FollowTraderEntity> getWrapper(FollowTraderQuery query){
         LambdaQueryWrapper<FollowTraderEntity> wrapper = Wrappers.lambdaQuery();
-        //查询指定VPS下的账号
         wrapper.eq(FollowTraderEntity::getDeleted,query.getDeleted());
         //根据vps地址查询
-        wrapper.eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST);
+        wrapper.eq(FollowTraderEntity::getIpAddr, query.getServerIp());
         return wrapper;
     }
 
@@ -124,7 +122,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Transactional(rollbackFor = Exception.class)
     public FollowTraderVO save(FollowTraderVO vo) {
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
-        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST));
+        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,vo.getServerIp()));
         if (ObjectUtil.isEmpty(followVpsEntity)){
             throw new ServerException("请先添加VPS");
         }
@@ -200,6 +198,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
+        //删除所有订单
+        idList.stream().forEach(o->{
+            followOrderSendService.remove(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,o));
+            followOrderDetailService.remove(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId,o));
+        });
+        //
         removeByIds(idList);
 //        list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, idList)).forEach(entity -> {
 //            // 删除
@@ -292,6 +296,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getAccount())){
             wrapper.eq(FollowOrderDetailEntity::getAccount,query.getAccount());
         }
+
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
@@ -512,10 +517,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public TraderOverviewVO traderOverview() {
+    public TraderOverviewVO traderOverview(String ip) {
         //查看所有账号
         TraderOverviewVO traderOverviewVO = new TraderOverviewVO();
-        List<FollowTraderEntity> list = this.list();
+        List<FollowTraderEntity> list = this.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,ip));
         traderOverviewVO.setTraderTotal(list.size());
         Integer total=0;
         double buyNum=0;

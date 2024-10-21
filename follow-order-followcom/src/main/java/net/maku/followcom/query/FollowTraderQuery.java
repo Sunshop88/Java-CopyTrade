@@ -19,4 +19,5 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "mt4账号查询")
 public class FollowTraderQuery extends Query {
+    private String serverIp;
 }
