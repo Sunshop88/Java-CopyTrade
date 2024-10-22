@@ -35,6 +35,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
 import cn.hutool.core.util.ObjectUtil;
@@ -180,6 +181,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 if (ObjectUtil.isEmpty(record.get(0)) || ObjectUtil.isEmpty(record.get(1))) continue;
                 String stdContract = record.get(0);
                 String stdSymbol = record.get(1);
+
                 for (int i = 2; i < record.size(); i++) {
                     if (ObjectUtil.isEmpty(record.get(i))) continue;
 
@@ -194,10 +196,19 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             brokerData.setStdSymbol(stdSymbol);
                             brokerData.setBrokerName(name.trim());
                             brokerData.setBrokerSymbol(symbol.trim());
-                            try {
-                                baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
-                            } catch (Exception e) {
-                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+
+                            LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
+                            queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+                                    .eq(FollowVarietyEntity::getBrokerName, name.trim())
+                                    .eq(FollowVarietyEntity::getBrokerSymbol, symbol.trim());
+
+                            int updateCount = baseMapper.update(FollowVarietyConvert.INSTANCE.convert(brokerData), queryWrapper);
+                            if (updateCount == 0) {
+                                try {
+                                    baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
+                                } catch (Exception e) {
+                                    log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+                                }
                             }
                         }
                     }
@@ -206,61 +217,122 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
+//    private void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
+//        try (InputStream inputStream = file.getInputStream();
+//             Workbook workbook = new XSSFWorkbook(inputStream)) {
+//            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
+//            List<String> brokerNames = new ArrayList<>();
+//
+//            Row headerRow = sheet.getRow(0);
+//            for (Cell cell : headerRow) {
+//                brokerNames.add(cell.getStringCellValue());
+//            }
+//
+//            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+//                Row row = sheet.getRow(rowIndex);
+//                if (row == null) continue;
+//
+//                // 检查 stdContract 和 stdSymbol 是否为空
+//                if (ObjectUtil.isEmpty(row.getCell(0)) || ObjectUtil.isEmpty(row.getCell(1))) continue;
+//
+//                String stdContract = String.valueOf(row.getCell(0).getNumericCellValue());
+//                String stdSymbol = row.getCell(1).getStringCellValue();
+//
+//                for (int i = 2; i < row.getPhysicalNumberOfCells(); i++) {
+//                    Cell cell = row.getCell(i);
+//                    if (cell == null || ObjectUtil.isEmpty(cell.getStringCellValue())) continue;
+//
+//                    String[] brokerNameParts = brokerNames.get(i).split("/");
+//                    String brokerSymbol = cell.getStringCellValue();
+//                    String[] brokerSymbolParts = brokerSymbol.split("/");
+//
+//                    for (String name : brokerNameParts) {
+//                        for (String symbol : brokerSymbolParts) {
+//                            int stdContractValue;
+//                            try {
+//                                stdContractValue = (int) Double.parseDouble(stdContract);
+//                            } catch (NumberFormatException e) {
+//                                log.error("无法解析 stdContract: " + stdContract, e);
+//                                continue;
+//                            }
+//                            FollowVarietyVO brokerData = new FollowVarietyVO();
+//                            brokerData.setStdContract(stdContractValue);
+//                            brokerData.setStdSymbol(stdSymbol);
+//                            brokerData.setBrokerName(name.trim());
+//                            brokerData.setBrokerSymbol(symbol.trim());
+//                            try {
+//                                baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
+//                            } catch (Exception e) {
+//                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            log.error("导入 Excel 失败", e);
+//            throw new IOException("导入 Excel 失败", e);
+//        }
+//    }
+
     private void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
         try (InputStream inputStream = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(inputStream)) {
-            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
+
+            Sheet sheet = workbook.getSheetAt(0);
+            Row headerRow = sheet.getRow(0);
             List<String> brokerNames = new ArrayList<>();
 
-            Row headerRow = sheet.getRow(0);
             for (Cell cell : headerRow) {
                 brokerNames.add(cell.getStringCellValue());
             }
 
-            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
-                if (row == null) continue;
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue; // 跳过标题行
 
-                // 检查 stdContract 和 stdSymbol 是否为空
-                if (ObjectUtil.isEmpty(row.getCell(0)) || ObjectUtil.isEmpty(row.getCell(1))) continue;
+                Cell stdContractCell = row.getCell(0);
+                Cell stdSymbolCell = row.getCell(1);
 
-                String stdContract = String.valueOf(row.getCell(0).getNumericCellValue());
-                String stdSymbol = row.getCell(1).getStringCellValue();
+                if (ObjectUtils.isEmpty(stdContractCell) || ObjectUtils.isEmpty(stdSymbolCell)) continue;
 
-                for (int i = 2; i < row.getPhysicalNumberOfCells(); i++) {
-                    Cell cell = row.getCell(i);
-                    if (cell == null || ObjectUtil.isEmpty(cell.getStringCellValue())) continue;
+                String stdContract1 = String.valueOf(row.getCell(0).getNumericCellValue());
+                String stdSymbol = stdSymbolCell.getStringCellValue();
+                double stdContract =  Double.parseDouble(stdContract1);
+
+                for (int i = 2; i < row.getLastCellNum(); i++) {
+                    Cell brokerSymbolCell = row.getCell(i);
+
+                    if (ObjectUtils.isEmpty(brokerSymbolCell)) continue;
 
                     String[] brokerNameParts = brokerNames.get(i).split("/");
-                    String brokerSymbol = cell.getStringCellValue();
+                    String brokerSymbol = brokerSymbolCell.getStringCellValue();
                     String[] brokerSymbolParts = brokerSymbol.split("/");
 
                     for (String name : brokerNameParts) {
                         for (String symbol : brokerSymbolParts) {
-                            int stdContractValue;
-                            try {
-                                stdContractValue = (int) Double.parseDouble(stdContract);
-                            } catch (NumberFormatException e) {
-                                log.error("无法解析 stdContract: " + stdContract, e);
-                                continue;
-                            }
                             FollowVarietyVO brokerData = new FollowVarietyVO();
-                            brokerData.setStdContract(stdContractValue);
+                            brokerData.setStdContract((int) stdContract);
                             brokerData.setStdSymbol(stdSymbol);
                             brokerData.setBrokerName(name.trim());
                             brokerData.setBrokerSymbol(symbol.trim());
-                            try {
-                                baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
-                            } catch (Exception e) {
-                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+
+                            LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
+                            queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+                                    .eq(FollowVarietyEntity::getBrokerName, name.trim())
+                                    .eq(FollowVarietyEntity::getBrokerSymbol, symbol.trim());
+
+                            int updateCount = baseMapper.update(FollowVarietyConvert.INSTANCE.convert(brokerData), queryWrapper);
+                            if (updateCount == 0) {
+                                try {
+                                    baseMapper.insert(FollowVarietyConvert.INSTANCE.convert(brokerData));
+                                } catch (Exception e) {
+                                    log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+                                }
                             }
                         }
                     }
                 }
             }
-        } catch (Exception e) {
-            log.error("导入 Excel 失败", e);
-            throw new IOException("导入 Excel 失败", e);
         }
     }
 
