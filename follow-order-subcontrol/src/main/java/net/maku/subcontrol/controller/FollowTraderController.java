@@ -229,27 +229,12 @@ public class FollowTraderController {
             String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
             vo.setSymbol(symbol1);
             try {
-                if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))) {
-                    //订阅
-                    quoteClient.Subscribe(vo.getSymbol());
-                }
-                Thread.sleep(100);
-                double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+                // 获取报价信息
+                double ask = getQuoteOrRetry(quoteClient,vo.getSymbol());
             } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-                throw new ServerException(followTraderVO.getAccount() + "获取报价失败,品种不正确,请先配置品种");
-            } catch (InterruptedException e1) {
-                throw new ServerException(followTraderVO.getAccount() + "失败");
-            } catch (NullPointerException e) {
-                //重试获取
-                try {
-                    quoteClient.Subscribe(vo.getSymbol());
-                    Thread.sleep(100);
-                    double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-                } catch (InvalidSymbolException | TimeoutException | ConnectException e1) {
-                    throw new ServerException(followTraderVO.getAccount() + "获取报价失败,品种不正确,请先配置品种");
-                } catch (InterruptedException | NullPointerException e1) {
-                    throw new ServerException(followTraderVO.getAccount() + "获取报价失败,请重试");
-                }
+                throw new ServerException(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
+            } catch (InterruptedException e) {
+                throw new ServerException(vo.getAccount() + " 操作被中断", e);
             }
             boolean result = followTraderService.orderSend(vo, quoteClient, followTraderVO);
             if (!result) {
@@ -287,20 +272,7 @@ public class FollowTraderController {
     @Operation(summary = "滑点分析列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public  Result<PageResult<FollowOrderSlipPointVO>>  orderSlipPoint(@ParameterObject @Valid FollowOrderSpliListQuery query) {
-        //处理平台查询逻辑，找出相关账号查询
-        if (ObjectUtil.isNotEmpty(query.getPlatform())){
-            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
-            List<String> collect = list.stream().map(entity -> String.valueOf(entity.getId())).collect(Collectors.toList());
-            String traderId = collect.stream().collect(Collectors.joining(","));
-            if (ObjectUtil.isEmpty(traderId)) {
-                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
-            }
-            if (ObjectUtil.isEmpty(query.getTraderId())){
-                query.setTraderId(traderId);
-            }else {
-                query.setTraderId(traderId+","+query.getTraderId());
-            }
-        }
+
         if (ObjectUtil.isNotEmpty(query.getSymbol())) {
             query.setSymbolList(Arrays.asList(query.getSymbol().split(",")));
         }
@@ -309,15 +281,7 @@ public class FollowTraderController {
         }
         PageResult<FollowOrderSlipPointVO> followOrderSlipPointVOPageResult = followTraderService.pageSlipPoint(query);
         Integer total = followOrderSlipPointVOPageResult.getList().stream().mapToInt(FollowOrderSlipPointVO::getSymbolNum).sum();;
-        followOrderSlipPointVOPageResult.getList().stream().forEach(o->{
-            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, o.getTraderId()));
-            o.setAccount(followTraderEntity.getAccount());
-            o.setPlatform(followTraderEntity.getPlatform());
-            o.setTraderId(o.getTraderId());
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
-            o.setBrokeName(followPlatform.getBrokerName());
-            o.setTotalNum(total);
-        });
+        followOrderSlipPointVOPageResult.getList().stream().forEach(o->o.setTotalNum(total));
         List<FollowOrderSlipPointVO> collect = followOrderSlipPointVOPageResult.getList().stream().sorted(Comparator.comparing(FollowOrderSlipPointVO::getTraderId)).collect(Collectors.toList());
         followOrderSlipPointVOPageResult.setList(collect);
         return Result.ok(followOrderSlipPointVOPageResult);
@@ -327,49 +291,8 @@ public class FollowTraderController {
     @Operation(summary = "订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderDetailVO>>  orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
-        //处理平台查询逻辑，找出相关账号查询
-        List<Long> collectPlat=new ArrayList<>() ;
-        List<Long> collectBroke=new ArrayList<>() ;
-        //处理券商查询逻辑，找出相关账号查询
-        if (ObjectUtil.isNotEmpty(query.getBrokeName())){
-            String[] split = query.getBrokeName().split(",");
-            List<FollowPlatformEntity> serverEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().in(FollowPlatformEntity::getBrokerName,Arrays.asList(split)));
-            if (ObjectUtil.isNotEmpty(serverEntityList)){
-                List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatformId, serverEntityList.stream().map(FollowPlatformEntity::getId).collect(Collectors.toList())));
-                collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
-            }
-            if (ObjectUtil.isEmpty(collectBroke)) {
-                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
-            }
-        }
-        if (ObjectUtil.isNotEmpty(query.getPlatform())){
-            String[] split = query.getPlatform().split(",");
-            List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, Arrays.asList(split)));
-            collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
-            if (ObjectUtil.isEmpty(collectPlat)) {
-                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
-            }
-        }
-        // 计算交集
-        if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
-            collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
-            if (ObjectUtil.isEmpty(collectPlat)) {
-                return Result.ok(new PageResult<>(new ArrayList<>(), 0)); // 返回空结果
-            }
-        }else if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
-            collectPlat=collectBroke;
-        }
-        if (ObjectUtil.isNotEmpty(collectPlat)){
-            query.setTraderIdList(collectPlat);
-        }
 
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
-        //查看券商和服务器
-        followOrderDetailVOPageResult.getList().parallelStream().forEach(o->{
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getTraderId()).getPlatformId());
-            o.setBrokeName(followPlatform.getBrokerName());
-            o.setPlatform(followPlatform.getServer());
-        });
         return  Result.ok(followOrderDetailVOPageResult);
     }
 
@@ -406,27 +329,12 @@ public class FollowTraderController {
                 String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
                 vo.setSymbol(symbol1);
                 try {
-                    if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))){
-                        //订阅
-                        quoteClient.Subscribe(vo.getSymbol());
-                    }
-                    Thread.sleep(100);
-                    double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-                }catch (InvalidSymbolException | TimeoutException | ConnectException  e ) {
-                    throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
-                }catch (InterruptedException e1) {
-                    throw new ServerException(followTraderVO.getAccount()+"失败");
-                }catch (NullPointerException e){
-                    //重试获取
-                    try {
-                        quoteClient.Subscribe(vo.getSymbol());
-                        Thread.sleep(100);
-                        double ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
-                    }catch (InvalidSymbolException | TimeoutException | ConnectException  e1) {
-                        throw new ServerException(followTraderVO.getAccount()+"获取报价失败,品种不正确,请先配置品种");
-                    }catch (InterruptedException |NullPointerException e1) {
-                        throw new ServerException(followTraderVO.getAccount()+"获取报价失败,请重试");
-                    }
+                    // 获取报价信息
+                    double ask = getQuoteOrRetry(quoteClient,vo.getSymbol());
+                } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
+                    throw new ServerException(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
+                } catch (InterruptedException e) {
+                    throw new ServerException(vo.getAccount() + " 操作被中断", e);
                 }
             }
             boolean result = followTraderService.orderClose(vo,quoteClient);
@@ -588,5 +496,29 @@ public class FollowTraderController {
             }
         }
         return symbol;
+    }
+
+    private double getQuoteOrRetry(QuoteClient quoteClient,String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
+        double ask;
+
+        try {
+            // 检查是否有报价
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
+                subscribeAndSleep(quoteClient,symbol);
+            }
+            ask = quoteClient.GetQuote(symbol).Ask;
+        } catch (NullPointerException e) {
+            // 重试获取报价
+            subscribeAndSleep(quoteClient,symbol);
+            ask = quoteClient.GetQuote(symbol).Ask;
+        }
+
+        return ask;
+    }
+
+    private void subscribeAndSleep(QuoteClient quoteClient,String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
+        quoteClient.Subscribe(symbol);
+        // 使用定时器或者其他异步方式替代 sleep
+        Thread.sleep(100);  // 考虑替换为更合适的异步处理
     }
 }

@@ -196,12 +196,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        //删除所有订单
-        idList.stream().forEach(o->{
-            followOrderSendService.remove(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,o));
-            followOrderDetailService.remove(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId,o));
-        });
-        //
         removeByIds(idList);
 //        list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, idList)).forEach(entity -> {
 //            // 删除
@@ -293,6 +287,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         if (ObjectUtil.isNotEmpty(query.getAccount())){
             wrapper.eq(FollowOrderDetailEntity::getAccount,query.getAccount());
+        }
+        if (ObjectUtil.isNotEmpty(query.getBrokeName())){
+            wrapper.eq(FollowOrderDetailEntity::getBrokeName,query.getBrokeName());
+        }
+        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+            wrapper.eq(FollowOrderDetailEntity::getServer,query.getPlatform());
         }
 
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);

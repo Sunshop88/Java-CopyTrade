@@ -162,4 +162,16 @@ public class FollowOrderSendEntity {
 	 */
 	@TableField(value = "placed_type")
 	private Integer placedType;
+
+	/**
+	 * 券商
+	 */
+	@TableField(value = "broke_name")
+	private String brokeName;
+
+	/**
+	 * 服务器
+	 */
+	@TableField(value = "server")
+	private String server;
 }

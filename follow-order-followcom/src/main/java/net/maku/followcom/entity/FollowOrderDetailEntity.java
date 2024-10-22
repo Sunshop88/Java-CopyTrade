@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -226,4 +227,16 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "placed_type")
 	private Integer placedType;
+
+	/**
+	 * 券商
+	 */
+	@TableField(value = "broke_name")
+	private String brokeName;
+
+	/**
+	 * 服务器
+	 */
+	@TableField(value = "server")
+	private String server;
 }

@@ -21,6 +21,9 @@ import java.util.List;
 public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
     @Select("<script>" +
             "SELECT trader_id as traderId, " +
+            "account,"+
+            "broker_name as brokerName ,"+
+            "server as platform,"+
             "symbol,"+
             "ROUND(AVG(open_time_difference),0) AS meanOpenTimeDifference, " +
             "ROUND(AVG(close_time_difference),0) AS meanCloseTimeDifference, " +
@@ -38,6 +41,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "  </foreach>\n" +
             "</if>" +
             "<if test='query.account != null and query.account != \"\"'> AND account = #{query.account} </if>" +
+            "<if test='query.platform != null and query.platform != \"\"'> AND server = #{query.platform} </if>" +
             "<if test='query.symbolList != null and query.symbolList.size > 0'> AND symbol in \n" +
             "  <foreach collection='query.symbolList' item='item' open='(' separator=',' close=')'>\n" +
             "    #{item}\n" +

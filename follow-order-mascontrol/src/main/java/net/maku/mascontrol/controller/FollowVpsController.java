@@ -2,12 +2,16 @@ package net.maku.mascontrol.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
@@ -17,6 +21,9 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+
+import java.io.IOException;
+import java.net.InetAddress;
 import java.util.List;
 
 /**
@@ -74,4 +81,32 @@ public class FollowVpsController {
         return Result.ok();
     }
 
+    @GetMapping("connect")
+    @Operation(summary = "vps连接")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<Boolean> connect(@Parameter(description = "ipAddress") String ipAddress){
+        //进行连接
+        try {
+            InetAddress inet = InetAddress.getByName(ipAddress);
+            boolean reachable = inet.isReachable(5000);
+            return Result.ok(reachable);
+        } catch (IOException e) {
+            System.out.println("Error occurred: " + e.getMessage());
+        }
+        return Result.ok(false);
+    }
+
+    @GetMapping("info")
+    @Operation(summary = "vps统计")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<FollowVpsInfoVO> info(){
+        Integer openNum =(int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
+        Integer runningNum =(int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
+        Integer total =(int) followVpsService.count();
+        FollowVpsInfoVO followVpsInfoVO=new FollowVpsInfoVO();
+        followVpsInfoVO.setTotal(total);
+        followVpsInfoVO.setOpenNum(openNum);
+        followVpsInfoVO.setRunningNum(runningNum);
+        return Result.ok(followVpsInfoVO);
+    }
 }
