@@ -3,6 +3,7 @@
 
 <mapper namespace="net.maku.followcom.dao.FollowVarietyDao">
 
+
     <select id="pageSymbolList" resultType="net.maku.followcom.entity.FollowVarietyEntity">
         select
         fv.std_symbol,
