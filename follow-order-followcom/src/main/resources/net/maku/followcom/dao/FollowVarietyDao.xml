@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="net.maku.followcom.dao.FollowVarietyDao">
+
+    <select id="pageSymbolList" resultType="net.maku.followcom.entity.FollowVarietyEntity">
+        select
+        fv.std_symbol,
+        fv.broker_name,
+        group_concat(distinct fv.broker_symbol separator '/') as broker_symbol
+        FROM
+        follow_variety fv
+        INNER JOIN
+        follow_platform fp ON fv.broker_name = fp.broker_name
+        <where>
+            <if test="stdSymbol != null and stdSymbol != ''">
+                and fv.std_symbol = #{stdSymbol}
+            </if>
+        </where>
+        group by
+        fv.std_symbol, fv.broker_name
+        having
+        broker_symbol is not null and broker_symbol != ''
+    </select>
+</mapper>
