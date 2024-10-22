@@ -34,6 +34,7 @@ import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -508,15 +509,16 @@ public class FollowTraderController {
             }
             ask = quoteClient.GetQuote(symbol).Ask;
         } catch (NullPointerException e) {
+            Thread.sleep(100);
             // 重试获取报价
-            subscribeAndSleep(quoteClient,symbol);
+            getQuoteOrRetry(quoteClient,symbol);
             ask = quoteClient.GetQuote(symbol).Ask;
         }
 
         return ask;
     }
 
-    private void subscribeAndSleep(QuoteClient quoteClient,String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
+    private void subscribeAndSleep(@NotNull QuoteClient quoteClient, String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
         quoteClient.Subscribe(symbol);
         // 使用定时器或者其他异步方式替代 sleep
         Thread.sleep(100);  // 考虑替换为更合适的异步处理
