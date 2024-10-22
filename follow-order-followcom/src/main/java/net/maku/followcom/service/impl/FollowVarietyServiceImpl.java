@@ -366,10 +366,22 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     @Override
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
+//        LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+//        wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
+//                .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
+//                .like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+//        IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
+//        return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
                 .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
-                .like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+                .isNotNull(FollowVarietyEntity::getStdContract) // 确保 std_contract 不为 null
+                .ne(FollowVarietyEntity::getStdContract, ""); // 确保 std_contract 不为空字符串
+
+// 根据条件过滤 std_symbol
+        wrapper.like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }

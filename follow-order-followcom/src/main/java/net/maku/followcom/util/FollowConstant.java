@@ -2,7 +2,11 @@ package net.maku.followcom.util;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 
 /**
@@ -17,10 +21,18 @@ public class FollowConstant {
      */
     public static String LOCAL_HOST = "";
     static {
-        String hostname = "www.google.com";
+        String ipServiceUrl = "http://checkip.amazonaws.com/";
         try {
-            LOCAL_HOST = InetAddress.getByName(hostname).getHostAddress();
-        } catch (UnknownHostException e) {
+            URL url = new URL(ipServiceUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String publicIP = in.readLine().trim();
+            in.close();
+
+            LOCAL_HOST= publicIP;
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

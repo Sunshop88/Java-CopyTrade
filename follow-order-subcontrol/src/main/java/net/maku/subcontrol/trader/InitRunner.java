@@ -59,31 +59,32 @@ public class InitRunner implements ApplicationRunner {
 
 
     private void mt4TraderStartup() throws Exception {
+        log.info("当前ip"+FollowConstant.LOCAL_HOST);
         //重新测速已有账号平台
-        List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,followPlatformService.list().stream().map(FollowPlatformEntity::getServer).collect(Collectors.toList())));
-        //进行测速
-        list.parallelStream().forEach(o->{
-            String ipAddress = o.getServerNode(); // 目标IP地址
-            int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-            try {
-                AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                long startTime = System.currentTimeMillis(); // 记录起始时间
-                Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                // 等待连接完成
-                future.get();
-                long endTime = System.currentTimeMillis(); // 记录结束时间
-                o.setSpeed((int)endTime - (int)startTime);
-                followBrokeServerService.updateById(o);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-        list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
-            //找出最小延迟
-            FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
-            //修改所有用户连接节点
-            followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
-        });
+//        List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,followPlatformService.list().stream().map(FollowPlatformEntity::getServer).collect(Collectors.toList())));
+//        //进行测速
+//        list.parallelStream().forEach(o->{
+//            String ipAddress = o.getServerNode(); // 目标IP地址
+//            int port = Integer.valueOf(o.getServerPort()); // 目标端口号
+//            try {
+//                AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+//                long startTime = System.currentTimeMillis(); // 记录起始时间
+//                Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+//                // 等待连接完成
+//                future.get();
+//                long endTime = System.currentTimeMillis(); // 记录结束时间
+//                o.setSpeed((int)endTime - (int)startTime);
+//                followBrokeServerService.updateById(o);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        });
+//        list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
+//            //找出最小延迟
+//            FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
+//            //修改所有用户连接节点
+//            followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
+//        });
 
         // 2.启动喊单者和跟单者
         // mt4账户
