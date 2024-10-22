@@ -166,7 +166,7 @@ public class FollowOrderSendEntity {
 	/**
 	 * 券商
 	 */
-	@TableField(value = "broke_name")
+	@TableField(value = "broker_name")
 	private String brokeName;
 
 	/**

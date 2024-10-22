@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
@@ -108,5 +109,13 @@ public class FollowVpsController {
         followVpsInfoVO.setOpenNum(openNum);
         followVpsInfoVO.setRunningNum(runningNum);
         return Result.ok(followVpsInfoVO);
+    }
+
+    @GetMapping("listVps")
+    @Operation(summary = "可用vps")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<List<FollowVpsVO>> listVps(){
+        List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
+        return Result.ok(FollowVpsConvert.INSTANCE.convertList(list));
     }
 }

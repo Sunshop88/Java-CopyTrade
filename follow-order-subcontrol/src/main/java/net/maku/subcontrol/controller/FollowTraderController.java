@@ -210,49 +210,73 @@ public class FollowTraderController {
     @PostMapping("orderSend")
     @Operation(summary = "下单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> orderSend(@RequestBody FollowOrderSendVO vo,HttpServletRequest request){
+    public Result<?> orderSend(@RequestBody FollowOrderSendVO vo, HttpServletRequest request) {
         String serverIp = (String) request.getAttribute("serverIp");
+
         if (serverIp.equals(FollowConstant.LOCAL_HOST)) {
+            // 本地处理逻辑
             FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderVO)) {
-                throw new ServerException("账号不存在");
+                return Result.error("账号不存在");
             }
-            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+                    .get(vo.getTraderId().toString());
             QuoteClient quoteClient = null;
-            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
-                quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
+
+            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
+                    || !leaderApiTrader.quoteClient.Connected()) {
+                quoteClient = followPlatformService.tologin(
+                        followTraderVO.getAccount(),
+                        followTraderVO.getPassword(),
+                        followTraderVO.getPlatform()
+                );
                 if (ObjectUtil.isEmpty(quoteClient)) {
-                    throw new ServerException("账号无法登录");
+                    return Result.error("账号无法登录");
                 }
             } else {
                 quoteClient = leaderApiTrader.quoteClient;
             }
+
+            Integer contract = followVarietyService.list(
+                            new LambdaQueryWrapper<FollowVarietyEntity>()
+                                    .eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()))
+                    .stream().findFirst()
+                    .map(FollowVarietyEntity::getStdContract)
+                    .orElse(0);
+
             String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
             vo.setSymbol(symbol1);
+
             try {
-                // 获取报价信息
-                double ask = getQuoteOrRetry(quoteClient,vo.getSymbol());
+                double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
             } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-                throw new ServerException(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
+                return Result.error(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种");
             } catch (InterruptedException e) {
-                throw new ServerException(vo.getAccount() + " 操作被中断", e);
+                return Result.error(vo.getAccount() + " 操作被中断");
             }
-            boolean result = followTraderService.orderSend(vo, quoteClient, followTraderVO);
+
+            boolean result = followTraderService.orderSend(vo, quoteClient, followTraderVO, contract);
             if (!result) {
                 return Result.error(followTraderVO.getAccount() + "下单失败,该账号正在下单中");
             }
-        }else {
-            //转发处理
+            return Result.ok(true);
+        } else {
+            // 转发处理
             try {
-                String url = MessageFormat.format("http://{0}:9001/subcontrol/trader/orderSend",serverIp);
-                JSONObject body = RestUtil.request(url, HttpMethod.POST, RestUtil.getHeaderApplicationJsonAndToken(request), null, JSONObject.toJSON(vo), JSONObject.class).getBody();
+                String url = MessageFormat.format("http://{0}:9001/subcontrol/trader/orderSend", serverIp);
+                JSONObject body = RestUtil.request(
+                        url, HttpMethod.POST,
+                        RestUtil.getHeaderApplicationJsonAndToken(request),
+                        null, JSONObject.toJSON(vo), JSONObject.class
+                ).getBody();
+                // 直接返回转发服务的返回结果
                 return JSONObject.toJavaObject(body, Result.class);
             } catch (Exception e) {
                 e.printStackTrace();
                 return Result.error(e.getMessage());
             }
         }
-        return Result.ok(true);
     }
 
     @GetMapping("orderSendList")
