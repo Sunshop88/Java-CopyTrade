@@ -164,7 +164,6 @@ public class TraderOrderSendWebSocket {
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
             leaderApiTrader.removeOnQuoteHandler();
-            leaderApiTrader.quoteClient.Unsubscribe(symbol);
             // 需要移除监听器时调用
             leaderApiTrader.quoteClient.OnQuote.removeListener(leaderApiTrader.getQuoteHandler());
         } catch (Exception e) {

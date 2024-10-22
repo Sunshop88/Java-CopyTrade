@@ -65,7 +65,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowOrderDetailService followOrderDetailService;
     private final RedisCache redisCache;
     private final FollowPlatformService followPlatformService;
-    private final FollowVarietyService followVarietyService;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -351,13 +350,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         //订阅
                         quoteClient.Subscribe(vo.getSymbol());
                     }
-                    //非平台平仓
-                    double  bid = quoteClient.GetQuote(vo.getSymbol()).Bid;
-                    double  ask = quoteClient.GetQuote(vo.getSymbol()).Ask;
+
                     if (vo.getType()==Op.Buy.getValue()){
-                        oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
+                        oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), 0.0, 0);
                     }else {
-                        oc.OrderClose(vo.getSymbol(),  vo.getOrderNo(),vo.getSize(), ask, 0);
+                        oc.OrderClose(vo.getSymbol(),  vo.getOrderNo(),vo.getSize(), 0.0, 0);
                     }
                 } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
                     log.info("平仓出错"+e.getMessage());
@@ -401,7 +398,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             list = followOrderDetailService.list(followOrderDetailw);
             // 提取 list 中的订单号
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
-            log.info("持仓数量{},平台持仓数量{}",orderActive.size(),listOrderNos.size());
+            log.info("需要平仓数量{},持仓数量{},平台持仓数量{}",orderCount,orderActive.size(),listOrderNos.size());
             orderActive.retainAll(listOrderNos);
             log.info("可平仓数量{}",orderActive.size());
             if (orderCount>orderActive.size()){
@@ -414,9 +411,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
+            Integer finalOrderCount = orderCount;
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderActive.size(); i++) {
+                CountDownLatch latch = new CountDownLatch(finalOrderCount);  // 初始化一个计数器，数量为任务数
+                int count=0;
+                for (int i = 0; i < finalOrderCount; i++) {
                     //平仓数据处理
                     try {
                         int finalI = i;
@@ -424,12 +423,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             //判断是否存在指定数据
                             updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo,orderActive.get(finalI))), quoteClient, oc);
                         });
+                        count++;
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }finally {
                         latch.countDown();  // 每当一个任务完成，计数器减1
                     }
                 }
+                log.info("平仓任务一共执行{}次",count);
                 // 等待所有任务完成
                 ThreadPoolUtils.execute(()-> {
                     try {
@@ -449,9 +450,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 redisCache.set(Constant.TRADER_CLOSE+vo.getTraderId(),1);
             }
             // 有间隔时间的下单，依次执行并等待
+            Integer finalOrderCount1 = orderCount;
             commonThreadPool.execute(()-> {
-                CountDownLatch latch = new CountDownLatch(orderActive.size());  // 初始化一个计数器，数量为任务数
-                for (int i = 0; i < orderActive.size(); i++) {
+                CountDownLatch latch = new CountDownLatch(finalOrderCount1);  // 初始化一个计数器，数量为任务数
+                int count=0;
+                for (int i = 0; i < finalOrderCount1; i++) {
                     if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))||redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()).equals(1)) {
                         try {
                             int finalI = i;
@@ -460,7 +463,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                 //进行平仓滑点分析
                                 updateCloseSlip(vo.getTraderId(), vo.getSymbol());
                             });
-                            Thread.sleep(interval);
+                            count++;
+                            if (count!=finalOrderCount1.intValue()){
+                                Thread.sleep(interval);
+                            }
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         } finally {
@@ -470,6 +476,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         latch.countDown();
                     }
                 }
+                log.info("间隔平仓任务一共执行{}次",count);
                 // 等待所有任务完成
                 ThreadPoolUtils.execute(()-> {
                     try {
@@ -483,7 +490,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     }
                 });
             });
-
         }
         return true;
     }
