@@ -90,7 +90,9 @@ public class FollowVpsController {
         try {
             InetAddress inet = InetAddress.getByName(ipAddress);
             boolean reachable = inet.isReachable(5000);
-            return Result.ok(reachable);
+            if (!reachable){
+                return Result.error("地址错误,请检查");
+            }
         } catch (IOException e) {
             System.out.println("Error occurred: " + e.getMessage());
         }
@@ -116,6 +118,10 @@ public class FollowVpsController {
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<List<FollowVpsVO>> listVps(){
         List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
-        return Result.ok(FollowVpsConvert.INSTANCE.convertList(list));
+        List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(list);
+        followVpsVOS.forEach(o->{
+            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+        });
+        return Result.ok(followVpsVOS);
     }
 }

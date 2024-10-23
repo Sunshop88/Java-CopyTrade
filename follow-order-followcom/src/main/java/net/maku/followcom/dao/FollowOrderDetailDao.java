@@ -22,7 +22,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
     @Select("<script>" +
             "SELECT trader_id as traderId, " +
             "account,"+
-            "broker_name as brokerName ,"+
+            "broker_name as brokeName ,"+
             "server as platform,"+
             "symbol,"+
             "ROUND(AVG(open_time_difference),0) AS meanOpenTimeDifference, " +

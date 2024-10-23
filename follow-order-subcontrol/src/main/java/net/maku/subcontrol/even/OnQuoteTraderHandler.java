@@ -41,11 +41,11 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     private final long interval = 5000; // 5秒间隔
 
     // 记录上次执行时间
+    private long lastInvokeTime = 0;
+    // 记录上次执行时间
     private long lastInvokeTimeTrader = 0;
     // 设定时间间隔，单位为毫秒
     private final long intervalTrader = 300000; // 五分钟间隔
-    // 用于存储每个 symbol 上次执行时间
-    private static final ConcurrentHashMap<String, Long> symbolLastInvokeTimeMap = new ConcurrentHashMap<>();
 
 
     public OnQuoteTraderHandler(AbstractApiTrader abstractApiTrader ) {
@@ -60,11 +60,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 
         // 获取当前系统时间
         long currentTime = System.currentTimeMillis();
-        // 获取该symbol上次执行时间
-        long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(quote.Symbol, 0L);
-        if (currentTime - lastSymbolInvokeTime  >= interval) {
+        if (currentTime - lastInvokeTime  >= interval) {
             // 更新该symbol的上次执行时间为当前时间
-            symbolLastInvokeTimeMap.put(quote.Symbol, currentTime);
+            lastInvokeTime= currentTime;
             QuoteClient qc = (QuoteClient) sender;
             try {
                 //缓存经常变动的三个值信息

@@ -238,5 +238,5 @@ public class FollowOrderDetailEntity {
 	 * 服务器
 	 */
 	@TableField(value = "server")
-	private String server;
+	private String platform;
 }

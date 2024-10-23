@@ -34,6 +34,7 @@ import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
+import online.mtapi.mt4.QuoteEventArgs;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +95,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody FollowTraderVO vo){
         String serverIp = FollowConstant.LOCAL_HOST;
+        log.info("localhost{}",serverIp);
         vo.setServerIp(serverIp);
         if (ObjectUtil.isEmpty(vo.getPlatform())){
             throw new ServerException("服务商错误");
@@ -213,13 +215,13 @@ public class FollowTraderController {
         Integer contract = followVarietyService.list(
                         new LambdaQueryWrapper<FollowVarietyEntity>()
                                 .eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()))
-                .stream().findFirst()
+                .stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
         String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
         vo.setSymbol(symbol1);
-
+        log.info("标准合约大小{}",contract);
         try {
             double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
         } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
@@ -448,28 +450,35 @@ public class FollowTraderController {
         return symbol;
     }
 
-    private double getQuoteOrRetry(QuoteClient quoteClient,String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
-        double ask;
+    private double getQuoteOrRetry(QuoteClient quoteClient, String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
+        double ask = -1; // 或者其他合适的默认值
+        int maxRetries = 5; // 最大重试次数
+        int attempts = 0;
 
-        try {
-            // 检查是否有报价
-            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
-                subscribeAndSleep(quoteClient,symbol);
+        while (attempts < maxRetries) {
+            try {
+                // 检查报价并订阅
+                QuoteEventArgs quote = quoteClient.GetQuote(symbol);
+                if (ObjectUtil.isEmpty(quote)) {
+                    quoteClient.Subscribe(symbol);
+                    attempts++;
+                    Thread.sleep(100); // 等待一段时间再重试
+                    continue; // 继续下一个尝试
+                }
+                ask = quote.Ask;
+                break; // 成功获取报价，退出循环
+            } catch (NullPointerException e) {
+                attempts++;
+                if (attempts < maxRetries) {
+                    Thread.sleep(100); // 等待后再重试
+                } else {
+                    throw new ServerException("获取报价失败，达到最大重试次数", e);
+                }
             }
-            ask = quoteClient.GetQuote(symbol).Ask;
-        } catch (NullPointerException e) {
-            Thread.sleep(100);
-            // 重试获取报价
-            getQuoteOrRetry(quoteClient,symbol);
-            ask = quoteClient.GetQuote(symbol).Ask;
         }
-
+        if (ask < 0) {
+            throw new ServerException("无法获取有效报价");
+        }
         return ask;
-    }
-
-    private void subscribeAndSleep(@NotNull QuoteClient quoteClient, String symbol) throws InvalidSymbolException, TimeoutException, ConnectException, InterruptedException {
-        quoteClient.Subscribe(symbol);
-        // 使用定时器或者其他异步方式替代 sleep
-        Thread.sleep(100);  // 考虑替换为更合适的异步处理
     }
 }
