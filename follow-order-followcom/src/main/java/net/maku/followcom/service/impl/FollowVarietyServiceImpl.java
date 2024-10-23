@@ -650,11 +650,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             for (String stdSymbol : stdSymbols) {
                 List<String> row = new ArrayList<>();
                 // 添加 stdContract 和 stdSymbol
-                String stdContract = String.valueOf(data.stream()
+                String stdContract = data.stream()
                         .filter(record -> record.getStdSymbol().equals(stdSymbol))
-                        .map(FollowVarietyExcelVO::getStdContract)
+                        .map(record -> String.valueOf(record.getStdContract())) // 将 Integer 转换为 String
                         .findFirst()
-                        .orElse(0)); // 获取对应的 stdContract
+                        .orElse(""); // 获取对应的 stdContract，如果不存在则为空字符串
 
                 row.add(stdContract); // 添加 stdContract
                 row.add(stdSymbol);    // 添加 stdSymbol
@@ -666,7 +666,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                             : "";
                     row.add(brokerSymbol);
                 }
-                //若有值等于null,全部转为""
+                // 若有值等于null,全部转为""
                 row.replaceAll(s -> "null".equals(s) ? "" : s);
                 csvPrinter.printRecord(row);
             }
