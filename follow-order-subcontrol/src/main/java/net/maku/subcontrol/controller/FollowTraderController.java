@@ -105,7 +105,7 @@ public class FollowTraderController {
             throw new ServerException("暂无可用服务器商");
         }
         //查看是否已存在该账号
-        FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()));
+        FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()).eq(FollowTraderEntity::getIpAddr,serverIp));
         if (ObjectUtil.isNotEmpty(followTraderEntity)){
             throw new ServerException("该账号已存在");
         }
@@ -320,7 +320,7 @@ public class FollowTraderController {
         }
         boolean result = followTraderService.orderClose(vo,quoteClient);
         if (!result){
-            return Result.error(followTraderVO.getAccount()+"平仓失败");
+            return Result.error(followTraderVO.getAccount()+"正在平仓,请稍后再试");
         }
         return Result.ok(true);
     }

@@ -1,6 +1,7 @@
 package net.maku.followcom.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
@@ -111,6 +112,12 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 
 	@ExcelProperty("服务器")
 	private String platform;
+
+	@ExcelProperty("vps地址")
+	private String ipAddr;
+
+	@ExcelProperty("vps名称")
+	private String serverName;
 
 
 }

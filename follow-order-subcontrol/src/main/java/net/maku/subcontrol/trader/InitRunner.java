@@ -13,6 +13,8 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -48,7 +50,7 @@ public class InitRunner implements ApplicationRunner {
     private FollowBrokeServerService followBrokeServerService;
 
     @Autowired
-    private FollowPlatformService followPlatformService;
+    private RedisCache redisCache;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
@@ -86,6 +88,9 @@ public class InitRunner implements ApplicationRunner {
 //            followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
 //        });
 
+        //删除所有进行中的下单和平常redis
+        redisCache.deleteByPattern(Constant.TRADER_SEND);
+        redisCache.deleteByPattern(Constant.TRADER_CLOSE);
         // 2.启动喊单者和跟单者
         // mt4账户
         List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()

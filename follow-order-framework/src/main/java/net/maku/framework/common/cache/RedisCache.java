@@ -146,4 +146,11 @@ public class RedisCache {
     public Object rightPop(String key) {
         return redisTemplate.opsForList().rightPop(key);
     }
+
+    public void deleteByPattern(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
 }

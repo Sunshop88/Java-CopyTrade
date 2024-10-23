@@ -239,4 +239,16 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "server")
 	private String platform;
+
+	/**
+	 * vps地址
+	 */
+	@Schema(description = "ip_addr")
+	private String ipAddr;
+
+	/**
+	 * vps名称
+	 */
+	@Schema(description = "server_name")
+	private String serverName;
 }

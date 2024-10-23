@@ -14,6 +14,7 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -25,6 +26,8 @@ import jakarta.validation.Valid;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.List;
 
 /**
@@ -93,10 +96,18 @@ public class FollowVpsController {
             if (!reachable){
                 return Result.error("地址错误,请检查");
             }
+            // 检查端口 9001 是否可连接
+            try (Socket socket = new Socket(ipAddress, 9001)) {
+                // 如果可以建立连接，则返回成功
+                return Result.ok(true);
+            }catch (IOException e) {
+                return Result.error("vps服务未启动");
+            }
+        } catch (UnknownHostException e) {
+            throw new ServerException("地址错误,请检查");
         } catch (IOException e) {
-            System.out.println("Error occurred: " + e.getMessage());
+            throw new ServerException("请求异常");
         }
-        return Result.ok(false);
     }
 
     @GetMapping("info")
@@ -123,5 +134,17 @@ public class FollowVpsController {
             o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
         });
         return Result.ok(followVpsVOS);
+    }
+
+    public static void main(String[] args) {
+        try {
+            InetAddress inet = InetAddress.getByName("问2132");
+            boolean reachable = inet.isReachable(5000); // 超时时间为 5 秒
+            System.out.println(reachable);
+        } catch (UnknownHostException e) {
+            System.out.println("222");
+        } catch (IOException e) {
+            System.out.println("1111");
+        }
     }
 }

@@ -136,4 +136,10 @@ public class FollowOrderDetailVO  implements Serializable {
 
 	@Schema(description = "下单方式")
 	private Integer placedType;
+
+	@Schema(description = "vps地址")
+	private String ipAddr;
+
+	@Schema(description = "vps名称")
+	private String serverName;
 }

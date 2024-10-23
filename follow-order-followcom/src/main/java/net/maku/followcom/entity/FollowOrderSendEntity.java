@@ -174,4 +174,16 @@ public class FollowOrderSendEntity {
 	 */
 	@TableField(value = "server")
 	private String server;
+
+	/**
+	 * vps地址
+	 */
+	@Schema(description = "ip_addr")
+	private String ipAddr;
+
+	/**
+	 * vps名称
+	 */
+	@Schema(description = "server_name")
+	private String serverName;
 }
