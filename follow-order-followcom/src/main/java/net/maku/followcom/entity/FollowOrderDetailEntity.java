@@ -251,4 +251,10 @@ public class FollowOrderDetailEntity {
 	 */
 	@Schema(description = "server_name")
 	private String serverName;
+
+	/**
+	 * 平仓ID
+	 */
+	@Schema(description = "close_id")
+	private String closeId;
 }

@@ -135,16 +135,4 @@ public class FollowVpsController {
         });
         return Result.ok(followVpsVOS);
     }
-
-    public static void main(String[] args) {
-        try {
-            InetAddress inet = InetAddress.getByName("问2132");
-            boolean reachable = inet.isReachable(5000); // 超时时间为 5 秒
-            System.out.println(reachable);
-        } catch (UnknownHostException e) {
-            System.out.println("222");
-        } catch (IOException e) {
-            System.out.println("1111");
-        }
-    }
 }

@@ -32,6 +32,8 @@ public class FollowConstant {
             in.close();
 
             LOCAL_HOST= publicIP;
+//            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
+
         } catch (Exception e) {
             e.printStackTrace();
         }

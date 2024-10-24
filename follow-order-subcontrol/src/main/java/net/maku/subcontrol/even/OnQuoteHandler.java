@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -139,7 +140,10 @@ public class OnQuoteHandler implements QuoteEventHandler {
         synchronized (pendingReturnObjects) {
             pendingReturnObjects.addAll(collect);
         }
-        return collect;
+        //倒序返回
+        return collect.stream()
+                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
+                .collect(Collectors.toList());
     }
 
     private void resetOrderActiveInfoVO(OrderActiveInfoVO vo, Order order, String account) {

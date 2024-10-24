@@ -13,6 +13,7 @@ import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
+import net.maku.followcom.query.FollowOrderCloseQuery;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -69,6 +70,7 @@ public class FollowTraderController {
     private final FollowOrderDetailService detailService;
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVarietyService followVarietyService;
+    private final FollowOrderCloseService followOrderCloseService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -225,9 +227,9 @@ public class FollowTraderController {
         try {
             double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
         } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-            return Result.error(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种");
+            return Result.error(followTraderVO.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种");
         } catch (InterruptedException e) {
-            return Result.error(vo.getAccount() + " 操作被中断");
+            return Result.error(followTraderVO.getAccount() + " 操作被中断");
         }
 
         boolean result = followTraderService.orderSend(vo, quoteClient, followTraderVO, contract);
@@ -242,12 +244,6 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderSendVO>> orderSendList(@ParameterObject @Valid FollowOrderSendQuery query) {
         PageResult<FollowOrderSendVO> page = followOrderSendService.page(query);
-        page.getList().stream().forEach(o-> {
-            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, o.getTraderId()));
-            o.setPlatform(followTraderEntity.getPlatform());
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
-            o.setBrokeName(followPlatform.getBrokerName());
-        });
         return  Result.ok(page);
     }
 
@@ -289,7 +285,7 @@ public class FollowTraderController {
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> orderClose(@RequestBody FollowOrderCloseVO vo){
+    public Result<Boolean> orderClose(@RequestBody FollowOrderSendCloseVO vo){
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)){
             throw new ServerException("账号不存在");
@@ -368,12 +364,6 @@ public class FollowTraderController {
         }
 
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
-        //查看券商和服务器
-        followOrderDetailVOPageResult.getList().parallelStream().forEach(o->{
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderService.getById(o.getTraderId()).getPlatformId());
-            o.setBrokeName(followPlatform.getBrokerName());
-            o.setPlatform(followPlatform.getServer());
-        });
         detailService.export(followOrderDetailVOPageResult.getList());
     }
 
@@ -384,7 +374,7 @@ public class FollowTraderController {
         Boolean result = followTraderService.stopOrder(type, traderId);
         if (!result){
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            return Result.error(followTraderEntity.getAccount()+"暂无进行中平仓操作");
+            return Result.error(followTraderEntity.getAccount()+"暂无进行中下单/平仓操作");
         }
         return Result.ok();
     }
@@ -418,6 +408,14 @@ public class FollowTraderController {
     public Result<String>  traderSymbol(@Parameter(description = "symbol") String symbol, @Parameter(description = "traderId") Long traderId) {
         String symbol1 = getSymbol(traderId, symbol);
         return  Result.ok(symbol1);
+    }
+
+    @GetMapping("orderCloseList")
+    @Operation(summary = "平仓列表")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<PageResult<FollowOrderCloseVO>> orderSendList(@ParameterObject @Valid FollowOrderCloseQuery query) {
+        PageResult<FollowOrderCloseVO> page = followOrderCloseService.page(query);
+        return  Result.ok(page);
     }
 
     private String getSymbol(Long traderId,String symbol){

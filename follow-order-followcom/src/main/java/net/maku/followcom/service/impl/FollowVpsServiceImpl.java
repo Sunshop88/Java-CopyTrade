@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -44,12 +45,16 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
         followVpsVOS.stream().forEach(o->{
-            Date date = Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant());
-            o.setRemainingDay(Math.toIntExact(DateUtil.betweenDay(date, DateUtil.date(), false)));
+            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), -10);
+            Date endDate = DateUtil.date();
+            long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
+            if (endDate.after(startDate)) {
+                daysBetween = -daysBetween;
+            }
+            o.setRemainingDay((int)daysBetween);
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }
-
 
     private LambdaQueryWrapper<FollowVpsEntity> getWrapper(FollowVpsQuery query){
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
@@ -89,9 +94,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 throw new ServerException("重复名称,请重新输入");
             }
         }
-        updateById(entity);
-
-
+        baseMapper.update(entity, new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getId, entity.getId()));
     }
 
     @Override
@@ -111,5 +114,4 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowVpsExcelVO.class, "vps列表", null, excelList);
     }
-
 }

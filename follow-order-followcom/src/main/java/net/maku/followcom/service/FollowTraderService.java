@@ -59,7 +59,7 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
      * @param vo
      * @return
      */
-    boolean orderClose(FollowOrderCloseVO vo,QuoteClient quoteClient);
+    boolean orderClose(FollowOrderSendCloseVO vo,QuoteClient quoteClient);
 
     FollowOrderSendEntity orderDoing(Long traderId);
 

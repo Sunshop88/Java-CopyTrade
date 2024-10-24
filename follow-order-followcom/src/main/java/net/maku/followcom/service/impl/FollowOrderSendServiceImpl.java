@@ -39,8 +39,10 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
     @Override
     public PageResult<FollowOrderSendVO> page(FollowOrderSendQuery query) {
         IPage<FollowOrderSendEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        List<FollowOrderSendVO> followOrderSendVOS = FollowOrderSendConvert.INSTANCE.convertList(page.getRecords());
+        followOrderSendVOS.forEach(o->o.setPlatform(o.getServer()));
+        return new PageResult<>(followOrderSendVOS, page.getTotal());
 
-        return new PageResult<>(FollowOrderSendConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
 
