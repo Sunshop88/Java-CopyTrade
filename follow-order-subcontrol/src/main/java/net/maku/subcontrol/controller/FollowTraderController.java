@@ -3,6 +3,7 @@ package net.maku.subcontrol.controller;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -270,6 +271,9 @@ public class FollowTraderController {
     @Operation(summary = "订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderDetailVO>>  orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
+//        if (ObjectUtil.isEmpty(query.getStartTime())|| ObjectUtil.isEmpty(query.getEndTime())) {
+//            return Result.ok();
+//        }
 
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
         return  Result.ok(followOrderDetailVOPageResult);
@@ -334,7 +338,7 @@ public class FollowTraderController {
     @Operation(summary = "导出订单")
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public void exportOrderDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
+    public Result<Object> exportOrderDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
         //设置查询数量最高100000条
         query.setPage(1);
         query.setLimit(100000);
@@ -363,8 +367,12 @@ public class FollowTraderController {
             query.setTraderIdList(collectPlat);
         }
 
+        if (ObjectUtil.isEmpty(query.getStartTime())|| ObjectUtil.isEmpty(query.getEndTime())) {
+            return Result.error("开仓时间为必填项");
+        }
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
         detailService.export(followOrderDetailVOPageResult.getList());
+        return Result.ok();
     }
 
     @GetMapping("stopOrder")

@@ -287,7 +287,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.in(FollowOrderDetailEntity::getTraderId,query.getTraderIdList());
         }
         //滑点分析筛选成功的数据
-        if (query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
+        if (ObjectUtil.isNotEmpty(query.getFlag())&&query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
         if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
@@ -400,7 +400,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (vo.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
 //            followOrderCloseEntity.setType(TraderCloseEnum.BUYANDSELL.getType());
             //全平
-            orderActive=orderActiveInfoVOS.stream().map(o->o.getOrderNo()).collect(Collectors.toList());
+            orderActive=orderActiveInfoVOS.stream().sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o->o.getOrderNo()).collect(Collectors.toList());
             list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
             // 提取 list 中的订单号
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
@@ -414,9 +414,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             //指定平仓
             if (vo.getType().equals(TraderCloseEnum.BUYANDSELL.getType())){
                 //平仓buy和sell
-                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())).map(o->o.getOrderNo()).collect(Collectors.toList());
+                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o->o.getOrderNo()).collect(Collectors.toList());
             }else {
-                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())&&o.getType().equals(Op.forValue(vo.getType()).name())).map(o->o.getOrderNo()).collect(Collectors.toList());
+                orderActive=orderActiveInfoVOS.stream().filter(o->o.getSymbol().equals(vo.getSymbol())&&o.getType().equals(Op.forValue(vo.getType()).name())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o->o.getOrderNo()).collect(Collectors.toList());
             }
             orderCount = vo.getNum();
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
