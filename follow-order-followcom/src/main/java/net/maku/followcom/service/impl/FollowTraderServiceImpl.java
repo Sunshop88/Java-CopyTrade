@@ -106,6 +106,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         wrapper.eq(FollowTraderEntity::getDeleted,query.getDeleted());
         //根据vps地址查询
         wrapper.eq(FollowTraderEntity::getIpAddr, query.getServerIp());
+        //根据更新时间进行降序
+        wrapper.orderByDesc(FollowTraderEntity::getCreateTime);
         return wrapper;
     }
 
@@ -275,6 +277,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public PageResult<FollowOrderDetailVO> orderSlipDetail(FollowOrderSendQuery query) {
         LambdaQueryWrapper<FollowOrderDetailEntity> wrapper = Wrappers.lambdaQuery();
+            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime())  // 大于或等于开始时间
+            .le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
         if (ObjectUtil.isNotEmpty(query.getTraderId())){
             wrapper.eq(FollowOrderDetailEntity::getTraderId,query.getTraderId());
         }
@@ -283,13 +287,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.in(FollowOrderDetailEntity::getTraderId,query.getTraderIdList());
         }
         //滑点分析筛选成功的数据
-        if (query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
+        if (ObjectUtil.isNotEmpty(query.getFlag())&&query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())){
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
-        if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
-            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
-            wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
-        }
+//        if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
+//            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
+//            wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
+//        }
         if (ObjectUtil.isNotEmpty(query.getCloseStartTime())&&ObjectUtil.isNotEmpty(query.getCloseEndTime())){
             wrapper.ge(FollowOrderDetailEntity::getCloseTime, query.getCloseStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderDetailEntity::getCloseTime, query.getCloseEndTime());    // 小于或等于结束时间

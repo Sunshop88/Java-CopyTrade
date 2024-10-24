@@ -145,7 +145,15 @@ public class TraderOrderSendWebSocket {
                 }
                 //查询持仓订单缓存
                  if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ACTIVE + traderId))){
-                     followOrderSendSocketVO.setOrderActiveInfoList((List<OrderActiveInfoVO>)redisCache.get(Constant.TRADER_ACTIVE + traderId));
+
+                     List<OrderActiveInfoVO> orderActiveInfoList = (List<OrderActiveInfoVO>) redisCache.get(Constant.TRADER_ACTIVE + traderId);
+                     // 按开仓时间倒序排序
+                     if (ObjectUtil.isNotEmpty(orderActiveInfoList)) {
+                         orderActiveInfoList.sort((o1, o2) -> o2.getOpenTime().compareTo(o1.getOpenTime()));
+                     }
+                     followOrderSendSocketVO.setOrderActiveInfoList(orderActiveInfoList);
+
+//                     followOrderSendSocketVO.setOrderActiveInfoList((List<OrderActiveInfoVO>)redisCache.get(Constant.TRADER_ACTIVE + traderId));
                  }
                 pushMessage(leaderApiTrader.getTrader().getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
             }
