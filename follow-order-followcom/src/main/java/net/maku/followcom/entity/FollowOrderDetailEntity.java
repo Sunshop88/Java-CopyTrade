@@ -243,18 +243,24 @@ public class FollowOrderDetailEntity {
 	/**
 	 * vps地址
 	 */
-	@Schema(description = "ip_addr")
+	@TableField(value = "ip_addr")
 	private String ipAddr;
 
 	/**
 	 * vps名称
 	 */
-	@Schema(description = "server_name")
+	@TableField(value = "server_name")
 	private String serverName;
 
 	/**
 	 * 平仓ID
 	 */
-	@Schema(description = "close_id")
-	private String closeId;
+	@TableField(value = "close_id")
+	private Integer closeId;
+
+	/**
+	 * 平仓状态
+	 */
+	@TableField(value = "close_status")
+	private Integer closeStatus;
 }

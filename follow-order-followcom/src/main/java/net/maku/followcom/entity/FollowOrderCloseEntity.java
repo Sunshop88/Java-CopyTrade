@@ -127,13 +127,13 @@ public class FollowOrderCloseEntity {
 	/**
 	 * vps地址
 	 */
-	@Schema(description = "ip_addr")
+	@TableField(value = "ip_addr")
 	private String ipAddr;
 
 	/**
 	 * vps名称
 	 */
-	@Schema(description = "server_name")
+	@TableField(value = "server_name")
 	private String serverName;
 
 	/**
@@ -141,4 +141,5 @@ public class FollowOrderCloseEntity {
 	 */
 	@TableField(value = "finish_time")
 	private LocalDateTime finishTime;
+
 }

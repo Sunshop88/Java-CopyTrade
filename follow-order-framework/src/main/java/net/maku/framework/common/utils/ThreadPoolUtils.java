@@ -15,6 +15,9 @@ public class ThreadPoolUtils {
     // 定义一个固定大小的延时任务的线程池
     private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);
 
+    public static ExecutorService getExecutor() {
+        return executorService;
+    }
 
     /**
      * 提交任务到线程池执行

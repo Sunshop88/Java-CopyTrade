@@ -142,4 +142,9 @@ public class FollowOrderDetailVO  implements Serializable {
 
 	@Schema(description = "vps名称")
 	private String serverName;
+	/**
+	 * 平仓状态
+	 */
+	@Schema(description = "平仓状态")
+	private Integer closeStatus;
 }

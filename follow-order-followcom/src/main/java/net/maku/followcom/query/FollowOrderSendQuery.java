@@ -69,5 +69,5 @@ public class FollowOrderSendQuery extends Query {
     private String serverIp;
 
     @Schema(description = "平仓id")
-    private String closeId;
+    private Integer closeId;
 }

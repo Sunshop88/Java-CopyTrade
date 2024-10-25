@@ -49,6 +49,7 @@ public class FollowOrderCloseServiceImpl extends BaseServiceImpl<FollowOrderClos
             wrapper.ge(FollowOrderCloseEntity::getCreateTime, query.getStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderCloseEntity::getCreateTime, query.getEndTime());    // 小于或等于结束时间
         }
+        wrapper.orderByDesc(FollowOrderCloseEntity::getCreateTime);
         return wrapper;
     }
 
