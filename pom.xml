@@ -2,12 +2,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.maku</groupId>
-    <artifactId>maku-boot</artifactId>
+    <artifactId>follow-order</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
-    <name>maku-boot</name>
-    <description>maku-boot</description>
+    <name>follow-order</name>
+    <description>follow-order</description>
     <url>https://maku.net</url>
 
     <parent>
@@ -17,12 +17,14 @@
     </parent>
 
     <modules>
-        <module>maku-boot-new</module>
-        <module>maku-boot-system</module>
-        <module>maku-boot-module</module>
-        <module>maku-boot-api</module>
-        <module>maku-framework</module>
-        <module>maku-server</module>
+        <module>follow-order-subcontrol</module>
+        <module>follow-order-system</module>
+        <module>follow-order-module</module>
+        <module>follow-order-api</module>
+        <module>follow-order-framework</module>
+        <module>follow-order-server</module>
+        <module>follow-order-mascontrol</module>
+        <module>follow-order-followcom</module>
     </modules>
 
     <properties>
@@ -230,6 +232,7 @@
                 <version>${spring-integration-mqtt.version}</version>
             </dependency>
         </dependencies>
+
     </dependencyManagement>
 
     <repositories>
