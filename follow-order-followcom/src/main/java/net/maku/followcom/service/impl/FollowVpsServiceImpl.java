@@ -46,14 +46,25 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
-        followVpsVOS.stream().forEach(o->{
-            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), -10);
+//        followVpsVOS.stream().forEach(o->{
+//            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), -10);
+//            Date endDate = DateUtil.date();
+//            long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
+//            if (endDate.after(startDate)) {
+//                daysBetween = -daysBetween;
+//            }
+//            o.setRemainingDay((int)daysBetween);
+//        });
+
+        followVpsVOS.stream().forEach(o -> {
+            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), 0);
             Date endDate = DateUtil.date();
             long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
             if (endDate.after(startDate)) {
-                daysBetween = -daysBetween;
+                o.setRemainingDay(-1); // 已过期
+            } else {
+                o.setRemainingDay((int) daysBetween);
             }
-            o.setRemainingDay((int)daysBetween);
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }

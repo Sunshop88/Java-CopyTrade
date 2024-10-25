@@ -45,6 +45,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -297,8 +300,30 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
         if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
-            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
-            wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
+
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+            // 解析字符串为 LocalDateTime
+            LocalDateTime startTime = LocalDateTime.parse(query.getStartTime(), formatter);
+            LocalDateTime endTime = LocalDateTime.parse(query.getEndTime(), formatter);
+
+            // 减去 8 小时
+            LocalDateTime adjustedStartTime = startTime.minusHours(8);
+            LocalDateTime adjustedEndTime = endTime.minusHours(8);
+            wrapper.ge(FollowOrderDetailEntity::getOpenTime, adjustedStartTime);  // 大于或等于开始时间
+            wrapper.le(FollowOrderDetailEntity::getOpenTime, adjustedEndTime);    // 小于或等于结束时间
+
+//            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
+//            wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
+
+
+
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+//            ZonedDateTime startTime = ZonedDateTime.parse(query.getStartTime(), formatter).withZoneSameInstant(ZoneOffset.UTC);
+//            ZonedDateTime endTime = ZonedDateTime.parse(query.getEndTime(), formatter).withZoneSameInstant(ZoneOffset.UTC);
+//
+//            wrapper.ge(FollowOrderDetailEntity::getOpenTime, startTime);
+//            wrapper.le(FollowOrderDetailEntity::getOpenTime, endTime);
         }
         if (ObjectUtil.isNotEmpty(query.getCloseStartTime())&&ObjectUtil.isNotEmpty(query.getCloseEndTime())){
             wrapper.ge(FollowOrderDetailEntity::getCloseTime, query.getCloseStartTime());  // 大于或等于开始时间
