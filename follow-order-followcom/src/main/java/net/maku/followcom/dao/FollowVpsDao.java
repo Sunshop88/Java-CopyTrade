@@ -13,4 +13,5 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface FollowVpsDao extends BaseDao<FollowVpsEntity> {
 
+    void updateVps(FollowVpsEntity entity);
 }

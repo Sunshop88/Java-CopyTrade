@@ -108,6 +108,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         wrapper.eq(FollowTraderEntity::getDeleted,query.getDeleted());
         //根据vps地址查询
         wrapper.eq(FollowTraderEntity::getIpAddr, query.getServerIp());
+        if (ObjectUtil.isNotEmpty(query.getAcount())) {
+            wrapper.eq(FollowTraderEntity::getAccount, query.getAcount());
+        }
         //根据更新时间进行降序
         wrapper.orderByDesc(FollowTraderEntity::getCreateTime);
         return wrapper;

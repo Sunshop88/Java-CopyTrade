@@ -20,4 +20,6 @@ import java.util.Date;
 @Schema(description = "mt4账号查询")
 public class FollowTraderQuery extends Query {
     private String serverIp;
+
+    private String acount;
 }
