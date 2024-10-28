@@ -19,6 +19,7 @@
 			<artifactId>follow-order-followcom</artifactId>
 			<version>${revision}</version>
 		</dependency>
+
 	</dependencies>
 	<build>
 		<finalName>${project.artifactId}</finalName>

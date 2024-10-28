@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -102,11 +103,11 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
         redisUtil.del(id.toString());
 
         //从数据库中获取到该跟单者的所有订阅关系
-        List<FollowTraderSubscribeEntity> masterSlaves = this.list(Wrappers.<FollowTraderSubscribeEntity>lambdaQuery().eq(FollowTraderSubscribeEntity::getSlaveId, id));
+        List<FollowTraderSubscribeEntity> masterSlaves = this.list(Wrappers.<FollowTraderSubscribeEntity>lambdaQuery().eq(FollowTraderSubscribeEntity::getSlaveId, id)
+                .eq(FollowTraderSubscribeEntity::getDeleted, CloseOrOpenEnum.OPEN.getValue()));
 
         List<String> subscriptions = new LinkedList<>();
         for (FollowTraderSubscribeEntity item : masterSlaves) {
-            //排除历史订阅关系
             subscriptions.add(item.getMasterId().toString());
             this.redisUtil.hSet(id.toString(), item.getMasterId().toString(), item);
         }

@@ -70,7 +70,7 @@ public class CopierApiTrader extends AbstractApiTrader {
     private Boolean startTrade(ExecutorService executorService, List<String> topics) {
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(CopierApiTrader.this), 2, 30, TimeUnit.SECONDS);
 //        cycleCloseOrderTask = new CycleCloseOrderTask(CopierApiTrader.this, kafkaProducer);
-        super.cycleFuture = this.scheduledExecutorService.schedule(cycleCloseOrderTask, 60, TimeUnit.SECONDS);
+//        super.cycleFuture = this.scheduledExecutorService.schedule(cycleCloseOrderTask, 60, TimeUnit.SECONDS);
         this.cldKafkaConsumer.setKafkaMessageCallback(new CopierKafkaMessageCallbackImpl(this));
         return this.cldKafkaConsumer.startConsume(KafkaTopicPrefixSuffix.TENANT, topics, executorService, new ConsumerRebalanceListenerImpl<>(this.cldKafkaConsumer), 100);
     }

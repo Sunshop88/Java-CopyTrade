@@ -72,7 +72,6 @@ public class InitRunner implements ApplicationRunner {
         // mt4账户 喊单
         List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
                 .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
-                .in(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType())
                 .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
                 .orderByAsc(FollowTraderEntity::getCreateTime));
         // 分类MASTER和SLAVE
@@ -80,7 +79,6 @@ public class InitRunner implements ApplicationRunner {
         log.info("===============喊单者{}", masters);
         leaderApiTradersAdmin.startUp();
         // mt4账户 跟单
-        // 分类MASTER和SLAVE
         long slave = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
         log.info("===============跟单者{}", slave);
         copierApiTradersAdmin.startUp();
