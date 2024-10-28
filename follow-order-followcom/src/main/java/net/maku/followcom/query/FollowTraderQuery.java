@@ -21,5 +21,5 @@ import java.util.Date;
 public class FollowTraderQuery extends Query {
     private String serverIp;
 
-    private String acount;
+    private String account;
 }
