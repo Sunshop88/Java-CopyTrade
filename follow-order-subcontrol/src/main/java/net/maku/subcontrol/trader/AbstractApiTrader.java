@@ -5,6 +5,10 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.cld.message.pubsub.kafka.IKafkaProducer;
+import com.cld.message.pubsub.kafka.impl.CldKafkaConsumer;
+import com.cld.message.pubsub.kafka.properties.Ks;
+import com.cld.utils.HumpLine;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +16,16 @@ import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.subcontrol.even.OnQuoteHandler;
 import net.maku.subcontrol.even.OnQuoteTraderHandler;
+import net.maku.subcontrol.even.OrderUpdateHandler;
+import net.maku.subcontrol.even.CopierOrderUpdateEventHandlerImpl;
+import net.maku.subcontrol.even.LeaderOrderUpdateEventHandlerImpl;
+import net.maku.subcontrol.pojo.EaSymbolInfo;
+import net.maku.subcontrol.task.CycleCloseOrderTask;
 import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -66,12 +76,15 @@ public abstract class AbstractApiTrader extends ApiTrader {
     protected int reconnectTimes = 0;
     private QuoteEventArgs quoteEventArgs;
     @Getter
+    protected Map<String, EaSymbolInfo> symbolInfoMap = new HashMap<>();
     public OrderClient orderClient;
     public static List<String> availableException4 = new LinkedList<>();
+    protected CycleCloseOrderTask cycleCloseOrderTask;
     protected Map<LocalDate, BigDecimal> equityMap = new HashMap<>(1);
     private Date apiAnalysisBeginDate = null;
     OnQuoteTraderHandler onQuoteTraderHandler;
     OnQuoteHandler onQuoteHandler;
+    OrderUpdateHandler orderUpdateHandler;
     static {
         availableException4.add("Market is closed");
         availableException4.add("Invalid volume");
@@ -79,18 +92,22 @@ public abstract class AbstractApiTrader extends ApiTrader {
         availableException4.add("Trade is disabled");
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, String host, int port) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port);
         this.trader = trader;
+        this.kafkaProducer = kafkaProducer;
 //        this.equityRiskListener = new EquityRiskListenerImpl();
         initService();
+        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
 //        this.equityRiskListener = new EquityRiskListenerImpl4();
         this.trader = trader;
+        this.kafkaProducer = kafkaProducer;
         initService();
+        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
     }
 
     /**
@@ -104,6 +121,8 @@ public abstract class AbstractApiTrader extends ApiTrader {
         }
         if (this.onQuoteTraderHandler==null){
             //订单监听
+            boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
+            this.orderUpdateHandler = isLeader ? new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer) : new CopierOrderUpdateEventHandlerImpl(this, kafkaProducer);
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
             this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
         }
@@ -379,11 +398,11 @@ public abstract class AbstractApiTrader extends ApiTrader {
         }
     }
 
-    protected OnQuoteHandler getQuoteHandler() {
+    public OnQuoteHandler getQuoteHandler() {
        return onQuoteHandler;
     }
 
-    protected void removeOnQuoteHandler() {
+    public void removeOnQuoteHandler() {
         onQuoteHandler=null;
     }
 //    /**
@@ -399,4 +418,83 @@ public abstract class AbstractApiTrader extends ApiTrader {
 //            this.updateTraderInfo();
 //        }
 //    }
+
+    /**
+     * 停止交易
+     *
+     * @return Boolean
+     */
+    public Boolean stopTrade() {
+        if (orderUpdateHandler != null) {
+            try {
+                orderUpdateHandler.setRunning(Boolean.FALSE);
+            } catch (Exception e) {
+                log.error("设置orderUpdateHandler running 为false", e);
+            }
+        }
+        // 跟单者对象关闭定时任务
+        if (!ObjectUtils.isEmpty(updateTradeInfoFuture)) {
+            try {
+                updateTradeInfoFuture.cancel(Boolean.TRUE);
+            } catch (Exception e) {
+                log.error("updateTradeInfoFuture cancel", e);
+            }
+        }
+
+        if (!ObjectUtils.isEmpty(cycleCloseOrderTask)) {
+            try {
+                cycleCloseOrderTask.setRunning(Boolean.FALSE);
+            } catch (Exception e) {
+                log.error("cycleCloseOrderTask running false", e);
+            }
+        }
+        try {
+            quoteClient.OnOrderUpdate.removeAllListeners();
+            quoteClient.OnConnect.removeAllListeners();
+            quoteClient.OnDisconnect.removeAllListeners();
+            quoteClient.OnQuoteHistory.removeAllListeners();
+            quoteClient.OnDisconnect.removeAllListeners();
+            quoteClient.Disconnect();
+            log.info("关闭mtapi");
+        } catch (Exception e) {
+            log.error("", e);
+        }
+        return this.cldKafkaConsumer.stopConsume();
+    }
+
+    /**
+     * 获取MT4品种的信息
+     *
+     * @param symbol 品种
+     * @param cache  是否从缓存中获取
+     * @return EaSymbolInfo
+     */
+    public EaSymbolInfo symbolInfo(String symbol, boolean cache) throws InvalidSymbolException, ConnectException, TimeoutException {
+        EaSymbolInfo eaSymbolInfo;
+        if (cache) {
+            eaSymbolInfo = symbolInfoMap.get(symbol);
+            if (ObjectUtils.isEmpty(eaSymbolInfo)) {
+                eaSymbolInfo = symbolInfo(symbol);
+            }
+        } else {
+            eaSymbolInfo = symbolInfo(symbol);
+            symbolInfoMap.put(symbol, eaSymbolInfo);
+        }
+        return eaSymbolInfo;
+    }
+
+    private EaSymbolInfo symbolInfo(String symbol) throws InvalidSymbolException, ConnectException, TimeoutException {
+        EaSymbolInfo eaSymbolInfo;
+        boolean anyMatch = Arrays.stream(this.quoteClient.Symbols()).anyMatch((s) -> s.equalsIgnoreCase(symbol));
+        if (!anyMatch) {
+            throw new InvalidSymbolException(symbol, this.quoteClient.Log);
+        }
+        SymbolInfo symbolInfo = this.GetSymbolInfo(symbol);
+        ConGroupSec conGroupSec = this.quoteClient.GetSymbolGroupParams(symbol);
+        eaSymbolInfo = new EaSymbolInfo(symbolInfo, conGroupSec);
+        eaSymbolInfo.setTradeTickSize(this.quoteClient.GetTickSize(symbol));
+        eaSymbolInfo.setTradeTickValue(this.quoteClient.GetTickValue(symbol, 10000));
+        return eaSymbolInfo;
+    }
+
 }

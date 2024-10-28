@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.subcontrol.config.CommonConstant;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -282,14 +281,6 @@ public class RestUtil {
         return RT_WX.exchange(url, method, request, responseType);
     }
 
-    /**
-     * 获取JSON请求头
-     */
-    public static HttpHeaders getHeaderApplicationJsonAndToken(HttpServletRequest request) {
-        HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
-        header.add(CommonConstant.X_ACCESS_TOKEN, request.getHeader(CommonConstant.X_ACCESS_TOKEN));
-        return header;
-    }
 
     /**
      * 获取JSON请求头

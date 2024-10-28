@@ -1,9 +1,15 @@
 package net.maku.followcom.entity;
 
+import com.cld.utils.date.ThreeStrategyDateUtil;
 import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
+import net.maku.followcom.pojo.EaOrderInfo;
+import online.mtapi.mt4.Order;
+
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * 订阅关系表
@@ -237,5 +243,40 @@ public class FollowSubscribeOrderEntity {
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
+
+
+	public FollowSubscribeOrderEntity(EaOrderInfo orderInfo, FollowTraderEntity copier) {
+		this.masterId = orderInfo.getMasterId();
+		this.masterTicket = orderInfo.getTicket();
+		this.masterSymbol = orderInfo.getOriSymbol();
+		this.masterLots = BigDecimal.valueOf(orderInfo.getLots());
+		this.masterType = orderInfo.getType();
+		this.masterOpenTime = orderInfo.getOpenTime();
+		this.comment = orderInfo.getComment();
+		this.detectedOpenTime =orderInfo.getDetectedOpenTime();
+		this.slaveId = copier.getId();
+		this.slaveReceiveTime = orderInfo.getSlaveReceiveOpenTime();
+	}
+
+	public void setLeaderCopier(FollowTraderSubscribeEntity leaderCopier) {
+		if (leaderCopier != null) {
+			this.setFollowMode(leaderCopier.getFollowMode());
+			this.setFollowParam(leaderCopier.getFollowParam());
+			this.setDirection(leaderCopier.getFollowDirection());
+		}
+	}
+	public void setCopierOrder(Order order, EaOrderInfo orderInfo) {
+		Duration between = Duration.between(orderInfo.getOpenTime(), order.OpenTime.plus(1, ChronoUnit.DAYS));
+//        long openDelay = between.toSeconds() % 3600;
+//        this.setOpenDelay(openDelay);
+//		this.setRatio(new BigDecimal(order.Lots / orderInfo.getLots()));
+		this.setSlaveType(order.Type.getValue());
+		this.setSlaveTicket(order.Ticket);
+		this.setSlaveOpenTime(order.OpenTime);
+		this.setSlaveOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+		this.setComment(orderInfo.getComment());
+		this.setSlaveComment(order.Comment);
+		this.setSlavePosition(BigDecimal.valueOf(order.Lots));
+	}
 
 }

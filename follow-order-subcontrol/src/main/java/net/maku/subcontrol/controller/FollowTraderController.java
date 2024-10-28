@@ -271,10 +271,6 @@ public class FollowTraderController {
     @Operation(summary = "订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderDetailVO>>  orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
-//        if (ObjectUtil.isEmpty(query.getStartTime())|| ObjectUtil.isEmpty(query.getEndTime())) {
-//            return Result.ok();
-//        }
-
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
         return  Result.ok(followOrderDetailVOPageResult);
     }

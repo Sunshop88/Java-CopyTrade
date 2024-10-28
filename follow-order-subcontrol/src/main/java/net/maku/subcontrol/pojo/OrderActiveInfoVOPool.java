@@ -1,4 +1,4 @@
-package net.maku.subcontrol.even;
+package net.maku.subcontrol.pojo;
 
 import net.maku.followcom.vo.OrderActiveInfoVO;
 

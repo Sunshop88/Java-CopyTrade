@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader;
 
 import com.cld.message.pubsub.kafka.IKafkaProducer;
+import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.Data;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.ConCodeEnum;
@@ -19,6 +20,7 @@ import java.util.concurrent.*;
 @Data
 public abstract class AbstractApiTradersAdmin {
     protected ConcurrentHashMap<String, LeaderApiTrader> leader4ApiTraderConcurrentHashMap;
+    protected ConcurrentHashMap<String, CopierApiTrader> copier4ApiTraderConcurrentHashMap;
 
     protected FollowBrokeServerService followBrokeServerService;
     protected FollowTraderService followTraderService;
@@ -27,10 +29,13 @@ public abstract class AbstractApiTradersAdmin {
     protected AdminClient adminClient;
     protected ScheduledExecutorService scheduledExecutorService;
     protected FollowPlatformService followPlatformService;
+    protected Ks ks;
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
-        scheduledExecutorService=Executors.newScheduledThreadPool(10);
+        scheduledExecutorService=Executors.newScheduledThreadPool(100);
+        this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
+
     }
 
     protected int traderCount = 0;

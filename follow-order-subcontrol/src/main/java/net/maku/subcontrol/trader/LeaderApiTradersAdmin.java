@@ -3,6 +3,8 @@ package net.maku.subcontrol.trader;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.cld.message.pubsub.kafka.IKafkaProducer;
+import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,6 +20,7 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.util.FollowConstant;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,6 +35,11 @@ import java.util.concurrent.*;
 @EqualsAndHashCode(callSuper = true)
 public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     /**
+     * 线程池对象
+     */
+    private final ScheduledExecutorService scheduledExecutorService;
+
+    /**
      * 信号量来控制，连接任务最多支持的并发数
      */
     private Semaphore semaphore;
@@ -41,11 +49,13 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     private Boolean launchOn = false;
 
-    private final ScheduledExecutorService scheduledExecutorService;
 
-    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, ScheduledExecutorService scheduledExecutorService, FollowPlatformService followPlatformService) {
+    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService) {
         this.followTraderService = eaTraderService;
         this.followBrokeServerService = eaBrokerService;
+        this.ks = ks;
+        this.adminClient = adminClient;
+        this.kafkaProducer = kafkaProducer;
         this.semaphore = new Semaphore(10);
         this.scheduledExecutorService = scheduledExecutorService;
         this.followPlatformService=followPlatformService;
@@ -92,19 +102,19 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
 
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
-        ConCodeEnum conCodeEnum=ConCodeEnum.TRADE_NOT_ALLOWED;
+        ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
         //优先查看平台默认节点
         FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
-        if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
+        if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())) {
             //处理节点格式
             String[] split = followPlatformServiceOne.getServerNode().split(":");
-            conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
-            if (conCodeEnum==ConCodeEnum.TRADE_NOT_ALLOWED){
+            conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]),kafkaProducer);
+            if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接
                 List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
                 for (FollowBrokeServerEntity address : serverEntityList) {
                     // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum=connectTrader(leader,conCodeEnum,address.getServerNode(),Integer.valueOf(address.getServerPort()));
+                    conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()),kafkaProducer);
                     if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
                         break;
                     }
@@ -114,9 +124,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         return conCodeEnum;
     }
 
-    private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
+    private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport, IKafkaProducer<String, Object> kafkaProducer) {
         try {
-            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
+            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader,kafkaProducer, serverNode, Integer.valueOf(serverport));
             ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
             FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) scheduledExecutorService.submit(connectionTask);
             ConnectionResult result = submit.get();
@@ -152,7 +162,10 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
 
         boolean b = true;
         if (leader4Trader != null) {
-            this.leader4ApiTraderConcurrentHashMap.remove(id);
+            b = leader4Trader.stopTrade();
+            if (b) {
+                this.leader4ApiTraderConcurrentHashMap.remove(id);
+            }
         }
         return b;
     }
