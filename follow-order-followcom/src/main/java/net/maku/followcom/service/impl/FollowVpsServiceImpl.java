@@ -57,7 +57,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
 //        });
 
         followVpsVOS.stream().forEach(o -> {
-            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), 0);
+            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), 1);
             Date endDate = DateUtil.date();
             long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
             if (endDate.after(startDate)) {
