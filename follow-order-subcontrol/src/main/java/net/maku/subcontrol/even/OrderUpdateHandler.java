@@ -62,7 +62,6 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
         // #84 喊单者发送订单前需要处理前后缀
         EaOrderInfo orderInfo = new EaOrderInfo(order, leader.getId() ,leader.getAccount(), leader.getServerName(), equity, currency, Boolean.FALSE);
         assembleOrderInfo(type, orderInfo, detectedDate);
-        //升级前后缀删除和强制映射，前后缀信息从账号信息中获取。
         CldProducerRecord<String, Object> cldProducerRecord = new CldProducerRecord<>(KafkaTopicPrefixSuffix.TENANT, topic, type.getValue(), orderInfo);
         kafkaProducer.send(cldProducerRecord);
     }

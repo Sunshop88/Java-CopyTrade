@@ -51,7 +51,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * mt4账号
+ * 策略账号
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
@@ -97,21 +97,6 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody FollowTraderVO vo){
-        String serverIp = FollowConstant.LOCAL_HOST;
-        log.info("localhost{}",serverIp);
-        vo.setServerIp(serverIp);
-        if (ObjectUtil.isEmpty(vo.getPlatform())){
-            throw new ServerException("服务商错误");
-        }
-        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(vo.getPlatform());
-        if (ObjectUtil.isEmpty(serverEntityList)){
-            throw new ServerException("暂无可用服务器商");
-        }
-        //查看是否已存在该账号
-        FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()).eq(FollowTraderEntity::getIpAddr,serverIp));
-        if (ObjectUtil.isNotEmpty(followTraderEntity)){
-            throw new ServerException("该账号已存在");
-        }
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);

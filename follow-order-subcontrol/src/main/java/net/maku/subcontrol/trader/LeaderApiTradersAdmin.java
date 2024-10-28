@@ -20,10 +20,18 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
+import net.maku.subcontrol.util.KafkaTopicUtil;
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.DeleteTopicsResult;
+import org.apache.kafka.clients.admin.ListTopicsResult;
+import org.apache.kafka.common.KafkaFuture;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -76,6 +84,22 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity leader : leaders) {
             scheduledExecutorService.submit(() -> {
                 try {
+                    //这里需要删除主题，因为有可能主题的分区配置变化了
+                    ListTopicsResult listTopicsResult = adminClient.listTopics();
+                    Collection<String> hostTopicNames = listTopicsResult.names().get();
+
+                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader));
+                    hostTopicNames.retainAll(topics);
+                    if (!hostTopicNames.isEmpty()) {
+                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
+                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
+                        map.values().forEach(value -> {
+                            try {
+                                value.get();
+                            } catch (Exception ignored) {
+                            }
+                        });
+                    }
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {

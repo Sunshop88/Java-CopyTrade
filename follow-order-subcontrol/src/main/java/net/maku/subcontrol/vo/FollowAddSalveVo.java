@@ -1,0 +1,53 @@
+package net.maku.subcontrol.vo;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+@Data
+@Schema(description = "添加跟单账号")
+public class FollowAddSalveVo  implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Schema(description = "喊单账号")
+    private Long traderId;
+
+    @Schema(description = "平台")
+    private String platform;
+
+    @Schema(description = "账号")
+    private String account;
+
+    @Schema(description = "密码")
+    private String password;
+
+    @Schema(description = "备注")
+    private String remark;
+
+    @Schema(description = "跟单方向0-正向1-反向")
+    private Integer followDirection;
+
+    @Schema(description = "跟随模式0-固定手数 1-手数比例 2-净值比例")
+    private Integer followMode;
+
+    @Schema(description = "跟单比例")
+    private BigDecimal followParam;
+
+    @Schema(description = "跟单状态0-未开启 1-已开启")
+    private Integer followStatus;
+
+    @Schema(description = "跟单开仓状态 0-未开启 1-开启")
+    private Integer followOpen;
+
+    @Schema(description = "跟单平仓状态 0-未开启 1-开启")
+    private Integer followClose;
+
+    @Schema(description = "跟单补单状态 0-未开启 1-开启")
+    private Integer followRep;
+
+    @Schema(description = "下单类型0-全部 1-多单 2-空单")
+    private Integer followType;
+
+}

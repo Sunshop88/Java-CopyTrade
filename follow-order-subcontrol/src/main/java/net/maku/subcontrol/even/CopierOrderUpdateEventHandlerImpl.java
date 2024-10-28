@@ -37,13 +37,6 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     log.info("此处只处理已经开仓的订单的修改，挂单的修改不做处理。");
                     break;
                 case PendingModify:
-                    if (orderUpdateEventArgs.Order.Type == Buy || orderUpdateEventArgs.Order.Type == Sell) {
-                        log.info("挂单开仓");
-                        // 挂单触发后会主动发送一个修改订单的信号，修改了订单类型,这种情况作为一个开仓信号进行发送
-    //                execute(OrderChangeTypeEnum.NEW, orderInfo, equity, currency);
-                    } else {
-                        log.info("挂单修改");
-                    }
                     break;
                 case PendingFill:
                     log.info("挂单触发");

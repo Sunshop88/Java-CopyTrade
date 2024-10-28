@@ -21,6 +21,7 @@ import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
@@ -73,6 +74,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final RedisCache redisCache;
     private final FollowPlatformService followPlatformService;
     private final FollowOrderCloseService followOrderCloseService;
+    private final FollowBrokeServerService followBrokeServerService;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -134,6 +136,19 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FollowTraderVO save(FollowTraderVO vo) {
+        vo.setServerIp(FollowConstant.LOCAL_HOST);
+        if (ObjectUtil.isEmpty(vo.getPlatform())){
+            throw new ServerException("服务商错误");
+        }
+        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(vo.getPlatform());
+        if (ObjectUtil.isEmpty(serverEntityList)){
+            throw new ServerException("暂无可用服务器商");
+        }
+        //查看是否已存在该账号
+        FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()).eq(FollowTraderEntity::getIpAddr,FollowConstant.LOCAL_HOST));
+        if (ObjectUtil.isNotEmpty(followTraderEntity)){
+            throw new ServerException("该账号已存在");
+        }
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,vo.getServerIp()));
         if (ObjectUtil.isEmpty(followVpsEntity)){

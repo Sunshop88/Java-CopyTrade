@@ -20,7 +20,10 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
+import net.maku.subcontrol.util.KafkaTopicUtil;
 import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.common.KafkaFuture;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -72,6 +75,23 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity slave : slaves) {
             scheduledExecutorService.submit(() -> {
                 try {
+                    ListTopicsResult listTopicsResult = adminClient.listTopics();
+                    Collection<String> hostTopicNames = listTopicsResult.names().get();
+                    List<String> topics = Collections.singletonList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(slave));
+                    hostTopicNames.retainAll(topics);
+                    if (!hostTopicNames.isEmpty()) {
+                        //这里需要删除主题，因为有可能主题的分区配置变化了
+                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
+
+                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
+                        map.values().forEach(value -> {
+                            try {
+                                value.get();
+                            } catch (Exception e) {
+                                log.error("", e);
+                            }
+                        });
+                    }
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !slave.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
@@ -91,7 +111,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         }
         //需要所有addCopier()函数执行完后才可以
         countDownLatch.await();
-        log.info("所有的mt4喊单者结束连接服务器");
+        log.info("所有的mt4跟单者结束连接服务器");
         this.launchOn = true;
     }
 
@@ -167,7 +187,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     
 
     /**
-     * 执行喊单者的连接操作做连接操作
+     * 执行跟单者的连接操作做连接操作
      */
     private static class ConnectionTask implements Callable<CopierApiTradersAdmin.ConnectionResult> {
         private final CopierApiTrader copierApiTrader;
@@ -189,14 +209,14 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 aq = Boolean.TRUE;
                 this.copierApiTrader.connect2Broker();
             } catch (Exception e) {
-                log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", copier.getId(), copier.getAccount(), copier.getServerName(), e.getClass().getSimpleName() + e.getMessage());
+                log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", copier.getId(), copier.getAccount(), copier.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
             } finally {
                 if (aq) {
                     semaphore.release();
                 }
             }
-            log.info("[MT4喊单者{}-{}-{}]连接服务器成功", copier.getId(), copier.getAccount(), copier.getServerName());
+            log.info("[MT4跟单者{}-{}-{}]连接服务器成功", copier.getId(), copier.getAccount(), copier.getServerName());
             return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.SUCCESS);
         }
     }
