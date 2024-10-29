@@ -1,4 +1,4 @@
-package net.maku.subcontrol.vo;
+package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -32,7 +32,7 @@ public class FollowAddSalveVo  implements Serializable {
     @Schema(description = "跟随模式0-固定手数 1-手数比例 2-净值比例")
     private Integer followMode;
 
-    @Schema(description = "跟单比例")
+    @Schema(description = "跟单参数")
     private BigDecimal followParam;
 
     @Schema(description = "跟单状态0-未开启 1-已开启")
@@ -47,7 +47,9 @@ public class FollowAddSalveVo  implements Serializable {
     @Schema(description = "跟单补单状态 0-未开启 1-开启")
     private Integer followRep;
 
-    @Schema(description = "下单类型0-全部 1-多单 2-空单")
-    private Integer followType;
+    @Schema(description = "下单方式")
+    private Integer placedType;
+
+    private Long slaveAccount;
 
 }

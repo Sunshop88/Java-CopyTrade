@@ -54,8 +54,8 @@ public class FollowTraderExcelVO implements TransPojo {
 	@ExcelProperty("下单模式参数")
 	private BigDecimal followParam;
 
-	@ExcelProperty("下单类型0-全部 1-多单 2-空单")
-	private Integer followType;
+	@ExcelProperty("下单方式")
+	private Integer placedType;
 
 	@ExcelProperty("跟单开仓状态 0-未开启 1-开启")
 	private Integer followOpen;

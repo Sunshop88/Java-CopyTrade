@@ -29,9 +29,6 @@ public class FollowTraderSubscribeExcelVO implements TransPojo {
 	@ExcelProperty("跟随模式0-固定手数 1-手数比例 2-净值比例")
 	private Integer followMode;
 
-	@ExcelProperty("跟单手数")
-	private BigDecimal followLots;
-
 	@ExcelProperty("跟单比例")
 	private BigDecimal followParam;
 
@@ -47,8 +44,8 @@ public class FollowTraderSubscribeExcelVO implements TransPojo {
 	@ExcelProperty("跟单补单状态 0-未开启 1-开启")
 	private Integer followRep;
 
-	@ExcelProperty("下单类型0-全部 1-多单 2-空单")
-	private Integer followType;
+	@ExcelProperty("下单方式")
+	private Integer placedType;
 
 	@ExcelProperty("止盈止损0-不跟随 1-跟随")
 	private Integer tpSl;

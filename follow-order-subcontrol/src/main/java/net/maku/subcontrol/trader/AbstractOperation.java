@@ -1,12 +1,15 @@
 package net.maku.subcontrol.trader;
 
+import cn.hutool.core.bean.BeanUtil;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.entity.FollowOrderHistoryEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.DirectionEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderHistoryService;
 import net.maku.followcom.service.FollowSubscribeOrderService;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.followcom.service.impl.FollowSubscribeOrderServiceImpl;
@@ -23,6 +26,7 @@ import online.mtapi.mt4.Op;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
@@ -42,7 +46,7 @@ public class AbstractOperation {
     protected String mapKey;
     protected FollowRule followRule;
     protected ScheduledThreadPoolExecutor threeStrategyThreadPoolExecutor;
-
+    protected FollowOrderHistoryService followOrderHistoryService;
     int whileTimes = 20;
 
     public AbstractOperation(FollowTraderEntity trader) {
@@ -53,6 +57,7 @@ public class AbstractOperation {
         historyOrderService = SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
         this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         followRule = new FollowRule();
+        this.followOrderHistoryService=SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
     }
 
     protected String comment(EaOrderInfo orderInfo) {
@@ -96,61 +101,23 @@ public class AbstractOperation {
         }
     }
 
-    protected double openPrice4(AbstractApiTrader abstract4ApiTrader, String symbol, int type) throws InvalidSymbolException, TimeoutException, ConnectException {
-        int loopTimes = 0;
-        QuoteEventArgs quoteEventArgs = abstract4ApiTrader.quoteClient.GetQuote(symbol);
-        while (quoteEventArgs == null && abstract4ApiTrader.quoteClient.Connected() && loopTimes < whileTimes) {
-            try {
-                loopTimes++;
-                Thread.sleep(50);
-            } catch (Exception ignored) {
-            }
-            abstract4ApiTrader.quoteClient.Subscribe(symbol);
-            quoteEventArgs = abstract4ApiTrader.quoteClient.GetQuote(symbol);
-        }
-        if (quoteEventArgs != null) {
-            return type == Buy.getValue() ? quoteEventArgs.Ask : quoteEventArgs.Bid;
-        } else {
-            return 1.00000;
-        }
-    }
 
     public void orderSend(ConsumerRecord<String, Object> record, int retry, FollowTraderEntity trader) {
-        EaOrderInfo orderInfo = (EaOrderInfo) record.value();
-        LocalDateTime now = LocalDateTime.now();
-        int tryTimes = 0;
-        boolean update = Boolean.FALSE;
-        while (!update) {
-            tryTimes++;
-//            update = orderChangeService.update(Wrappers.<BchainOrderChange>lambdaUpdate().eq(BchainOrderChange::getTraderId, trader.getId()).eq(BchainOrderChange::getTicket, orderInfo.getTicket()).eq(BchainOrderChange::getChangeType, OrderChangeTypeEnum.NEW.toString()).set(BchainOrderChange::getKafkaReceive, now).set(JeecgEntity::getUpdateTime, LocalDateTime.now()));
-            try {
-                Thread.sleep(tryTimes * 1000L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            if (tryTimes > 500) {
-                break;
-            }
-        }
+
     }
 
     public void orderClose(ConsumerRecord<String, Object> record, int retry, FollowTraderEntity trader) {
+        //生成历史订单
         EaOrderInfo orderInfo = (EaOrderInfo) record.value();
-        LocalDateTime now = LocalDateTime.now();
-        int tryTimes = 0;
-        boolean update = Boolean.FALSE;
-        while (!update) {
-            tryTimes++;
-//            update = orderChangeService.update(Wrappers.<BchainOrderChange>lambdaUpdate().eq(BchainOrderChange::getTraderId, trader.getId()).eq(BchainOrderChange::getTicket, orderInfo.getTicket()).eq(BchainOrderChange::getChangeType, OrderChangeTypeEnum.CLOSED).set(BchainOrderChange::getKafkaReceive, now).set(JeecgEntity::getUpdateTime, LocalDateTime.now()));
-            try {
-                Thread.sleep(tryTimes * 1000L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            if (tryTimes > 500) {
-                break;
-            }
-        }
+        FollowOrderHistoryEntity followOrderHistory=new FollowOrderHistoryEntity();
+        BeanUtil.copyProperties(orderInfo,followOrderHistory);
+        followOrderHistory.setOrderNo(orderInfo.getTicket());
+        followOrderHistory.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
+        followOrderHistory.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
+        followOrderHistory.setTraderId(trader.getId());
+        followOrderHistory.setAccount(trader.getAccount());
+        followOrderHistory.setCreateTime(LocalDateTime.now());
+        followOrderHistoryService.save(followOrderHistory);
     }
 
     public void orderModify(ConsumerRecord<String, Object> record, int retry, FollowTraderEntity trader) {

@@ -1,10 +1,12 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -17,11 +19,13 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowTraderSubscribeExcelVO;
+import net.maku.framework.security.user.SecurityUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ObjectUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -35,7 +39,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTraderSubscribeDao, FollowTraderSubscribeEntity> implements FollowTraderSubscribeService {
     private final TransService transService;
-
     @Autowired
     private RedisUtil redisUtil;
 
@@ -104,7 +107,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
 
         //从数据库中获取到该跟单者的所有订阅关系
         List<FollowTraderSubscribeEntity> masterSlaves = this.list(Wrappers.<FollowTraderSubscribeEntity>lambdaQuery().eq(FollowTraderSubscribeEntity::getSlaveId, id)
-                .eq(FollowTraderSubscribeEntity::getDeleted, CloseOrOpenEnum.OPEN.getValue()));
+                .eq(FollowTraderSubscribeEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
 
         List<String> subscriptions = new LinkedList<>();
         for (FollowTraderSubscribeEntity item : masterSlaves) {
@@ -135,6 +138,22 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
                 return null;
             }
         }
+    }
+
+    @Override
+    public void addSubscription(FollowAddSalveVo vo) {
+        FollowTraderSubscribeEntity followTraderSubscribeEntity=convertSubscribeConvert(vo);
+        this.save(followTraderSubscribeEntity);
+    }
+
+    private FollowTraderSubscribeEntity convertSubscribeConvert(FollowAddSalveVo vo) {
+        FollowTraderSubscribeEntity followTraderSubscribeEntity=new FollowTraderSubscribeEntity();
+        BeanUtil.copyProperties(vo,followTraderSubscribeEntity);
+        followTraderSubscribeEntity.setMasterId(vo.getTraderId());
+        followTraderSubscribeEntity.setSlaveId(vo.getSlaveAccount());
+        followTraderSubscribeEntity.setCreator(SecurityUser.getUserId());
+        followTraderSubscribeEntity.setCreateTime(LocalDateTime.now());
+        return followTraderSubscribeEntity;
     }
 
 }

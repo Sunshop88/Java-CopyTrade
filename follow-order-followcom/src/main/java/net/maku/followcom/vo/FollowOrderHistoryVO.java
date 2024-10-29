@@ -72,17 +72,11 @@ public class FollowOrderHistoryVO implements Serializable {
 	@Schema(description = "魔数")
 	private Integer magic;
 
-	@Schema(description = "写库时间")
-	private Integer realTime;
-
 	@Schema(description = "MT4账号id")
-	private String traderId;
+	private Integer traderId;
 
 	@Schema(description = "MT4账号")
 	private String account;
-
-	@Schema(description = "盈利点数")
-	private Integer profitPoint;
 
 	@Schema(description = "版本号")
 	private Integer version;

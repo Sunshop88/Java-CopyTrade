@@ -119,28 +119,16 @@ public class FollowOrderHistoryEntity {
 	private Integer magic;
 
 	/**
-	* 写库时间
-	*/
-	@TableField(value = "real_time")
-	private Integer realTime;
-
-	/**
 	* MT4账号id
 	*/
 	@TableField(value = "trader_id")
-	private String traderId;
+	private Long traderId;
 
 	/**
 	* MT4账号
 	*/
 	@TableField(value = "account")
 	private String account;
-
-	/**
-	* 盈利点数
-	*/
-	@TableField(value = "profit_point")
-	private Integer profitPoint;
 
 	/**
 	* 版本号

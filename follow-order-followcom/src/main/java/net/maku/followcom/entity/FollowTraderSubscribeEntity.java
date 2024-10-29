@@ -40,12 +40,6 @@ public class FollowTraderSubscribeEntity {
 	private Integer followMode;
 
 	/**
-	* 跟单手数
-	*/
-	@TableField(value = "follow_lots")
-	private BigDecimal followLots;
-
-	/**
 	* 跟单比例
 	*/
 	@TableField(value = "follow_param")
@@ -76,10 +70,10 @@ public class FollowTraderSubscribeEntity {
 	private Integer followRep;
 
 	/**
-	* 下单类型0-全部 1-多单 2-空单
+	* 下单方式
 	*/
-	@TableField(value = "follow_type")
-	private Integer followType;
+	@TableField(value = "placed_type")
+	private Integer placedType;
 
 	/**
 	* 止盈止损0-不跟随 1-跟随

@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowTraderSubscribeVO;
@@ -33,4 +34,5 @@ public interface FollowTraderSubscribeService extends BaseService<FollowTraderSu
 
     FollowTraderSubscribeEntity subscription(Long slaveId, Long masterId);
 
+    void addSubscription(FollowAddSalveVo vo);
 }

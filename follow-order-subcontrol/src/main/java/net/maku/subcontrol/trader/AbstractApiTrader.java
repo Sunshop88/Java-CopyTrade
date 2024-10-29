@@ -120,11 +120,16 @@ public abstract class AbstractApiTrader extends ApiTrader {
             this.orderClient = new OrderClient(quoteClient);
         }
         if (this.onQuoteTraderHandler==null){
-            //订单监听
             boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
-            this.orderUpdateHandler = isLeader ? new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer) : new CopierOrderUpdateEventHandlerImpl(this, kafkaProducer);
+            if (isLeader){
+                //订单变化监听
+                this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer);
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+            }
+            //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
             this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
+
         }
 
     }

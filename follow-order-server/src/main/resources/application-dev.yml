@@ -38,3 +38,13 @@ spring:
     password: maku
     clientId: maku_boot_service_dev
     default-topic: topic_default
+
+cld:
+  kafka:
+    servers: 127.0.0.1:9092
+    partition: 1
+    replication: 1
+    maxIdle: 20
+    minIdle: 10
+    # block synchronous callback 三种发送模式
+    sendMode: callback

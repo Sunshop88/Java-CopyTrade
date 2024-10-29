@@ -140,8 +140,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isEmpty(vo.getPlatform())){
             throw new ServerException("服务商错误");
         }
-        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(vo.getPlatform());
-        if (ObjectUtil.isEmpty(serverEntityList)){
+        FollowPlatformEntity followPlatform = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer,vo.getPlatform()));
+        if (ObjectUtil.isEmpty(followPlatform)){
             throw new ServerException("暂无可用服务器商");
         }
         //查看是否已存在该账号
@@ -154,6 +154,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isEmpty(followVpsEntity)){
             throw new ServerException("请先添加VPS");
         }
+        entity.setPlatformId(followPlatform.getId().intValue());
         entity.setIpAddr(vo.getServerIp());
         entity.setServerId(followVpsEntity.getId());
         entity.setServerName(followVpsEntity.getName());

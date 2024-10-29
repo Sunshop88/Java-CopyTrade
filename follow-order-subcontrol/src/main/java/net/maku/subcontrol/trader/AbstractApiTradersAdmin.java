@@ -9,6 +9,8 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
+import net.maku.followcom.util.SpringContextUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
@@ -35,6 +37,7 @@ public abstract class AbstractApiTradersAdmin {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
         scheduledExecutorService=Executors.newScheduledThreadPool(100);
         this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
+        this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
 
     }
 

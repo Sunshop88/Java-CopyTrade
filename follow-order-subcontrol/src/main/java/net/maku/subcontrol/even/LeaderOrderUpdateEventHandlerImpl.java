@@ -82,23 +82,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
                 break;
-            case PositionModify:
-                scheduledThreadPoolExecutor.submit(() -> {
-                    send2Copiers(OrderChangeTypeEnum.MODIFIED, order, 0, currency, LocalDateTime.now());
-                });
-                break;
-            case PendingOpen:
-            case PendingClose:
-            case PendingModify:
-                //此处只处理已经开仓的订单的修改，挂单的修改不做处理
-                log.info("PendingModify");
-                break;
-            case Balance:
-                log.info("Balance");
-                break;
-            case Credit:
-                log.info("Credit");
-                break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
