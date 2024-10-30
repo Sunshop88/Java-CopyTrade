@@ -21,7 +21,7 @@ knife4j:
 spring:
   # 环境 dev|test|prod
   profiles:
-    active: dev
+    active: @profile.name@
   application:
     name: follow-order
   jackson:
