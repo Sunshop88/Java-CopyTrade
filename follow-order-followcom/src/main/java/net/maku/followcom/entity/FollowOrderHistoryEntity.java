@@ -20,7 +20,7 @@ public class FollowOrderHistoryEntity {
 	*/
 	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
-	private String id;
+	private Integer id;
 
 	/**
 	* 订单

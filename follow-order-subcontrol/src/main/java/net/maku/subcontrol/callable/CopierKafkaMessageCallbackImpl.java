@@ -38,22 +38,18 @@ public class CopierKafkaMessageCallbackImpl extends AbstractKafkaMessageCallback
 
     @Override
     public void onMessage(ConsumerRecords<String, Object> consumerRecords) {
-        for (ConsumerRecord<String, Object> consumerRecord : consumerRecords) {
-            log.debug("MT4跟单者：{}-{}-{}收到 {}---{}", copier.getId(), copier.getAccount(), copier.getServerName(), consumerRecord.key(), consumerRecord.value());
-            scheduledExecutorService.submit(() -> {
-                try {
-                    tradeOperation(consumerRecord);
-                } catch (ConnectException | TimeoutException e) {
-                    e.printStackTrace();
-                }
-            });
-        }
+
     }
 
     @Override
     public void onMessage(ConsumerRecord<String, Object> consumerRecord) {
-
+        log.debug("MT4跟单者：{}-{}-{}收到 {}---{}", copier.getId(), copier.getAccount(), copier.getServerName(), consumerRecord.key(), consumerRecord.value());
+        scheduledExecutorService.submit(() -> {
+            try {
+                tradeOperation(consumerRecord);
+            } catch (ConnectException | TimeoutException e) {
+                e.printStackTrace();
+            }
+        });
     }
-
-
 }

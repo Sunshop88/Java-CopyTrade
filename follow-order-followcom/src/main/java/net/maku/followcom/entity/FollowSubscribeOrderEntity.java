@@ -266,10 +266,6 @@ public class FollowSubscribeOrderEntity {
 		}
 	}
 	public void setCopierOrder(Order order, EaOrderInfo orderInfo) {
-		Duration between = Duration.between(orderInfo.getOpenTime(), order.OpenTime.plus(1, ChronoUnit.DAYS));
-//        long openDelay = between.toSeconds() % 3600;
-//        this.setOpenDelay(openDelay);
-//		this.setRatio(new BigDecimal(order.Lots / orderInfo.getLots()));
 		this.setSlaveType(order.Type.getValue());
 		this.setSlaveTicket(order.Ticket);
 		this.setSlaveOpenTime(order.OpenTime);

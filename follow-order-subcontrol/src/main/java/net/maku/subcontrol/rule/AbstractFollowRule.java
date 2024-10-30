@@ -64,7 +64,6 @@ public abstract class AbstractFollowRule {
         if (ObjectUtils.isEmpty(masterSlave)) {
             return 0.0;
         }
-        //如果跟单者没有这个品种需要在外部直接处理
         //喊单者、跟单者的合约大小
         EaSymbolInfo copierSymbolInfo = copierApiTrader.symbolInfo(eaOrderInfo.getSymbol(), true);
         EaSymbolInfo leaderSymbolInfo = null;
@@ -86,6 +85,7 @@ public abstract class AbstractFollowRule {
                 break;
             case 2:
                 //按净值比例
+                lots = 0.0;
                 break;
             default:
                 lots = 0.0;

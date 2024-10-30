@@ -173,41 +173,7 @@ public class EaOrderInfo implements Serializable {
      */
     public void addSymbolPrefixSuffix(Map<String, String> modSymbolMap, List<String> prefixSuffixList) {
 
-        String modSymbol = modSymbolMap.get(this.symbol);
-        if (!ObjectUtils.isEmpty(modSymbol)) {
-            //跟单者使用的时候映射的是原始品种名
-            Arrays.stream(modSymbol.split(","))
-                    .forEach(ms -> {
-                        if (ms.contains(this.removedSymbol)) {
-                            symbolList.add(0, ms);
-                        } else {
-                            symbolList.add(ms);
-                        }
-                    });
-        } else {
-            //前后缀补全的整体思路是，将多组前后缀都补全，进行返回；由后续开仓环节多多个品种进行开仓；
-            for (String prefixSuffix : prefixSuffixList) {
-                StringBuilder symbolBuffer = new StringBuilder();
-                if (!ObjectUtils.isEmpty(prefixSuffixList)) {
-                    String[] ps = prefixSuffix.split(StrUtil.COMMA);
-                    if (ObjectUtils.isEmpty(ps)) {
-                        symbolBuffer.append(this.symbol);
-                    } else {
-                        symbolBuffer.append(Objects.equals(ps[0], "empty") ? StrUtil.EMPTY : ps[0]).append(this.symbol).append(Objects.equals(ps[1], "empty") ? StrUtil.EMPTY : ps[1]);
-                    }
-                    if (oriSymbol.equalsIgnoreCase(symbolBuffer.toString())) {
-                        symbolList.add(0, symbolBuffer.toString());
-                    } else {
-                        symbolList.add(symbolBuffer.toString());
-                    }
-                }
-            }
-            //解决有前后缀账户的没有前后缀部分的开仓
-            boolean anyMatch = symbolList.stream().anyMatch(symbol -> StrUtil.containsAnyIgnoreCase(symbol, this.oriSymbol));
-            if (!anyMatch) {
-                symbolList.add(this.oriSymbol);
-            }
-        }
+
     }
 
 }

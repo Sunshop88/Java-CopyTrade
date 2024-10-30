@@ -1,13 +1,10 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
 
 /**
@@ -22,7 +19,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Schema(description = "id")
-	private String id;
+	private Integer id;
 
 	@Schema(description = "订单")
 	private Integer orderNo;
@@ -73,7 +70,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private Integer magic;
 
 	@Schema(description = "MT4账号id")
-	private Integer traderId;
+	private Long traderId;
 
 	@Schema(description = "MT4账号")
 	private String account;

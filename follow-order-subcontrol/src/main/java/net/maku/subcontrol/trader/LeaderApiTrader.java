@@ -51,6 +51,7 @@ public class LeaderApiTrader extends AbstractApiTrader {
     }
 
     private Boolean startTrade(ExecutorService executorService, List<String> subscriptions) {
+        log.info("消费leader"+subscriptions);
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(this), 6, 30, TimeUnit.SECONDS);
         super.cldKafkaConsumer.setKafkaMessageCallback(new LeaderKafkaMessageCallbackImpl(this));
         return this.cldKafkaConsumer.startConsume(KafkaTopicPrefixSuffix.TENANT, subscriptions, executorService, new AotfxConsumerMasterOrderRebalanceListener(this.cldKafkaConsumer), 100);

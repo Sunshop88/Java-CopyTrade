@@ -78,4 +78,9 @@ public interface Constant {
      * 账户持仓订单缓存
      */
     String TRADER_ACTIVE="trader:active:";
+
+    /**
+     * 品种匹配数据
+     */
+    String TRADER_VARIETY="trader:variety:";
 }

@@ -62,7 +62,7 @@ public class AbstractOperation {
 
     protected String comment(EaOrderInfo orderInfo) {
         //#喊单者账号(36进制)#喊单者订单号(订单号)#AUTO
-        return "#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#WK_AUTO";
+        return "#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
     }
 
     protected Op op(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier) {
@@ -109,6 +109,7 @@ public class AbstractOperation {
     public void orderClose(ConsumerRecord<String, Object> record, int retry, FollowTraderEntity trader) {
         //生成历史订单
         EaOrderInfo orderInfo = (EaOrderInfo) record.value();
+        log.info("生成历史订单"+orderInfo.getTicket());
         FollowOrderHistoryEntity followOrderHistory=new FollowOrderHistoryEntity();
         BeanUtil.copyProperties(orderInfo,followOrderHistory);
         followOrderHistory.setOrderNo(orderInfo.getTicket());
@@ -116,6 +117,7 @@ public class AbstractOperation {
         followOrderHistory.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
         followOrderHistory.setTraderId(trader.getId());
         followOrderHistory.setAccount(trader.getAccount());
+        followOrderHistory.setSize(BigDecimal.valueOf(orderInfo.getLots()));
         followOrderHistory.setCreateTime(LocalDateTime.now());
         followOrderHistoryService.save(followOrderHistory);
     }

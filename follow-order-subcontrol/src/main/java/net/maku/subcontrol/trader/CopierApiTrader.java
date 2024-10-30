@@ -68,6 +68,7 @@ public class CopierApiTrader extends AbstractApiTrader {
     }
 
     private Boolean startTrade(ExecutorService executorService, List<String> topics) {
+        log.info("消费copy"+topics);
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(CopierApiTrader.this), 2, 30, TimeUnit.SECONDS);
 //        cycleCloseOrderTask = new CycleCloseOrderTask(CopierApiTrader.this, kafkaProducer);
 //        super.cycleFuture = this.scheduledExecutorService.schedule(cycleCloseOrderTask, 60, TimeUnit.SECONDS);

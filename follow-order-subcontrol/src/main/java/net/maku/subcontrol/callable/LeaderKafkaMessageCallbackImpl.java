@@ -26,14 +26,11 @@ public class LeaderKafkaMessageCallbackImpl extends AbstractKafkaMessageCallback
     @Override
     public void onMessage(ConsumerRecords<String, Object> consumerRecords) {
 
-        for (ConsumerRecord<String, Object> consumerRecord : consumerRecords) {
-            onMessage(consumerRecord);
-        }
     }
 
     @Override
     public void onMessage(ConsumerRecord<String, Object> consumerRecord) {
-        log.debug("喊单账号：{},收到{} {}", LeaderApiTrader.getTrader().getAccount(), consumerRecord.key(), consumerRecord.value());
+        log.info("喊单账号：{},收到{} {}", LeaderApiTrader.getTrader().getAccount(), consumerRecord.key(), consumerRecord.value());
         scheduledExecutorService.submit(() -> {
             try {
                 tradeOperation(consumerRecord);
