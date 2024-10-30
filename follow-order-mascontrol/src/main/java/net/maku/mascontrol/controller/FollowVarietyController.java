@@ -151,19 +151,6 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public ResponseEntity<byte[]> generateCsv() {
-//        try {
-//            byte[] csvData = followVarietyService.generateCsv();
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.add("Content-Disposition", "attachment; filename=modified_template.csv");
-//            headers.add("Content-Type", "text/csv");
-//            return ResponseEntity.ok()
-//                    .headers(headers)
-//                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-//                    .body(csvData);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return ResponseEntity.status(500).body(null);
-//        }
         try {
             // 使用 ByteArrayOutputStream 来生成 CSV 数据
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -187,6 +174,8 @@ public class FollowVarietyController {
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<FollowVarietyVO>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
+        //相同的stdSymbol对应同一个stdContract值，更新数据库里所有的stdContract值
+//        followVarietyService.updateStdContract(list);
         return Result.ok(list);
     }
 
