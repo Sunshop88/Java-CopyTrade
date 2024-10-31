@@ -32,7 +32,7 @@ public class BrokeServerSpeedTask {
     private FollowPlatformService followPlatformService;
 
 
-    public void run() throws InterruptedException {
+    public void run(String param) throws InterruptedException {
         log.info("开始执行节点测速任务");
         //重新测速已有账号平台
         List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,followPlatformService.list().stream().map(FollowPlatformEntity::getServer).collect(Collectors.toList())));
