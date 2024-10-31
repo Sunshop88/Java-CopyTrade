@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 @TableName("follow_vps")
 public class FollowVpsEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**

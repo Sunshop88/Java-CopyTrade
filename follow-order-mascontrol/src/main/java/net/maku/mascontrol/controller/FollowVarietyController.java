@@ -1,9 +1,13 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.query.FollowVarietyQuery;
+import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
@@ -23,7 +27,8 @@ import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 品种匹配
@@ -37,7 +42,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowVarietyController {
     private final FollowVarietyService followVarietyService;
-
+    private final FollowPlatformService followPlatformService;
     @GetMapping("pageSymbol")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -172,11 +177,44 @@ public class FollowVarietyController {
     @GetMapping("listSmybol")
     @Operation(summary = "查询标准品种，标准合约")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<PageResult<FollowVarietyVO>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
+    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
-        //相同的stdSymbol对应同一个stdContract值，更新数据库里所有的stdContract值
-//        followVarietyService.updateStdContract(list);
-        return Result.ok(list);
+        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list();
+
+        // 构建映射关系：<StdSymbol + BrokerName, BrokerSymbol列表>
+        Map<String, List<String>> varietyMap = followVarietyEntityList.stream()
+                .collect(Collectors.groupingBy(
+                        va -> va.getStdSymbol() + "_" + va.getBrokerName(),
+                        Collectors.mapping(FollowVarietyEntity::getBrokerSymbol, Collectors.toList())
+                ));
+
+        // 初始化表头
+        List<String[]> listString = new ArrayList<>();
+        String[] header = new String[followPlatformEntityList.size() + 1];
+        header[0] = "品种名称";
+        for (int i = 0; i < followPlatformEntityList.size(); i++) {
+            header[i + 1] = followPlatformEntityList.get(i).getBrokerName();
+        }
+        listString.add(header);
+
+        // 填充数据
+        for (FollowVarietyVO o : list.getList()) {
+            String[] strings = new String[followPlatformEntityList.size() + 1];
+            strings[0] = o.getStdSymbol();
+
+            for (int i = 0; i < followPlatformEntityList.size(); i++) {
+                FollowPlatformEntity plat = followPlatformEntityList.get(i);
+                String key = o.getStdSymbol() + "_" + plat.getBrokerName();
+                List<String> collect = varietyMap.getOrDefault(key, Collections.emptyList());
+                strings[i + 1] = collect.isEmpty() ? o.getStdSymbol() : String.join("/", collect);
+            }
+            listString.add(strings);
+        }
+
+        // 构造分页结果
+        PageResult<String[]> pageResult = new PageResult<>(listString, list.getTotal());
+        return Result.ok(pageResult);
     }
 
     @GetMapping("listBySymbol")

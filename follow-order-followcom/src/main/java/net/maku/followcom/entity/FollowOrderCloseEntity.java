@@ -19,7 +19,6 @@ import java.util.Date;
 @TableName("follow_order_close")
 public class FollowOrderCloseEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**

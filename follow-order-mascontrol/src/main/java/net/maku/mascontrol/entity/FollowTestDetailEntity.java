@@ -19,7 +19,6 @@ import java.util.Date;
 @TableName("follow_test_detail")
 public class FollowTestDetailEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**

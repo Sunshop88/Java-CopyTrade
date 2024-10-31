@@ -19,7 +19,6 @@ public class FollowOrderHistoryEntity {
 	* id
 	*/
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**
