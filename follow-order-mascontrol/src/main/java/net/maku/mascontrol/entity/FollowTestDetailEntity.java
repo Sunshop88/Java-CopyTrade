@@ -1,5 +1,6 @@
 package net.maku.mascontrol.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -48,8 +49,8 @@ public class FollowTestDetailEntity {
 	/**
 	* 服务器节点
 	*/
-	@TableField(value = "sever_node")
-	private String severNode;
+	@TableField(value = "server_node")
+	private String serverNode;
 
 	/**
 	* 速度ms
@@ -93,4 +94,15 @@ public class FollowTestDetailEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTim;
 
+	/**
+	 * Vps ID
+	 */
+	@TableField(value = "vps_id")
+	private Integer vpsId;
+
+	/**
+	 * Vps名称
+	 */
+	@TableField(value = "vps_name")
+	private String vpsName;
 }

@@ -9,6 +9,8 @@ import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 测速详情
@@ -36,7 +38,7 @@ public class FollowTestDetailVO implements Serializable {
 	private Integer testId;
 
 	@Schema(description = "服务器节点")
-	private String severNode;
+	private String serverNode;
 
 	@Schema(description = "速度ms")
 	private Integer speed;
@@ -57,6 +59,16 @@ public class FollowTestDetailVO implements Serializable {
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private LocalDateTime updateTim;
+	private LocalDateTime updateTime;
+
+	@Schema(description = "vps id")
+	private Integer vpsId;
+
+	@Schema(description = "vps名称")
+	private String vpsName;
+
+//	private Map<String, List<Integer>> vpsSpeedMap;
+//	private List<String> platformTypes;
+//	private List<String> serverNodes;
 
 }

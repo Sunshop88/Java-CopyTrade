@@ -18,4 +18,5 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "测速详情查询")
 public class FollowTestDetailQuery extends Query {
+    private Integer testId;
 }

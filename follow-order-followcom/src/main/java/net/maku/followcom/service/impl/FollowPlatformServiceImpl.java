@@ -162,6 +162,12 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return FollowPlatformConvert.INSTANCE.convertList(list);
     }
 
+    @Override
+    public String listByServerName(String serverName) {
+        //根据服务器名称查询出第一个平台名称
+        return baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery().eq(FollowPlatformEntity::getServer,serverName)).getBrokerName();
+    }
+
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {
 //        if (idList.isEmpty()) {

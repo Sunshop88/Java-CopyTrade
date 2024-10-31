@@ -37,4 +37,6 @@ public interface FollowBrokeServerService extends BaseService<FollowBrokeServerE
 
 
     List<FollowBrokeServerEntity> listByServerNameGroup(String name);
+
+    List<FollowBrokeServerVO> listByServer();
 }

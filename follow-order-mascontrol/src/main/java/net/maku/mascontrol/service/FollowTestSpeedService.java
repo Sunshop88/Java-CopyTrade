@@ -1,11 +1,16 @@
 package net.maku.mascontrol.service;
 
+import net.maku.followcom.vo.FollowBrokeServerVO;
+import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
+import net.maku.mascontrol.entity.FollowTestDetailEntity;
 import net.maku.mascontrol.entity.FollowTestSpeedEntity;
 import net.maku.mascontrol.query.FollowTestSpeedQuery;
+import net.maku.mascontrol.vo.FollowTestDetailVO;
 import net.maku.mascontrol.vo.FollowTestSpeedVO;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -29,4 +34,8 @@ public interface FollowTestSpeedService extends BaseService<FollowTestSpeedEntit
 
 
     void export();
+
+    void measure(List<String> servers, List<String> vps);
+
+    void remeasure(Long id,List<String> servers, List<String> vps);
 }

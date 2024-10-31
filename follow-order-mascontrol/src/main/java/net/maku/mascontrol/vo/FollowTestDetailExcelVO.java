@@ -31,7 +31,7 @@ public class FollowTestDetailExcelVO implements TransPojo {
 	private Integer testId;
 
 	@ExcelProperty("服务器节点")
-	private String severNode;
+	private String serverNode;
 
 	@ExcelProperty("速度ms")
 	private Integer speed;

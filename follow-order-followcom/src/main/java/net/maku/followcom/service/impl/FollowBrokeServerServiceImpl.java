@@ -114,4 +114,15 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
             return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).groupBy(FollowBrokeServerEntity::getServerName));
         }
     }
+
+    @Override
+    public List<FollowBrokeServerVO> listByServer() {
+        // 查询所有服务器名称
+        LambdaQueryWrapper<FollowBrokeServerEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowBrokeServerEntity::getServerName)
+                .groupBy(FollowBrokeServerEntity::getServerName);
+        List<FollowBrokeServerEntity> list = baseMapper.selectList(wrapper);
+        return FollowBrokeServerConvert.INSTANCE.convertList(list);
+
+    }
 }

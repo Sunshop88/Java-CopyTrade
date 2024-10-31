@@ -2,6 +2,7 @@ package net.maku.mascontrol.dao;
 
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.mascontrol.entity.FollowTestSpeedEntity;
+import net.maku.mascontrol.vo.FollowTestSpeedVO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -12,5 +13,8 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface FollowTestSpeedDao extends BaseDao<FollowTestSpeedEntity> {
+
+
+    void saveTestSpeed(FollowTestSpeedVO overallResult);
 
 }

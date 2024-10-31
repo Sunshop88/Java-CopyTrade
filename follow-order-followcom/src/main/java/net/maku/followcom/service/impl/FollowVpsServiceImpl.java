@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
+import kotlin.jvm.internal.Lambda;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
@@ -127,5 +128,14 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     List<FollowVpsExcelVO> excelList = FollowVpsConvert.INSTANCE.convertExcelList(list());
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowVpsExcelVO.class, "vps列表", null, excelList);
+    }
+
+    @Override
+    public List<FollowVpsVO> listByVps() {
+        LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowVpsEntity::getName)
+                .groupBy(FollowVpsEntity::getName);
+        List<FollowVpsEntity> list = baseMapper.selectList(wrapper);
+        return FollowVpsConvert.INSTANCE.convertList(list);
     }
 }
