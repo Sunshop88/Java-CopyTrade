@@ -1,7 +1,9 @@
 package net.maku.subcontrol.trader.strategy;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.entity.FollowOrderHistoryEntity;
 import net.maku.followcom.entity.FollowSubscribeOrderEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
@@ -54,17 +56,14 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         // 跟单者(和当前喊单者的平仓订单)，对应的订单号。
         CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(mapKey, Long.toString(orderInfo.getTicket()));
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
-            try {
-                FollowSubscribeOrderEntity openOrderMapping = openOrderMappingService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
-                        .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
-                        .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
-                        .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
-                if (!ObjectUtils.isEmpty(openOrderMapping)) {
-                    cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
-                } else {
-                    cachedCopierOrderInfo = new CachedCopierOrderInfo();
-                }
-            } catch (Exception ignored) {
+            FollowSubscribeOrderEntity openOrderMapping = openOrderMappingService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
+                    .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
+                    .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
+                    .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+            if (!ObjectUtils.isEmpty(openOrderMapping)) {
+                cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
+            } else {
+                cachedCopierOrderInfo = new CachedCopierOrderInfo();
             }
         }
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
@@ -119,6 +118,18 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                     .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
                     .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+            //生成历史订单
+            log.info("生成历史订单"+orderInfo.getTicket());
+            FollowOrderHistoryEntity followOrderHistory=new FollowOrderHistoryEntity();
+            BeanUtil.copyProperties(orderInfo,followOrderHistory);
+            followOrderHistory.setOrderNo(orderInfo.getTicket());
+            followOrderHistory.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
+            followOrderHistory.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
+            followOrderHistory.setTraderId(copier.getId());
+            followOrderHistory.setAccount(orderInfo.getAccount());
+            followOrderHistory.setSize(BigDecimal.valueOf(orderInfo.getLots()));
+            followOrderHistory.setCreateTime(LocalDateTime.now());
+            followOrderHistoryService.save(followOrderHistory);
 
         } catch (Exception e) {
             if (retry > 0) {

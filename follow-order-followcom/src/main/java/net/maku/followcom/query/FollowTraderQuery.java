@@ -8,6 +8,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 /**
  * mt4账号查询
@@ -21,5 +22,10 @@ import java.util.Date;
 public class FollowTraderQuery extends Query {
     private String serverIp;
 
-    private String acount;
+    private String account;
+
+    private Long traderId;
+
+    private List<Long> traderList;
+
 }

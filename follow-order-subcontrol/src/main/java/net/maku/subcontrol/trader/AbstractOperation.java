@@ -7,13 +7,8 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.DirectionEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
-import net.maku.followcom.service.FollowOrderHistoryService;
-import net.maku.followcom.service.FollowSubscribeOrderService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.impl.FollowOrderHistoryServiceImpl;
-import net.maku.followcom.service.impl.FollowSubscribeOrderServiceImpl;
-import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
+import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -47,6 +42,9 @@ public class AbstractOperation {
     protected FollowRule followRule;
     protected ScheduledThreadPoolExecutor threeStrategyThreadPoolExecutor;
     protected FollowOrderHistoryService followOrderHistoryService;
+    protected FollowVarietyService followVarietyService;
+    protected FollowTraderService followTraderService;
+    protected FollowPlatformService followPlatformService;
     int whileTimes = 20;
 
     public AbstractOperation(FollowTraderEntity trader) {
@@ -58,6 +56,9 @@ public class AbstractOperation {
         this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         followRule = new FollowRule();
         this.followOrderHistoryService=SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
+        this.followVarietyService=SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
+        this.followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
+        this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     }
 
     protected String comment(EaOrderInfo orderInfo) {

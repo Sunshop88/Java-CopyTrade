@@ -31,6 +31,7 @@ public abstract class AbstractFollowRule {
      * 链中下一元素
      */
     protected AbstractFollowRule nextRule = null;
+    protected LeaderApiTradersAdmin leaderApiTradersAdmin=SpringContextUtils.getBean(LeaderApiTradersAdmin.class);;
 
     public void setNextRule(AbstractFollowRule nextRule) {
         this.nextRule = nextRule;
@@ -68,8 +69,7 @@ public abstract class AbstractFollowRule {
         EaSymbolInfo copierSymbolInfo = copierApiTrader.symbolInfo(eaOrderInfo.getSymbol(), true);
         EaSymbolInfo leaderSymbolInfo = null;
         //MT4平台
-        LeaderApiTradersAdmin leader4ApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
-        LeaderApiTrader LeaderApiTrader = leader4ApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId());
+        LeaderApiTrader LeaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId().toString());
         leaderSymbolInfo = LeaderApiTrader.symbolInfo(eaOrderInfo.getOriSymbol(), true);
 
         log.debug("leaderSymbolInfo {}",leaderSymbolInfo);

@@ -27,6 +27,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,9 +39,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
     FollowTraderEntity copier;
     FollowRule followRule;
     CopierApiTrader copierApiTrader;
-    FollowVarietyService followVarietyService;
-    FollowTraderService aotfxTraderService;
-    FollowPlatformService followPlatformService;
     public OrderSendCopier(CopierApiTrader copierApiTrader) {
         super(copierApiTrader.getTrader());
         this.copierApiTrader = copierApiTrader;
@@ -60,25 +58,44 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
         FollowTraderSubscribeEntity leaderCopier = leaderCopierService.subscription(copier.getId(), orderInfo.getMasterId());
         //查看喊单账号信息
-        FollowTraderEntity followTraderEntity = aotfxTraderService.getById(orderInfo.getMasterId());
+        FollowTraderEntity followTraderEntity = followTraderService.getById(orderInfo.getMasterId());
         FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
         // 查看品种匹配
-        List<FollowVarietyEntity> followVarietyEntityList = List.of();
+        List<FollowVarietyEntity> followVarietyEntityList ;
         if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_VARIETY))){
             followVarietyEntityList = (List<FollowVarietyEntity>)redisUtil.get(Constant.TRADER_VARIETY);
         }else {
-            List<FollowVarietyEntity> list = followVarietyService.list();
-            redisUtil.set(Constant.TRADER_VARIETY,list);
+            followVarietyEntityList= followVarietyService.list();
+            redisUtil.set(Constant.TRADER_VARIETY,followVarietyEntityList);
         }
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o -> o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
-            FollowTraderEntity copyTrade = aotfxTraderService.getById(copier.getId());
+            FollowTraderEntity copyTrade = followTraderService.getById(copier.getId());
             FollowPlatformEntity copyPlat = followPlatformService.getById(copyTrade.getPlatformId());
-            List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> o.getBrokerSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+            List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> o.getStdSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
             List<String> symbolList = orderInfo.getSymbolList();
-            collectCopy.forEach(o-> symbolList.add(o.getBrokerSymbol()));
-            orderInfo.setSymbolList(symbolList);
+            collectCopy.forEach(o-> {
+                if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                    symbolList.add(o.getBrokerSymbol());
+                }
+            });
+            if (ObjectUtil.isNotEmpty(collectCopy)){
+                orderInfo.setSymbolList(symbolList);
+            }
+        }
+        if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
+            try{
+                //如果没有此品种匹配，校验是否可以获取报价
+                if (ObjectUtil.isEmpty(copierApiTrader.quoteClient.GetQuote(orderInfo.getOriSymbol()))){
+                    //订阅
+                    copierApiTrader.quoteClient.Subscribe(orderInfo.getOriSymbol());
+                }
+                copierApiTrader.quoteClient.GetQuote(orderInfo.getOriSymbol());
+            } catch (Exception e) {
+                log.info("品种异常,不可下单{}+++++++账号{}" , orderInfo.getOriSymbol(),copier.getId());
+            }
+            orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
         }
 
         FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);

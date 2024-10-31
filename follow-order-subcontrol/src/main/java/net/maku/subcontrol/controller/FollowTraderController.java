@@ -174,6 +174,7 @@ public class FollowTraderController {
 
     @PostMapping("orderSend")
     @Operation(summary = "下单")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<?> orderSend(@RequestBody FollowOrderSendVO vo) {
         // 本地处理逻辑
@@ -269,6 +270,7 @@ public class FollowTraderController {
 
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> orderClose(@RequestBody FollowOrderSendCloseVO vo){
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
@@ -358,6 +360,7 @@ public class FollowTraderController {
 
     @GetMapping("stopOrder")
     @Operation(summary = "停止下单/平仓")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "traderId") String traderId) {
         Boolean result = followTraderService.stopOrder(type, traderId);

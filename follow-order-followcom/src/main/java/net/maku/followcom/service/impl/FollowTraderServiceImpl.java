@@ -90,21 +90,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 o.setEuqit(followRedisTraderVO.getEuqit());
                 o.setFreeMargin(followRedisTraderVO.getFreeMargin());
                 o.setMarginProportion(followRedisTraderVO.getMarginProportion());
-                if (ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal())){
-                    o.setTotal(followRedisTraderVO.getTotal());
-                }else {
-                    o.setTotal(0);
-                }
-                if (ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum())){
-                    o.setBuyNum(followRedisTraderVO.getBuyNum());
-                }else {
-                    o.setBuyNum(0);
-                }
-                if (ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum())){
-                    o.setSellNum(followRedisTraderVO.getSellNum());
-                }else {
-                    o.setSellNum(0);
-                }
+                o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal())?followRedisTraderVO.getTotal():0);
+                o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum())?followRedisTraderVO.getBuyNum():0);
+                o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum())?followRedisTraderVO.getSellNum():0);
             }
         });
         return new PageResult<>(followTraderVOS, page.getTotal());
@@ -116,8 +104,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         wrapper.eq(FollowTraderEntity::getDeleted,query.getDeleted());
         //根据vps地址查询
         wrapper.eq(FollowTraderEntity::getIpAddr, query.getServerIp());
-        if (ObjectUtil.isNotEmpty(query.getAcount())) {
-            wrapper.eq(FollowTraderEntity::getAccount, query.getAcount());
+        if (ObjectUtil.isNotEmpty(query.getAccount())) {
+            wrapper.eq(FollowTraderEntity::getAccount, query.getAccount());
+        }
+        if (ObjectUtil.isNotEmpty(query.getTraderList())) {
+            wrapper.in(FollowTraderEntity::getId, query.getTraderList());
         }
         //根据更新时间进行降序
         wrapper.orderByDesc(FollowTraderEntity::getCreateTime);

@@ -172,16 +172,6 @@ public class FollowPlatformController {
     }
 
 
-
-//    @GetMapping("/brokeName")
-//    @Operation(summary = "查询券商名称" )
-//    @PreAuthorize("hasAuthority('mascontrol:platform')")
-//    //查询所有的券商名称
-//    public Result<List<String>> brokeName(@RequestBody List<Long> idList){
-//        List<String> list = followPlatformService.getBrokeName(idList);
-//        return Result.ok(list);
-//    }
-
     @GetMapping("list")
     @Operation(summary = "查询列表")
     public Result<List<FollowPlatformVO>> list(){
