@@ -25,25 +25,18 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     FollowVarietyVO get(Long id);
 
-
     void save(FollowVarietyVO vo);
 
     void update(FollowVarietyVO vo);
 
     void delete(List<Long> idList);
 
-
-
     void export();
 
     void download(HttpServletResponse response)throws Exception;
     
 
-    List<String> listSymbol();
-
     List<FollowVarietyExcelVO> importByExcel(MultipartFile file)throws Exception;
-
-    List<FollowVarietyVO> getlist(String stdSymbol);
 
     PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query);
 
@@ -53,7 +46,4 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     void exportCsv(ByteArrayOutputStream outputStream) throws IOException;
 
     void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
-
-
-//   void byte[] generateCsv() throws IOException;
 }

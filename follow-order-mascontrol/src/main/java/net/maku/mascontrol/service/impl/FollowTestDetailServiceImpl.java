@@ -46,63 +46,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
 
 
-//    public List<List<Object>> page(FollowTestDetailQuery query) {
-//        // 获取分页数据
-//        IPage<FollowTestDetailEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
-//        List<FollowTestDetailVO> detailVOList = FollowTestDetailConvert.INSTANCE.convertList(page.getRecords());
-//
-//        // 用于最终结果的列表
-//        List<List<Object>> result = new ArrayList<>();
-//
-//        // 创建表头
-//        Set<String> uniqueVpsNames = new LinkedHashSet<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            uniqueVpsNames.add(detail.getVpsName());
-//        }
-//
-//        // 添加表头
-//        List<Object> header = new ArrayList<>();
-//        header.add("服务器名称");
-//        header.add("平台类型");
-//        header.add("服务器节点");
-//        header.addAll(uniqueVpsNames);
-//        result.add(header);
-//
-//        // 创建一个映射，用于快速查找速度
-//        Map<String, Map<String, Double>> speedMap = new HashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String serverNode = detail.getServerNode();
-//            String vpsName = detail.getVpsName();
-//            double speed = detail.getSpeed();
-//
-//            speedMap.computeIfAbsent(serverNode, k -> new HashMap<>()).put(vpsName, speed);
-//        }
-//
-//        // 遍历 detailVOList，使用 LinkedHashMap 保持插入顺序
-//        Map<String, List<Object>> uniqueEntries = new LinkedHashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
-//            if (!uniqueEntries.containsKey(key)) {
-//                List<Object> entry = new ArrayList<>();
-//                entry.add(detail.getServerName());
-//                entry.add(detail.getPlatformType());
-//                entry.add(detail.getServerNode());
-//
-//                String serverNode = detail.getServerNode();
-//                for (String vpsName : uniqueVpsNames) {
-//                    Double speed = speedMap.getOrDefault(serverNode, Collections.emptyMap()).get(vpsName);
-//                    entry.add(speed != null ? speed : 0.0); // 默认速度为 0.0
-//                }
-//
-//                uniqueEntries.put(key, entry); // 存入唯一条目Map
-//            }
-//        }
-//
-//        result.addAll(uniqueEntries.values());
-//
-//        return result;
-//    }
-
     public List<List<Object>> page(FollowTestDetailQuery query) {
         // 获取分页数据
         IPage<FollowTestDetailEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -220,24 +163,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         return FollowTestDetailConvert.INSTANCE.convertList(list);
     }
 
-    @Override
-    public List<FollowTestDetailEntity> selectList(FollowTestDetailVO vo) {
-        List<FollowTestDetailEntity> entities = baseMapper.selectList(Wrappers.<FollowTestDetailEntity>lambdaQuery()
-                .eq(FollowTestDetailEntity::getServerName, vo.getServerName())
-                .eq(FollowTestDetailEntity::getVpsName, vo.getVpsName())
-                );
-        entities = entities.stream()
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toMap(
-                                FollowTestDetailEntity::getServerNode,
-                                entity -> entity,
-                                (existing, replacement) -> existing
-                        ),
-                        map -> new ArrayList<>(map.values())
-                ));
-
-        return entities;
-    }
 
     @Override
     public void updates(FollowTestDetailVO convert) {

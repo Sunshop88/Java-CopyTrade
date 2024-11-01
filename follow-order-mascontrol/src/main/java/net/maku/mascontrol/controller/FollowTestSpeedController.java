@@ -45,16 +45,6 @@ public class FollowTestSpeedController {
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
 
-//    @GetMapping("page")
-//    @Operation(summary = "分页")
-//    @PreAuthorize("hasAuthority('mascontrol:speed')")
-//    public Result<PageResult<FollowTestSpeedVO>> page(@ParameterObject @Valid FollowTestSpeedQuery query) {
-//        PageResult<FollowTestSpeedVO> page = followTestSpeedService.page(query);
-//
-//        return Result.ok(page);
-//    }
-
-
     @GetMapping("{id}")
     @Operation(summary = "信息")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
@@ -108,19 +98,11 @@ public class FollowTestSpeedController {
     @PostMapping("measure")
     @Operation(summary = "测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-//    public Result<FollowTestSpeedVO> measure(@RequestBody List<FollowTestDetailVO> vos) {
-//        // 批量调用服务进行测速
-//      followTestSpeedService.measure(vos);
-//
-//
-//        return Result.ok();
-//    }
     public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestEntity request) {
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
         // 批量调用服务进行测速
         followTestSpeedService.measure(servers, vps);
-
 
         return Result.ok();
     }
@@ -143,7 +125,6 @@ public class FollowTestSpeedController {
         List<String> vps = request.getVps();
         // 批量调用服务进行测速
         followTestSpeedService.remeasure(id,servers, vps);
-
 
         return Result.ok();
     }

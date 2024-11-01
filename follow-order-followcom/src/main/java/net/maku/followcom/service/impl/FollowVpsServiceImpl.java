@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -47,16 +48,6 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
-//        followVpsVOS.stream().forEach(o->{
-//            Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), -10);
-//            Date endDate = DateUtil.date();
-//            long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
-//            if (endDate.after(startDate)) {
-//                daysBetween = -daysBetween;
-//            }
-//            o.setRemainingDay((int)daysBetween);
-//        });
-
         followVpsVOS.stream().forEach(o -> {
             Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), 0);
             Date endDate = DateUtil.date();
@@ -109,7 +100,25 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             }
         }
 //        baseMapper.update(entity, new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getId, entity.getId()));
-        baseMapper.updateVps(entity);
+        UpdateWrapper<FollowVpsEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", entity.getId());
+        updateWrapper.set("remark", entity.getRemark());
+        if (ObjectUtils.isNotEmpty(entity.getName()) && !entity.getName().isEmpty()) {
+            updateWrapper.set("name", entity.getName());
+        }
+        if (ObjectUtils.isNotEmpty(entity.getIpAddress()) && !entity.getIpAddress().isEmpty()) {
+            updateWrapper.set("ip_address", entity.getIpAddress());
+        }
+        if (ObjectUtils.isNotEmpty(entity.getExpiryDate())) {
+            updateWrapper.set("expiry_date", entity.getExpiryDate());
+        }
+        if (ObjectUtils.isNotEmpty(entity.getIsOpen())) {
+            updateWrapper.set("is_open", entity.getIsOpen());
+        }
+        if (ObjectUtils.isNotEmpty(entity.getIsActive())) {
+            updateWrapper.set("is_active", entity.getIsActive());
+        }
+        baseMapper.update(entity, updateWrapper);
     }
 
     @Override
@@ -137,5 +146,10 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 .groupBy(FollowVpsEntity::getName);
         List<FollowVpsEntity> list = baseMapper.selectList(wrapper);
         return FollowVpsConvert.INSTANCE.convertList(list);
+    }
+
+    @Override
+    public List<FollowVpsEntity> listByVpsName(List<String> vps) {
+        return list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getName,vps).orderByDesc(FollowVpsEntity::getCreateTime));
     }
 }

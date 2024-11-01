@@ -4,8 +4,8 @@
 <mapper namespace="net.maku.mascontrol.dao.FollowTestSpeedDao">
 
     <insert id="saveTestSpeed" parameterType="net.maku.mascontrol.vo.FollowTestSpeedVO" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO follow_test_speed (status, do_time, test_name)
-        VALUES (#{status}, #{doTime}, #{testName})
+        INSERT INTO follow_test_speed (status, do_time, test_name, version,deleted, creator, create_time)
+        VALUES (#{status}, #{doTime}, #{testName},#{version},#{deleted},#{creator},#{createTime})
     </insert>
 
     </mapper>

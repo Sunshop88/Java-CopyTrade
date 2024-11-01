@@ -31,4 +31,6 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
     void export();
 
     List<FollowVpsVO> listByVps();
+
+    List<FollowVpsEntity> listByVpsName(List<String> vps);
 }

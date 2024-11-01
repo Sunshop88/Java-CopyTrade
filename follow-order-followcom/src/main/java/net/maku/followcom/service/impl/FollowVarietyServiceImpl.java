@@ -296,11 +296,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         StreamUtils.copy(inputStream, response.getOutputStream());
     }
 
-    @Override
-    public List<FollowVarietyVO> getlist(String stdSymbol) {
-        //根据品种名称来查询券商名称和券商对应的品种名称
-        return FollowVarietyConvert.INSTANCE.convertList(baseMapper.getlist(stdSymbol));
-    }
 
     @Override
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
@@ -439,18 +434,5 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new IOException("写入 CSV 时出错", e);
         }
     }
-    @Override
-    public List<String> listSymbol() {
-        // 查询所有品种,因为品种有重复的，要先判断，相同的品种取一次就可以
-        Set<String> uniqueSymbols = new HashSet<>(); // 使用HashSet来存储唯一的品种
-        List<String> allSymbols = baseMapper.queryVarieties(); // 假设此方法返回所有品种的列表
-
-        for (String symbol : allSymbols) {
-            uniqueSymbols.add(symbol); // 将查询到的所有品种添加到Set中，自动去重
-        }
-
-        return new ArrayList<>(uniqueSymbols); // 将Set转换为List并返回
-    }
-
 
 }

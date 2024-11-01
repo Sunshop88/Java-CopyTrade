@@ -23,15 +23,6 @@
         broker_symbol is not null and broker_symbol != ''
     </select>
 
-    <update id="updateCustom" parameterType="net.maku.followcom.entity.FollowVarietyEntity">
-        update follow_variety
-        set std_contract = #{stdContract},
-            update_time = now()
-        where std_symbol = #{stdSymbol}
-          and broker_name = #{brokerName}
-          and broker_symbol = #{brokerSymbol}
-    </update>
-
     <update id="updateStdContractByStdSymbol">
         UPDATE follow_variety
         SET std_contract = #{stdContract}
