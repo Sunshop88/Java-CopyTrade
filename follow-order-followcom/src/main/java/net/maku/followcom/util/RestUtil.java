@@ -1,9 +1,8 @@
-package net.maku.subcontrol.util;
+package net.maku.followcom.util;
 
 import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.util.SpringContextUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -328,5 +327,14 @@ public class RestUtil {
             mediaTypes.add(MediaType.TEXT_HTML);
             setSupportedMediaTypes(mediaTypes);
         }
+    }
+
+    /**
+     * 获取JSON请求头
+     */
+    public static HttpHeaders getHeaderApplicationJsonAndToken(HttpServletRequest request) {
+        HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+        header.add("Authorization", request.getHeader("Authorization"));
+        return header;
     }
 }

@@ -82,8 +82,7 @@ public class TraderOrderSendWebSocket {
             LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("订阅该品种{}+++{}",symbol,traderId);
             //查询平台信息
-            FollowTraderEntity followTraderEntity = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, traderId));
-            FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
+            FollowPlatformEntity followPlatform = followTraderService.getPlatForm(Long.valueOf(traderId));
             //获取symbol信息
             List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){

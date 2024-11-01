@@ -83,4 +83,9 @@ public interface Constant {
      * 品种匹配数据
      */
     String TRADER_VARIETY="trader:variety:";
+
+    /**
+     * 账号平台信息
+     */
+    String TRADER_PLATFORM="trader:platform:";
 }

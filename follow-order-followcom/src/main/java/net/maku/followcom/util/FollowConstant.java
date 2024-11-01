@@ -38,7 +38,17 @@ public class FollowConstant {
             e.printStackTrace();
         }
     }
-    public static void main(String[] args) {
-        System.out.println("Local host IP: " + LOCAL_HOST);
-    }
+
+    /**
+     * 请求端口
+     */
+    public static String VPS_PORT ="9001";
+
+    /**
+     * VPS请求路径
+     */
+    public static String VPS_TRANSFERVPS = "/subcontrol/follow/transferVps";
+
+    public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
+
 }

@@ -88,7 +88,7 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
      * @return milliseconds
      */
     protected int delaySendCloseSignal(LocalDateTime openTime, LocalDateTime closeTime) {
-        // fix20220114 开仓后立刻平仓，容易出现一个现象就是跟单者新开订单还没开出来，平仓信号到了后，会出现平仓失败。
+        // 开仓后立刻平仓，容易出现一个现象就是跟单者新开订单还没开出来，平仓信号到了后，会出现平仓失败。
         // 虽然最后循环平仓也会成功，但是会做一个优化就是开平仓时间间隔很短的平仓信号都做一个延迟。实际的交易很少会出现这种情况，只是做一个优化。
         try {
             Duration duration = Duration.between(openTime, closeTime).abs();

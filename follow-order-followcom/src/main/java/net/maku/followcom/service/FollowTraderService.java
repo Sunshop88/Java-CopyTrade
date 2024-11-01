@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.vo.*;
@@ -68,4 +69,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     TraderOverviewVO traderOverview(String ip);
 
     Boolean stopOrder(Integer type,String traderId);
+
+    FollowPlatformEntity getPlatForm(Long masterId);
 }

@@ -70,6 +70,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
                 break;
             case PositionClose:
+                log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 //持仓时间小于2秒，则延迟一秒发送平仓信号，避免客户测试的时候平仓信号先于开仓信号到达
                 int delaySendCloseSignal = delaySendCloseSignal(order.OpenTime, order.CloseTime);
                 if (delaySendCloseSignal == 0) {

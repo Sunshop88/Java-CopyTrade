@@ -17,6 +17,8 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.subcontrol.even.OnQuoteHandler;
@@ -85,6 +87,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     OnQuoteTraderHandler onQuoteTraderHandler;
     OnQuoteHandler onQuoteHandler;
     OrderUpdateHandler orderUpdateHandler;
+    protected RedisCache redisCache;
     static {
         availableException4.add("Market is closed");
         availableException4.add("Invalid volume");
@@ -99,6 +102,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
 //        this.equityRiskListener = new EquityRiskListenerImpl();
         initService();
         this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
+        this.redisCache=SpringContextUtils.getBean(RedisCache.class);
     }
 
     public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
@@ -108,6 +112,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         this.kafkaProducer = kafkaProducer;
         initService();
         this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
+        this.redisCache=SpringContextUtils.getBean(RedisCache.class);
     }
 
     /**
@@ -453,6 +458,12 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 log.error("cycleCloseOrderTask running false", e);
             }
         }
+        //删除redis缓存
+        redisCache.delete(Constant.TRADER_SEND+trader.getId());
+        redisCache.delete(Constant.TRADER_CLOSE+trader.getId());
+        redisCache.delete(Constant.TRADER_PLATFORM+trader.getId());
+
+        redisCache.deleteByPattern(Constant.TRADER_PLATFORM);
         try {
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();
@@ -462,7 +473,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             quoteClient.Disconnect();
             log.info("关闭mtapi");
         } catch (Exception e) {
-            log.error("", e);
+            log.error("停止失败", e);
         }
         return this.cldKafkaConsumer.stopConsume();
     }

@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.entity.FollowVpsEntity;
@@ -33,4 +34,8 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
     List<FollowVpsVO> listByVps();
 
     List<FollowVpsEntity> listByVpsName(List<String> vps);
+
+    void transferVps(Integer oldId, HttpServletRequest req);
+
+    void startNewVps(Integer newId, HttpServletRequest req);
 }

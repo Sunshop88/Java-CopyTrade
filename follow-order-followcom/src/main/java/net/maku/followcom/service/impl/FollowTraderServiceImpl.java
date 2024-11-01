@@ -74,7 +74,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final RedisCache redisCache;
     private final FollowPlatformService followPlatformService;
     private final FollowOrderCloseService followOrderCloseService;
-    private final FollowBrokeServerService followBrokeServerService;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -243,7 +242,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         //查询券商和服务商
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
-        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
+        FollowPlatformEntity followPlatform = this.getPlatForm(vo.getTraderId());
         //创建下单记录
         String orderNo = RandomStringUtil.generateNumeric(13);
         vo.setCreator(SecurityUser.getUserId());
@@ -409,7 +408,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         //查询券商和服务商
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
-        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderEntity.getPlatformId());
+        FollowPlatformEntity followPlatform = this.getPlatForm(vo.getTraderId());
         //创建平仓记录
         FollowOrderCloseEntity followOrderCloseEntity = new FollowOrderCloseEntity();
         followOrderCloseEntity.setTraderId(vo.getTraderId());
@@ -637,6 +636,17 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
         return true;
+    }
+
+    @Override
+    public FollowPlatformEntity getPlatForm(Long masterId) {
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_PLATFORM+masterId))){
+            return (FollowPlatformEntity)redisCache.get(Constant.TRADER_PLATFORM+masterId);
+        }else {
+            FollowPlatformEntity followPlatform = followPlatformService.getById(this.get(masterId).getPlatformId());
+            redisCache.set(Constant.TRADER_PLATFORM+masterId,followPlatform);
+            return followPlatform;
+        }
     }
 
     private void updateCloseSlip(long traderId,String symbol,FollowOrderCloseEntity followOrderCloseEntity,Integer flag) {

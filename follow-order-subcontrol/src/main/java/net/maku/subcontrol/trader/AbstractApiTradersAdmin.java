@@ -14,6 +14,7 @@ import net.maku.followcom.util.SpringContextUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -53,6 +54,13 @@ public abstract class AbstractApiTradersAdmin {
      * @throws Exception 异常
      */
     public abstract void startUp() throws Exception;
+
+    /**
+     * 启动部分账号
+     *
+     * @throws Exception 异常
+     */
+    public abstract void startUp(List<FollowTraderEntity> list) throws Exception;
 
     /**
      * 删除账号

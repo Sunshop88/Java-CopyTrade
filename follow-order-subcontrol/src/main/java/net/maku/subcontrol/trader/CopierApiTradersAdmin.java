@@ -116,6 +116,47 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     }
 
     /**
+     * 指定mt4账户并发连接mt4服务端，连接成功后创建主题。
+     */
+    @Override
+    public void startUp(List<FollowTraderEntity> list){
+        for (FollowTraderEntity copier : list) {
+            scheduledExecutorService.submit(() -> {
+                try {
+                    //这里需要删除主题，因为有可能主题的分区配置变化了
+                    ListTopicsResult listTopicsResult = adminClient.listTopics();
+                    Collection<String> hostTopicNames = listTopicsResult.names().get();
+
+                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(copier), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(copier));
+                    hostTopicNames.retainAll(topics);
+                    if (!hostTopicNames.isEmpty()) {
+                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
+                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
+                        map.values().forEach(value -> {
+                            try {
+                                value.get();
+                            } catch (Exception ignored) {
+                            }
+                        });
+                    }
+                    ConCodeEnum conCodeEnum = addTrader(copier);
+                    CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString());
+                    if (conCodeEnum != ConCodeEnum.SUCCESS && !copier.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                        copier.setStatus(TraderStatusEnum.ERROR.getValue());
+                        followTraderService.updateById(copier);
+                        log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
+                    } else {
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        copierApiTrader.startTrade();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
+    /**
      * @param id mt账户的id
      * @return 删除结果 删除成功返回true 失败返回false
      */

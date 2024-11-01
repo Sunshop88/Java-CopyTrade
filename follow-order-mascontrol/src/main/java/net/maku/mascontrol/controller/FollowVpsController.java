@@ -1,16 +1,20 @@
 package net.maku.mascontrol.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
@@ -43,6 +47,7 @@ import java.util.List;
 public class FollowVpsController {
     private final FollowVpsService followVpsService;
     private final FollowTraderService followTraderService;
+    private final FollowTraderSubscribeService followTraderSubscribeService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -135,4 +140,44 @@ public class FollowVpsController {
         });
         return Result.ok(followVpsVOS);
     }
+
+    @GetMapping("transferVps")
+    @Operation(summary = "转移vps数据")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId,@Parameter(description = "newId") Integer newId, HttpServletRequest req){
+        //清理旧账号缓存
+        followVpsService.transferVps(oldId,req);
+
+        FollowVpsEntity followVpsEntity = followVpsService.getById(newId);
+        //转移账号
+        LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(FollowTraderEntity::getServerId,newId).
+                set(FollowTraderEntity::getServerName,followVpsEntity.getName()).
+                set(FollowTraderEntity::getIpAddr,followVpsEntity.getIpAddress()).
+                eq(FollowTraderEntity::getServerId,oldId);
+        followTraderService.update(updateWrapper);
+
+        //发送请求到新VPS，启动账号
+        followVpsService.startNewVps(newId,req);
+        return Result.ok();
+    }
+
+
+    @GetMapping("deleteVps")
+    @Operation(summary = "清除vps数据")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<Boolean> deleteVps(@Parameter(description = "vpsId") Integer vpsId, HttpServletRequest req){
+        //清理旧账号缓存
+        followVpsService.transferVps(vpsId,req);
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+        List<Long> idList = list.stream().map(FollowTraderEntity::getId).toList();
+        //删除跟单关系
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId,idList).or().in(FollowTraderSubscribeEntity::getSlaveId,idList));
+        //删除账号
+        followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId,vpsId));
+        return Result.ok();
+    }
+
 }

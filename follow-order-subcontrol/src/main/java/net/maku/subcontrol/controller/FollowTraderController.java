@@ -1,9 +1,7 @@
 package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,22 +29,17 @@ import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
-import net.maku.subcontrol.util.RestUtil;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -411,9 +404,8 @@ public class FollowTraderController {
     }
 
     private String getSymbol(Long traderId,String symbol){
-        FollowTraderVO followTraderVO = followTraderService.get(traderId);
         //查询平台信息
-        FollowPlatformEntity followPlatform = followPlatformService.getById(followTraderVO.getPlatformId());
+        FollowPlatformEntity followPlatform = followTraderService.getPlatForm(traderId);
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){

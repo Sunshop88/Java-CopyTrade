@@ -123,6 +123,47 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         this.launchOn = true;
     }
 
+    /**
+     * 指定mt4账户并发连接mt4服务端，连接成功后创建主题。
+     */
+    @Override
+    public void startUp(List<FollowTraderEntity> list){
+        for (FollowTraderEntity leader : list) {
+            scheduledExecutorService.submit(() -> {
+                try {
+                    //这里需要删除主题，因为有可能主题的分区配置变化了
+                    ListTopicsResult listTopicsResult = adminClient.listTopics();
+                    Collection<String> hostTopicNames = listTopicsResult.names().get();
+
+                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader));
+                    hostTopicNames.retainAll(topics);
+                    if (!hostTopicNames.isEmpty()) {
+                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
+                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
+                        map.values().forEach(value -> {
+                            try {
+                                value.get();
+                            } catch (Exception ignored) {
+                            }
+                        });
+                    }
+                    ConCodeEnum conCodeEnum = addTrader(leader);
+                    LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
+                    if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                        leader.setStatus(TraderStatusEnum.ERROR.getValue());
+                        followTraderService.updateById(leader);
+                        log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
+                    } else {
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        leaderApiTrader.startTrade();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
 
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
