@@ -312,7 +312,7 @@ public class FollowTraderController {
     @Operation(summary = "数据概览")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<TraderOverviewVO>  traderOverview(HttpServletRequest request) {
-        String serverIp = (String) request.getAttribute("serverIp");
+        String serverIp = FollowConstant.LOCAL_HOST;
         return  Result.ok(followTraderService.traderOverview(serverIp));
     }
 
