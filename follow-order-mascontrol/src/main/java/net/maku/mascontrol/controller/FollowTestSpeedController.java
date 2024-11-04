@@ -3,6 +3,7 @@ package net.maku.mascontrol.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.query.FollowVarietyQuery;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.vo.FollowBrokeServerVO;
@@ -132,8 +133,10 @@ public class FollowTestSpeedController {
     @GetMapping("listTestDetail")
     @Operation(summary = "测速详情")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public List<List<Object>> listTestDetail(@ParameterObject @Valid FollowTestDetailQuery query) {
-        return followTestDetailService.page(query);
+    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowTestDetailQuery query){
+        PageResult<String[]> list = followTestDetailService.page(query);
+
+        return Result.ok(list);
     }
 
     @GetMapping("listServerAndVps")

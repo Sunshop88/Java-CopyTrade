@@ -4,33 +4,21 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
-import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.mascontrol.convert.FollowTestDetailConvert;
 import net.maku.mascontrol.entity.FollowTestDetailEntity;
 import net.maku.mascontrol.query.FollowTestDetailQuery;
-import net.maku.mascontrol.service.FollowTestSpeedService;
 import net.maku.mascontrol.vo.FollowTestDetailVO;
 import net.maku.mascontrol.dao.FollowTestDetailDao;
 import net.maku.mascontrol.service.FollowTestDetailService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.mascontrol.vo.FollowTestDetailExcelVO;
-import net.maku.framework.common.excel.ExcelFinishCallBack;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.multipart.MultipartFile;
-import cn.hutool.core.util.ObjectUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 /**
@@ -44,64 +32,67 @@ import java.util.stream.Stream;
 public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetailDao, FollowTestDetailEntity> implements FollowTestDetailService {
     private final TransService transService;
 
-
-
-    public List<List<Object>> page(FollowTestDetailQuery query) {
-        // 获取分页数据
-        IPage<FollowTestDetailEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
-        List<FollowTestDetailVO> detailVOList = FollowTestDetailConvert.INSTANCE.convertList(page.getRecords());
-
+    public PageResult<String[]> page(FollowTestDetailQuery query) {
+        List<FollowTestDetailEntity> allRecords = baseMapper.selectList(getWrapper(query));
+        List<FollowTestDetailVO> detailVOList = FollowTestDetailConvert.INSTANCE.convertList(allRecords);
         // 用于最终结果的列表
-        List<List<Object>> result = new ArrayList<>();
+        List<String[]> result = new ArrayList<>();
 
-        // 创建表头
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
         for (FollowTestDetailVO detail : detailVOList) {
             uniqueVpsNames.add(detail.getVpsName());
         }
-
-        // 添加表头
-        List<Object> header = new ArrayList<>();
+        List<String> header = new ArrayList<>();
         header.add("服务器名称");
         header.add("平台类型");
         header.add("服务器节点");
         header.addAll(uniqueVpsNames);
-        result.add(header);
+        // 将表头转换为数组并作为固定的第一行加入结果中
+        result.add(header.toArray(new String[0]));
 
+        // 暂存每个 key 对应的速度数据
         Map<String, Map<String, Double>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
             String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
             String vpsName = detail.getVpsName();
             double speed = detail.getSpeed();
-
-            // 初始化Map并添加速度数据
             speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speed);
         }
 
+        List<String[]> dataRows = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Double>> entry : speedMap.entrySet()) {
+            String key = entry.getKey();
+            String[] keyParts = key.split("_");
+            String serverName = keyParts[0];
+            String platformType = keyParts[1];
+            String serverNode = keyParts[2];
 
-        Map<String, List<Object>> uniqueEntries = new LinkedHashMap<>();
-        for (FollowTestDetailVO detail : detailVOList) {
-            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
-            if (!uniqueEntries.containsKey(key)) {
-                List<Object> entry = new ArrayList<>();
-                entry.add(detail.getServerName());
-                entry.add(detail.getPlatformType());
-                entry.add(detail.getServerNode());
+            Map<String, Double> vpsSpeeds = entry.getValue();
+            String[] dataRow = new String[3 + uniqueVpsNames.size()];
+            dataRow[0] = serverName;
+            dataRow[1] = platformType;
+            dataRow[2] = serverNode;
 
-
-                Map<String, Double> vpsSpeeds = speedMap.getOrDefault(key, Collections.emptyMap());
-                for (String vpsName : uniqueVpsNames) {
-                    entry.add(vpsSpeeds.getOrDefault(vpsName, 0.0));
-                }
-
-                uniqueEntries.put(key, entry);
+            int index = 3;
+            for (String vpsName : uniqueVpsNames) {
+                Double speed = vpsSpeeds.get(vpsName);
+                dataRow[index++] = (speed != null) ? speed.toString() : "null";
             }
+
+            dataRows.add(dataRow);
         }
-        result.addAll(uniqueEntries.values());
 
-        return result;
+        // 计算分页的开始和结束索引
+        int page = query.getPage();
+        int limit = query.getLimit();
+        int start = (page - 1) * limit;
+        int end = Math.min(start + limit, dataRows.size());
+        List<String[]> paginatedDataRows = dataRows.subList(start, end);
+        result.addAll(paginatedDataRows);
+
+        PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
+        return pageResult;
     }
-
 
     private LambdaQueryWrapper<FollowTestDetailEntity> getWrapper(FollowTestDetailQuery query) {
         LambdaQueryWrapper<FollowTestDetailEntity> wrapper = Wrappers.lambdaQuery();

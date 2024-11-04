@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface FollowTestDetailService extends BaseService<FollowTestDetailEntity> {
 
-   List <List<Object>>  page(FollowTestDetailQuery query);
+//   List <List<Object>>  page(FollowTestDetailQuery query);
 
     FollowTestDetailVO get(Long id);
 
@@ -34,9 +34,6 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
 
  void updates(FollowTestDetailVO convert);
 
+ PageResult<String[]> page(FollowTestDetailQuery query);
 
-// void measure(List<FollowTestDetailVO> vos);
-
-//    FollowTestDetailVO measure(List<FollowTestDetailVO> vos);
- 
 }
