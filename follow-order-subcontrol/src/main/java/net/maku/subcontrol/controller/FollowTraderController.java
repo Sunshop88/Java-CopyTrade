@@ -46,6 +46,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -190,7 +191,10 @@ public class FollowTraderController {
     @PostMapping("orderSend")
     @Operation(summary = "下单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<?> orderSend(@RequestBody FollowOrderSendVO vo) {
+    public Result<?> orderSend(@RequestBody @Valid FollowOrderSendVO vo) {
+        if ((ObjectUtil.isNotEmpty(vo.getStartSize())&&vo.getStartSize().compareTo(new BigDecimal("0.01"))<0)||(ObjectUtil.isNotEmpty(vo.getEndSize())&&vo.getEndSize().compareTo(new BigDecimal("0.01"))<0)){
+            return  Result.error("区间值不小于0.01");
+        }
         // 本地处理逻辑
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
