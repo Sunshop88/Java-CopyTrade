@@ -3,11 +3,9 @@ package net.maku.subcontrol.callable;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.enums.AcEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowSubscribeOrderService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
-import net.maku.followcom.service.impl.FollowSubscribeOrderServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.framework.common.cache.RedisUtil;
@@ -33,7 +31,6 @@ public class AbstractKafkaMessageCallback {
 
     protected FollowBrokeServerService eaServerService;
     protected FollowTraderSubscribeService eaMasterSlaveService;
-    protected FollowSubscribeOrderService eaOpenOrderMappingService;
     protected FollowTraderService eaTraderService;
     protected ScheduledExecutorService scheduledExecutorService;
     protected RedisUtil redisUtil;
@@ -51,7 +48,6 @@ public class AbstractKafkaMessageCallback {
         this.scheduledExecutorService = SpringContextUtils.getBean("scheduledExecutorService", ScheduledExecutorService.class);
         this.eaMasterSlaveService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
         this.eaTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
-        this.eaOpenOrderMappingService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
         this.redisUtil = SpringContextUtils.getBean(RedisUtil.class);
         this.reentrantReadWriteLock = new ReentrantReadWriteLock();
     }

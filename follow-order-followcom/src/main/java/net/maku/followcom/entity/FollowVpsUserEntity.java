@@ -5,31 +5,27 @@ import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
- * 交易日志
+ * 用户vps可查看列表
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_trader_log")
-public class FollowTraderLogEntity {
+@TableName("follow_vps_user")
+public class FollowVpsUserEntity {
 	@TableId(type = IdType.AUTO)
+	@TableField(value = "id")
 	private Long id;
 
 	/**
-	* 日志记录
+	* 用户id
 	*/
-	@TableField(value = "log_detail")
-	private String logDetail;
-
-	/**
-	* vps名称
-	*/
-	@TableField(value = "vps_name")
-	private String vpsName;
+	@TableField(value = "user_id")
+	private Long userId;
 
 	/**
 	* vpsId
@@ -38,34 +34,10 @@ public class FollowTraderLogEntity {
 	private Integer vpsId;
 
 	/**
-	 * vpsClient
-	 */
-	@TableField(value = "vps_client")
-	private String vpsClient;
-
-	/**
-	* 操作类型1-策略管理 2-跟单管理 3-跟单操作
+	* vps服务器名称
 	*/
-	@TableField(value = "trader_type")
-	private Integer traderType;
-
-	/**
-	* 类型0-新增 1-编辑 2-删除 3-下单 4-平仓 5-补单
-	*/
-	@TableField(value = "type")
-	private Integer type;
-
-	/**
-	* 是否主动0-否 1-是
-	*/
-	@TableField(value = "if_initiative")
-	private Integer ifInitiative;
-
-	/**
-	* 单号
-	*/
-	@TableField(value = "order_no")
-	private Integer orderNo;
+	@TableField(value = "vps_name")
+	private String vpsName;
 
 	/**
 	* 版本号

@@ -88,4 +88,9 @@ public interface Constant {
      * 账号平台信息
      */
     String TRADER_PLATFORM="trader:platform:";
+
+    /**
+     * 用户的vps
+     */
+    String SYSTEM_VPS_USER="system:vps:user:";
 }

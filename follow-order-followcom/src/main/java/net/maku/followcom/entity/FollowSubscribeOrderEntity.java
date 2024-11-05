@@ -1,8 +1,10 @@
 package net.maku.followcom.entity;
 
 import com.cld.utils.date.ThreeStrategyDateUtil;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.NoArgsConstructor;
 import net.maku.followcom.pojo.EaOrderInfo;
 import online.mtapi.mt4.Order;
 
@@ -20,6 +22,8 @@ import java.time.temporal.ChronoUnit;
 
 @Data
 @TableName("follow_subscribe_order")
+@AllArgsConstructor
+@NoArgsConstructor
 public class FollowSubscribeOrderEntity {
 	/**
 	* 主键
@@ -32,6 +36,12 @@ public class FollowSubscribeOrderEntity {
 	*/
 	@TableField(value = "master_id")
 	private Long masterId;
+
+	/**
+	 * 喊单者的账号
+	 */
+	@TableField(value = "master_account")
+	private Integer masterAccount;
 
 	/**
 	* 喊单者的订单号
@@ -104,6 +114,12 @@ public class FollowSubscribeOrderEntity {
 	*/
 	@TableField(value = "slave_id")
 	private Long slaveId;
+
+	/**
+	 * 跟单者账号
+	 */
+	@TableField(value = "slave_account")
+	private Integer slaveAccount;
 
 	/**
 	* 跟单者对应的订单号，允许为null，为null时就是跟单没跟上
@@ -246,6 +262,7 @@ public class FollowSubscribeOrderEntity {
 
 	public FollowSubscribeOrderEntity(EaOrderInfo orderInfo, FollowTraderEntity copier) {
 		this.masterId = orderInfo.getMasterId();
+		this.masterAccount=Integer.valueOf(orderInfo.getAccount());
 		this.masterTicket = orderInfo.getTicket();
 		this.masterSymbol = orderInfo.getOriSymbol();
 		this.masterLots = BigDecimal.valueOf(orderInfo.getLots());
@@ -254,6 +271,7 @@ public class FollowSubscribeOrderEntity {
 		this.comment = orderInfo.getComment();
 		this.detectedOpenTime =orderInfo.getDetectedOpenTime();
 		this.slaveId = copier.getId();
+		this.slaveAccount=Integer.valueOf(copier.getAccount());
 		this.slaveReceiveTime = orderInfo.getSlaveReceiveOpenTime();
 	}
 

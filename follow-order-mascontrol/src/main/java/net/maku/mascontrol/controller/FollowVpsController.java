@@ -1,5 +1,6 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,18 +12,25 @@ import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.framework.security.user.SecurityUser;
+import online.mtapi.mt4.Op;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -48,7 +56,8 @@ public class FollowVpsController {
     private final FollowVpsService followVpsService;
     private final FollowTraderService followTraderService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
-
+    private final RedisCache redisCache;
+    private final FollowVpsUserService followVpsUserService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
@@ -133,10 +142,19 @@ public class FollowVpsController {
     @Operation(summary = "可用vps")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<List<FollowVpsVO>> listVps(){
-        List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
-        List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(list);
+        List<Integer> list;
+        //查看当前用户拥有的vps
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId()))){
+             list =(List<Integer>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+        }else {
+             list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId())).stream().map(FollowVpsUserEntity::getVpsId).toList();
+             redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(),list);
+        }
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
+        List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
         followVpsVOS.forEach(o->{
-            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+            o.setFollowNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType()).eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
         });
         return Result.ok(followVpsVOS);
     }

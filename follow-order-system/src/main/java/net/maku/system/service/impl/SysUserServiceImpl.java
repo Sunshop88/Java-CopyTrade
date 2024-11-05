@@ -1,10 +1,15 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.excel.ExcelFinishCallBack;
 import net.maku.framework.common.exception.ServerException;
@@ -29,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +54,9 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     private final SysOrgService sysOrgService;
     private final TokenStoreCache tokenStoreCache;
     private final TransService transService;
-
+    private final FollowVpsUserService followVpsUserService;
+    private final FollowVpsService followVpsService;
+    private final RedisCache redisCache;
     @Override
     public PageResult<SysUserVO> page(SysUserQuery query) {
         // 查询参数
@@ -110,6 +118,20 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
 
         // 更新用户岗位关系
         sysUserPostService.saveOrUpdate(entity.getId(), vo.getPostIdList());
+
+        //保存VPS权限
+        if (ObjectUtil.isNotEmpty(vo.getVpsList())){
+            List<FollowVpsUserEntity> list=new ArrayList<>();
+            vo.getVpsList().forEach(o->{
+                FollowVpsUserEntity followVpsUserEntity = new FollowVpsUserEntity();
+                followVpsUserEntity.setUserId(entity.getId());
+                followVpsUserEntity.setVpsId(o);
+                followVpsUserEntity.setVpsName(followVpsService.getById(o).getName());
+                list.add(followVpsUserEntity);
+            });
+            followVpsUserService.saveBatch(list);
+            redisCache.set(Constant.SYSTEM_VPS_USER+entity.getId(),vo.getVpsList());
+        }
     }
 
     @Override
@@ -139,6 +161,21 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
 
         // 更新用户缓存权限
         sysUserTokenService.updateCacheAuthByUserId(entity.getId());
+
+        //保存VPS权限
+        followVpsUserService.removeById(entity.getId());
+        if (ObjectUtil.isNotEmpty(vo.getVpsList())){
+            List<FollowVpsUserEntity> list=new ArrayList<>();
+            vo.getVpsList().forEach(o->{
+                FollowVpsUserEntity followVpsUserEntity = new FollowVpsUserEntity();
+                followVpsUserEntity.setUserId(entity.getId());
+                followVpsUserEntity.setVpsId(o);
+                followVpsUserEntity.setVpsName(followVpsService.getById(o).getName());
+                list.add(followVpsUserEntity);
+            });
+            followVpsUserService.saveBatch(list);
+        }
+        redisCache.delete(Constant.SYSTEM_VPS_USER+entity.getId());
     }
 
     @Override

@@ -86,4 +86,7 @@ public class SysUserVO implements Serializable, TransPojo {
     @Schema(description = "创建时间")
     @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
     private LocalDateTime createTime;
+
+    @Schema(description = "VPS列表")
+    private List<Integer> vpsList;
 }

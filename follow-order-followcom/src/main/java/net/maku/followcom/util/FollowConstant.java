@@ -51,4 +51,11 @@ public class FollowConstant {
 
     public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
 
+    /**
+     * 跟单日志
+     */
+    public static String FOLLOW_SEND="【策略下单跟随】";
+
+    public static String FOLLOW_CLOSE="【策略平仓跟随】";
+
 }

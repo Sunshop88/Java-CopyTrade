@@ -1,10 +1,17 @@
 package net.maku.system.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -47,7 +54,8 @@ public class SysUserController {
     private final SysUserPostService sysUserPostService;
     private final SysPostService sysPostService;
     private final PasswordEncoder passwordEncoder;
-
+    private final RedisCache redisCache;
+    private final FollowVpsUserService followVpsUserService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('sys:user:page')")
@@ -73,6 +81,14 @@ public class SysUserController {
         List<Long> postIdList = sysUserPostService.getPostIdList(id);
         vo.setPostIdList(postIdList);
 
+        //用户VPS
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+id))){
+            vo.setVpsList((List<Integer>) redisCache.get(Constant.SYSTEM_VPS_USER+id));
+        }else {
+            List<Integer> list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId())).stream().map(FollowVpsUserEntity::getVpsId).toList();
+            redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(), JSONObject.toJSON(list));
+            vo.setVpsList(list);
+        }
         return Result.ok(vo);
     }
 

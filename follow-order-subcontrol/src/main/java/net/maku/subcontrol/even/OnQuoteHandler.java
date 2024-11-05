@@ -41,11 +41,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
     private static final Logger log = LoggerFactory.getLogger(OnQuoteHandler.class);
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
-
-    protected FollowSubscribeOrderService followSubscribeOrderService;
-
-    protected Boolean running = Boolean.TRUE;
-
     private TraderOrderSendWebSocket traderOrderSendWebSocket;
     private FollowOrderSendService followOrderSendService;
     private RedisCache redisCache;
@@ -64,7 +59,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
 
     public OnQuoteHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
-        this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         traderOrderSendWebSocket=SpringContextUtils.getBean(TraderOrderSendWebSocket.class);
         followOrderSendService=SpringContextUtils.getBean(FollowOrderSendService.class);
         redisCache=SpringContextUtils.getBean(RedisCache.class);
