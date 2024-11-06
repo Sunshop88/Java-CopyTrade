@@ -1022,8 +1022,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         // 如果还有剩余手数，按比例分配给每个订单
         BigDecimal remainingLots = totalLots.subtract(totalPlacedLots).setScale(2, RoundingMode.HALF_UP);
-        if (remainingLots.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal lotsToAddPerOrder = remainingLots.divide(new BigDecimal(orderCountNum), 2, RoundingMode.HALF_UP);
+        if (remainingLots.compareTo(BigDecimal.ZERO) > 0 && !orders.isEmpty()) {
+            BigDecimal lotsToAddPerOrder = remainingLots.divide(new BigDecimal(orderCountNum), 2, RoundingMode.DOWN);
+
             BigDecimal cumulativeRemainder = remainingLots.subtract(lotsToAddPerOrder.multiply(new BigDecimal(orderCountNum)));
 
             for (int i = 0; i < orders.size(); i++) {
@@ -1036,13 +1037,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
 
-        // 最终确认总手数
+        // 最终确认总手数并调整误差
         BigDecimal finalTotal = orders.stream().reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
-        if (finalTotal.compareTo(totalLots) < 0) {
-            BigDecimal remainingDiff = totalLots.subtract(finalTotal).setScale(2, RoundingMode.HALF_UP);
+        if (finalTotal.compareTo(totalLots) > 0) {
+            BigDecimal excess = finalTotal.subtract(totalLots);
+            for (int i = 0; i < orders.size() && excess.compareTo(BigDecimal.ZERO) > 0; i++) {
+                BigDecimal order = orders.get(i);
+                BigDecimal adjustment = order.min(excess).setScale(2, RoundingMode.HALF_UP);
+                orders.set(i, order.subtract(adjustment));
+                excess = excess.subtract(adjustment);
+            }
+        } else if (finalTotal.compareTo(totalLots) < 0) {
+            BigDecimal deficit = totalLots.subtract(finalTotal);
             int randomOrderIndex = rand.nextInt(orders.size());
-            BigDecimal updatedOrder = orders.get(randomOrderIndex).add(remainingDiff).setScale(2, RoundingMode.HALF_UP);
-            orders.set(randomOrderIndex, updatedOrder);
+            orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
 
         // 过滤 0 值
