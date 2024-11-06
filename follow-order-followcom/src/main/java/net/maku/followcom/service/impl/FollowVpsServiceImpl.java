@@ -184,4 +184,9 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         log.info("新VPS启动账号请求:"+body);
     }
 
+    @Override
+    public FollowVpsEntity select(String vpsName) {
+        return baseMapper.selectOne(Wrappers.<FollowVpsEntity>lambdaQuery().eq(FollowVpsEntity::getName,vpsName));
+    }
+
 }

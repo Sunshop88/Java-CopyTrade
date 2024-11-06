@@ -1,5 +1,7 @@
 package net.maku.mascontrol.service;
 
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.vo.FollowBrokeServerVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.utils.PageResult;
@@ -35,7 +37,11 @@ public interface FollowTestSpeedService extends BaseService<FollowTestSpeedEntit
 
     void export();
 
-    void measure(List<String> servers, List<String> vps);
+//    void measure(List<String> servers, List<String> vps);
 
-    void remeasure(Long id,List<String> servers, List<String> vps);
+    void saveTestSpeed(FollowTestSpeedVO overallResult);
+
+    boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId);
+
+    void updateTestSpend(Long id);
 }

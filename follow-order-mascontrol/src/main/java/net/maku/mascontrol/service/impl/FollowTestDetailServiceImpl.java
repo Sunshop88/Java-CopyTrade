@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.mascontrol.convert.FollowTestDetailConvert;
@@ -92,6 +93,12 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
+    }
+
+    @Override
+    public void deleteByTestId(Integer id) {
+        //根据testId删除其数据
+        baseMapper.delete(Wrappers.<FollowTestDetailEntity>lambdaQuery().eq(FollowTestDetailEntity::getTestId, id));
     }
 
     private LambdaQueryWrapper<FollowTestDetailEntity> getWrapper(FollowTestDetailQuery query) {

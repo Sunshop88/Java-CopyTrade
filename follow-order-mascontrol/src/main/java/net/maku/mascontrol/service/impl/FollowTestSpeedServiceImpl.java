@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.TraderCloseEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
@@ -119,139 +120,68 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
     }
 
 
-    @Override
-    public void remeasure(Long id, List<String> servers, List<String> vps) {
-        FollowTestSpeedEntity result = baseMapper.selectById(id);
-        if (ObjectUtil.isEmpty(result)) {
-            throw new ServerException("测速结果不存在");
-        }
-
-        result.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-        result.setDoTime(new Date());
-        updateById(result);
-
-        extracted(servers, vps, result);
-    }
-
 
     @Override
-    public void measure(List<String> servers, List<String> vps) {
-        FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
-        overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-        overallResult.setDoTime(new Date());
-        overallResult.setVersion(0);
-        overallResult.setDeleted(0);
-        overallResult.setCreator(SecurityUser.getUserId());
-        overallResult.setCreateTime(LocalDateTime.now());
-        overallResult.setTestName(SecurityUser.getUser().getUsername());
-//            save(overallResult);
-        baseMapper.saveTestSpeed(overallResult);
-
-        // 保存并获取生成的 ID
-//        baseMapper.saveTestSpeed(overallResult);
-        FollowTestSpeedEntity result = FollowTestSpeedConvert.INSTANCE.convert(overallResult);
-
-        extracted(servers, vps, result);
-    }
-
-    public void extracted(List<String> servers, List<String> vps, FollowTestSpeedEntity result) {
+    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId) {
         List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
-        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
 
         Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
-        AtomicBoolean allSuccess = new AtomicBoolean(true); // 用于记录是否所有连接都成功
-        List<FollowTestDetailEntity> savedEntities = new ArrayList<>();
+        boolean result = true;
+        for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
+            String serverName = entry.getKey();
+            List<FollowBrokeServerEntity> serverNodes = entry.getValue();
 
-        serverMap.forEach((serverName, serverNodes) -> {
-            serverNodes.parallelStream().forEach(o -> {
-                String ipAddress = o.getServerNode(); // 目标 IP 地址
-                int port = Integer.parseInt(o.getServerPort()); // 目标端口号
+            for (FollowBrokeServerEntity serverNode : serverNodes) {
+                String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
+                int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
-                vpsList.parallelStream().forEach(vpsName -> {
+                try {
+                    AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                    long startTime = System.currentTimeMillis(); // 记录起始时间
+                    Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                    // 等待连接完成
+                    long timeout = 15000; // 设置超时时间为15秒
                     try {
-                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                        long startTime = System.currentTimeMillis(); // 记录起始时间
-                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                        // 等待连接完成
-                        long timeout = 5000; // 设置超时时间为5秒
-                        try {
-                            future.get(timeout, TimeUnit.MILLISECONDS);
-                        } catch (TimeoutException e) {
-                            // 处理超时情况
-                            e.printStackTrace();
-                            allSuccess.set(false);
-                        }
-                        long endTime = System.currentTimeMillis(); // 记录结束时间
-                        long duration = endTime - startTime;
-
-                        FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                        newEntity.setServerName(o.getServerName());
-                        newEntity.setServerId(o.getId());
-//                        newEntity.setPlatformType(followPlatformService.listByServerName(o.getServerName()));
-                        newEntity.setPlatformType("MT4");
-                        newEntity.setServerNode(o.getServerNode() + ":" + o.getServerPort());
-                        newEntity.setVpsName(vpsName.getName());
-                        newEntity.setVpsId(vpsName.getId());
-                        newEntity.setSpeed((int) duration);
-                        newEntity.setTestId(result.getId());
-                        savedEntities.add(newEntity);
-                    } catch (Exception e) {
+                        future.get(timeout, TimeUnit.MILLISECONDS);
+                    } catch (TimeoutException e) {
+                        // 处理超时情况
                         e.printStackTrace();
-                        allSuccess.set(false);// 如果有任何连接失败，设置 allSuccess 为 false
+                        result = false;
+                        break; // 如果出现异常,直接跳出当前循环
                     }
-                });
-            });
-        });
+                    long endTime = System.currentTimeMillis(); // 记录结束时间
+                    long duration = endTime - startTime;
 
-        // 更新状态
-        if (allSuccess.get()) {
-            result.setStatus(VpsSpendEnum.SUCCESS.getType());
-            followTestDetailService.saveBatch(savedEntities);
-            //TODO 测速完成后选节点
-            /**
-             List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
-             new LambdaQueryWrapper<FollowTestDetailEntity>()
-             .eq(FollowTestDetailEntity::getTestId, result.getId())
-             );
-             // 获取所有唯一的 VPS 名称
-             List<String> vpsNames = allEntities.stream()
-             .map(FollowTestDetailEntity::getVpsName)
-             .distinct()
-             .collect(Collectors.toList());
-
-             vpsNames.forEach(vpsName -> {
-             // 获取当前 VPS 名称下的所有服务器名称
-             List<String> serverNames = allEntities.stream()
-             .filter(entity -> vpsName.equals(entity.getVpsName()))
-             .map(FollowTestDetailEntity::getServerName)
-             .distinct()
-             .collect(Collectors.toList());
-             serverNames.forEach(serverName -> {
-             // 查找当前 VPS 名称和服务器名称下的最小延迟
-             FollowTestDetailEntity minLatencyEntity = allEntities.stream()
-             .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-             .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
-             .orElse(null);
-
-             if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
-
-             //修改所有用户连接节点
-             followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().
-             eq(FollowPlatformEntity::getServer,minLatencyEntity.getServerName()).
-             eq(FollowPlatformEntity::getVpsName,minLatencyEntity.getVpsName()).
-             set(FollowPlatformEntity::getServerNode,minLatencyEntity.getServerNode()));
-
-             }
-             });
-             });
-             */
-        } else {
-            result.setStatus(VpsSpendEnum.FAILURE.getType());
+                    FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                    newEntity.setServerName(serverNode.getServerName());
+                    newEntity.setServerId(serverNode.getId());
+                    newEntity.setPlatformType("MT4");
+                    newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                    newEntity.setVpsName(vpsEntity.getName());
+                    newEntity.setVpsId(vpsEntity.getId());
+                    newEntity.setSpeed((int) duration);
+                    newEntity.setTestId(testId);
+                    followTestDetailService.save(newEntity);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    result = false;
+                    break; // 如果出现异常,直接跳出当前循环
+                }
+            }
         }
+        return result;
+}
 
-        updateById(result);
+    @Override
+    public void updateTestSpend(Long id) {
+        baseMapper.updateTestSpend(id);
+    }
+
+    @Override
+    public void saveTestSpeed(FollowTestSpeedVO overallResult) {
+        baseMapper.saveTestSpeed(overallResult);
     }
 
 }

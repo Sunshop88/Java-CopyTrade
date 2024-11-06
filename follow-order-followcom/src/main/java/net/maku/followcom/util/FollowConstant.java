@@ -44,12 +44,16 @@ public class FollowConstant {
      */
     public static String VPS_PORT ="9001";
 
+    public static String REQUEST_PORT = "9000";
+
     /**
      * VPS请求路径
      */
     public static String VPS_TRANSFERVPS = "/subcontrol/follow/transferVps";
 
     public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
+
+    public static String VPS_MEASURE="/mascontrol/speed/start";
 
     /**
      * 跟单日志

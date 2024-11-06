@@ -38,4 +38,7 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
     void transferVps(Integer oldId, HttpServletRequest req);
 
     void startNewVps(Integer newId, HttpServletRequest req);
+
+    FollowVpsEntity select(String vpsName);
+
 }

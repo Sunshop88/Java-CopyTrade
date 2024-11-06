@@ -8,4 +8,9 @@
         VALUES (#{status}, #{doTime}, #{testName},#{version},#{deleted},#{creator},#{createTime})
     </insert>
 
+    <update id="updateTestSpend">
+        update follow_test_speed SET status = 1
+        where id = #{id}
+    </update>
+
     </mapper>

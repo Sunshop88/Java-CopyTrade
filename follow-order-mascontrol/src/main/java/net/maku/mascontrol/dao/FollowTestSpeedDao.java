@@ -17,4 +17,6 @@ public interface FollowTestSpeedDao extends BaseDao<FollowTestSpeedEntity> {
 
     void saveTestSpeed(FollowTestSpeedVO overallResult);
 
+
+    void updateTestSpend(Long id);
 }
