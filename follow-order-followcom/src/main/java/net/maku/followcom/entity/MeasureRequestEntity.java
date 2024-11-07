@@ -1,9 +1,6 @@
-package net.maku.mascontrol.entity;
+package net.maku.followcom.entity;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.mascontrol.vo.FollowTestSpeedVO;
 
 import java.util.List;
 

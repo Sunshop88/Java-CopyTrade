@@ -1,21 +1,19 @@
-package net.maku.mascontrol.service.impl;
+package net.maku.followcom.service.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
-import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.convert.FollowTestDetailConvert;
+import net.maku.followcom.dao.FollowTestDetailDao;
+import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.service.FollowTestDetailService;
+import net.maku.followcom.vo.FollowTestDetailExcelVO;
+import net.maku.followcom.vo.FollowTestDetailVO;
+import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
-import net.maku.mascontrol.convert.FollowTestDetailConvert;
-import net.maku.mascontrol.entity.FollowTestDetailEntity;
-import net.maku.mascontrol.query.FollowTestDetailQuery;
-import net.maku.mascontrol.vo.FollowTestDetailVO;
-import net.maku.mascontrol.dao.FollowTestDetailDao;
-import net.maku.mascontrol.service.FollowTestDetailService;
-import com.fhs.trans.service.impl.TransService;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.mascontrol.vo.FollowTestDetailExcelVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

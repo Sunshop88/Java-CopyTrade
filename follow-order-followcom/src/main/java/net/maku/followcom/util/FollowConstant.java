@@ -53,7 +53,7 @@ public class FollowConstant {
 
     public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
 
-    public static String VPS_MEASURE="/mascontrol/speed/start";
+    public static String VPS_MEASURE="/subcontrol/follow/start";
 
     /**
      * 跟单日志

@@ -1,10 +1,11 @@
-package net.maku.mascontrol.service;
+package net.maku.followcom.service;
 
+import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
-import net.maku.mascontrol.vo.FollowTestDetailVO;
-import net.maku.mascontrol.query.FollowTestDetailQuery;
-import net.maku.mascontrol.entity.FollowTestDetailEntity;
+
 import java.util.List;
 
 /**

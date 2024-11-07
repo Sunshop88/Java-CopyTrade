@@ -1,44 +1,37 @@
-package net.maku.mascontrol.service.impl;
+package net.maku.followcom.service.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowTestSpeedConvert;
+import net.maku.followcom.dao.FollowTestSpeedDao;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.entity.FollowTestSpeedEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.enums.TraderCloseEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.query.FollowTestSpeedQuery;
+import net.maku.followcom.service.*;
+import net.maku.followcom.vo.FollowTestSpeedExcelVO;
+import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
-import net.maku.framework.security.user.SecurityUser;
-import net.maku.mascontrol.convert.FollowTestSpeedConvert;
-import net.maku.mascontrol.entity.FollowTestDetailEntity;
-import net.maku.mascontrol.entity.FollowTestSpeedEntity;
-import net.maku.mascontrol.query.FollowTestSpeedQuery;
-import net.maku.mascontrol.service.FollowTestDetailService;
-import net.maku.mascontrol.vo.FollowTestSpeedVO;
-import net.maku.mascontrol.dao.FollowTestSpeedDao;
-import net.maku.mascontrol.service.FollowTestSpeedService;
-import com.fhs.trans.service.impl.TransService;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.mascontrol.vo.FollowTestSpeedExcelVO;
-import org.springframework.beans.factory.annotation.Autowired;
-import cn.hutool.core.util.ObjectUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -50,15 +43,12 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedDao, FollowTestSpeedEntity> implements FollowTestSpeedService {
+    private static final Logger log = LoggerFactory.getLogger(FollowTestSpeedServiceImpl.class);
     private final TransService transService;
-    @Autowired
-    private FollowTestDetailService followTestDetailService;
-    @Autowired
-    private FollowPlatformService followPlatformService;
-    @Autowired
-    private FollowBrokeServerService followBrokeServerService;
-    @Autowired
-    private FollowVpsService followVpsService;
+    private final FollowTestDetailService followTestDetailService;
+    private final FollowPlatformService followPlatformService;
+    private final FollowBrokeServerService followBrokeServerService;
+    private final FollowVpsService followVpsService;
 
     @Override
     public PageResult<FollowTestSpeedVO> page(FollowTestSpeedQuery query) {
@@ -128,55 +118,59 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
-        boolean result = true;
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
-            String serverName = entry.getKey();
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
 
             for (FollowBrokeServerEntity serverNode : serverNodes) {
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
+                int retryCount = 0; // 重试次数
 
-                try {
-                    AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                    long startTime = System.currentTimeMillis(); // 记录起始时间
-                    Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                    // 等待连接完成
-                    long timeout = 15000; // 设置超时时间为15秒
+                while (retryCount < 3) {
                     try {
-                        future.get(timeout, TimeUnit.MILLISECONDS);
-                    } catch (TimeoutException e) {
-                        // 处理超时情况
-                        e.printStackTrace();
-                        result = false;
-                        break; // 如果出现异常,直接跳出当前循环
-                    }
-                    long endTime = System.currentTimeMillis(); // 记录结束时间
-                    long duration = endTime - startTime;
+                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                        long startTime = System.currentTimeMillis(); // 记录起始时间
+                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
 
-                    FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                    newEntity.setServerName(serverNode.getServerName());
-                    newEntity.setServerId(serverNode.getId());
-                    newEntity.setPlatformType("MT4");
-                    newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                    newEntity.setVpsName(vpsEntity.getName());
-                    newEntity.setVpsId(vpsEntity.getId());
-                    newEntity.setSpeed((int) duration);
-                    newEntity.setTestId(testId);
-                    followTestDetailService.save(newEntity);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    result = false;
-                    break; // 如果出现异常,直接跳出当前循环
+                        long timeout = 10000;
+                        try {
+                            future.get(timeout, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+//                            log.error("测速超时，目标地址: {}:{}, 超过 {} 毫秒", ipAddress, port, timeout);
+                            retryCount++; // 增加重试次数
+                            if (retryCount == 3) {
+                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+                                break;
+                            }
+                            continue;
+                        } catch (Exception e) {
+                            log.error("连接失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+                            return false;
+                        }
+
+                        long endTime = System.currentTimeMillis();
+                        long duration = endTime - startTime;
+
+                        // 保存测速结果
+                        FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                        newEntity.setServerName(serverNode.getServerName());
+                        newEntity.setServerId(serverNode.getId());
+                        newEntity.setPlatformType("MT4");
+                        newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                        newEntity.setVpsName(vpsEntity.getName());
+                        newEntity.setVpsId(vpsEntity.getId());
+                        newEntity.setSpeed((int) duration);
+                        newEntity.setTestId(testId);
+                        followTestDetailService.save(newEntity);
+                        break;
+                    } catch (Exception e) {
+                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+                        return false;
+                    }
                 }
             }
         }
-        return result;
-}
-
-    @Override
-    public void updateTestSpend(Long id) {
-        baseMapper.updateTestSpend(id);
+        return true;
     }
 
     @Override

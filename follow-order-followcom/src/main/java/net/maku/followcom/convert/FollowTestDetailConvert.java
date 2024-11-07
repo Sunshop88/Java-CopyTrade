@@ -1,8 +1,9 @@
-package net.maku.mascontrol.convert;
+package net.maku.followcom.convert;
 
-import net.maku.mascontrol.entity.FollowTestDetailEntity;
-import net.maku.mascontrol.vo.FollowTestDetailVO;
-import net.maku.mascontrol.vo.FollowTestDetailExcelVO;
+
+import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.vo.FollowTestDetailExcelVO;
+import net.maku.followcom.vo.FollowTestDetailVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

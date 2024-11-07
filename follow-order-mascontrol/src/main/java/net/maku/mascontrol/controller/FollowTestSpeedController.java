@@ -1,42 +1,31 @@
 package net.maku.mascontrol.controller;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
-import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowTestSpeedEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.MeasureRequestEntity;
 import net.maku.followcom.enums.VpsSpendEnum;
-import net.maku.followcom.query.FollowVarietyQuery;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.query.FollowTestSpeedQuery;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowBrokeServerVO;
+import net.maku.followcom.vo.FollowTestDetailVO;
+import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
-import net.maku.mascontrol.convert.FollowTestDetailConvert;
-import net.maku.mascontrol.convert.FollowTestSpeedConvert;
-import net.maku.mascontrol.entity.FollowTestDetailEntity;
-import net.maku.mascontrol.entity.FollowTestSpeedEntity;
-import net.maku.mascontrol.entity.MeasureRequestEntity;
-import net.maku.mascontrol.query.FollowTestDetailQuery;
-import net.maku.mascontrol.service.FollowTestDetailService;
-import net.maku.mascontrol.service.FollowTestSpeedService;
-import net.maku.mascontrol.query.FollowTestSpeedQuery;
-import net.maku.mascontrol.vo.FollowTestDetailVO;
-import net.maku.mascontrol.vo.FollowTestSpeedVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -48,11 +37,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 测速记录
@@ -145,7 +131,7 @@ public class FollowTestSpeedController {
         ObjectMapper objectMapper = new ObjectMapper();
         boolean allSuccess = true;
         for (FollowVpsEntity vpsEntity : vpsList) {
-                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.REQUEST_PORT, FollowConstant.VPS_MEASURE);
+                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
 
                 MeasureRequestEntity startRequest = new MeasureRequestEntity();
                 startRequest.setServers(servers);
@@ -213,24 +199,24 @@ public class FollowTestSpeedController {
     }
 
 
-    @PostMapping("start")
-    @Operation(summary = "单个vps测速")
-    @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestEntity request) {
-        List<String> servers = request.getServers();
-        FollowVpsEntity vpsEntity = request.getVpsEntity();
-        Integer testId = request.getTestId();
-
-        // 批量调用服务进行测速
-        boolean isSuccess =followTestSpeedService.measure(servers,vpsEntity,testId);
-        if (isSuccess) {
-            return Result.ok();
-        } else {
-            // 删除当前vps相关的数据
-            followTestDetailService.deleteByTestId(testId);
-            return Result.error("测速失败，已删除相关数据");
-        }
-    }
+//    @PostMapping("start")
+//    @Operation(summary = "单个vps测速")
+//    @PreAuthorize("hasAuthority('mascontrol:speed')")
+//    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestEntity request) {
+//        List<String> servers = request.getServers();
+//        FollowVpsEntity vpsEntity = request.getVpsEntity();
+//        Integer testId = request.getTestId();
+//
+//        // 批量调用服务进行测速
+//        boolean isSuccess =followTestSpeedService.measure(servers,vpsEntity,testId);
+//        if (isSuccess) {
+//            return Result.ok();
+//        } else {
+//            // 删除当前vps相关的数据
+//            followTestDetailService.deleteByTestId(testId);
+//            return Result.error("测速失败，已删除相关数据");
+//        }
+//    }
 
     @GetMapping("listTestSpeed")
     @Operation(summary = "测速记录列表")
@@ -244,14 +230,14 @@ public class FollowTestSpeedController {
     @PostMapping("remeasure")
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestEntity request,HttpServletRequest req) throws Exception{
+    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestEntity request, HttpServletRequest req) throws Exception{
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
-
         FollowTestSpeedVO overallResult = followTestSpeedService.get(id);
-//        overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-//        update(overallResult);
-        followTestSpeedService.updateTestSpend(id);
+        overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
+        UpdateWrapper<FollowTestSpeedEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", id).set("status", VpsSpendEnum.IN_PROGRESS.getType());
+        followTestSpeedService.update(updateWrapper);
 
         extracted(req, vps, servers, overallResult);
         return Result.ok();

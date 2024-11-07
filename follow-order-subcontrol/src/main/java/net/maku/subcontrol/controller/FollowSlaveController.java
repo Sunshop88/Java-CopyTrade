@@ -2,9 +2,7 @@ package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -19,8 +17,6 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.framework.operatelog.annotations.OperateLog;
-import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.followcom.vo.FollowAddSalveVo;
@@ -33,7 +29,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 跟单
@@ -49,6 +44,8 @@ public class FollowSlaveController {
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsService followVpsService;
+    private final FollowTestSpeedService followTestSpeedService;
+    private final FollowTestDetailService followTestDetailService;
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -123,5 +120,24 @@ public class FollowSlaveController {
             throw new ServerException("新Vps账号启动异常"+e);
         }
         return Result.ok(true);
+    }
+
+    @PostMapping("start")
+    @Operation(summary = "单个vps测速")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestEntity request) {
+        List<String> servers = request.getServers();
+        FollowVpsEntity vpsEntity = request.getVpsEntity();
+        Integer testId = request.getTestId();
+
+        // 批量调用服务进行测速
+        boolean isSuccess =followTestSpeedService.measure(servers,vpsEntity,testId);
+        if (isSuccess) {
+            return Result.ok();
+        } else {
+            // 删除当前vps相关的数据
+            followTestDetailService.deleteByTestId(testId);
+            return Result.error("测速失败，已删除相关数据");
+        }
     }
 }

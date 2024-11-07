@@ -1,8 +1,8 @@
-package net.maku.mascontrol.convert;
+package net.maku.followcom.convert;
 
-import net.maku.mascontrol.entity.FollowTestSpeedEntity;
-import net.maku.mascontrol.vo.FollowTestSpeedVO;
-import net.maku.mascontrol.vo.FollowTestSpeedExcelVO;
+import net.maku.followcom.entity.FollowTestSpeedEntity;
+import net.maku.followcom.vo.FollowTestSpeedExcelVO;
+import net.maku.followcom.vo.FollowTestSpeedVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

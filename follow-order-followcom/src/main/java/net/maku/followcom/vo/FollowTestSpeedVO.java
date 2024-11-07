@@ -1,13 +1,10 @@
-package net.maku.mascontrol.vo;
+package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
-
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.Data;
+
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**

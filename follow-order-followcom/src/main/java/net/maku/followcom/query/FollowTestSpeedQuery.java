@@ -1,22 +1,18 @@
-package net.maku.mascontrol.query;
+package net.maku.followcom.query;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import java.util.Date;
 
 /**
- * 测速详情查询
+ * 测速记录查询
  *
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@Schema(description = "测速详情查询")
-public class FollowTestDetailQuery extends Query {
-    private Integer testId;
+@Schema(description = "测速记录查询")
+public class FollowTestSpeedQuery extends Query {
 }
