@@ -1,6 +1,8 @@
 package net.maku.subcontrol.controller;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,17 +16,26 @@ import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.subcontrol.query.FollowOrderHistoryQuery;
+import net.maku.subcontrol.query.FollowRepairOrderQuery;
+import net.maku.subcontrol.service.FollowOrderHistoryService;
+import net.maku.subcontrol.service.FollowRepairOrderService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
+import net.maku.subcontrol.vo.FollowOrderHistoryVO;
+import net.maku.subcontrol.vo.FollowRepairOrderVO;
 import online.mtapi.mt4.PlacedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +43,9 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +65,8 @@ public class FollowSlaveController {
     private final FollowRepairOrderService followRepairOrderService;
     private final RedisCache redisCache;
     private final FollowVpsService followVpsService;
+    private final FollowTestSpeedService followTestSpeedService;
+    private final FollowTestDetailService followTestDetailService;
 
 
     @PostMapping("addSlave")
