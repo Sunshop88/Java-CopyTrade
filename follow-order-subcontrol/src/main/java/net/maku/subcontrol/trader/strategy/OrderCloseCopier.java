@@ -3,17 +3,15 @@ package net.maku.subcontrol.trader.strategy;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowOrderHistoryEntity;
-import net.maku.followcom.entity.FollowSubscribeOrderEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.enums.AcEnum;
 import net.maku.followcom.enums.CopyTradeFlag;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.framework.common.constant.Constant;
+import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
-import net.maku.subcontrol.service.IOperationStrategy;
-import net.maku.subcontrol.trader.AbstractOperation;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import online.mtapi.mt4.Order;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -21,9 +19,7 @@ import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 import static net.maku.followcom.enums.CopyTradeFlag.CPOS;
 import static net.maku.followcom.enums.CopyTradeFlag.POF;
@@ -54,7 +50,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         // 通过map获取平仓订单号
         log.debug("[MT4跟单者:{}-{}-{}]开始尝试平仓，[喊单者:{}-{}-{}],喊单者订单信息[{}]", orderId, copier.getAccount(), copier.getServerName(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         // 跟单者(和当前喊单者的平仓订单)，对应的订单号。
-        CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(mapKey, Long.toString(orderInfo.getTicket()));
+        CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER+mapKey, Long.toString(orderInfo.getTicket()));
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
             FollowSubscribeOrderEntity openOrderMapping = openOrderMappingService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
                     .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())

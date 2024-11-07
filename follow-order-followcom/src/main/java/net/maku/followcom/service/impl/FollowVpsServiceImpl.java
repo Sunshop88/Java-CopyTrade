@@ -167,9 +167,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         FollowVpsVO followVpsEntityOld = this.get(Long.valueOf(oldId));
         //发送请求到旧VPS，清除缓存
         String url = MessageFormat.format("https://{0}:{1}{2}", followVpsEntityOld.getIpAddress(),FollowConstant.VPS_PORT,FollowConstant.VPS_TRANSFERVPS);
-        JSONObject variables = new JSONObject();
-        variables.put("oldId", oldId);
-        JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), variables, null, JSONObject.class).getBody();
+        JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), null, null, JSONObject.class).getBody();
         log.info("旧VPS清理缓存请求:"+body);
     }
 
@@ -178,9 +176,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         FollowVpsVO followVpsEntityOld = this.get(Long.valueOf(newId));
         //发送请求到新VPS，启动账号
         String url = MessageFormat.format("https://{0}:{1}{2}", followVpsEntityOld.getIpAddress(),FollowConstant.VPS_PORT,FollowConstant.VPS_STARTNEWVPS);
-        JSONObject variables = new JSONObject();
-        variables.put("newId", newId);
-        JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), variables, null, JSONObject.class).getBody();
+        JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), null, null, JSONObject.class).getBody();
         log.info("新VPS启动账号请求:"+body);
     }
 

@@ -277,7 +277,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             executeOrdersRandomFixedCount(vo.getIpAddr(),vo.getServerName(),BigDecimal.valueOf(pr),followTraderEntity.getPlatform(),followPlatform.getBrokerName(),vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
         }else if (ObjectUtil.isNotEmpty(vo.getTotalSzie())&&ObjectUtil.isNotEmpty(vo.getTotalNum())&&ObjectUtil.isNotEmpty(vo.getStartSize())&&ObjectUtil.isNotEmpty(vo.getEndSize())){
             //区间随机下单，总手数和订单数量都受限制
-            executeOrdersRandomLimited(vo.getIpAddr(),vo.getServerName(),BigDecimal.valueOf(pr),followTraderEntity.getPlatform(),followPlatform.getBrokerName(),vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(),vo.getTotalSzie().doubleValue(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
+            executeOrdersRandomLimited(vo.getIpAddr(),vo.getServerName(),BigDecimal.valueOf(pr),followTraderEntity.getPlatform(),followPlatform.getBrokerName(),vo,followTraderVO.getId(),followTraderVO.getAccount(),vo.getType(),quoteClient,vo.getSymbol(),vo.getTotalNum(),vo.getTotalSzie(), vo.getStartSize(),vo.getEndSize(),vo.getIntervalTime(),orderNo);
         }
         //只有间隔会创建下单标识
         if (vo.getIntervalTime()!=0){
@@ -1014,58 +1014,64 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     // 示例 4: 每笔订单的下单数量为 区间内的随机值，总手数和订单数量都受限制
-    public void executeOrdersRandomLimited(String ipAdd,String serverName,BigDecimal pr,String platform,String brokerName,FollowOrderSendVO vo,long traderId,String account,Integer type,QuoteClient quoteClient,String symbol,Integer orderCount,double totalLots,  BigDecimal minLots,BigDecimal maxLots,Integer interval,String orderNo) {
+    public void executeOrdersRandomLimited(String ipAdd,String serverName,BigDecimal pr,String platform,String brokerName,FollowOrderSendVO vo,long traderId,String account,Integer type,QuoteClient quoteClient,String symbol,Integer orderCount,BigDecimal totalLots,  BigDecimal minLots,BigDecimal maxLots,Integer interval,String orderNo) {
         Random rand = new Random();
-        double totalPlacedLots = 0;  // 已下单的总手数
-        int orderCountNum = 0;       // 已下单的订单数量
-        List<Double> orders = new ArrayList<>();
+        BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
+        int orderCountNum = 0;                         // 已下单的订单数量
+        List<BigDecimal> orders = new ArrayList<>();
+        while (totalPlacedLots.compareTo(totalLots) < 0 && orderCountNum < orderCount) {
+            // 生成随机手数，并四舍五入保留两位小数
+            BigDecimal randomLots = minLots.add(maxLots.subtract(minLots).multiply(new BigDecimal(rand.nextDouble())))
+                    .setScale(2, RoundingMode.HALF_UP);
 
-// 随机生成订单手数
-        while (totalPlacedLots < totalLots && orderCountNum < orderCount) {
-            double randomLots = roundToTwoDecimal(minLots.doubleValue() +
-                    (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
-
-            // 如果当前生成的手数加上已分配的手数超过 totalLots，则将剩余手数分配给当前订单
-            if (totalPlacedLots + randomLots > totalLots) {
-                randomLots = roundToTwoDecimal(totalLots - totalPlacedLots);
+            // 检查生成的随机手数是否超过剩余手数
+            if (totalPlacedLots.add(randomLots).compareTo(totalLots) > 0) {
+                randomLots = totalLots.subtract(totalPlacedLots).setScale(2, RoundingMode.HALF_UP);
             }
 
             // 防止生成的订单手数为 0
-            if (randomLots > 0) {
+            if (randomLots.compareTo(BigDecimal.ZERO) > 0) {
                 orders.add(randomLots);
-                totalPlacedLots += randomLots;
+                totalPlacedLots = totalPlacedLots.add(randomLots);
                 orderCountNum++;
             }
         }
 
-// 如果还有剩余手数，按比例分配给每个订单
-        double remainingLots = roundToTwoDecimal(totalLots - totalPlacedLots);
-        if (remainingLots > 0) {
-            double lotsToAddPerOrder = roundToTwoDecimal(remainingLots / orderCountNum);
-            double cumulativeRemainder = remainingLots - lotsToAddPerOrder * orderCountNum;
+        // 如果还有剩余手数，按比例分配给每个订单
+        BigDecimal remainingLots = totalLots.subtract(totalPlacedLots).setScale(2, RoundingMode.HALF_UP);
+        if (remainingLots.compareTo(BigDecimal.ZERO) > 0 && !orders.isEmpty()) {
+            BigDecimal lotsToAddPerOrder = remainingLots.divide(new BigDecimal(orderCountNum), 2, RoundingMode.DOWN);
+
+            BigDecimal cumulativeRemainder = remainingLots.subtract(lotsToAddPerOrder.multiply(new BigDecimal(orderCountNum)));
 
             for (int i = 0; i < orders.size(); i++) {
-                double updatedOrder = roundToTwoDecimal(orders.get(i) + lotsToAddPerOrder);
-                if (cumulativeRemainder > 0) {
-                    updatedOrder = roundToTwoDecimal(updatedOrder + 0.01);  // 分配余数
-                    cumulativeRemainder -= 0.01;
+                BigDecimal updatedOrder = orders.get(i).add(lotsToAddPerOrder).setScale(2, RoundingMode.HALF_UP);
+                if (cumulativeRemainder.compareTo(BigDecimal.ZERO) > 0) {
+                    updatedOrder = updatedOrder.add(new BigDecimal("0.01"));
+                    cumulativeRemainder = cumulativeRemainder.subtract(new BigDecimal("0.01"));
                 }
                 orders.set(i, updatedOrder);
             }
         }
 
-// 最终确认总手数
-        double finalTotal = roundToTwoDecimal(orders.stream().mapToDouble(Double::doubleValue).sum());
-        if (finalTotal < totalLots) {
-            double remainingDiff = roundToTwoDecimal(totalLots - finalTotal);
-            int randomOrderIndex = new Random().nextInt(orders.size());  // 随机选择一个订单分配剩余手数
-            double updatedOrder = roundToTwoDecimal(orders.get(randomOrderIndex) + remainingDiff);
-            orders.set(randomOrderIndex, updatedOrder);
+        // 最终确认总手数并调整误差
+        BigDecimal finalTotal = orders.stream().reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+        if (finalTotal.compareTo(totalLots) > 0) {
+            BigDecimal excess = finalTotal.subtract(totalLots);
+            for (int i = 0; i < orders.size() && excess.compareTo(BigDecimal.ZERO) > 0; i++) {
+                BigDecimal order = orders.get(i);
+                BigDecimal adjustment = order.min(excess).setScale(2, RoundingMode.HALF_UP);
+                orders.set(i, order.subtract(adjustment));
+                excess = excess.subtract(adjustment);
+            }
+        } else if (finalTotal.compareTo(totalLots) < 0) {
+            BigDecimal deficit = totalLots.subtract(finalTotal);
+            int randomOrderIndex = rand.nextInt(orders.size());
+            orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
 
-// 过滤 0 值
-        orders = orders.stream().filter(o -> o > 0).collect(Collectors.toList());
-
+        // 过滤 0 值
+        orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
         log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orders.size());
 
         if (orders.isEmpty()) {
@@ -1079,21 +1085,22 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (pr.compareTo(BigDecimal.ONE)!=0) {
             // 使用索引更新列表中的值
             for (int i = 0; i < orders.size(); i++) {
-                BigDecimal orderValue = BigDecimal.valueOf(orders.get(i));
+                BigDecimal orderValue = orders.get(i);
                 BigDecimal newOrderValue = orderValue.multiply(pr);
 
                 if (newOrderValue.compareTo(new BigDecimal("0.01")) < 0) {
                     // 如果小于 0.01，则设置为 0.01
-                    orders.set(i, 0.01);
+                    orders.set(i, new BigDecimal("0.01"));
                 } else {
                     // 否则将新的值设置回 orders 列表
-                    orders.set(i, newOrderValue.doubleValue());
+                    orders.set(i, newOrderValue);
                 }
             }
         }
         log.info("下单数量{}",orders);
         // 执行订单操作
-        executeOrder(ipAdd,serverName,platform,brokerName,interval, orderCountNum, orders, traderId, account, quoteClient, symbol, type, orderNo,vo.getPlacedType());
+        List<Double> collect = orders.stream().map(BigDecimal::doubleValue).collect(Collectors.toList());
+        executeOrder(ipAdd,serverName,platform,brokerName,interval, orderCountNum,collect, traderId, account, quoteClient, symbol, type, orderNo,vo.getPlacedType());
     }
 
     // 保留两位小数的方法

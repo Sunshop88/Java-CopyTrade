@@ -2,8 +2,6 @@ package net.maku.subcontrol.trader.strategy;
 
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.subcontrol.service.IOperationStrategy;
-import net.maku.subcontrol.trader.AbstractOperation;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 

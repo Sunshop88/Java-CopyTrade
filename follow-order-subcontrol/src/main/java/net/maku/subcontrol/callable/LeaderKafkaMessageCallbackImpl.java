@@ -33,7 +33,7 @@ public class LeaderKafkaMessageCallbackImpl extends AbstractKafkaMessageCallback
         log.info("喊单账号：{},收到{} {}", LeaderApiTrader.getTrader().getAccount(), consumerRecord.key(), consumerRecord.value());
         scheduledExecutorService.submit(() -> {
             try {
-                tradeOperation(consumerRecord);
+                tradeOperation(consumerRecord,null);
             } catch (Exception ex) {
                 log.error("账号：{},收到{}-{}处理失败", LeaderApiTrader.getTrader().getAccount(), consumerRecord.key(), consumerRecord.value(), ex);
             }

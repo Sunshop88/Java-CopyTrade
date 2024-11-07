@@ -1,7 +1,7 @@
-package net.maku.followcom.dao;
+package net.maku.subcontrol.dao;
 
 import net.maku.framework.mybatis.dao.BaseDao;
-import net.maku.followcom.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

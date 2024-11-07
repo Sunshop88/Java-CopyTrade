@@ -1,6 +1,7 @@
 package net.maku.system.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
@@ -125,8 +126,8 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
             vo.getVpsList().forEach(o->{
                 FollowVpsUserEntity followVpsUserEntity = new FollowVpsUserEntity();
                 followVpsUserEntity.setUserId(entity.getId());
-                followVpsUserEntity.setVpsId(o);
-                followVpsUserEntity.setVpsName(followVpsService.getById(o).getName());
+                followVpsUserEntity.setVpsId(o.getId());
+                followVpsUserEntity.setVpsName(o.getName());
                 list.add(followVpsUserEntity);
             });
             followVpsUserService.saveBatch(list);
@@ -163,14 +164,14 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         sysUserTokenService.updateCacheAuthByUserId(entity.getId());
 
         //保存VPS权限
-        followVpsUserService.removeById(entity.getId());
+        followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,entity.getId()));
         if (ObjectUtil.isNotEmpty(vo.getVpsList())){
             List<FollowVpsUserEntity> list=new ArrayList<>();
             vo.getVpsList().forEach(o->{
                 FollowVpsUserEntity followVpsUserEntity = new FollowVpsUserEntity();
                 followVpsUserEntity.setUserId(entity.getId());
-                followVpsUserEntity.setVpsId(o);
-                followVpsUserEntity.setVpsName(followVpsService.getById(o).getName());
+                followVpsUserEntity.setVpsId(o.getId());
+                followVpsUserEntity.setVpsName(o.getName());
                 list.add(followVpsUserEntity);
             });
             followVpsUserService.saveBatch(list);

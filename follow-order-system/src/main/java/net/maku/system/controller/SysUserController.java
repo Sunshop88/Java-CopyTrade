@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
@@ -83,13 +85,23 @@ public class SysUserController {
 
         //用户VPS
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+id))){
-            vo.setVpsList((List<Integer>) redisCache.get(Constant.SYSTEM_VPS_USER+id));
+            vo.setVpsList((List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER+id));
         }else {
-            List<Integer> list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId())).stream().map(FollowVpsUserEntity::getVpsId).toList();
-            redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(), JSONObject.toJSON(list));
-            vo.setVpsList(list);
+            List<FollowVpsUserEntity> list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,id));
+            List<VpsUserVO> vpsUserVOS = convertoVpsUser(list);
+            redisCache.set(Constant.SYSTEM_VPS_USER+ id, JSONObject.toJSON(vpsUserVOS));
+            vo.setVpsList(vpsUserVOS);
         }
         return Result.ok(vo);
+    }
+
+    private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
+      return list.stream().map(o->{
+            VpsUserVO vpsUserVO = new VpsUserVO();
+            vpsUserVO.setId(o.getVpsId());
+            vpsUserVO.setName(o.getVpsName());
+            return vpsUserVO;
+        }).toList();
     }
 
     @GetMapping("info")

@@ -7,7 +7,6 @@ import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowOrderSendService;
-import net.maku.followcom.service.FollowSubscribeOrderService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;

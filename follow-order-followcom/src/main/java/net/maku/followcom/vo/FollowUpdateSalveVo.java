@@ -7,18 +7,12 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Data
-@Schema(description = "添加跟单账号")
-public class FollowAddSalveVo  implements Serializable {
+@Schema(description = "修改跟单账号")
+public class FollowUpdateSalveVo implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "喊单账号")
-    private Long traderId;
-
-    @Schema(description = "平台")
-    private String platform;
-
-    @Schema(description = "账号")
-    private String account;
+    @Schema(description = "账号Id")
+    private Long id;
 
     @Schema(description = "密码")
     private String password;
@@ -50,10 +44,6 @@ public class FollowAddSalveVo  implements Serializable {
     @Schema(description = "下单方式")
     private Integer placedType;
 
-    private Long slaveId;
-
-    private String slaveAccount;
-
-    private String masterAccount;
+    private Long slaveAccount;
 
 }

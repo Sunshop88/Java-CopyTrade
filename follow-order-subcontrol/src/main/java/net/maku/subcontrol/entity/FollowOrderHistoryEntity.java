@@ -1,7 +1,8 @@
-package net.maku.followcom.entity;
+package net.maku.subcontrol.entity;
 
-import lombok.Data;
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

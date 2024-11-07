@@ -1,11 +1,9 @@
-package net.maku.followcom.vo;
+package net.maku.subcontrol.vo;
 
-import lombok.Data;
-import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
-import com.fhs.core.trans.anno.Trans;
-import com.fhs.core.trans.constant.TransType;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.util.Date;
 

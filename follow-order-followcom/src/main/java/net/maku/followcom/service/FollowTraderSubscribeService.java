@@ -7,6 +7,7 @@ import net.maku.followcom.vo.FollowTraderSubscribeVO;
 import net.maku.followcom.query.FollowTraderSubscribeQuery;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订阅关系表
@@ -35,4 +36,6 @@ public interface FollowTraderSubscribeService extends BaseService<FollowTraderSu
     FollowTraderSubscribeEntity subscription(Long slaveId, Long masterId);
 
     void addSubscription(FollowAddSalveVo vo);
+
+    Map<String,Object> getStatus(String account, String account1);
 }

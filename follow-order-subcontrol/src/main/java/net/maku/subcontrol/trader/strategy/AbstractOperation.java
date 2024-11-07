@@ -1,25 +1,36 @@
-package net.maku.subcontrol.trader;
+package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.DirectionEnum;
 import net.maku.followcom.enums.TraderLogEnum;
 import net.maku.followcom.enums.TraderLogTypeEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
+import net.maku.subcontrol.entity.FollowRepairOrderEntity;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.enums.TraderRepairOrderEnum;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.rule.FollowRule;
+import net.maku.subcontrol.service.FollowOrderHistoryService;
+import net.maku.subcontrol.service.FollowRepairOrderService;
+import net.maku.subcontrol.service.FollowSubscribeOrderService;
+import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
+import net.maku.subcontrol.service.impl.FollowRepairOrderServiceImpl;
+import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -31,8 +42,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -45,7 +58,6 @@ import static online.mtapi.mt4.Op.Sell;
 public class AbstractOperation {
     protected FollowTraderSubscribeService leaderCopierService;
     protected FollowSubscribeOrderService openOrderMappingService;
-    protected FollowOrderHistoryService historyOrderService;
     protected RedisUtil redisUtil;
     protected String mapKey;
     protected FollowRule followRule;
@@ -56,6 +68,7 @@ public class AbstractOperation {
     protected FollowPlatformService followPlatformService;
     protected FollowVpsService followVpsService;
     protected FollowTraderLogService followTraderLogService;
+    protected FollowRepairOrderService followRepairOrderService;
     int whileTimes = 20;
 
     public AbstractOperation(FollowTraderEntity trader) {
@@ -63,7 +76,6 @@ public class AbstractOperation {
         redisUtil = SpringContextUtils.getBean(RedisUtil.class);
         leaderCopierService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
         openOrderMappingService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
-        historyOrderService = SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
         this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         followRule = new FollowRule();
         this.followOrderHistoryService=SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
@@ -72,6 +84,7 @@ public class AbstractOperation {
         this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
         this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
         this.followTraderLogService=SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
+        this.followRepairOrderService=SpringContextUtils.getBean(FollowRepairOrderServiceImpl.class);
     }
 
     protected String comment(EaOrderInfo orderInfo) {
@@ -117,9 +130,14 @@ public class AbstractOperation {
 
 
     public void orderSend(ConsumerRecord<String, Object> record, int retry, FollowTraderEntity trader) {
+        EaOrderInfo orderInfo = (EaOrderInfo) record.value();
+        //查看跟单关系
+        List<FollowTraderSubscribeEntity> subscribeEntityList = leaderCopierService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId())
+                .eq(FollowTraderSubscribeEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue())
+                .eq(FollowTraderSubscribeEntity::getFollowOpen,CloseOrOpenEnum.OPEN.getValue()));
+        List<Long> slaveList = subscribeEntityList.stream().map(o -> o.getSlaveId()).toList();
         threeStrategyThreadPoolExecutor.schedule(()->{
             //生成日志
-            EaOrderInfo orderInfo = (EaOrderInfo) record.value();
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
             FollowVpsEntity followVpsEntity = followVpsService.getById(trader.getServerId());
@@ -143,6 +161,27 @@ public class AbstractOperation {
             }
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogService.save(followTraderLogEntity);
+            //对比当前下单关系和已下单情况
+            List<Long> result = new ArrayList<>(slaveList);
+            result.removeAll(list.stream().map(o->o.getSlaveId()).toList());
+            if (ObjectUtil.isNotEmpty(result)){
+                result.parallelStream().forEach(o->{
+                    //漏单记录
+                    FollowRepairOrderEntity followRepairOrderEntity = new FollowRepairOrderEntity();
+                    followRepairOrderEntity.setMasterId(orderInfo.getMasterId());
+                    followRepairOrderEntity.setType(TraderRepairOrderEnum.SEND.getType());
+                    followRepairOrderEntity.setCreateTime(LocalDateTime.now());
+                    followRepairOrderEntity.setMasterAccount(orderInfo.getAccount());
+                    followRepairOrderEntity.setMasterLots(BigDecimal.valueOf(orderInfo.getLots()));
+                    followRepairOrderEntity.setMasterOpenTime(orderInfo.getOpenTime());
+                    followRepairOrderEntity.setMasterSymbol(orderInfo.getSymbol());
+                    followRepairOrderEntity.setMasterTicket(orderInfo.getTicket());
+                    followRepairOrderEntity.setSlaveAccount(followTraderService.get(o).getAccount());
+                    followRepairOrderEntity.setSlaveId(o);
+                    followRepairOrderService.save(followRepairOrderEntity);
+                });
+            }
+
         },5, TimeUnit.SECONDS);
     }
 
@@ -160,6 +199,11 @@ public class AbstractOperation {
         followOrderHistory.setSize(BigDecimal.valueOf(orderInfo.getLots()));
         followOrderHistory.setCreateTime(LocalDateTime.now());
         followOrderHistoryService.save(followOrderHistory);
+        //查看跟单关系
+        List<FollowTraderSubscribeEntity> subscribeEntityList = leaderCopierService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId())
+                .eq(FollowTraderSubscribeEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue())
+                .eq(FollowTraderSubscribeEntity::getFollowClose,CloseOrOpenEnum.OPEN.getValue()));
+        List<Long> slaveList = subscribeEntityList.stream().map(o -> o.getSlaveId()).toList();
         threeStrategyThreadPoolExecutor.schedule(()->{
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
@@ -183,7 +227,31 @@ public class AbstractOperation {
                 remark=remark+"暂无跟单";
             }
             followTraderLogEntity.setLogDetail(remark);
-            followTraderLogService.save(followTraderLogEntity);
+            followTraderLogService.save(followTraderLogEntity);  //对比当前跟单关系和已平仓情况
+            List<Long> result = new ArrayList<>(slaveList);
+            result.removeAll(list.stream().map(o->o.getSlaveId()).toList());
+            List<FollowSubscribeOrderEntity> followSubscribeOrderEntities = openOrderMappingService.list(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()).isNull(FollowSubscribeOrderEntity::getSlaveCloseTime));
+            Map<Long, FollowSubscribeOrderEntity> collect = followSubscribeOrderEntities.stream().collect(Collectors.toMap(FollowSubscribeOrderEntity::getSlaveId, i -> i));
+            if (ObjectUtil.isNotEmpty(result)){
+                result.parallelStream().forEach(o->{
+                    //漏单记录
+                    FollowRepairOrderEntity followRepairOrderEntity = new FollowRepairOrderEntity();
+                    followRepairOrderEntity.setMasterId(orderInfo.getMasterId());
+                    followRepairOrderEntity.setType(TraderRepairOrderEnum.CLOSE.getType());
+                    followRepairOrderEntity.setCreateTime(LocalDateTime.now());
+                    followRepairOrderEntity.setMasterAccount(orderInfo.getAccount());
+                    followRepairOrderEntity.setMasterLots(BigDecimal.valueOf(orderInfo.getLots()));
+                    followRepairOrderEntity.setMasterOpenTime(orderInfo.getOpenTime());
+                    followRepairOrderEntity.setMasterSymbol(orderInfo.getSymbol());
+                    followRepairOrderEntity.setMasterTicket(orderInfo.getTicket());
+                    followRepairOrderEntity.setSlaveAccount(followTraderService.get(o).getAccount());
+                    followRepairOrderEntity.setSlaveId(o);
+                    //保存订单关系ID
+                    followRepairOrderEntity.setSubscribeId(collect.get(o).getId());
+                    followRepairOrderService.save(followRepairOrderEntity);
+                });
+            }
+
         },5, TimeUnit.SECONDS);
     }
 

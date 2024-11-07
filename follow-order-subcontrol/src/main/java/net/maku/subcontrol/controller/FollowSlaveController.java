@@ -2,7 +2,9 @@ package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -17,6 +19,8 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.operatelog.annotations.OperateLog;
+import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.followcom.vo.FollowAddSalveVo;
@@ -29,6 +33,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 跟单
@@ -43,9 +48,12 @@ public class FollowSlaveController {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
     private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final FollowOrderHistoryService followOrderHistoryService;
+    private final FollowRepairOrderService followRepairOrderService;
+    private final RedisCache redisCache;
     private final FollowVpsService followVpsService;
-    private final FollowTestSpeedService followTestSpeedService;
-    private final FollowTestDetailService followTestDetailService;
+
+
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -55,12 +63,19 @@ public class FollowSlaveController {
             if (ObjectUtil.isEmpty(followTraderEntity)){
                 throw new ServerException("请输入正确喊单账号");
             }
+
+            //查看是否存在循环跟单情况
+            FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
+            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)){
+                throw new ServerException("存在循环跟单,请检查");
+            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
             followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
+
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVo);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(convert);
@@ -74,12 +89,58 @@ public class FollowSlaveController {
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType=PlacedType.forValue(vo.getPlacedType());;
                 //建立跟单关系
-                vo.setSlaveAccount(followTraderVO.getId());
+                vo.setSlaveId(followTraderVO.getId());
+                vo.setSlaveAccount(vo.getAccount());
+                vo.setMasterAccount(followTraderEntity.getAccount());
                 followTraderSubscribeService.addSubscription(vo);
+                copierApiTrader.startTrade();
+                //保存状态到redis
+                Map<String,Object> map=new HashMap<>();
+                map.put("followStatus",vo.getFollowStatus());
+                map.put("followOpen",vo.getFollowOpen());
+                map.put("followClose",vo.getFollowClose());
+                map.put("followRep",vo.getFollowRep());
+                //设置跟单关系缓存值 保存状态
+                redisCache.set(Constant.FOLLOW_MASTER_SLAVE+followTraderEntity.getAccount()+":"+vo.getAccount(), JSONObject.toJSON(map));
+            });
+        }catch (Exception e){
+            throw new ServerException("保存失败"+e);
+        }
+
+        return Result.ok();
+    }
+
+    @PostMapping("updateSlave")
+    @Operation(summary = "修改跟单账号")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> updateSlave(@RequestBody FollowUpdateSalveVo vo){
+        try {
+            FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
+            BeanUtil.copyProperties(vo,followTraderEntity);
+            followTraderService.updateById(followTraderEntity);
+            //查看绑定跟单账号
+            FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
+                    .eq(FollowTraderSubscribeEntity::getSlaveId,vo.getId()));
+            BeanUtil.copyProperties(vo,followTraderSubscribeEntity,"id");
+            //更新订阅状态
+            followTraderSubscribeService.updateById(followTraderSubscribeEntity);
+            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE+followTraderSubscribeEntity.getMasterAccount()+":"+followTraderEntity.getAccount());
+            //删除缓存
+            copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
+            //启动账户
+            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
+            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
+                followTraderService.removeById(followTraderEntity.getId());
+                return Result.error();
+            }
+            ThreadPoolUtils.execute(()->{
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                //设置下单方式
+                copierApiTrader.orderClient.PlacedType=PlacedType.forValue(vo.getPlacedType());;
                 copierApiTrader.startTrade();
             });
         }catch (Exception e){
-            log.error("保存失败"+e);
+            throw new ServerException("修改失败"+e);
         }
 
         return Result.ok();
@@ -102,8 +163,8 @@ public class FollowSlaveController {
     @GetMapping("transferVps")
     @Operation(summary = "旧账号清理缓存")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> transferVps(@PathVariable("oldId") Long oldId){
-        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, oldId));
+    public Result<Boolean> transferVps(){
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         list.forEach(o->leaderApiTradersAdmin.removeTrader(o.getId().toString()));
         return Result.ok(true);
     }
@@ -111,8 +172,8 @@ public class FollowSlaveController {
     @GetMapping("startNewVps")
     @Operation(summary = "新账号启动")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> startNewVps(@PathVariable("newId") Long newId){
-        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, newId));
+    public Result<Boolean> startNewVps(){
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         try {
             leaderApiTradersAdmin.startUp(list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
             copierApiTradersAdmin.startUp(list.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList());
@@ -120,6 +181,21 @@ public class FollowSlaveController {
             throw new ServerException("新Vps账号启动异常"+e);
         }
         return Result.ok(true);
+    }
+
+
+    @GetMapping("histotyOrderList")
+    @Operation(summary = "历史订单")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<PageResult<FollowOrderHistoryVO>> histotyOrderList(@ParameterObject FollowOrderHistoryQuery followOrderHistoryQuery){
+        return Result.ok(followOrderHistoryService.page(followOrderHistoryQuery));
+    }
+
+    @GetMapping("missOrderList")
+    @Operation(summary = "漏单列表")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<PageResult<FollowRepairOrderVO>> missOrderList(@ParameterObject FollowRepairOrderQuery followOrderHistoryQuery){
+        return Result.ok(followRepairOrderService.page(followOrderHistoryQuery));
     }
 
     @PostMapping("start")

@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.system.entity.SysOrgEntity;
 import org.hibernate.validator.constraints.Range;
@@ -88,5 +89,5 @@ public class SysUserVO implements Serializable, TransPojo {
     private LocalDateTime createTime;
 
     @Schema(description = "VPS列表")
-    private List<Integer> vpsList;
+    private List<VpsUserVO> vpsList;
 }

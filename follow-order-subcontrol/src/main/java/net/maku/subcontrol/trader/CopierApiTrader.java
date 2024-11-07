@@ -7,7 +7,6 @@ import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.callable.CopierKafkaMessageCallbackImpl;
 import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
 import net.maku.subcontrol.listener.impl.ConsumerRebalanceListenerImpl;
-import net.maku.subcontrol.task.CycleCloseOrderTask;
 import net.maku.subcontrol.task.UpdateTraderInfoTask;
 import net.maku.subcontrol.util.KafkaTopicUtil;
 
@@ -70,8 +69,6 @@ public class CopierApiTrader extends AbstractApiTrader {
     private Boolean startTrade(ExecutorService executorService, List<String> topics) {
         log.info("消费copy"+topics);
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(CopierApiTrader.this), 2, 30, TimeUnit.SECONDS);
-//        cycleCloseOrderTask = new CycleCloseOrderTask(CopierApiTrader.this, kafkaProducer);
-//        super.cycleFuture = this.scheduledExecutorService.schedule(cycleCloseOrderTask, 60, TimeUnit.SECONDS);
         this.cldKafkaConsumer.setKafkaMessageCallback(new CopierKafkaMessageCallbackImpl(this));
         return this.cldKafkaConsumer.startConsume(KafkaTopicPrefixSuffix.TENANT, topics, executorService, new ConsumerRebalanceListenerImpl<>(this.cldKafkaConsumer), 100);
     }

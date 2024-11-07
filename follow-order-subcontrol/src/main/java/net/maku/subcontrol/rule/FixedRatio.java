@@ -35,7 +35,7 @@ public class FixedRatio implements ICopyTradeStrategy {
 
     @Override
     public double lots(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo,double equity, String currency) {
-        return eaOrderInfo.getLots() * eaLeaderCopier.getFollowParam().doubleValue() / 100;
+        return eaOrderInfo.getLots() * eaLeaderCopier.getFollowParam().doubleValue();
     }
 
 }

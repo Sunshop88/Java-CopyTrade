@@ -32,6 +32,20 @@ public class FollowTraderSubscribeEntity {
 	@TableField(value = "slave_id")
 	private Long slaveId;
 
+
+	/**
+	 * 交易员账号
+	 */
+	@TableField(value = "master_account")
+	private String masterAccount;
+
+	/**
+	 * 跟单者账号
+	 */
+	@TableField(value = "slave_account")
+	private String slaveAccount;
+
+
 	/**
 	* 跟随模式0-固定手数 1-手数比例 2-净值比例
 	*/
@@ -85,12 +99,6 @@ public class FollowTraderSubscribeEntity {
 	*/
 	@TableField(value = "follow_direction")
 	private Integer followDirection;
-
-	/**
-	* 暂停订阅0-否 1-是
-	*/
-	@TableField(value = "pause")
-	private Integer pause;
 
 	/**
 	* 备注

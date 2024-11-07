@@ -1,6 +1,8 @@
 package net.maku.followcom.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,6 +10,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowTraderSubscribeConvert;
@@ -26,8 +29,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订阅关系表
@@ -103,7 +108,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
     @Override
     public List<String> initSubscriptions(Long id) {
         //清空缓存该跟单者所有的订阅关系的缓存
-        redisUtil.del(id.toString());
+        redisUtil.del(Constant.FOLLOW_SUB_TRADER+id);
 
         //从数据库中获取到该跟单者的所有订阅关系
         List<FollowTraderSubscribeEntity> masterSlaves = this.list(Wrappers.<FollowTraderSubscribeEntity>lambdaQuery().eq(FollowTraderSubscribeEntity::getSlaveId, id)
@@ -112,7 +117,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
         List<String> subscriptions = new LinkedList<>();
         for (FollowTraderSubscribeEntity item : masterSlaves) {
             subscriptions.add(item.getMasterId().toString());
-            this.redisUtil.hSet(id.toString(), item.getMasterId().toString(), item);
+            this.redisUtil.hSet(Constant.FOLLOW_SUB_TRADER+id, item.getMasterId().toString(), item);
         }
         return subscriptions;
     }
@@ -120,7 +125,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
     @Override
     public FollowTraderSubscribeEntity subscription(Long slaveId, Long masterId) {
         //查看缓存
-        Object hGet = this.redisUtil.hGet(slaveId.toString(), masterId.toString());
+        Object hGet = this.redisUtil.hGet(Constant.FOLLOW_SUB_TRADER+slaveId.toString(), masterId.toString());
         if (!ObjectUtils.isEmpty(hGet)) {
             //缓存存在，直接返回
             return (FollowTraderSubscribeEntity) hGet;
@@ -131,7 +136,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
 
             if (!ObjectUtils.isEmpty(masterSlave)) {
                 //数据库中存在
-                this.redisUtil.hSet(slaveId.toString(), masterId.toString(), masterSlave);
+                this.redisUtil.hSet(Constant.FOLLOW_SUB_TRADER+slaveId.toString(), masterId.toString(), masterSlave);
                 return masterSlave;
             } else {
                 //数据库中不存在
@@ -146,11 +151,27 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
         this.save(followTraderSubscribeEntity);
     }
 
+    @Override
+    public Map<String, Object> getStatus(String masterAccount, String slaveAccount) {
+        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterAccount+":"+slaveAccount))){
+            return (Map<String, Object>)redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterAccount+":"+slaveAccount);
+        }else {
+            FollowTraderSubscribeEntity traderSubscribeEntity = this.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, masterAccount).eq(FollowTraderSubscribeEntity::getSlaveAccount, slaveAccount));
+            Map<String,Object> map=new HashMap<>();
+            map.put("followStatus",traderSubscribeEntity.getFollowStatus());
+            map.put("followOpen",traderSubscribeEntity.getFollowOpen());
+            map.put("followClose",traderSubscribeEntity.getFollowClose());
+            map.put("followRep",traderSubscribeEntity.getFollowRep());
+            //设置跟单关系缓存值 保存状态
+            redisUtil.set(Constant.FOLLOW_MASTER_SLAVE+traderSubscribeEntity.getMasterAccount()+":"+traderSubscribeEntity.getSlaveAccount(), JSONObject.toJSON(map));
+            return map;
+        }
+    }
+
     private FollowTraderSubscribeEntity convertSubscribeConvert(FollowAddSalveVo vo) {
         FollowTraderSubscribeEntity followTraderSubscribeEntity=new FollowTraderSubscribeEntity();
         BeanUtil.copyProperties(vo,followTraderSubscribeEntity);
         followTraderSubscribeEntity.setMasterId(vo.getTraderId());
-        followTraderSubscribeEntity.setSlaveId(vo.getSlaveAccount());
         followTraderSubscribeEntity.setCreator(SecurityUser.getUserId());
         followTraderSubscribeEntity.setCreateTime(LocalDateTime.now());
         return followTraderSubscribeEntity;

@@ -53,9 +53,6 @@ public class FollowTraderSubscribeExcelVO implements TransPojo {
 	@ExcelProperty("跟单方向0-正向1-反向")
 	private Integer followDirection;
 
-	@ExcelProperty("暂停订阅0-否 1-是")
-	private Integer pause;
-
 	@ExcelProperty("备注")
 	private String remark;
 

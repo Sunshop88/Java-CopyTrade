@@ -1,17 +1,16 @@
-package net.maku.followcom.entity;
+package net.maku.subcontrol.entity;
 
-import com.cld.utils.date.ThreeStrategyDateUtil;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import com.baomidou.mybatisplus.annotation.*;
 import lombok.NoArgsConstructor;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.pojo.EaOrderInfo;
 import online.mtapi.mt4.Order;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 /**
  * 订阅关系表

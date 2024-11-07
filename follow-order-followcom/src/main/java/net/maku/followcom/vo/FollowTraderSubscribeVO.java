@@ -57,9 +57,6 @@ public class FollowTraderSubscribeVO implements Serializable {
 	@Schema(description = "跟单方向0-正向1-反向")
 	private Integer followDirection;
 
-	@Schema(description = "暂停订阅0-否 1-是")
-	private Integer pause;
-
 	@Schema(description = "备注")
 	private String remark;
 

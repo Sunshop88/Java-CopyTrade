@@ -3,8 +3,8 @@ package net.maku.subcontrol.trader;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.AcEnum;
-import net.maku.subcontrol.pojo.SynInfo;
-import net.maku.subcontrol.service.IOperationStrategy;
+import net.maku.subcontrol.trader.strategy.AbstractOperation;
+import net.maku.subcontrol.trader.strategy.IOperationStrategy;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 /**

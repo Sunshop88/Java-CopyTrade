@@ -1,23 +1,17 @@
 package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CopyTradeFlag;
 import net.maku.followcom.pojo.EaOrderInfo;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowVarietyService;
 import net.maku.framework.common.constant.Constant;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
-import net.maku.subcontrol.pojo.LiveOrderInfo;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.rule.FollowRule;
-import net.maku.subcontrol.service.IOperationStrategy;
 import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.trader.AbstractOperation;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Op;
@@ -155,7 +149,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
                     //缓存跟单者的开仓信息
                     CachedCopierOrderInfo cachedCopierOrderInfo = new CachedCopierOrderInfo(order);
-                    redisUtil.hset(mapKey, Long.toString(orderInfo.getTicket()), cachedCopierOrderInfo, 0);
+                    redisUtil.hset(Constant.FOLLOW_SUB_ORDER+mapKey, Long.toString(orderInfo.getTicket()), cachedCopierOrderInfo, 0);
                 } catch (Exception exception) {
                     if (AbstractApiTrader.availableException4.contains(exception.getMessage())) {
                         log.info(exception.getMessage());

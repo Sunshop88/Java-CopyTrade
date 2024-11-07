@@ -27,7 +27,6 @@ import net.maku.subcontrol.even.OrderUpdateHandler;
 import net.maku.subcontrol.even.CopierOrderUpdateEventHandlerImpl;
 import net.maku.subcontrol.even.LeaderOrderUpdateEventHandlerImpl;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
-import net.maku.subcontrol.task.CycleCloseOrderTask;
 import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -49,16 +48,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract class AbstractApiTrader extends ApiTrader {
 
-    private final Object lock = new Object();
     public QuoteClient quoteClient;
     @Getter
     @Setter
     protected FollowTraderEntity trader;
     protected ScheduledFuture<?> updateTradeInfoFuture;
-    protected ScheduledFuture<?> cycleFuture;
-//    @Setter
-//    @Getter
-//    protected IEquityRiskListener equityRiskListener;
 
     /**
      * 一个账号同时只能处理一个同步持仓订单
@@ -76,14 +70,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public static Semaphore semaCommonTrade = new Semaphore(100);
     protected Semaphore reconnectSemaphore = new Semaphore(1);
     protected int reconnectTimes = 0;
-    private QuoteEventArgs quoteEventArgs;
     @Getter
     protected Map<String, EaSymbolInfo> symbolInfoMap = new HashMap<>();
     public OrderClient orderClient;
     public static List<String> availableException4 = new LinkedList<>();
-    protected CycleCloseOrderTask cycleCloseOrderTask;
-    protected Map<LocalDate, BigDecimal> equityMap = new HashMap<>(1);
-    private Date apiAnalysisBeginDate = null;
     OnQuoteTraderHandler onQuoteTraderHandler;
     OnQuoteHandler onQuoteHandler;
     OrderUpdateHandler orderUpdateHandler;
@@ -99,7 +89,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port);
         this.trader = trader;
         this.kafkaProducer = kafkaProducer;
-//        this.equityRiskListener = new EquityRiskListenerImpl();
         initService();
         this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
         this.redisCache=SpringContextUtils.getBean(RedisCache.class);
@@ -107,7 +96,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
 
     public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
-//        this.equityRiskListener = new EquityRiskListenerImpl4();
         this.trader = trader;
         this.kafkaProducer = kafkaProducer;
         initService();
@@ -199,113 +187,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
         return result;
     }
 
-    public void updatePrefixSuffix() throws TimeoutException, ConnectException {
-        if (!initPrefixSuffix) {
-            prefixSuffixList.clear();
-            // initPrefixSuffix变量的作用是：如果已经初始化则不需要继续判断，解决周末货币品种不可交易的情况；
-            // 即周末(未开市)计算不出合理的前后缀，等到周一(开始后)计算成功后就不需要再反复计算了。
-
-            //1-过滤出包含EURUSD（不区分大小写）的品种名
-            List<String> eurusds = Arrays.stream(this.quoteClient.Symbols()).filter(symbol -> StrUtil.containsAnyIgnoreCase(symbol, EURUSD)).sorted(Comparator.comparingInt(String::length)).collect(Collectors.toList());
-
-            //2-遍历包含了EURUSD的所有货币对
-            for (String symbol : eurusds) {
-                //2.1-判断该货币对是否是正常可交易的
-                try {
-                    //通过TRADEALLOWED来判断该品种是否可交易
-                    if (!tradeAllowed(symbol)) {
-                        continue;
-                    } else {
-                        eurusd = symbol;
-                        this.quoteClient.Subscribe(eurusd);
-                        //成功初始化
-                        initPrefixSuffix = Boolean.TRUE;
-                    }
-                } catch (Exception e) {
-                    log.error("", e);
-                }
-
-                //2.2-不区分大小写找出EURUSD的准确位置，之前的就是前缀，之后的就是后缀
-                Matcher matcher = pattern.matcher(symbol);
-                while (matcher.find()) {
-                    String p = symbol.substring(0, matcher.start());
-                    String s = symbol.substring(matcher.end());
-                    String psItem = (ObjectUtils.isEmpty(p) ? EMPTY : p) + StrUtil.COMMA + (ObjectUtils.isEmpty(s) ? EMPTY : s);
-                    //前后缀配对的方式存储
-                    if (!prefixSuffixList.contains(psItem)) {
-                        prefixSuffixList.add((ObjectUtils.isEmpty(p) ? EMPTY : p) + StrUtil.COMMA + (ObjectUtils.isEmpty(s) ? EMPTY : s));
-                    }
-                }
-            }
-            FollowTraderEntity build = new FollowTraderEntity();
-            build.setId(trader.getId());
-            traderService.updateById(build);
-        } else {
-            log.info(" {}'s initPrefixSuffix is {}", trader.getAccount(), initPrefixSuffix);
-        }
-    }
-
-    /**
-     * 判断品种是否可以交易
-     *
-     * @param symbol 交易品种
-     * @return true 可以交易 false 不可以交易
-     */
-    public boolean tradeAllowed(String symbol) {
-        SymbolInfoEx symbolInfoEx;
-        try {
-            symbolInfoEx = this.GetSymbolInfo(symbol).Ex;
-            switch (symbolInfoEx.trade) {
-                case 0:
-                    log.debug("DISABLED");
-                    break;
-                case 1:
-                    log.debug("CLOSE_ONLY");
-                    break;
-                case 2:
-                    log.debug("FULL_ACCESS");
-                    return Boolean.TRUE;
-                case 3:
-                    log.debug("LONG_ONLY");
-                    break;
-                case 4:
-                    log.debug("SHORT_ONLY");
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + symbolInfoEx.trade);
-            }
-        } catch (InvalidSymbolException | ConnectException e) {
-            return Boolean.FALSE;
-        }
-
-
-        return Boolean.FALSE;
-    }
-
-    public boolean tradeSession(String symbol) {
-        SymbolInfoEx symbolInfoEx;
-        try {
-            symbolInfoEx = this.GetSymbolInfo(symbol).Ex;
-        } catch (InvalidSymbolException | ConnectException e) {
-            return Boolean.FALSE;
-        }
-        LocalDateTime localDateTime = this.quoteClient.ServerTime();
-        long minutes = Duration.between(localDateTime.toLocalDate().atStartOfDay(), localDateTime).toMinutes();
-
-        if (!ObjectUtils.isEmpty(symbolInfoEx)) {
-            if (symbolInfoEx.trade == 2) {
-                ConSessions session = symbolInfoEx.sessions[this.quoteClient.ServerTime().getDayOfWeek().getValue() % 7];
-                for (ConSession conSession : session.trade) {
-                    if (minutes >= conSession.open && minutes < conSession.close) {
-                        return Boolean.TRUE;
-                    }
-                }
-            }
-        }
-        return Boolean.FALSE;
-    }
-
-
     public void updateTraderInfo() {
         adjust(trader);
         log.info("更新信息++++++{}",trader.getAccount());
@@ -363,13 +244,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 .set(FollowTraderEntity::getEuqit,quoteClient.AccountEquity())
                 .set(FollowTraderEntity::getStatus,  CloseOrOpenEnum.CLOSE.getValue())
                 .set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId());
-//        Date apiAnalysisEndDate = new Date();
-//        long between = apiAnalysisBeginDate == null ? 100 : DateUtil.between(apiAnalysisBeginDate, apiAnalysisEndDate, DateUnit.MINUTE, true);
-//        if (between > 5) {
-//            apiAnalysisBeginDate = new Date();
-////            analysisThreeStrategyThreadPoolExecutor.submit(new ApiAnalysisCallable(analysisThreeStrategyThreadPoolExecutor, trader, this, new SynInfo(trader.getId().toString(), false)));
-//        }
-
         //  此处加上try的原因是，某些经济商不支持读取服务器时间的获取。或者市场关闭(ERR_MARKET_CLOSED 132)。获取失败后会抛出异常。
         try {
             lambdaUpdateWrapper.set(FollowTraderEntity::getDiff, quoteClient.ServerTimeZone() / 60);
@@ -415,19 +289,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public void removeOnQuoteHandler() {
         onQuoteHandler=null;
     }
-//    /**
-//     * 判断当前账户净值是否小于设置的最小风控净值，
-//     * <p>
-//     * 1-如果是则进行风控干预
-//     * 2-如果不是则不干预
-//     */
-//    public void riskControl(FollowTraderEntity traderFromDb) {
-//        BigDecimal riskEquity = traderFromDb == null ? BigDecimal.ZERO : traderFromDb.getMinEquity();
-//        if (riskEquity != null && riskEquity.compareTo(BigDecimal.ZERO) != 0) {
-//            equityRiskListener.onTriggered(this, riskEquity);
-//            this.updateTraderInfo();
-//        }
-//    }
 
     /**
      * 停止交易
@@ -451,19 +312,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
         }
 
-        if (!ObjectUtils.isEmpty(cycleCloseOrderTask)) {
-            try {
-                cycleCloseOrderTask.setRunning(Boolean.FALSE);
-            } catch (Exception e) {
-                log.error("cycleCloseOrderTask running false", e);
-            }
-        }
         //删除redis缓存
         redisCache.delete(Constant.TRADER_SEND+trader.getId());
         redisCache.delete(Constant.TRADER_CLOSE+trader.getId());
         redisCache.delete(Constant.TRADER_PLATFORM+trader.getId());
-
-        redisCache.deleteByPattern(Constant.TRADER_PLATFORM);
         try {
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();

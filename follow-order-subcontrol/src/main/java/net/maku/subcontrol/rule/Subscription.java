@@ -26,10 +26,6 @@ public class Subscription extends AbstractFollowRule {
             permitInfo = new PermitInfo(Boolean.FALSE, CopyTradeFlag.OF2, "订阅关系不存在", 0);
             return permitInfo;
         }
-        if (leaderCopier.getPause()==1) {
-            permitInfo = new PermitInfo(Boolean.FALSE, CopyTradeFlag.OF4, "已暂停开仓", 0);
-            return permitInfo;
-        }
 
         if (eaOrderInfo.isArrears()) {
             permitInfo = new PermitInfo(Boolean.FALSE, CopyTradeFlag.OF6, "系统暂停开仓(喊单者账号欠费)", 0);

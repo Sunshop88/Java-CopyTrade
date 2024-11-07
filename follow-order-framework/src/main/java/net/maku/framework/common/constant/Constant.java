@@ -93,4 +93,24 @@ public interface Constant {
      * 用户的vps
      */
     String SYSTEM_VPS_USER="system:vps:user:";
+
+    /**
+     * vps节点速度
+     */
+    String VPS_NODE_SPEED="vps:node:speed:";
+
+    /**
+     * 跟单关系状态开关
+     */
+    String FOLLOW_MASTER_SLAVE="follow:master:slave:";
+
+    /**
+     * 跟单关系记录
+     */
+    String FOLLOW_SUB_TRADER="follow:sub:trader:";
+
+    /**
+     * 订单关系记录
+     */
+    String FOLLOW_SUB_ORDER="follow:sub:order:";
 }

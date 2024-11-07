@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader;
 
-import net.maku.subcontrol.service.IOperationStrategy;
+import net.maku.subcontrol.trader.strategy.AbstractOperation;
+import net.maku.subcontrol.trader.strategy.IOperationStrategy;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 

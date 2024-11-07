@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -142,15 +144,27 @@ public class FollowVpsController {
     @Operation(summary = "可用vps")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<List<FollowVpsVO>> listVps(){
-        List<Integer> list;
-        //查看当前用户拥有的vps
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId()))){
-             list =(List<Integer>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+        List<VpsUserVO> list;
+        //除了admin都需要判断
+        if(!ObjectUtil.equals(SecurityUser.getUserId(),"10000")){
+            //查看当前用户拥有的vps
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId()))){
+                list =(List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+            }else {
+                List<FollowVpsUserEntity> vpsUserEntityList =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId()));
+                List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
+                redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
+                list=vpsUserVOS;
+            }
         }else {
-             list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId())).stream().map(FollowVpsUserEntity::getVpsId).toList();
-             redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(),list);
+            list=followVpsService.list().stream().map(o->{
+                VpsUserVO vpsUserVO = new VpsUserVO();
+                vpsUserVO.setName(o.getName());
+                vpsUserVO.setId(o.getId());
+                return vpsUserVO;
+            }).toList();
         }
-        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list.stream().map(o->o.getId()).toList()).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
         followVpsVOS.forEach(o->{
             o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
@@ -198,4 +212,12 @@ public class FollowVpsController {
         return Result.ok();
     }
 
+    private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
+        return list.stream().map(o->{
+            VpsUserVO vpsUserVO = new VpsUserVO();
+            vpsUserVO.setId(o.getVpsId());
+            vpsUserVO.setName(o.getVpsName());
+            return vpsUserVO;
+        }).toList();
+    }
 }
