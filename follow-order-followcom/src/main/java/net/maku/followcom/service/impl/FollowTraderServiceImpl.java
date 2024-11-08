@@ -533,7 +533,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 allOrdersCompleted.thenRun(() -> {
                     try {
                         log.info("所有间隔平仓任务已完成");
-                        followOrderCloseEntity.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                        followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
                         followOrderCloseEntity.setFinishTime(LocalDateTime.now());
                         followOrderCloseService.updateById(followOrderCloseEntity);
                         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE+vo.getTraderId()))){
