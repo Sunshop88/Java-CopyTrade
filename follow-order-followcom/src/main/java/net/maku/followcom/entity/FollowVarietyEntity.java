@@ -46,6 +46,12 @@ public class FollowVarietyEntity {
 	private String brokerSymbol;
 
 	/**
+	 * 模板
+	 */
+	@TableField(value = "template")
+	private Integer template;
+
+	/**
 	* 版本号
 	*/
 	@TableField(value = "version", fill = FieldFill.INSERT)

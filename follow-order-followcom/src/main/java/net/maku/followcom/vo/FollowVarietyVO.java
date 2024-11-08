@@ -36,6 +36,9 @@ public class FollowVarietyVO implements Serializable {
 	@Schema(description = "券商对应的品种名称")
 	private String brokerSymbol;
 
+	@Schema(description  = "模板")
+	private Integer template;
+
 	@Schema(description = "版本号")
 	private Integer version;
 

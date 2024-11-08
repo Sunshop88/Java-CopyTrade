@@ -192,6 +192,70 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
 
+//    public void importCsv(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
+//        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+//
+//            List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
+//
+//            for (CSVRecord record : csvParser) {
+//                if (ObjectUtil.isEmpty(record.get(1))) continue;
+//                String stdContractStr = record.get(0);
+//                String stdSymbol = record.get(1);
+//                Integer stdContract = null;
+//                Integer template = null;
+//
+//                // 检查 stdContractStr 是否为空字符串并进行转换
+//                if (!ObjectUtil.isEmpty(stdContractStr)) {
+//                    try {
+//                        stdContract = Integer.valueOf(stdContractStr.trim());
+//                    } catch (NumberFormatException e) {
+//                        log.warn("Invalid stdContract value: " + stdContractStr);
+//                    }
+//                }
+//
+//                // 检查 template 是否为空字符串并进行转换
+//                if (record.size() > 1 && !ObjectUtil.isEmpty(record.get(2))) {
+//                    try {
+//                        template = Integer.valueOf(record.get(2).trim());
+//                    } catch (NumberFormatException e) {
+//                        log.warn("Invalid template value: " + record.get(2));
+//                    }
+//                }
+//
+//                // 更新所有具有相同 stdSymbol 的记录的 stdContract 和 template 值
+//                baseMapper.updateStdContractAndTemplateByStdSymbol(stdSymbol, stdContract, template);
+//
+//                for (int i = 3; i < record.size(); i++) {
+//                    if (ObjectUtil.isEmpty(record.get(i))) continue;
+//
+//                    String[] brokerNameParts = brokerNames.get(i).split("/");
+//                    String brokerSymbol = record.get(i);
+//                    String[] brokerSymbolParts = brokerSymbol.split("/");
+//
+//                    for (String name : brokerNameParts) {
+//                        for (String symbol : brokerSymbolParts) {
+//                            FollowVarietyVO brokerData = new FollowVarietyVO();
+//                            brokerData.setStdContract(stdContract);
+//                            brokerData.setStdSymbol(stdSymbol);
+//                            brokerData.setBrokerName(name.trim());
+//                            brokerData.setBrokerSymbol(symbol.trim());
+//                            brokerData.setTemplate(template);
+//
+//                            // 确保 stdContract 和 template 字段总是被更新
+//                            FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+//                            try {
+//                                baseMapper.insert(entity);
+//                            } catch (Exception e) {
+//                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+
 
     public void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
         try (InputStream inputStream = file.getInputStream()) {

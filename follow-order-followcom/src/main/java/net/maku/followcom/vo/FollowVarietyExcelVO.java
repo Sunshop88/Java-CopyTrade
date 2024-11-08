@@ -31,4 +31,7 @@ public class FollowVarietyExcelVO implements TransPojo {
 	@ExcelProperty("券商对应的品种名称")
 	private String brokerSymbol;
 
+	@ExcelProperty("模板")
+	private Integer template;
+
 }

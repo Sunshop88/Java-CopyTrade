@@ -110,68 +110,148 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
     }
 
 
+//    @Override
+//    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId) {
+//        List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
+//
+//        Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
+//                .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
+//
+//        for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
+//            List<FollowBrokeServerEntity> serverNodes = entry.getValue();
+//
+//            for (FollowBrokeServerEntity serverNode : serverNodes) {
+//                String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
+//                int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
+//                int retryCount = 0; // 重试次数
+//
+//                while (retryCount < 3) {
+//                    try {
+//                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+//                        long startTime = System.currentTimeMillis(); // 记录起始时间
+//                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+//
+//                        long timeout = 10000;
+//                        try {
+//                            future.get(timeout, TimeUnit.MILLISECONDS);
+//                        } catch (TimeoutException e) {
+////                            log.error("测速超时，目标地址: {}:{}, 超过 {} 毫秒", ipAddress, port, timeout);
+//                            retryCount++; // 增加重试次数
+//                            if (retryCount == 3) {
+//                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+//                                break;
+//                            }
+//                            continue;
+//                        } catch (Exception e) {
+//                            log.error("连接失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+//                            return false;
+//                        }
+//
+//                        long endTime = System.currentTimeMillis();
+//                        long duration = endTime - startTime;
+//
+//                        // 保存测速结果
+//                        FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+//                        newEntity.setServerName(serverNode.getServerName());
+//                        newEntity.setServerId(serverNode.getId());
+//                        newEntity.setPlatformType("MT4");
+//                        newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+//                        newEntity.setVpsName(vpsEntity.getName());
+//                        newEntity.setVpsId(vpsEntity.getId());
+//                        newEntity.setSpeed((int) duration);
+//                        newEntity.setTestId(testId);
+//                        followTestDetailService.save(newEntity);
+//                        break;
+//                    } catch (Exception e) {
+//                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+//                        return false;
+//                    }
+//                }
+//            }
+//        }
+//        return true;
+//    }
+
 
     @Override
     public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId) {
+        // 获取服务器列表
         List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
 
+        // 按服务器名称分组
         Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
+        // 创建一个固定大小的线程池
+        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
+
+        // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
 
             for (FollowBrokeServerEntity serverNode : serverNodes) {
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
-                int retryCount = 0; // 重试次数
 
-                while (retryCount < 3) {
-                    try {
-                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                        long startTime = System.currentTimeMillis(); // 记录起始时间
-                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                // 提交测速任务到线程池
+                executorService.submit(() -> {
+                    int retryCount = 0; // 重试次数
 
-                        long timeout = 10000;
+                    while (retryCount < 3) {
                         try {
-                            future.get(timeout, TimeUnit.MILLISECONDS);
-                        } catch (TimeoutException e) {
-//                            log.error("测速超时，目标地址: {}:{}, 超过 {} 毫秒", ipAddress, port, timeout);
-                            retryCount++; // 增加重试次数
-                            if (retryCount == 3) {
-                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
-                                break;
+                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                            long startTime = System.currentTimeMillis(); // 记录起始时间
+                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+
+                            long timeout = 10000; // 设置超时时间
+                            try {
+                                future.get(timeout, TimeUnit.MILLISECONDS);
+                            } catch (TimeoutException e) {
+                                retryCount++; // 增加重试次数
+                                if (retryCount == 3) {
+                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+                                    break; // 超过最大重试次数后跳出循环
+                                }
+                                continue; // 如果超时，则重试
                             }
-                            continue;
+
+                            long endTime = System.currentTimeMillis(); // 记录结束时间
+                            long duration = endTime - startTime; // 计算测速时长
+
+                            // 保存测速结果
+                            FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                            newEntity.setServerName(serverNode.getServerName());
+                            newEntity.setServerId(serverNode.getId());
+                            newEntity.setPlatformType("MT4");
+                            newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                            newEntity.setVpsName(vpsEntity.getName());
+                            newEntity.setVpsId(vpsEntity.getId());
+                            newEntity.setSpeed((int) duration);
+                            newEntity.setTestId(testId);
+                            followTestDetailService.save(newEntity);
+                            break; // 测试成功，跳出重试循环
                         } catch (Exception e) {
-                            log.error("连接失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
-                            return false;
+                            log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+                            break; // 出现异常时跳出重试循环
                         }
-
-                        long endTime = System.currentTimeMillis();
-                        long duration = endTime - startTime;
-
-                        // 保存测速结果
-                        FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                        newEntity.setServerName(serverNode.getServerName());
-                        newEntity.setServerId(serverNode.getId());
-                        newEntity.setPlatformType("MT4");
-                        newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                        newEntity.setVpsName(vpsEntity.getName());
-                        newEntity.setVpsId(vpsEntity.getId());
-                        newEntity.setSpeed((int) duration);
-                        newEntity.setTestId(testId);
-                        followTestDetailService.save(newEntity);
-                        break;
-                    } catch (Exception e) {
-                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
-                        return false;
                     }
-                }
+                });
             }
         }
-        return true;
+
+        // 关闭线程池并等待所有任务完成
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+        }
+
+        return true; // 返回 true 表示所有任务提交成功
     }
+
 
     @Override
     public void saveTestSpeed(FollowTestSpeedVO overallResult) {

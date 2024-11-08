@@ -37,8 +37,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * 测速记录
@@ -125,18 +130,24 @@ public class FollowTestSpeedController {
         return Result.ok();
     }
 
+
     private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
         List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
-
         ObjectMapper objectMapper = new ObjectMapper();
         boolean allSuccess = true;
+
+        ExecutorService executorService = Executors.newFixedThreadPool(vpsList.size()); // 创建固定大小的线程池
+        List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
+
         for (FollowVpsEntity vpsEntity : vpsList) {
+            futures.add(executorService.submit(() -> {
                 String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
 
                 MeasureRequestEntity startRequest = new MeasureRequestEntity();
                 startRequest.setServers(servers);
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
+
                 // 将对象序列化为 JSON
                 String jsonBody = objectMapper.writeValueAsString(startRequest);
                 RestTemplate restTemplate = new RestTemplate();
@@ -147,76 +158,113 @@ public class FollowTestSpeedController {
 
                 if (!response.getBody().getString("msg").equals("success")) {
                     log.error("测速失败ip: " + vpsEntity.getIpAddress());
-                    overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
-                    update(overallResult);
-                    followTestDetailService.deleteByTestId(overallResult.getId());
+                    return false; // 返回失败状态
+                }
+                return true; // 返回成功状态
+            }));
+        }
+
+        // 等待所有任务完成并检查结果
+        for (Future<Boolean> future : futures) {
+            try {
+                if (!future.get()) { // 如果有任何任务返回失败
                     allSuccess = false;
                     break;
                 }
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("测速任务执行异常: " + e.getMessage());
+                allSuccess = false;
+                break;
+            }
         }
+
+        // 根据所有任务的执行结果更新 overallResult
         if (allSuccess) {
             overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
-            update(overallResult);
-            //TODO 测速完成后选节点
-            /**
-            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
-                    new LambdaQueryWrapper<FollowTestDetailEntity>()
-                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
-            );
-            // 获取所有唯一的 VPS 名称
-            List<String> vpsNames = allEntities.stream()
-                    .map(FollowTestDetailEntity::getVpsName)
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            vpsNames.forEach(vpsName -> {
-                // 获取当前 VPS 名称下的所有服务器名称
-                List<String> serverNames = allEntities.stream()
-                        .filter(entity -> vpsName.equals(entity.getVpsName()))
-                        .map(FollowTestDetailEntity::getServerName)
-                        .distinct()
-                        .collect(Collectors.toList());
-                serverNames.forEach(serverName -> {
-                    // 查找当前 VPS 名称和服务器名称下的最小延迟
-                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
-                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
-                            .orElse(null);
-
-                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
-
-                        //修改所有用户连接节点
-                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().
-                                eq(FollowPlatformEntity::getServer,minLatencyEntity.getServerName()).
-                                eq(FollowPlatformEntity::getVpsName,minLatencyEntity.getVpsName()).
-                                set(FollowPlatformEntity::getServerNode,minLatencyEntity.getServerNode()));
-
-                    }
-                });
-            });
-             */
+        } else {
+            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+            // 延迟删除操作，确保在所有测速请求完成后再进行删除
+            followTestDetailService.deleteByTestId(overallResult.getId());
         }
+
+        update(overallResult);
+        executorService.shutdown(); // 关闭线程池
     }
 
-
-//    @PostMapping("start")
-//    @Operation(summary = "单个vps测速")
-//    @PreAuthorize("hasAuthority('mascontrol:speed')")
-//    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestEntity request) {
-//        List<String> servers = request.getServers();
-//        FollowVpsEntity vpsEntity = request.getVpsEntity();
-//        Integer testId = request.getTestId();
+//    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
+//        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
 //
-//        // 批量调用服务进行测速
-//        boolean isSuccess =followTestSpeedService.measure(servers,vpsEntity,testId);
-//        if (isSuccess) {
-//            return Result.ok();
-//        } else {
-//            // 删除当前vps相关的数据
-//            followTestDetailService.deleteByTestId(testId);
-//            return Result.error("测速失败，已删除相关数据");
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        boolean allSuccess = true;
+//        for (FollowVpsEntity vpsEntity : vpsList) {
+//                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+//
+//                MeasureRequestEntity startRequest = new MeasureRequestEntity();
+//                startRequest.setServers(servers);
+//                startRequest.setVpsEntity(vpsEntity);
+//                startRequest.setTestId(overallResult.getId());
+//                // 将对象序列化为 JSON
+//                String jsonBody = objectMapper.writeValueAsString(startRequest);
+//                RestTemplate restTemplate = new RestTemplate();
+//                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+//                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+//                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+//                log.info("测速请求:" + response.getBody());
+//
+//                if (!response.getBody().getString("msg").equals("success")) {
+//                    log.error("测速失败ip: " + vpsEntity.getIpAddress());
+//                    overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+//                    update(overallResult);
+//                    followTestDetailService.deleteByTestId(overallResult.getId());
+//                    allSuccess = false;
+//                    break;
+//                }
+//        }
+//        if (allSuccess) {
+//            overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+//            update(overallResult);
+//            //TODO 测速完成后选节点
+//            /**
+//            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
+//                    new LambdaQueryWrapper<FollowTestDetailEntity>()
+//                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
+//            );
+//            // 获取所有唯一的 VPS 名称
+//            List<String> vpsNames = allEntities.stream()
+//                    .map(FollowTestDetailEntity::getVpsName)
+//                    .distinct()
+//                    .collect(Collectors.toList());
+//
+//            vpsNames.forEach(vpsName -> {
+//                // 获取当前 VPS 名称下的所有服务器名称
+//                List<String> serverNames = allEntities.stream()
+//                        .filter(entity -> vpsName.equals(entity.getVpsName()))
+//                        .map(FollowTestDetailEntity::getServerName)
+//                        .distinct()
+//                        .collect(Collectors.toList());
+//                serverNames.forEach(serverName -> {
+//                    // 查找当前 VPS 名称和服务器名称下的最小延迟
+//                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
+//                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
+//                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+//                            .orElse(null);
+//
+//                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+//
+//                        //修改所有用户连接节点
+//                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().
+//                                eq(FollowPlatformEntity::getServer,minLatencyEntity.getServerName()).
+//                                eq(FollowPlatformEntity::getVpsName,minLatencyEntity.getVpsName()).
+//                                set(FollowPlatformEntity::getServerNode,minLatencyEntity.getServerNode()));
+//
+//                    }
+//                });
+//            });
+//             */
 //        }
 //    }
+
+
 
     @GetMapping("listTestSpeed")
     @Operation(summary = "测速记录列表")
