@@ -128,6 +128,32 @@ public class FollowVarietyController {
         return extension.equals("xlsx") || extension.equals("xls") || extension.equals("csv");
     }
 
+    @PostMapping("addTemplate")
+    @Operation(summary = "新增模板")
+    @OperateLog(type = OperateTypeEnum.IMPORT)
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<String> addExcel(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return Result.error("请选择需要上传的文件");
+        }
+
+        try {
+            // 检查文件类型
+            if (!isExcelOrCsv(file.getOriginalFilename())) {
+                return Result.error("仅支持 Excel 和 CSV 文件");
+            }
+
+            // 导入文件
+            followVarietyService.addByExcel(file);
+
+            return Result.ok("文件导入成功");
+        } catch (Exception e) {
+            return Result.error("文件导入失败：" + e.getMessage());
+        }
+    }
+
+
+
 
 
     @GetMapping("export")
