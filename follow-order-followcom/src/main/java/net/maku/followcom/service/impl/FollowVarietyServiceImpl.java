@@ -359,7 +359,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
 
     public void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
-         try (InputStream inputStream = file.getInputStream()) {
+        try (InputStream inputStream = file.getInputStream()) {
             Workbook workbook = new XSSFWorkbook(inputStream);
             Sheet sheet = workbook.getSheetAt(0);
 
@@ -438,8 +438,16 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setBrokerSymbol(null);
 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
-                    //如果里面有就更新，没有就新增
-                    baseMapper.insert(entity);
+                    // 插入或更新记录，确保 stdContract 和 stdSymbol 成功保存
+                    LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
+                    queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+
+                    // 如果存在则更新，否则插入
+                    if (baseMapper.selectCount(queryWrapper) > 0) {
+                        baseMapper.update(entity, queryWrapper);
+                    } else {
+                        baseMapper.insert(entity);
+                    }
                 }
             }
         }
@@ -456,7 +464,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return cell.getDateCellValue().toString();
                 } else {
-                    return Double.toString(cell.getNumericCellValue());
+                    return String.valueOf((int) cell.getNumericCellValue());
                 }
             case BOOLEAN:
                 return Boolean.toString(cell.getBooleanCellValue());
@@ -466,6 +474,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 return null;
         }
     }
+
 
 //    public void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
 //        try (InputStream inputStream = file.getInputStream()) {
