@@ -1,16 +1,17 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
-import net.maku.followcom.entity.FollowTestSpeedEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.entity.MeasureRequestEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestSpeedQuery;
@@ -21,6 +22,8 @@ import net.maku.followcom.vo.FollowBrokeServerVO;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -38,12 +41,14 @@ import org.springframework.web.client.RestTemplate;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * 测速记录
@@ -59,6 +64,7 @@ public class FollowTestSpeedController {
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
     private final FollowPlatformService followPlatformService;
+    private final RedisUtil redisUtil;
 
     @GetMapping("{id}")
     @Operation(summary = "信息")
@@ -99,7 +105,6 @@ public class FollowTestSpeedController {
         return Result.ok();
     }
 
-
     @GetMapping("export")
     @Operation(summary = "导出")
     @OperateLog(type = OperateTypeEnum.EXPORT)
@@ -107,8 +112,6 @@ public class FollowTestSpeedController {
     public void export() {
         followTestSpeedService.export();
     }
-
-
 
     @PostMapping("measure")
     @Operation(summary = "测速")
@@ -130,13 +133,12 @@ public class FollowTestSpeedController {
         return Result.ok();
     }
 
-
     private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
         List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
         ObjectMapper objectMapper = new ObjectMapper();
         boolean allSuccess = true;
 
-        ExecutorService executorService = Executors.newFixedThreadPool(vpsList.size()); // 创建固定大小的线程池
+        ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
         List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
 
         for (FollowVpsEntity vpsEntity : vpsList) {
@@ -148,11 +150,13 @@ public class FollowTestSpeedController {
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
 
-                // 将对象序列化为 JSON
-                String jsonBody = objectMapper.writeValueAsString(startRequest);
+                // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+                String expiryDateStr = vpsEntity.getExpiryDate().toString();
+                startRequest.setExpiryDateStr(expiryDateStr);
+
                 RestTemplate restTemplate = new RestTemplate();
                 HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+                HttpEntity<MeasureRequestEntity> entity = new HttpEntity<>(startRequest, headers);
                 ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                 log.info("测速请求:" + response.getBody());
 
@@ -163,7 +167,6 @@ public class FollowTestSpeedController {
                 return true; // 返回成功状态
             }));
         }
-
         // 等待所有任务完成并检查结果
         for (Future<Boolean> future : futures) {
             try {
@@ -177,10 +180,41 @@ public class FollowTestSpeedController {
                 break;
             }
         }
-
         // 根据所有任务的执行结果更新 overallResult
         if (allSuccess) {
             overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+
+            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
+                    new LambdaQueryWrapper<FollowTestDetailEntity>()
+                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
+            );
+            // 获取所有唯一的 VPS 名称
+            List<String> vpsNames = allEntities.stream()
+                    .map(FollowTestDetailEntity::getVpsName)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            vpsNames.forEach(vpsName -> {
+                // 获取当前 VPS 名称下的所有服务器名称
+                List<String> serverNames = allEntities.stream()
+                        .filter(entity -> vpsName.equals(entity.getVpsName()))
+                        .map(FollowTestDetailEntity::getServerName)
+                        .distinct()
+                        .collect(Collectors.toList());
+                serverNames.forEach(serverName -> {
+                    // 查找当前 VPS 名称和服务器名称下的最小延迟
+                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
+                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
+                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+                            .orElse(null);
+
+                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+                        //查询vps名称所对应的id
+                        Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName)).getId();
+                        redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
+                    }
+                });
+            });
         } else {
             overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
             // 延迟删除操作，确保在所有测速请求完成后再进行删除
@@ -190,81 +224,6 @@ public class FollowTestSpeedController {
         update(overallResult);
         executorService.shutdown(); // 关闭线程池
     }
-
-//    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
-//        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
-//
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        boolean allSuccess = true;
-//        for (FollowVpsEntity vpsEntity : vpsList) {
-//                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
-//
-//                MeasureRequestEntity startRequest = new MeasureRequestEntity();
-//                startRequest.setServers(servers);
-//                startRequest.setVpsEntity(vpsEntity);
-//                startRequest.setTestId(overallResult.getId());
-//                // 将对象序列化为 JSON
-//                String jsonBody = objectMapper.writeValueAsString(startRequest);
-//                RestTemplate restTemplate = new RestTemplate();
-//                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-//                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-//                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-//                log.info("测速请求:" + response.getBody());
-//
-//                if (!response.getBody().getString("msg").equals("success")) {
-//                    log.error("测速失败ip: " + vpsEntity.getIpAddress());
-//                    overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
-//                    update(overallResult);
-//                    followTestDetailService.deleteByTestId(overallResult.getId());
-//                    allSuccess = false;
-//                    break;
-//                }
-//        }
-//        if (allSuccess) {
-//            overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
-//            update(overallResult);
-//            //TODO 测速完成后选节点
-//            /**
-//            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
-//                    new LambdaQueryWrapper<FollowTestDetailEntity>()
-//                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
-//            );
-//            // 获取所有唯一的 VPS 名称
-//            List<String> vpsNames = allEntities.stream()
-//                    .map(FollowTestDetailEntity::getVpsName)
-//                    .distinct()
-//                    .collect(Collectors.toList());
-//
-//            vpsNames.forEach(vpsName -> {
-//                // 获取当前 VPS 名称下的所有服务器名称
-//                List<String> serverNames = allEntities.stream()
-//                        .filter(entity -> vpsName.equals(entity.getVpsName()))
-//                        .map(FollowTestDetailEntity::getServerName)
-//                        .distinct()
-//                        .collect(Collectors.toList());
-//                serverNames.forEach(serverName -> {
-//                    // 查找当前 VPS 名称和服务器名称下的最小延迟
-//                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
-//                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-//                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
-//                            .orElse(null);
-//
-//                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
-//
-//                        //修改所有用户连接节点
-//                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().
-//                                eq(FollowPlatformEntity::getServer,minLatencyEntity.getServerName()).
-//                                eq(FollowPlatformEntity::getVpsName,minLatencyEntity.getVpsName()).
-//                                set(FollowPlatformEntity::getServerNode,minLatencyEntity.getServerNode()));
-//
-//                    }
-//                });
-//            });
-//             */
-//        }
-//    }
-
-
 
     @GetMapping("listTestSpeed")
     @Operation(summary = "测速记录列表")
@@ -278,7 +237,7 @@ public class FollowTestSpeedController {
     @PostMapping("remeasure")
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestEntity request, HttpServletRequest req) throws Exception{
+    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestEntity request, HttpServletRequest req) throws Exception {
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
         FollowTestSpeedVO overallResult = followTestSpeedService.get(id);
@@ -294,7 +253,7 @@ public class FollowTestSpeedController {
     @GetMapping("listTestDetail")
     @Operation(summary = "测速详情")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowTestDetailQuery query){
+    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowTestDetailQuery query) {
         PageResult<String[]> list = followTestDetailService.page(query);
 
         return Result.ok(list);

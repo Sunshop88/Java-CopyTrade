@@ -209,8 +209,8 @@ public class FollowVarietyController {
 
         List<String[]> listString = new ArrayList<>();
         String[] header = new String[followPlatformEntityList.size() + 2]; // +2 for stdContract and stdSymbol
-        header[0] = "品种合约"; // 第一列为品种合约
-        header[1] = "标准品种"; // 第二列为标准品种
+        header[0] = "标准合约";
+        header[1] = "品种名称";
         for (int i = 0; i < followPlatformEntityList.size(); i++) {
             header[i + 2] = followPlatformEntityList.get(i).getBrokerName(); // 券商名称
         }
