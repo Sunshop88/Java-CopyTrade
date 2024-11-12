@@ -52,7 +52,6 @@ public class FollowVarietyController {
         return Result.ok(page);
     }
 
-
     @GetMapping("{id}")
     @Operation(summary = "信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -96,20 +95,17 @@ public class FollowVarietyController {
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> importExcel(@RequestParam("file") MultipartFile file) throws Exception {
+    public Result<String> importExcel(@RequestParam("file") MultipartFile file,@RequestParam("template")Integer template) throws Exception {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
-
         try {
             // 检查文件类型
             if (!isExcelOrCsv(file.getOriginalFilename())) {
                 return Result.error("仅支持 Excel 和 CSV 文件");
             }
-
             // 导入文件
-            followVarietyService.importByExcel(file);
-
+            followVarietyService.importByExcel(file,template);
             return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
@@ -123,7 +119,6 @@ public class FollowVarietyController {
         if (filename == null || filename.isEmpty()) {
             return false;
         }
-
         String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
         return extension.equals("xlsx") || extension.equals("xls") || extension.equals("csv");
     }
@@ -136,35 +131,28 @@ public class FollowVarietyController {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
-
         try {
             // 检查文件类型
             if (!isExcelOrCsv(file.getOriginalFilename())) {
                 return Result.error("仅支持 Excel 和 CSV 文件");
             }
-
             // 导入文件
             followVarietyService.addByExcel(file);
-
             return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }
     }
 
-
-
-
-
     @GetMapping("export")
     @Operation(summary = "数据导出")
     @OperateLog(type = OperateTypeEnum.EXPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public ResponseEntity<byte[]> export() {
+    public ResponseEntity<byte[]> export(@RequestParam("template")Integer template) {
         try {
             // 使用 ByteArrayOutputStream 来生成 CSV 数据
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            followVarietyService.exportCsv(outputStream);
+            followVarietyService.exportCsv(outputStream,template);
 
             // 设置响应头
             HttpHeaders headers = new HttpHeaders();
@@ -203,10 +191,14 @@ public class FollowVarietyController {
     @GetMapping("listSmybol")
     @Operation(summary = "查询标准品种，标准合约")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query){
+    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
         List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
-        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list();
+        // 根据 template 过滤 FollowVarietyEntity
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list()
+                .stream()
+                .filter(entity -> entity.getTemplate() != null && entity.getTemplate().equals(query.getTemplate()))
+                .collect(Collectors.toList());
 
         // 构建映射关系：<StdSymbol + BrokerName, BrokerSymbol列表>
         Map<String, List<String>> varietyMap = followVarietyEntityList.stream()
@@ -215,25 +207,29 @@ public class FollowVarietyController {
                         Collectors.mapping(FollowVarietyEntity::getBrokerSymbol, Collectors.toList())
                 ));
 
-        // 初始化表头
         List<String[]> listString = new ArrayList<>();
-        String[] header = new String[followPlatformEntityList.size() + 1];
-        header[0] = "品种名称";
+        String[] header = new String[followPlatformEntityList.size() + 2]; // +2 for stdContract and stdSymbol
+        header[0] = "品种合约"; // 第一列为品种合约
+        header[1] = "标准品种"; // 第二列为标准品种
         for (int i = 0; i < followPlatformEntityList.size(); i++) {
-            header[i + 1] = followPlatformEntityList.get(i).getBrokerName();
+            header[i + 2] = followPlatformEntityList.get(i).getBrokerName(); // 券商名称
         }
         listString.add(header);
 
         // 填充数据
         for (FollowVarietyVO o : list.getList()) {
-            String[] strings = new String[followPlatformEntityList.size() + 1];
-            strings[0] = o.getStdSymbol();
+            String[] strings = new String[followPlatformEntityList.size() + 2];
+            strings[0] = o.getStdContract() != null ? o.getStdContract().toString() : ""; // 品种合约
+            strings[1] = o.getStdSymbol(); // 标准品种
 
             for (int i = 0; i < followPlatformEntityList.size(); i++) {
                 FollowPlatformEntity plat = followPlatformEntityList.get(i);
                 String key = o.getStdSymbol() + "_" + plat.getBrokerName();
                 List<String> collect = varietyMap.getOrDefault(key, Collections.emptyList());
-                strings[i + 1] = collect.isEmpty() ? o.getStdSymbol() : String.join("/", collect);
+
+                // 检查是否有数据，如果有数据但含有 "null"，则替换为空字符串
+                String brokerSymbol = collect.isEmpty() ? "" : String.join("/", collect);
+                strings[i + 2] = "null".equals(brokerSymbol) ? "" : brokerSymbol;
             }
             listString.add(strings);
         }

@@ -34,18 +34,16 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     void export();
 
     void download(HttpServletResponse response)throws Exception;
-    
-
-   void importByExcel(MultipartFile file)throws Exception;
 
     PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query);
 
     PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query);
 
-
-    void exportCsv(ByteArrayOutputStream outputStream) throws IOException;
+    void exportCsv(ByteArrayOutputStream outputStream,Integer template) throws IOException;
 
     void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
 
     void addByExcel(MultipartFile file) throws Exception;
+
+    void importByExcel(MultipartFile file, Integer template) throws Exception;
 }

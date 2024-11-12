@@ -59,12 +59,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, FollowVarietyEntity> implements FollowVarietyService {
     private final TransService transService;
-    @Autowired
-    private ResourceLoader resourceLoader;
-    @Autowired
-    private FollowVarietyDao followVarietyDao;
-    @Autowired
-    private FollowPlatformServiceImpl followPlatformServiceImpl;
+    private final ResourceLoader resourceLoader;
+    private final FollowPlatformServiceImpl followPlatformServiceImpl;
 
     @Override
     public PageResult<FollowVarietyVO> page(FollowVarietyQuery query) {
@@ -73,13 +69,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
-
     private LambdaQueryWrapper<FollowVarietyEntity> getWrapper(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         return wrapper;
     }
-
 
     @Override
     public FollowVarietyVO get(Long id) {
@@ -95,8 +89,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(vo);
 
         baseMapper.insert(entity);
-
-
     }
 
     @Override
@@ -105,8 +97,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(vo);
 
         updateById(entity);
-
-
     }
 
     @Override
@@ -117,37 +107,30 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public void importByExcel(MultipartFile file) throws Exception {
+    public void importByExcel(MultipartFile file, Integer template) throws Exception {
         String fileName = file.getOriginalFilename();
-        List<FollowVarietyExcelVO> brokerDataList = new ArrayList<>();
-
-        Integer template=1;
-
         if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
             // 处理CSV文件
-            importCsv(file,brokerDataList,template);
+            importCsv(file, template);
         } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
             // 处理Excel文件
-//            importExcel(file, brokerDataList,template);
+            importExcel(file, template);
         } else {
             throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
         }
     }
 
 
-    public void importCsv(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList, Integer template) throws IOException {
+    public void importCsv(MultipartFile file, Integer template) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
-
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-
             for (CSVRecord record : csvParser) {
-                if (ObjectUtil.isEmpty(record.get(1))) continue;
-                String stdContractStr = record.get(0);
-                String stdSymbol = record.get(1);
+                String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
+                String stdSymbol = record.get(1);      // 第二个字段是 stdSymbol
                 Integer stdContract = null;
-
-                // 检查 stdContractStr 是否为空字符串并进行转换
+                if (ObjectUtil.isEmpty(stdSymbol)) continue;
+                // 解析 stdContract 字段
                 if (!ObjectUtil.isEmpty(stdContractStr)) {
                     try {
                         stdContract = Integer.valueOf(stdContractStr.trim());
@@ -155,75 +138,189 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         log.warn("Invalid stdContract value: " + stdContractStr);
                     }
                 }
-
-                // 更新所有具有相同 stdSymbol 的记录的 stdContract 值
-                baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
-
-                // 处理每个 brokerName
+                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+                wrapper.eq(FollowVarietyEntity::getTemplate, template)
+                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+                // 根据 template 查询数据库中的数据
+                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+                    recordToUpdate.setStdContract(stdContract);
+                    baseMapper.updateById(recordToUpdate);
+                }
+                // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
                 for (int i = 2; i < record.size(); i++) {
                     String brokerName = brokerNames.get(i);
                     String brokerSymbol = record.get(i);
-                    String[] brokerNameParts = brokerName.split("/");
+                    // 删除已有的相同 stdSymbol 和 brokerName 对应的 brokerSymbol，即便 brokerSymbol 为 null
+                    LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
+                    deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+                            .eq(FollowVarietyEntity::getBrokerName, brokerName.trim())
+                            .eq(FollowVarietyEntity::getTemplate, template);
+                    baseMapper.delete(deleteQueryWrapper);
 
-                    for (String name : brokerNameParts) {
-                        // 删除已有的相同 stdSymbol、brokerName 和模板的记录
-                        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
-                        queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-                                .eq(FollowVarietyEntity::getBrokerName, name.trim())
-                                .eq(FollowVarietyEntity::getTemplate, template);
+                    FollowVarietyVO brokerData = new FollowVarietyVO();
+                    brokerData.setStdContract(stdContract);
+                    brokerData.setStdSymbol(stdSymbol);
+                    brokerData.setBrokerName(brokerName.trim());
+                    brokerData.setTemplate(template); // 设置 template 字段
 
-                        FollowVarietyEntity existingEntity = baseMapper.selectOne(queryWrapper);
-
-                        if (existingEntity != null) {
-                            // 如果存在相同的模板记录，则更新
-                            existingEntity.setStdContract(stdContract);
-                            existingEntity.setTemplate(template);
-                            baseMapper.updateById(existingEntity);
-                        } else {
-                            // 如果 brokerSymbol 不为空，则插入新的记录
-                            if (!ObjectUtil.isEmpty(brokerSymbol)) {
-                                String[] brokerSymbolParts = brokerSymbol.split("/");
-                                for (String symbol : brokerSymbolParts) {
-                                    FollowVarietyVO brokerData = new FollowVarietyVO();
-                                    brokerData.setStdContract(stdContract);
-                                    brokerData.setStdSymbol(stdSymbol);
-                                    brokerData.setBrokerName(name.trim());
-                                    brokerData.setBrokerSymbol(symbol.trim());
-                                    brokerData.setTemplate(template);
-
-                                    // 插入新记录
-                                    FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
-                                    try {
-                                        baseMapper.insert(entity);
-                                    } catch (Exception e) {
-                                        log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
-                                    }
-                                }
+                    if (ObjectUtil.isEmpty(brokerSymbol)) {
+                        // brokerSymbol 为空的情况
+                        brokerData.setBrokerSymbol(null);
+                        FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                        baseMapper.insert(entity);
+                    } else {
+                        // brokerSymbol 不为空的情况，可能包含多个符号
+                        String[] brokerSymbolParts = brokerSymbol.split("/");
+                        for (String symbol : brokerSymbolParts) {
+                            brokerData.setBrokerSymbol(symbol.trim());
+                            FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                            try {
+                                baseMapper.insert(entity);
+                            } catch (Exception e) {
+                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
                             }
                         }
                     }
                 }
-                // 处理列数不匹配的情况
-                if (record.size() != brokerNames.size()) {
-                    for (int i = brokerNames.size() - 1; i < brokerNames.size(); i--) {
-                        String[] brokerNameParts = brokerNames.get(i).split("/");
-                        for (String name : brokerNameParts) {
-                            // 补充删除处理
-                            LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
-                            deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-                                    .eq(FollowVarietyEntity::getBrokerName, name.trim())
-                                    .eq(FollowVarietyEntity::getTemplate, template);
-                            baseMapper.delete(deleteQueryWrapper);
+                // 只有 stdSymbol 和 stdContract，没有 brokerName 和 brokerSymbol时保存
+                if (record.size() == 2 || (stdContract != null && record.size() == 3 && brokerNames.size() < 3)) {
+                    FollowVarietyVO brokerData = new FollowVarietyVO();
+                    brokerData.setStdSymbol(stdSymbol);
+                    brokerData.setStdContract(stdContract);
+                    brokerData.setBrokerName(null);
+                    brokerData.setBrokerSymbol(null);
+                    brokerData.setTemplate(template); // 设置 template 字段
+                    FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                    baseMapper.insert(entity);
+                }
+            }
+        }
+    }
+
+    public void importExcel(MultipartFile file, Integer template) throws IOException {
+        try (InputStream inputStream = file.getInputStream()) {
+            Workbook workbook = new XSSFWorkbook(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            // 获取表头
+            Row headerRow = sheet.getRow(0);
+            List<String> brokerNames = new ArrayList<>();
+            for (Cell cell : headerRow) {
+                brokerNames.add(cell.getStringCellValue());
+            }
+            // 从第二行开始遍历数据
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) continue;
+                String stdContractStr = getCellStringValue(row.getCell(0));
+                String stdSymbol = getCellStringValue(row.getCell(1));
+                Integer stdContract = null;
+                if (stdSymbol == null || stdSymbol.isEmpty()) continue;
+
+                // 解析 stdContract 字段
+                if (stdContractStr != null && !stdContractStr.isEmpty()) {
+                    try {
+                        stdContract = Integer.parseInt(stdContractStr.trim());
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid stdContract value: " + stdContractStr);
+                    }
+                }
+                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+                wrapper.eq(FollowVarietyEntity::getTemplate, template)
+                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+                // 根据 template 查询数据库中的数据
+                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+                    recordToUpdate.setStdContract(stdContract);
+                    baseMapper.updateById(recordToUpdate);
+                }
+                // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
+                for (int i = 2; i < brokerNames.size(); i++) {
+                    String brokerName = brokerNames.get(i);
+                    String brokerSymbol = getCellStringValue(row.getCell(i));
+
+                    LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
+                    deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+                            .eq(FollowVarietyEntity::getBrokerName, brokerName.trim())
+                            .eq(FollowVarietyEntity::getTemplate, template); // 添加 template 条件
+                    baseMapper.delete(deleteQueryWrapper);
+
+                    FollowVarietyVO brokerData = new FollowVarietyVO();
+                    brokerData.setStdContract(stdContract);
+                    brokerData.setStdSymbol(stdSymbol);
+                    brokerData.setBrokerName(brokerName.trim());
+                    brokerData.setTemplate(template); // 设置 template 字段
+
+                    if (brokerSymbol == null || brokerSymbol.isEmpty()) {
+                        // brokerSymbol 为空的情况
+                        brokerData.setBrokerSymbol(null);
+                        FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                        baseMapper.insert(entity);
+                    } else {
+                        // brokerSymbol 不为空的情况，可能包含多个符号
+                        String[] brokerSymbolParts = brokerSymbol.split("/");
+                        for (String symbol : brokerSymbolParts) {
+                            brokerData.setBrokerSymbol(symbol.trim());
+                            FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                            try {
+                                baseMapper.insert(entity);
+                            } catch (Exception e) {
+                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+                            }
                         }
-                        if (i == record.size()) break;
+                    }
+                }
+                // 如果只有 stdSymbol 和 stdContract，没有 brokerName 和 brokerSymbol，也要保存
+                if (row.getLastCellNum() == 2 || (stdContract != null && row.getLastCellNum() == 3 && brokerNames.size() < 3)) {
+                    FollowVarietyVO brokerData = new FollowVarietyVO();
+                    brokerData.setStdSymbol(stdSymbol);
+                    brokerData.setStdContract(stdContract);
+                    brokerData.setBrokerName(null);
+                    brokerData.setBrokerSymbol(null);
+                    brokerData.setTemplate(template); // 设置 template 字段
+
+                    FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+                    // 插入或更新记录，确保 stdContract 和 stdSymbol 成功保存
+                    LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
+                    queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+                            .eq(FollowVarietyEntity::getTemplate, template); // 添加 template 条件
+
+                    // 如果存在则更新，否则插入
+                    if (baseMapper.selectCount(queryWrapper) > 0) {
+                        baseMapper.update(entity, queryWrapper);
+                    } else {
+                        baseMapper.insert(entity);
                     }
                 }
             }
         }
     }
 
+    @Override
+    public void addByExcel(MultipartFile file) throws Exception {
+        String fileName = file.getOriginalFilename();
+        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(FollowVarietyEntity::getTemplate)
+                .orderByDesc(FollowVarietyEntity::getTemplate)
+                .last("LIMIT 1");
+        FollowVarietyEntity maxTemplateEntity = baseMapper.selectOne(queryWrapper);
+        int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplate() != null)
+                ? maxTemplateEntity.getTemplate() + 1 : 1;
 
-    public void importCsv(MultipartFile file, Integer template) throws IOException {
+        if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
+            // 处理CSV文件
+            addCsv(file, template);
+        } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
+            // 处理Excel文件
+            addExcel(file, template);
+        } else {
+            throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
+        }
+    }
+
+    public void addCsv(MultipartFile file, Integer template) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
 
@@ -233,7 +330,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
                 String stdSymbol = record.get(1);      // 第二个字段是 stdSymbol
                 Integer stdContract = null;
-
                 if (ObjectUtil.isEmpty(stdSymbol)) continue;
 
                 // 解析 stdContract 字段
@@ -244,10 +340,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         log.warn("Invalid stdContract value: " + stdContractStr);
                     }
                 }
-
-                // 更新所有具有相同 stdSymbol 的记录的 stdContract 值
-                baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
-
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
                 for (int i = 2; i < record.size(); i++) {
                     String brokerName = brokerNames.get(i);
@@ -287,7 +379,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setBrokerName(null);
                     brokerData.setBrokerSymbol(null);
                     brokerData.setTemplate(template); // 设置 template 字段
-
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     baseMapper.insert(entity);
                 }
@@ -295,48 +386,42 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
-    public void importExcel(MultipartFile file, Integer template) throws IOException {
-        try (InputStream inputStream = file.getInputStream();
-             Workbook workbook = new XSSFWorkbook(inputStream)) {
 
-            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
-            List<String> brokerNames = new ArrayList<>();
-
-            // 读取表头
+    public void addExcel(MultipartFile file, Integer template) throws IOException {
+        try (InputStream inputStream = file.getInputStream()) {
+            Workbook workbook = new XSSFWorkbook(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            // 获取表头
             Row headerRow = sheet.getRow(0);
-            if (headerRow != null) {
-                for (Cell cell : headerRow) {
-                    brokerNames.add(cell.getStringCellValue());
-                }
+            List<String> brokerNames = new ArrayList<>();
+            for (Cell cell : headerRow) {
+                brokerNames.add(cell.getStringCellValue());
             }
-
-            // 遍历每一行
+            // 从第二行开始遍历数据
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
 
-                String stdContractStr = getCellValue(row.getCell(0)); // 第一个字段可能是 stdContract
-                String stdSymbol = getCellValue(row.getCell(1));      // 第二个字段是 stdSymbol
+                String stdContractStr = getCellStringValue(row.getCell(0));
+                String stdSymbol = getCellStringValue(row.getCell(1));
                 Integer stdContract = null;
-
-                if (ObjectUtil.isEmpty(stdSymbol)) continue;
+                if (stdSymbol == null || stdSymbol.isEmpty()) continue;
 
                 // 解析 stdContract 字段
-                if (!ObjectUtil.isEmpty(stdContractStr)) {
+                if (stdContractStr != null && !stdContractStr.isEmpty()) {
                     try {
-                        stdContract = Integer.valueOf(stdContractStr.trim());
+                        stdContract = Integer.parseInt(stdContractStr.trim());
                     } catch (NumberFormatException e) {
                         log.warn("Invalid stdContract value: " + stdContractStr);
                     }
                 }
-
                 // 更新所有具有相同 stdSymbol 的记录的 stdContract 值
                 baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
 
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
-                for (int i = 2; i < row.getPhysicalNumberOfCells(); i++) {
+                for (int i = 2; i < brokerNames.size(); i++) {
                     String brokerName = brokerNames.get(i);
-                    String brokerSymbol = getCellValue(row.getCell(i));
+                    String brokerSymbol = getCellStringValue(row.getCell(i));
 
                     FollowVarietyVO brokerData = new FollowVarietyVO();
                     brokerData.setStdContract(stdContract);
@@ -344,7 +429,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setBrokerName(brokerName.trim());
                     brokerData.setTemplate(template); // 设置 template 字段
 
-                    if (ObjectUtil.isEmpty(brokerSymbol)) {
+                    if (brokerSymbol == null || brokerSymbol.isEmpty()) {
                         // brokerSymbol 为空的情况
                         brokerData.setBrokerSymbol(null);
                         FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
@@ -363,9 +448,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         }
                     }
                 }
-
-                // 只有 stdSymbol 和 stdContract，没有 brokerName 和 brokerSymbol时保存
-                if (row.getPhysicalNumberOfCells() == 2 || (stdContract != null && row.getPhysicalNumberOfCells() == 3 && brokerNames.size() < 3)) {
+                // 如果只有 stdSymbol 和 stdContract，没有 brokerName 和 brokerSymbol，也要保存
+                if (row.getLastCellNum() == 2 || (stdContract != null && row.getLastCellNum() == 3 && brokerNames.size() < 3)) {
                     FollowVarietyVO brokerData = new FollowVarietyVO();
                     brokerData.setStdSymbol(stdSymbol);
                     brokerData.setStdContract(stdContract);
@@ -374,206 +458,40 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setTemplate(template); // 设置 template 字段
 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
-                    baseMapper.insert(entity);
-                }
-            }
-        }
-    }
+                    // 插入或更新记录，确保 stdContract 和 stdSymbol 成功保存
+                    LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
+                    queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
 
-    private String getCellValue(Cell cell) {
-        if (cell == null) return null;
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                return String.valueOf(cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            default:
-                return null;
-        }
-    }
-
-//    public void importCsv(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
-//        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
-//
-//            List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-//
-//            for (CSVRecord record : csvParser) {
-//                if (ObjectUtil.isEmpty(record.get(1))) continue;
-//                String stdContractStr = record.get(0);
-//                String stdSymbol = record.get(1);
-//                Integer stdContract = null;
-//
-//                // 检查 stdContractStr 是否为空字符串并进行转换
-//                if (!ObjectUtil.isEmpty(stdContractStr)) {
-//                    try {
-//                        stdContract = Integer.valueOf(stdContractStr.trim());
-//                    } catch (NumberFormatException e) {
-//                        log.warn("Invalid stdContract value: " + stdContractStr);
-//                    }
-//                }
-//
-//                // 更新所有具有相同 stdSymbol 的记录的 stdContract 值
-//                baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
-//
-//                // 处理每个 brokerName
-//                for (int i = 2; i < record.size(); i++) {
-//                    String brokerName = brokerNames.get(i);
-//                    String brokerSymbol = record.get(i);
-//                    String[] brokerNameParts = brokerName.split("/");
-//
-//                    for (String name : brokerNameParts) {
-//                        // 删除已有的相同 stdSymbol 和 brokerName 对应的 brokerSymbol
-//                        LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
-//                        deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-//                                .eq(FollowVarietyEntity::getBrokerName, name.trim());
-//                        baseMapper.delete(deleteQueryWrapper);
-//
-//                        // 如果 brokerSymbol 不为空，则插入新的记录
-//                        if (!ObjectUtil.isEmpty(brokerSymbol)) {
-//                            String[] brokerSymbolParts = brokerSymbol.split("/");
-//
-//                            for (String symbol : brokerSymbolParts) {
-//                                FollowVarietyVO brokerData = new FollowVarietyVO();
-//                                brokerData.setStdContract(stdContract);
-//                                brokerData.setStdSymbol(stdSymbol);
-//                                brokerData.setBrokerName(name.trim());
-//                                brokerData.setBrokerSymbol(symbol.trim());
-//
-//                                // 确保 stdContract 字段总是被更新
-//                                FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
-//                                try {
-//                                    baseMapper.insert(entity);
-//                                } catch (Exception e) {
-//                                    log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//                // 处理列数不匹配的情况
-//                if (record.size() != brokerNames.size()) {
-//                    for (int i = brokerNames.size() - 1; i < brokerNames.size(); i--) {
-//                        String[] brokerNameParts = brokerNames.get(i).split("/");
-//                        for (String name : brokerNameParts) {
-//                            // 进行补充删除处理
-//                            LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
-//                            deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-//                                    .eq(FollowVarietyEntity::getBrokerName, name.trim());
-//                            baseMapper.delete(deleteQueryWrapper);
-//                        }
-//                        if (i == record.size()) break;
-//                    }
-//                }
-//            }
-//        }
-//    }
-
-
-
-    public void importExcel(MultipartFile file, List<FollowVarietyExcelVO> brokerDataList) throws IOException {
-        try (InputStream inputStream = file.getInputStream()) {
-            Workbook workbook = new XSSFWorkbook(inputStream);
-            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
-
-            List<String> brokerNames = new ArrayList<>();
-
-            // 读取表头
-            Row headerRow = sheet.getRow(0);
-            for (Cell cell : headerRow) {
-                brokerNames.add(getCellStringValue(cell));
-            }
-
-            // 从第二行开始读取数据
-            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
-
-                String stdContractStr = getCellStringValue(row.getCell(0));
-                String stdSymbol = getCellStringValue(row.getCell(1));
-                Integer stdContract = null;
-
-                // 检查 stdContractStr 是否为空字符串并进行转换
-                if (!ObjectUtil.isEmpty(stdContractStr)) {
-                    try {
-                        double doubleValue = Double.parseDouble(stdContractStr.trim ());
-                        stdContract = (int) doubleValue;
-                    } catch (NumberFormatException e) {
-                        log.warn("Invalid stdContract value: " + stdContractStr);
-                    }
-                }
-                // 更新所有具有相同 stdSymbol 的记录的 stdContract 值，包括覆盖那些 stdContract 为空的值
-                baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
-
-
-                for (int i = 2; i < row.getLastCellNum(); i++) {
-                    Cell cell = row.getCell(i);
-//                    if (cell == null || cell.getCellType() == CellType.BLANK) continue;
-
-                    String[] brokerNameParts = brokerNames.get(i).split("/");
-                    String brokerSymbol = getCellStringValue(cell);
-//                    String[] brokerSymbolParts = brokerSymbol.split("/");
-
-                    for (String name : brokerNameParts) {
-                        // 删除已有的相同 stdSymbol 和 brokerName 对应的 brokerSymbol
-                        LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
-                        deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-                                .eq(FollowVarietyEntity::getBrokerName, name.trim());
-                        baseMapper.delete(deleteQueryWrapper);
-
-                        // 如果 brokerSymbol 不为空，则插入新的记录
-                        if (!ObjectUtil.isEmpty(brokerSymbol)) {
-                            String[] brokerSymbolParts = brokerSymbol.split("/");
-
-                            for (String symbol : brokerSymbolParts) {
-                                FollowVarietyVO brokerData = new FollowVarietyVO();
-                                brokerData.setStdContract(stdContract);
-                                brokerData.setStdSymbol(stdSymbol);
-                                brokerData.setBrokerName(name.trim());
-                                brokerData.setBrokerSymbol(symbol.trim());
-
-                                // 确保 stdContract 字段总是被更新
-                                FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
-                                try {
-                                    baseMapper.insert(entity);
-                                } catch (Exception e) {
-                                    log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (row.getLastCellNum()!=brokerNames.size()){
-                    for(int i=brokerNames.size()-1;i<brokerNames.size();i--){
-                        String[] brokerNameParts = brokerNames.get(i).split("/");
-                        for (String name : brokerNameParts) {
-                            //进行补充删除处理
-                            LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
-                            deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-                                    .eq(FollowVarietyEntity::getBrokerName, name.trim());
-                            baseMapper.delete(deleteQueryWrapper);
-                        }
-                        if (i==row.getLastCellNum())break;
+                    // 如果存在则更新，否则插入
+                    if (baseMapper.selectCount(queryWrapper) > 0) {
+                        baseMapper.update(entity, queryWrapper);
+                    } else {
+                        baseMapper.insert(entity);
                     }
                 }
             }
         }
     }
+
     private String getCellStringValue(Cell cell) {
-        if (cell == null) return "";
+        if (cell == null) {
+            return null;
+        }
         switch (cell.getCellType()) {
             case STRING:
                 return cell.getStringCellValue();
             case NUMERIC:
-                return String.valueOf(cell.getNumericCellValue());
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    return cell.getDateCellValue().toString();
+                } else {
+                    return String.valueOf((int) cell.getNumericCellValue());
+                }
             case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
+                return Boolean.toString(cell.getBooleanCellValue());
             case FORMULA:
                 return cell.getCellFormula();
             default:
-                return "";
+                return null;
         }
     }
 
@@ -599,11 +517,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         StreamUtils.copy(inputStream, response.getOutputStream());
     }
 
-
     @Override
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
+                .eq(FollowVarietyEntity::getTemplate, query.getTemplate())
                 .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
                 .like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
@@ -617,18 +535,18 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(resultPage.getRecords()), resultPage.getTotal());
     }
 
-    @Override
-    public void exportCsv(ByteArrayOutputStream outputStream) throws IOException {
-        // 查询数据库所有数据
+    public void exportCsv(ByteArrayOutputStream outputStream, Integer template) throws IOException {
+        // 查询数据库所有数据，添加 template 过滤
         List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
-
         // 获取券商名称列表
         List<String> brokerNames = brokers.stream()
                 .map(FollowPlatformVO::getBrokerName)
                 .toList();
-
-        // 查询数据库所有数据
-        List<FollowVarietyExcelVO> data1 = FollowVarietyConvert.INSTANCE.convertExcelList(list());
+        // 查询数据库所有数据，添加 template 过滤
+        List<FollowVarietyExcelVO> data1 = FollowVarietyConvert.INSTANCE.convertExcelList(list())
+                .stream()
+                .filter(record -> record.getTemplate() != null && record.getTemplate().equals(template))
+                .collect(Collectors.toList());
 
         List<FollowVarietyExcelVO> data = data1.stream()
                 .filter(record -> brokerNames.contains(record.getBrokerName()))
@@ -666,7 +584,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 // 添加 stdContract 和 stdSymbol
                 String stdContract = data.stream()
                         .filter(record -> record.getStdSymbol().equals(stdSymbol))
-                        .map(record -> String.valueOf(ObjectUtil.isEmpty(record.getStdContract())?"":record.getStdContract())) // 将 Integer 转换为 String
+                        .map(record -> String.valueOf(ObjectUtil.isEmpty(record.getStdContract()) ? "" : record.getStdContract())) // 将 Integer 转换为 String
                         .findFirst()
                         .orElse(""); // 获取对应的 stdContract，如果不存在则为空字符串
 
@@ -685,16 +603,40 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 csvPrinter.printRecord(row);
             }
 
+            for (FollowVarietyExcelVO record : data1) {
+                String stdSymbol = record.getStdSymbol();
+                String stdContract = ObjectUtil.isEmpty(record.getStdContract()) ? "" : String.valueOf(record.getStdContract());
+
+                if (!stdSymbols.contains(stdSymbol) && !stdContract.isEmpty()) {
+                    List<String> row = new ArrayList<>();
+                    row.add(stdContract);
+                    row.add(stdSymbol);
+                    for (int i = 0; i < brokerNamesSet.size(); i++) {
+                        row.add("");
+                    }
+                    csvPrinter.printRecord(row);
+                    stdSymbols.add(stdSymbol);
+                }
+                if (!stdSymbols.contains(stdSymbol) && stdContract.isEmpty()) {
+                    List<String> row = new ArrayList<>();
+                    row.add("");
+                    row.add(stdSymbol);
+
+                    for (int i = 0; i < brokerNamesSet.size(); i++) {
+                        row.add("");
+                    }
+                    csvPrinter.printRecord(row);
+                    stdSymbols.add(stdSymbol);
+                }
+            }
         } catch (IOException e) {
             throw new IOException(e);
         }
     }
 
-
     @Override
     public void generateCsv(ByteArrayOutputStream outputStream) throws IOException {
         List<FollowPlatformVO> brokers = followPlatformServiceImpl.listBroke();
-
         // 获取券商名称
         List<String> brokerNames = brokers.stream()
                 .map(FollowPlatformVO::getBrokerName)
@@ -712,7 +654,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             if (inputStream == null) {
                 throw new FileNotFoundException("未找到指定的模板文件：" + inputFilePath);
             }
-
             List<CSVRecord> records = parser.getRecords();
 
             // 写入表头
@@ -737,28 +678,4 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new IOException("写入 CSV 时出错", e);
         }
     }
-
-    @Override
-    public void addByExcel(MultipartFile file) throws Exception{
-        String fileName = file.getOriginalFilename();
-        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(FollowVarietyEntity::getTemplate)
-                .orderByDesc(FollowVarietyEntity::getTemplate)
-                .last("LIMIT 1");
-        FollowVarietyEntity maxTemplateEntity = baseMapper.selectOne(queryWrapper);
-
-        int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplate() != null)
-                ? maxTemplateEntity.getTemplate() + 1 : 1;
-
-        if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
-            // 处理CSV文件
-            importCsv(file, template);
-        } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
-            // 处理Excel文件
-            importExcel(file, template);
-        } else {
-            throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
-        }
-    }
-
 }
