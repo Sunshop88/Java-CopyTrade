@@ -4,9 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -24,18 +22,15 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.framework.operatelog.annotations.OperateLog;
-import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.subcontrol.query.FollowOrderHistoryQuery;
-import net.maku.subcontrol.query.FollowRepairOrderQuery;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
-import net.maku.subcontrol.service.FollowRepairOrderService;
+import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
-import net.maku.subcontrol.vo.FollowRepairOrderVO;
+import net.maku.subcontrol.vo.RepairSendVO;
 import online.mtapi.mt4.PlacedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +41,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 跟单
@@ -62,11 +56,11 @@ public class FollowSlaveController {
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowOrderHistoryService followOrderHistoryService;
-    private final FollowRepairOrderService followRepairOrderService;
     private final RedisCache redisCache;
     private final FollowVpsService followVpsService;
     private final FollowTestSpeedService followTestSpeedService;
     private final FollowTestDetailService followTestDetailService;
+    private final FollowSubscribeOrderService followSubscribeOrderService;
 
 
     @PostMapping("addSlave")
@@ -206,13 +200,6 @@ public class FollowSlaveController {
         return Result.ok(followOrderHistoryService.page(followOrderHistoryQuery));
     }
 
-    @GetMapping("missOrderList")
-    @Operation(summary = "漏单列表")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowRepairOrderVO>> missOrderList(@ParameterObject FollowRepairOrderQuery followOrderHistoryQuery){
-        return Result.ok(followRepairOrderService.page(followOrderHistoryQuery));
-    }
-
     @PostMapping("start")
     @Operation(summary = "单个vps测速")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -230,5 +217,12 @@ public class FollowSlaveController {
             followTestDetailService.deleteByTestId(testId);
             return Result.error("测速失败，已删除相关数据");
         }
+    }
+
+    @PostMapping("repairSend")
+    @Operation(summary = "漏单处理")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO){
+        return Result.ok(followSubscribeOrderService.repairSend(repairSendVO));
     }
 }

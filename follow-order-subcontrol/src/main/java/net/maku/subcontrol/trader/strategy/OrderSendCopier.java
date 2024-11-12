@@ -1,11 +1,16 @@
 package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CopyTradeFlag;
+import net.maku.followcom.enums.TraderLogEnum;
+import net.maku.followcom.enums.TraderLogTypeEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
@@ -20,6 +25,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +54,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
      */
     @Override
     public void operate(ConsumerRecord<String, Object> consumerRecord, int retry) {
+        //作为补单标识
+        int flag=0;
+        if (consumerRecord.key().equals("send")){
+            flag=1;
+        }
         EaOrderInfo orderInfo = (EaOrderInfo) consumerRecord.value();
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
         FollowTraderSubscribeEntity leaderCopier = leaderCopierService.subscription(copier.getId(), orderInfo.getMasterId());
@@ -99,9 +110,9 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setLeaderCopier(leaderCopier);
             openOrderMapping.setSlaveLots(BigDecimal.valueOf(permitInfo.getLots()));
             openOrderMapping.setFlag(permitInfo.getPermit());
+            openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
-            log.info("开仓1========"+ permitInfo.getExtra());
-            if (sendOrder(orderInfo, leaderCopier, openOrderMapping)) {
+            if (sendOrder(orderInfo, leaderCopier, openOrderMapping,flag)) {
                 break;
             }
             openOrderMappingService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -116,7 +127,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
      * @param openOrderMapping 开仓映射关系
      * @return true-开仓结果 true-成功 false-失败
      */
-    boolean sendOrder(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier, FollowSubscribeOrderEntity openOrderMapping) {
+    boolean sendOrder(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier, FollowSubscribeOrderEntity openOrderMapping,Integer flag) {
         boolean send = Boolean.FALSE;
         //开单所需要的信息
         String symbol = orderInfo.getSymbol();
@@ -129,6 +140,9 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             case Buy:
             case Sell:
                 try {
+                    if (flag==1){
+                        log.info("补单下单开始");
+                    }
                     log.info("[MT4跟单者:{}-{}-{}]收到订单{},开始下单,下单品种:{},下单手数:{}", copier.getId(), copier.getAccount(), copier.getServerName(), orderInfo, symbol, lots);
                     try {
                         double price = 0.0;
@@ -150,6 +164,21 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     //缓存跟单者的开仓信息
                     CachedCopierOrderInfo cachedCopierOrderInfo = new CachedCopierOrderInfo(order);
                     redisUtil.hset(Constant.FOLLOW_SUB_ORDER+mapKey, Long.toString(orderInfo.getTicket()), cachedCopierOrderInfo, 0);
+                    //生成日志
+                    FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
+                    followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
+                    FollowTraderEntity trader = followTraderService.getById(copier.getId());
+                    FollowVpsEntity followVpsEntity = followVpsService.getById(trader.getServerId());
+                    followTraderLogEntity.setVpsId(followVpsEntity.getId());
+                    followTraderLogEntity.setVpsClient(followVpsEntity.getClientId());
+                    followTraderLogEntity.setVpsName(followVpsEntity.getName());
+                    followTraderLogEntity.setCreateTime(LocalDateTime.now());
+                    followTraderLogEntity.setType(flag==0?TraderLogTypeEnum.SEND.getType():TraderLogTypeEnum.REPAIR.getType());
+                    //跟单信息
+                    String remark = (flag == 0 ? FollowConstant.FOLLOW_SEND : FollowConstant.FOLLOW_REPAIR_SEND) + ",策略账号=" + orderInfo.getAccount() + ",单号=" + orderInfo.getTicket() +
+                            ",跟单账号=" + openOrderMapping.getSlaveAccount() + ",单号=" + openOrderMapping.getSlaveTicket() + ",品种=" + openOrderMapping.getSlaveSymbol() + ",手数=" + openOrderMapping.getSlaveLots() + ",类型=" + Op.forValue(openOrderMapping.getSlaveType()).name();
+                    followTraderLogEntity.setLogDetail(remark);
+                    followTraderLogService.save(followTraderLogEntity);
                 } catch (Exception exception) {
                     if (AbstractApiTrader.availableException4.contains(exception.getMessage())) {
                         log.info(exception.getMessage());

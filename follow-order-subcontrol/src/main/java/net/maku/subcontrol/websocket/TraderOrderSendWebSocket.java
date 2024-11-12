@@ -42,6 +42,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+/**
+ * 品种报价及订单状态推送
+ */
 @Component
 @ServerEndpoint("/socket/trader/orderSend/{traderId}/{symbol}") //此注解相当于设置访问URL
 public class TraderOrderSendWebSocket {
@@ -55,7 +58,6 @@ public class TraderOrderSendWebSocket {
 
     private OnQuoteHandler onQuoteHandler;
     private FollowVarietyServiceImpl followVarietyService= SpringContextUtils.getBean( FollowVarietyServiceImpl.class);
-    private FollowPlatformServiceImpl followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
     private RedisCache redisCache= SpringContextUtils.getBean( RedisCache.class);
     private FollowSysmbolSpecificationServiceImpl followSysmbolSpecificationService= SpringContextUtils.getBean( FollowSysmbolSpecificationServiceImpl.class);
@@ -80,6 +82,7 @@ public class TraderOrderSendWebSocket {
             sessionSet.add(session);
             sessionPool.put(traderId+symbol, sessionSet);
             LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+
             log.info("订阅该品种{}+++{}",symbol,traderId);
             //查询平台信息
             FollowPlatformEntity followPlatform = followTraderService.getPlatForm(Long.valueOf(traderId));
@@ -142,10 +145,7 @@ public class TraderOrderSendWebSocket {
                         followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
                     }
                 }
-                //查询持仓订单缓存
-                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ACTIVE + traderId))){
-                     followOrderSendSocketVO.setOrderActiveInfoList((List<OrderActiveInfoVO>)redisCache.get(Constant.TRADER_ACTIVE + traderId));
-                 }
+
                 pushMessage(leaderApiTrader.getTrader().getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
             }
         } catch (Exception e) {

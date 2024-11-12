@@ -5,6 +5,7 @@ import net.maku.followcom.vo.FollowSubscribeOrderVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.vo.RepairSendVO;
 
 import java.util.List;
 
@@ -29,4 +30,6 @@ public interface FollowSubscribeOrderService extends BaseService<FollowSubscribe
 
 
     void export();
+
+    Boolean repairSend(RepairSendVO repairSendVO);
 }

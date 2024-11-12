@@ -122,11 +122,10 @@ public class EaOrderInfo implements Serializable {
      */
     private int platform = 4;
 
-
     /**
-     * 用户循环开仓
+     * 跟单注释
      */
-    private String eaOrderOpenMappingId;
+    private String slaveComment;
 
 
     public EaOrderInfo(Order order) {

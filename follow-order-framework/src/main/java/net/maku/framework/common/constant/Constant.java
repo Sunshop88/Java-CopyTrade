@@ -113,4 +113,14 @@ public interface Constant {
      * 订单关系记录
      */
     String FOLLOW_SUB_ORDER="follow:sub:order:";
+
+    /**
+     * 跟单下单情况缓存
+     */
+    String FOLLOW_REPAIR_SEND="follow:repair:send:";
+
+    /**
+     * 跟单平仓情况缓存
+     */
+    String FOLLOW_REPAIR_CLOSE="follow:repair:close:";
 }

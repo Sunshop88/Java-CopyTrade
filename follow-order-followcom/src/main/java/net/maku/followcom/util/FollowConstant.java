@@ -62,4 +62,9 @@ public class FollowConstant {
 
     public static String FOLLOW_CLOSE="【策略平仓跟随】";
 
+
+    public static String FOLLOW_REPAIR_SEND="【策略补单下单跟随】";
+    public static String FOLLOW_REPAIR_CLOSE="【策略补单平仓跟随】";
+
+
 }

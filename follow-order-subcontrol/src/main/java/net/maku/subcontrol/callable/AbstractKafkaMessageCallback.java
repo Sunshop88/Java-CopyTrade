@@ -89,7 +89,6 @@ public class AbstractKafkaMessageCallback {
             }
         }
 
-        //Strategy Design Pattern
         IOperationStrategy iOperationStrategy = operationStrategy.get(ac) == null ? operationStrategy.get(AcEnum.OTHERS) : operationStrategy.get(ac);
         iOperationStrategy.operate(consumerRecord, 2);
     }

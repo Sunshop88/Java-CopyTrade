@@ -45,16 +45,10 @@ public class OnQuoteHandler implements QuoteEventHandler {
     private RedisCache redisCache;
     private final FollowOrderSendSocketVO followOrderSendSocketVO = new FollowOrderSendSocketVO();
 
-    // 用于存储每个Symbol的锁
-    private static final ConcurrentHashMap<String, Lock> symbolLockMap = new ConcurrentHashMap<>();
-    private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
-    private final ScheduledThreadPoolExecutor scheduler = ThreadPoolUtils.getScheduledExecute();
-
     // 设定时间间隔，单位为毫秒
     private final long interval = 3000; // 3秒间隔
     // 用于存储每个 symbol 上次执行时间
     private static final ConcurrentHashMap<String, Long> symbolLastInvokeTimeMap = new ConcurrentHashMap<>();
-    private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
 
     public OnQuoteHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
@@ -65,17 +59,12 @@ public class OnQuoteHandler implements QuoteEventHandler {
 
 
     public void invoke(Object sender, QuoteEventArgs quote) {
-
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-
         // 获取当前系统时间
         long currentTime = System.currentTimeMillis();
         // 获取该symbol上次执行时间
         long lastSymbolInvokeTime = symbolLastInvokeTimeMap.getOrDefault(quote.Symbol, 0L);
         if (currentTime - lastSymbolInvokeTime  >= interval) {
-            // 回收对象
-            returnObjectsInBatch();
-            // 更新该symbol的上次执行时间为当前时间
             symbolLastInvokeTimeMap.put(quote.Symbol, currentTime);
             QuoteClient qc = (QuoteClient) sender;
             try {
@@ -88,11 +77,9 @@ public class OnQuoteHandler implements QuoteEventHandler {
     }
 
     private void handleQuote(QuoteClient qc, QuoteEventArgs quote) {
-        //所有持仓
-        List<Order> openedOrders = Arrays.stream(qc.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+
         //账户信息
         log.info("OnQuote监听：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
-        List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,abstractApiTrader.getTrader().getAccount());
 
         List<FollowOrderSendEntity> list;
         if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId()))){
@@ -105,7 +92,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
         followOrderSendSocketVO.setSellPrice(quote.Bid);
         followOrderSendSocketVO.setBuyPrice(quote.Ask);
         followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
-        followOrderSendSocketVO.setOrderActiveInfoList(orderActiveInfoList);
 
         if (ObjectUtil.isNotEmpty(list)) {
             FollowOrderSendEntity followOrderSendEntity = list.stream()
@@ -118,60 +104,9 @@ public class OnQuoteHandler implements QuoteEventHandler {
                 followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
             }
         }
-        //存入redis
-        redisCache.set(Constant.TRADER_ACTIVE+abstractApiTrader.getTrader().getId().toString(),orderActiveInfoList);
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
-    private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
-        List<OrderActiveInfoVO> collect = new ArrayList<>();
-        for (Order o : openedOrders) {
-            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoVOPool.borrowObject(); // 从对象池中借用对象
-            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
-            collect.add(reusableOrderActiveInfoVO);
-        }
-        // 将所有借用的对象添加到待归还列表中
-        synchronized (pendingReturnObjects) {
-            pendingReturnObjects.addAll(collect);
-        }
-        //倒序返回
-        return collect.stream()
-                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
-                .collect(Collectors.toList());
-    }
 
-    private void resetOrderActiveInfoVO(OrderActiveInfoVO vo, Order order, String account) {
-        vo.setAccount(account);
-        vo.setLots(order.Lots);
-        vo.setComment(order.Comment);
-        vo.setOrderNo(order.Ticket);
-        vo.setCommission(order.Commission);
-        vo.setSwap(order.Swap);
-        vo.setProfit(order.Profit);
-        vo.setSymbol(order.Symbol);
-        vo.setOpenPrice(order.OpenPrice);
-        vo.setMagicNumber(order.MagicNumber);
-        vo.setType(order.Type.name());
-        //增加五小时
-        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),5)));
-        vo.setStopLoss(order.StopLoss);
-        vo.setTakeProfit(order.TakeProfit);
-    }
-
-    private void returnObjectsInBatch() {
-        synchronized (pendingReturnObjects) {
-            if (pendingReturnObjects.isEmpty()) {
-                return; // 如果没有待归还的对象，直接返回
-            }
-
-            // 归还所有对象
-            for (OrderActiveInfoVO vo : pendingReturnObjects) {
-                orderActiveInfoVOPool.returnObject(vo);
-            }
-
-            // 清空待归还列表
-            pendingReturnObjects.clear();
-        }
-    }
 
 }
