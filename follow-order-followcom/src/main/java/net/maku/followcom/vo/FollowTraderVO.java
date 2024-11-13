@@ -6,6 +6,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
@@ -25,18 +29,24 @@ public class FollowTraderVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "mt4账号")
+	@NotBlank(message = "mt4账号不能为空")
 	private String account;
 
 	@Schema(description = "类型0-信号源 1-跟单者")
+	@Min(value = 0, message = "类型只能为0或1")
+	@Max(value = 1, message = "类型只能为0或1")
+	@NotBlank(message = "账号类型不能为空")
 	private Integer type;
 
 	@Schema(description = "密码")
+	@NotBlank(message = "密码不能为空")
 	private String password;
 
 	@Schema(description = "平台id")
 	private Integer platformId;
 
 	@Schema(description = "平台服务器")
+	@NotBlank( message = "平台服务器不能为空")
 	private String platform;
 
 	@Schema(description = "状态0-正常 1-异常")

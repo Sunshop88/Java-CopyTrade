@@ -4,6 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -22,6 +26,7 @@ public class FollowOrderSendVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "品种类型")
+	@NotBlank(message = "品种类型不能为空")
 	private String symbol;
 
 	@Schema(description = "券商")
@@ -31,12 +36,16 @@ public class FollowOrderSendVO implements Serializable {
 	private String platform;
 
 	@Schema(description = "账号id")
+	@NotBlank(message = "账号id不能为空")
 	private Long traderId;
 
 	@Schema(description = "账号")
 	private String account;
 
 	@Schema(description = "类型0-buy 1-sell")
+	@NotBlank(message = "类型不能为空")
+	@Min(value = 0, message = "类型只能为0或1")
+	@Max(value = 1, message = "类型只能为0或1")
 	private Integer type;
 
 	@Schema(description = "总单数")

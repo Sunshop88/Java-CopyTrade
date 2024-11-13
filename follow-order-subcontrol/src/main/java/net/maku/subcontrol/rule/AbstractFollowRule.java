@@ -10,6 +10,7 @@ import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
 import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Exception.ConnectException;
@@ -27,6 +28,8 @@ import java.math.RoundingMode;
 public abstract class AbstractFollowRule {
     protected FixedLot fixedLot = new FixedLot();
     protected FixedRatio fixedRatio = new FixedRatio();
+    protected FixedEuqit fixedEuqit = new FixedEuqit();
+
     /**
      * 链中下一元素
      */
@@ -72,6 +75,7 @@ public abstract class AbstractFollowRule {
         LeaderApiTrader LeaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId().toString());
         leaderSymbolInfo = LeaderApiTrader.symbolInfo(eaOrderInfo.getOriSymbol(), true);
 
+
         log.debug("leaderSymbolInfo {}",leaderSymbolInfo);
         log.debug("copierSymbolInfo {}",copierSymbolInfo);
         switch (masterSlave.getFollowMode()) {
@@ -85,7 +89,7 @@ public abstract class AbstractFollowRule {
                 break;
             case 2:
                 //按净值比例
-                lots = 0.0;
+                lots = fixedEuqit.lots(eaOrderInfo,LeaderApiTrader.quoteClient.Equity,copierApiTrader.quoteClient.Equity);
                 break;
             default:
                 lots = 0.0;

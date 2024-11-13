@@ -1,6 +1,7 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -22,6 +23,7 @@ public class FollowOrderSendCloseVO implements Serializable {
 	private String symbol;
 
 	@Schema(description = "账号id")
+	@NotBlank(message = "账号不能为空")
 	private Long traderId;
 
 	@Schema(description = "账号")
@@ -37,6 +39,7 @@ public class FollowOrderSendCloseVO implements Serializable {
 	private Integer intervalTime;
 
 	@Schema(description = "是否全平")
+	@NotBlank(message = "是否全平不能为空")
 	private Integer flag;
 
 	@Schema(description = "订单号")

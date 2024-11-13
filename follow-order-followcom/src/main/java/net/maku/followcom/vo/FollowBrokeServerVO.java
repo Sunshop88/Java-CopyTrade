@@ -43,6 +43,5 @@ public class FollowBrokeServerVO implements Serializable {
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private LocalDateTime updateTim;
-
+	private LocalDateTime updateTime;
 }

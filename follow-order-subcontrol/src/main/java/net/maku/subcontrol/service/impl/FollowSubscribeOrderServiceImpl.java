@@ -132,6 +132,9 @@ public class FollowSubscribeOrderServiceImpl extends BaseServiceImpl<FollowSubsc
                         ConsumerRecord consumerRecord= new ConsumerRecord<>("send",1,1,"send",first.get());
                         OrderSendCopier orderSendCopier = new OrderSendCopier(copierApiTrader);
                         orderSendCopier.operate(consumerRecord,1);
+                        redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + traderSubscribeEntity.getId(),1,first.get());
+                    }else {
+                        throw new ServerException("暂无订单需处理");
                     }
                 }else {
                     //获取redis内的平仓信息
@@ -141,6 +144,9 @@ public class FollowSubscribeOrderServiceImpl extends BaseServiceImpl<FollowSubsc
                         ConsumerRecord consumerRecord= new ConsumerRecord<>("close",1,1,"close",first.get());
                         OrderCloseCopier orderCloseCopier = new OrderCloseCopier(copierApiTrader);
                         orderCloseCopier.operate(consumerRecord,1);
+                        redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + traderSubscribeEntity.getId(),1,first.get());
+                    }else {
+                        throw new ServerException("暂无订单需处理");
                     }
                 }
                 return true;
