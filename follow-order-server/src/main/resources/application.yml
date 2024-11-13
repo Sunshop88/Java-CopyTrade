@@ -21,7 +21,7 @@ knife4j:
 spring:
   # 环境 dev|test|prod
   profiles:
-    active: dev
+    active: @profile.name@
   application:
     name: follow-order
   jackson:
@@ -30,6 +30,8 @@ spring:
     multipart:
       max-file-size: 1024MB
       max-request-size: 1024MB
+  main:
+    allow-bean-definition-overriding: true
 
 storage:
   enabled: true
