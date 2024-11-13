@@ -203,7 +203,7 @@ public class FollowSlaveController {
     @PostMapping("start")
     @Operation(summary = "单个vps测速")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestEntity request) {
+    public Result<FollowTestSpeedVO> start(@RequestBody MeasureRequestVO request) {
         List<String> servers = request.getServers();
         FollowVpsEntity vpsEntity = request.getVpsEntity();
         Integer testId = request.getTestId();

@@ -1,9 +1,12 @@
 package net.maku.followcom.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.maku.framework.common.utils.DateUtils;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -37,6 +40,7 @@ public class FollowVarietyVO implements Serializable {
 	private String brokerSymbol;
 
 	@Schema(description  = "模板")
+	@NotBlank(message = "模板不能为空")
 	private Integer template;
 
 	@Schema(description = "版本号")
@@ -49,12 +53,14 @@ public class FollowVarietyVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime updateTime;
 
 }
