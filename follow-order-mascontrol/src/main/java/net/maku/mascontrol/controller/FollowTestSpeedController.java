@@ -18,10 +18,7 @@ import net.maku.followcom.query.FollowTestSpeedQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowBrokeServerVO;
-import net.maku.followcom.vo.FollowTestDetailVO;
-import net.maku.followcom.vo.FollowTestSpeedVO;
-import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
@@ -116,7 +113,7 @@ public class FollowTestSpeedController {
     @PostMapping("measure")
     @Operation(summary = "测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestEntity request, HttpServletRequest req) throws Exception {
+    public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
         overallResult.setDoTime(new Date());
@@ -145,18 +142,16 @@ public class FollowTestSpeedController {
             futures.add(executorService.submit(() -> {
                 String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
 
-                MeasureRequestEntity startRequest = new MeasureRequestEntity();
+                MeasureRequestVO startRequest = new MeasureRequestVO();
                 startRequest.setServers(servers);
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
 
-                // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
-                String expiryDateStr = vpsEntity.getExpiryDate().toString();
-                startRequest.setExpiryDateStr(expiryDateStr);
-
+                // 将对象序列化为 JSON
+                String jsonBody = objectMapper.writeValueAsString(startRequest);
                 RestTemplate restTemplate = new RestTemplate();
                 HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                HttpEntity<MeasureRequestEntity> entity = new HttpEntity<>(startRequest, headers);
+                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
                 ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                 log.info("测速请求:" + response.getBody());
 
@@ -225,6 +220,7 @@ public class FollowTestSpeedController {
         executorService.shutdown(); // 关闭线程池
     }
 
+
     @GetMapping("listTestSpeed")
     @Operation(summary = "测速记录列表")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
@@ -237,7 +233,7 @@ public class FollowTestSpeedController {
     @PostMapping("remeasure")
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestEntity request, HttpServletRequest req) throws Exception {
+    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
         FollowTestSpeedVO overallResult = followTestSpeedService.get(id);

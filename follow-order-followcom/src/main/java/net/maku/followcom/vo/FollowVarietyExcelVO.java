@@ -2,6 +2,7 @@ package net.maku.followcom.vo;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.fhs.core.trans.vo.TransPojo;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,7 @@ public class FollowVarietyExcelVO implements TransPojo {
 	private String brokerSymbol;
 
 	@ExcelProperty("模板")
+	@NotBlank(message = "模板不能为空")
 	private Integer template;
 
 }

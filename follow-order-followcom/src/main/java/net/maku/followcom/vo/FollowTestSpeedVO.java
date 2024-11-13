@@ -1,7 +1,13 @@
 package net.maku.followcom.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import net.maku.framework.common.utils.DateUtils;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -21,12 +27,18 @@ public class FollowTestSpeedVO implements Serializable {
 	private Integer id;
 
 	@Schema(description = "测速时间")
+	@NotNull(message = "测速时间不能为空")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private Date doTime;
 
 	@Schema(description = "测试状态0-失败 1-进行中 2-成功")
+	@NotNull(message = "测试状态不能为空")
+	@Min(value = 0, message = "测试状态必须大于等于0")
+	@Max(value = 2, message = "测试状态必须小于等于2")
 	private Integer status;
 
 	@Schema(description = "测速人")
+	@NotBlank(message = "测速人不能为空")
 	private String testName;
 
 	@Schema(description = "版本号")
@@ -39,12 +51,14 @@ public class FollowTestSpeedVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime updateTime;
 
 }
