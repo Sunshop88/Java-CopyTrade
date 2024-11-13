@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 @TableName("follow_trader")
 public class FollowTraderEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**

@@ -19,7 +19,6 @@ import java.util.Date;
 @TableName("follow_sysmbol_specification")
 public class FollowSysmbolSpecificationEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**

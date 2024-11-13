@@ -6,7 +6,6 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowPlatformService;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
@@ -22,7 +21,6 @@ public abstract class AbstractApiTradersAdmin {
 
     protected FollowBrokeServerService followBrokeServerService;
     protected FollowTraderService followTraderService;
-    protected FollowTraderSubscribeService followTraderSubscribeService;
     protected IKafkaProducer<String, Object> kafkaProducer;
     protected AdminClient adminClient;
     protected ScheduledExecutorService scheduledExecutorService;

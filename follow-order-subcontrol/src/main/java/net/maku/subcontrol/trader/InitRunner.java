@@ -1,17 +1,12 @@
 package net.maku.subcontrol.trader;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
@@ -21,11 +16,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.util.List;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 /**
  * @author Shaozz
@@ -42,9 +33,6 @@ public class InitRunner implements ApplicationRunner {
 
     @Autowired
     private FollowTraderService aotfxTraderService;
-
-    @Autowired
-    FollowTraderSubscribeService masterSlaveService;
 
     @Autowired
     private FollowBrokeServerService followBrokeServerService;

@@ -7,7 +7,6 @@ import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowOrderSendService;
-import net.maku.followcom.service.FollowSubscribeOrderService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -41,8 +40,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
 
-    protected FollowSubscribeOrderService followSubscribeOrderService;
-
     protected Boolean running = Boolean.TRUE;
 
     private TraderOrderSendWebSocket traderOrderSendWebSocket;
@@ -63,7 +60,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
 
     public OnQuoteHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
-        this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         traderOrderSendWebSocket=SpringContextUtils.getBean(TraderOrderSendWebSocket.class);
         followOrderSendService=SpringContextUtils.getBean(FollowOrderSendService.class);
         redisCache=SpringContextUtils.getBean(RedisCache.class);

@@ -19,7 +19,6 @@ public class FollowVarietyEntity {
 	* ID
 	*/
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**

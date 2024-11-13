@@ -22,7 +22,6 @@ import java.util.Date;
 public class FollowOrderSendEntity {
 
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
