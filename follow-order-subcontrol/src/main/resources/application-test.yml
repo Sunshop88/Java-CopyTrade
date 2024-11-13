@@ -2,9 +2,9 @@ spring:
   data:
     redis:
       database: 1
-      host: 39.99.255.153
+      host: 39.99.136.49
       port: 6379
-      password: p56MbQk!@2
+      password: d@OgcOQdvQ09
       #timeout: 6000ms  # 连接超时时长（毫秒）
   datasource:
     dynamic:
@@ -20,9 +20,9 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://39.99.255.153:3306/follow-order?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://39.99.136.49:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: mUew97PMP~!6nn
+          password: xizcJWmXFkB5f4fm
           # 达梦
           #    driver-class-name: dm.jdbc.driver.DmDriver
           #    url: jdbc:dm://192.168.3.19:5236/maku_boot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
@@ -43,7 +43,7 @@ spring:
 
 cld:
   kafka:
-    servers: 39.99.255.153:9092
+    servers: 39.99.136.49:9092
     partition: 1
     replication: 1
     maxIdle: 20
