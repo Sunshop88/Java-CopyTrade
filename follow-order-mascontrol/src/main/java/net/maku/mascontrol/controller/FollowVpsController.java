@@ -22,6 +22,7 @@ import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -57,7 +58,8 @@ public class FollowVpsController {
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
-    private final ClientService clientService;
+    private final RedisUtil redisUtil;
+
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
@@ -217,15 +219,6 @@ public class FollowVpsController {
             vpsUserVO.setName(o.getVpsName());
             return vpsUserVO;
         }).toList();
-    }
-
-    @GetMapping("ces")
-    @Operation(summary = "测试")
-    @OperateLog(type = OperateTypeEnum.UPDATE)
-    @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<Boolean> ces(){
-        clientService.list();
-        return Result.ok();
     }
 
 }

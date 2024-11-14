@@ -1,6 +1,8 @@
 package net.maku.framework.common.cache;
 
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -19,7 +21,8 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 public class RedisCache {
-    @Resource
+    @Autowired
+    @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
 
     /**

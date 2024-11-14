@@ -2,6 +2,7 @@ package net.maku.framework.common.cache;
 
 import net.maku.framework.common.exception.ServerException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -20,9 +21,12 @@ import java.util.concurrent.TimeUnit;
 public class RedisUtil {
 
 	@Autowired
+	@Qualifier("redisTemplate1")
 	private RedisTemplate<String, Object> redisTemplate;
+
 	@Autowired
-	private StringRedisTemplate stringRedisTemplate;
+	@Qualifier("redisTemplate2")
+	private RedisTemplate<String, Object> redisTemplate2;
 
 	/**
 	 * 指定缓存失效时间
@@ -790,6 +794,24 @@ public class RedisUtil {
 	 */
 	private Long zCount(String key, double min, double max) {
 		return this.redisTemplate.opsForZSet().count(key, min, max);
+	}
+
+	/**
+	 * redis2普通缓存放入
+	 *
+	 * @param key   键
+	 * @param value 值
+	 * @return true成功 false失败
+	 */
+	public boolean setSlaveRedis(String key, Object value) {
+		try {
+			redisTemplate2.opsForValue().set(key, value);
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+
 	}
 
 //4	ZINCRBY key increment member

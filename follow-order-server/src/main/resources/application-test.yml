@@ -1,11 +1,19 @@
 spring:
   data:
     redis:
-      database: 1
-      host: 39.99.136.49
-      port: 6379
-      password: d@OgcOQdvQ09
-      #timeout: 6000ms  # 连接超时时长（毫秒）
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: 39.99.136.49
+        port: 6379
+        password: d@OgcOQdvQ09
+        #timeout: 6000ms  # 连接超时时长（毫秒）
+
+      redis2:
+        database: 0
+        host: 98.142.143.187
+        port: 6379
+        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
