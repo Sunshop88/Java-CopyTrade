@@ -185,11 +185,4 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public FollowVpsEntity select(String vpsName) {
         return baseMapper.selectOne(Wrappers.<FollowVpsEntity>lambdaQuery().eq(FollowVpsEntity::getName,vpsName));
     }
-
-    @Override
-    @DS("slave")
-    public void ces() {
-
-    }
-
 }
