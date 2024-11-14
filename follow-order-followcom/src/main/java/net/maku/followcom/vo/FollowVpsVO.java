@@ -34,6 +34,7 @@ public class FollowVpsVO implements Serializable {
 	private String ipAddress;
 
 	@Schema(description = "到期时间")
+	@NotBlank(message = "到期时间不为空")
 	private LocalDateTime expiryDate;
 
 	@Schema(description = "备注")
