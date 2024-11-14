@@ -41,8 +41,6 @@ public class FollowPlatformVO implements Serializable {
 	private String server;
 
 	@Schema(description = "服务器节点")
-	@NotBlank(message = "服务器节点不能为空")
-	@Size(max = 100, message = "服务器节点长度不能超过100个字符")
 	private String serverNode;
 
 	@Schema(description = "备注")
@@ -69,6 +67,7 @@ public class FollowPlatformVO implements Serializable {
 	private LocalDateTime updateTime;
 
 	@Schema(description = "服务名称集合")
+	@NotBlank(message = "服务名称集合不能为空")
 	private List<String> platformList;
 
 }

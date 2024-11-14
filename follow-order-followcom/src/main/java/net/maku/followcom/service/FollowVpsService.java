@@ -41,4 +41,5 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
 
     FollowVpsEntity select(String vpsName);
 
+    void ces();
 }
