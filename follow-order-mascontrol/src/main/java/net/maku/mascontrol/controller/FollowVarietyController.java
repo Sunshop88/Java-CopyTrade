@@ -95,17 +95,17 @@ public class FollowVarietyController {
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> importExcel(@RequestParam("file") MultipartFile file,@RequestParam("template")Integer template) throws Exception {
-        if (file.isEmpty()) {
-            return Result.error("请选择需要上传的文件");
-        }
+    public Result<String> importExcel(@RequestParam("file") MultipartFile file,@RequestParam("template")Integer template,@RequestParam("templateName") String templateName) throws Exception {
+//        if (file.isEmpty()) {
+//            return Result.error("请选择需要上传的文件");
+//        }
         try {
             // 检查文件类型
             if (!isExcelOrCsv(file.getOriginalFilename())) {
                 return Result.error("仅支持 Excel 和 CSV 文件");
             }
             // 导入文件
-            followVarietyService.importByExcel(file,template);
+            followVarietyService.importByExcel(file,template,templateName);
             return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
@@ -127,7 +127,7 @@ public class FollowVarietyController {
     @Operation(summary = "新增模板")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> addExcel(@RequestParam("file") MultipartFile file) throws Exception {
+    public Result<String> addExcel(@RequestParam("file") MultipartFile file,@RequestParam("templateName") String templateName) throws Exception {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
@@ -137,7 +137,7 @@ public class FollowVarietyController {
                 return Result.error("仅支持 Excel 和 CSV 文件");
             }
             // 导入文件
-            followVarietyService.addByExcel(file);
+            followVarietyService.addByExcel(file,templateName);
             return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
@@ -197,7 +197,7 @@ public class FollowVarietyController {
         // 根据 template 过滤 FollowVarietyEntity
         List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list()
                 .stream()
-                .filter(entity -> entity.getTemplate() != null && entity.getTemplate().equals(query.getTemplate()))
+                .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
                 .collect(Collectors.toList());
 
         // 构建映射关系：<StdSymbol + BrokerName, BrokerSymbol列表>

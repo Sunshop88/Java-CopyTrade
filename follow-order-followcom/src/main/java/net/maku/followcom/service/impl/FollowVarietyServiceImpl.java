@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -107,21 +108,21 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public void importByExcel(MultipartFile file, Integer template) throws Exception {
+    public void importByExcel(MultipartFile file, Integer template, String templateName) throws Exception {
         String fileName = file.getOriginalFilename();
         if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
             // 处理CSV文件
-            importCsv(file, template);
+            importCsv(file, template, templateName);
         } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
             // 处理Excel文件
-            importExcel(file, template);
+            importExcel(file, template, templateName);
         } else {
             throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
         }
     }
 
 
-    public void importCsv(MultipartFile file, Integer template) throws IOException {
+    public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
@@ -140,7 +141,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 }
                 // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
                 LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-                wrapper.eq(FollowVarietyEntity::getTemplate, template)
+                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
                         .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
                 // 根据 template 查询数据库中的数据
                 List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
@@ -156,14 +157,14 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
                     deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
                             .eq(FollowVarietyEntity::getBrokerName, brokerName.trim())
-                            .eq(FollowVarietyEntity::getTemplate, template);
+                            .eq(FollowVarietyEntity::getTemplateId, template);
                     baseMapper.delete(deleteQueryWrapper);
 
                     FollowVarietyVO brokerData = new FollowVarietyVO();
                     brokerData.setStdContract(stdContract);
                     brokerData.setStdSymbol(stdSymbol);
                     brokerData.setBrokerName(brokerName.trim());
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
 
                     if (ObjectUtil.isEmpty(brokerSymbol)) {
                         // brokerSymbol 为空的情况
@@ -191,15 +192,22 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setBrokerName(null);
                     brokerData.setBrokerSymbol(null);
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     baseMapper.insert(entity);
                 }
             }
+            if (!ObjectUtil.isEmpty(templateName)) {
+                //根据template更新templateName
+                LambdaUpdateWrapper<FollowVarietyEntity> updateWrapper = Wrappers.lambdaUpdate();
+                updateWrapper.eq(FollowVarietyEntity::getTemplateId, template)
+                        .set(FollowVarietyEntity::getTemplateName, templateName);
+                baseMapper.update(updateWrapper);
+            }
         }
     }
 
-    public void importExcel(MultipartFile file, Integer template) throws IOException {
+    public void importExcel(MultipartFile file, Integer template, String templateName) throws IOException {
         try (InputStream inputStream = file.getInputStream()) {
             Workbook workbook = new XSSFWorkbook(inputStream);
             Sheet sheet = workbook.getSheetAt(0);
@@ -228,7 +236,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 }
                 // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
                 LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-                wrapper.eq(FollowVarietyEntity::getTemplate, template)
+                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
                         .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
                 // 根据 template 查询数据库中的数据
                 List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
@@ -244,14 +252,14 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
                     deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
                             .eq(FollowVarietyEntity::getBrokerName, brokerName.trim())
-                            .eq(FollowVarietyEntity::getTemplate, template); // 添加 template 条件
+                            .eq(FollowVarietyEntity::getTemplateId, template); // 添加 template 条件
                     baseMapper.delete(deleteQueryWrapper);
 
                     FollowVarietyVO brokerData = new FollowVarietyVO();
                     brokerData.setStdContract(stdContract);
                     brokerData.setStdSymbol(stdSymbol);
                     brokerData.setBrokerName(brokerName.trim());
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
 
                     if (brokerSymbol == null || brokerSymbol.isEmpty()) {
                         // brokerSymbol 为空的情况
@@ -279,13 +287,13 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setBrokerName(null);
                     brokerData.setBrokerSymbol(null);
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     // 插入或更新记录，确保 stdContract 和 stdSymbol 成功保存
                     LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = Wrappers.lambdaQuery();
                     queryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
-                            .eq(FollowVarietyEntity::getTemplate, template); // 添加 template 条件
+                            .eq(FollowVarietyEntity::getTemplateId, template); // 添加 template 条件
 
                     // 如果存在则更新，否则插入
                     if (baseMapper.selectCount(queryWrapper) > 0) {
@@ -295,32 +303,39 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     }
                 }
             }
+            if (!ObjectUtil.isEmpty(templateName)) {
+                //根据template更新templateName
+                LambdaUpdateWrapper<FollowVarietyEntity> updateWrapper = Wrappers.lambdaUpdate();
+                updateWrapper.eq(FollowVarietyEntity::getTemplateId, template)
+                        .set(FollowVarietyEntity::getTemplateName, templateName);
+                baseMapper.update(updateWrapper);
+            }
         }
     }
 
     @Override
-    public void addByExcel(MultipartFile file) throws Exception {
+    public void addByExcel(MultipartFile file, String templateName) throws Exception {
         String fileName = file.getOriginalFilename();
         LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(FollowVarietyEntity::getTemplate)
-                .orderByDesc(FollowVarietyEntity::getTemplate)
+        queryWrapper.select(FollowVarietyEntity::getTemplateId)
+                .orderByDesc(FollowVarietyEntity::getTemplateId)
                 .last("LIMIT 1");
         FollowVarietyEntity maxTemplateEntity = baseMapper.selectOne(queryWrapper);
-        int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplate() != null)
-                ? maxTemplateEntity.getTemplate() + 1 : 1;
+        int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplateId() != null)
+                ? maxTemplateEntity.getTemplateId() + 1 : 1;
 
         if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
             // 处理CSV文件
-            addCsv(file, template);
+            addCsv(file, template, templateName);
         } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
             // 处理Excel文件
-            addExcel(file, template);
+            addExcel(file, template, templateName);
         } else {
             throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
         }
     }
 
-    public void addCsv(MultipartFile file, Integer template) throws IOException {
+    public void addCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
 
@@ -349,7 +364,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setStdSymbol(stdSymbol);
                     brokerData.setBrokerName(brokerName.trim());
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
+                    brokerData.setTemplateName(templateName);
 
                     if (ObjectUtil.isEmpty(brokerSymbol)) {
                         // brokerSymbol 为空的情况
@@ -378,7 +394,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setBrokerName(null);
                     brokerData.setBrokerSymbol(null);
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
+                    brokerData.setTemplateName(templateName);
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     baseMapper.insert(entity);
                 }
@@ -387,7 +404,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
 
-    public void addExcel(MultipartFile file, Integer template) throws IOException {
+    public void addExcel(MultipartFile file, Integer template, String templateName) throws IOException {
         try (InputStream inputStream = file.getInputStream()) {
             Workbook workbook = new XSSFWorkbook(inputStream);
             Sheet sheet = workbook.getSheetAt(0);
@@ -427,7 +444,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setStdSymbol(stdSymbol);
                     brokerData.setBrokerName(brokerName.trim());
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
+                    brokerData.setTemplateName(templateName);
 
                     if (brokerSymbol == null || brokerSymbol.isEmpty()) {
                         // brokerSymbol 为空的情况
@@ -455,7 +473,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     brokerData.setStdContract(stdContract);
                     brokerData.setBrokerName(null);
                     brokerData.setBrokerSymbol(null);
-                    brokerData.setTemplate(template); // 设置 template 字段
+                    brokerData.setTemplateId(template); // 设置 template 字段
+                    brokerData.setTemplateName(templateName);
 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     // 插入或更新记录，确保 stdContract 和 stdSymbol 成功保存
@@ -521,7 +540,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
-                .eq(FollowVarietyEntity::getTemplate, query.getTemplate())
+                .eq(FollowVarietyEntity::getTemplateId, query.getTemplate())
                 .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
                 .like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
@@ -545,7 +564,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         // 查询数据库所有数据，添加 template 过滤
         List<FollowVarietyExcelVO> data1 = FollowVarietyConvert.INSTANCE.convertExcelList(list())
                 .stream()
-                .filter(record -> record.getTemplate() != null && record.getTemplate().equals(template))
+                .filter(record -> record.getTemplateId() != null && record.getTemplateId().equals(template))
                 .collect(Collectors.toList());
 
         List<FollowVarietyExcelVO> data = data1.stream()

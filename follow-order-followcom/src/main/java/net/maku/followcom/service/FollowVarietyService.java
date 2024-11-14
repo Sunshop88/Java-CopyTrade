@@ -43,7 +43,7 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
 
-    void addByExcel(MultipartFile file) throws Exception;
+    void addByExcel(MultipartFile file,String templateName) throws Exception;
 
-    void importByExcel(MultipartFile file, Integer template) throws Exception;
+    void importByExcel(MultipartFile file, Integer template,String templateName) throws Exception;
 }

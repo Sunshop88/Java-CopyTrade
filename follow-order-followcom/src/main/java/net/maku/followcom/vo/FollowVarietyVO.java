@@ -3,6 +3,7 @@ package net.maku.followcom.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -39,12 +40,17 @@ public class FollowVarietyVO implements Serializable {
 	@Schema(description = "券商对应的品种名称")
 	private String brokerSymbol;
 
-	@Schema(description  = "模板")
-	@NotBlank(message = "模板不能为空")
-	private Integer template;
+	@Schema(description  = "模板ID")
+	@NotNull(message = "模板ID不能为空")
+	private Integer templateId;
+
+	@Schema(description = "模板名称")
+	@NotBlank(message = "模板名称不能为空")
+	private String templateName;
 
 	@Schema(description = "版本号")
 	private Integer version;
+
 
 	@Schema(description = "删除标识 0：正常 1：已删除")
 	private Integer deleted;
