@@ -59,6 +59,7 @@ public class RedisConfig {
         config.setHostName(redisProperties.getHost());
         config.setPort(redisProperties.getPort());
         config.setDatabase(redisProperties.getDatabase());  // 设置 database
+        config.setPassword(redisProperties.getPassword());
         return new LettuceConnectionFactory(config);
     }
 

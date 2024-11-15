@@ -41,6 +41,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * vps列表
@@ -146,7 +147,7 @@ public class FollowVpsController {
     public Result<List<FollowVpsVO>> listVps(){
         List<VpsUserVO> list;
         //除了admin都需要判断
-        if(!ObjectUtil.equals(SecurityUser.getUserId(),"10000")){
+        if(!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(),"10000")){
             //查看当前用户拥有的vps
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId()))){
                 list =(List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
@@ -163,6 +164,9 @@ public class FollowVpsController {
                 vpsUserVO.setId(o.getId());
                 return vpsUserVO;
             }).toList();
+        }
+        if (ObjectUtil.isEmpty(list)){
+            return Result.ok(null);
         }
         List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list.stream().map(o->o.getId()).toList()).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
