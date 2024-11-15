@@ -10,6 +10,7 @@ import java.util.List;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
@@ -35,7 +36,7 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "类型0-信号源 1-跟单者")
 	@Min(value = 0, message = "类型只能为0或1")
 	@Max(value = 1, message = "类型只能为0或1")
-	@NotBlank(message = "账号类型不能为空")
+	@NotNull(message = "账号类型不能为空")
 	private Integer type;
 
 	@Schema(description = "密码")

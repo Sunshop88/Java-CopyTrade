@@ -89,7 +89,7 @@ public class FollowTraderController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<String> save(@RequestBody FollowTraderVO vo){
+    public Result<String> save(@RequestBody @Valid FollowTraderVO vo){
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);

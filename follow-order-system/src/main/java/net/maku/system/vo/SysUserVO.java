@@ -90,4 +90,13 @@ public class SysUserVO implements Serializable, TransPojo {
 
     @Schema(description = "VPS列表")
     private List<VpsUserVO> vpsList;
+
+    @Schema(description = "角色")
+    private List<String> roleNameList;
+
+    @Schema(description = "上次登录时间")
+    private LocalDateTime lastLoginTime;
+
+    @Schema(description = "上次登录IP")
+    private String ip;
 }

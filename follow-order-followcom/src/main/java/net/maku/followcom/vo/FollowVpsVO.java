@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -34,7 +35,7 @@ public class FollowVpsVO implements Serializable {
 	private String ipAddress;
 
 	@Schema(description = "到期时间")
-	@NotBlank(message = "到期时间不为空")
+	@NotNull(message = "到期时间不为空")
 	private LocalDateTime expiryDate;
 
 	@Schema(description = "备注")

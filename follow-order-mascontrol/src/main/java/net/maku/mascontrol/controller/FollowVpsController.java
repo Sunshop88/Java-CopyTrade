@@ -77,7 +77,7 @@ public class FollowVpsController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> save(@RequestBody FollowVpsVO vo){
+    public Result<String> save(@RequestBody @Valid FollowVpsVO vo){
         followVpsService.save(vo);
 
         return Result.ok();
