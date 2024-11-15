@@ -22,6 +22,7 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.framework.security.utils.TokenUtils;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.dao.SysUserDao;
+import net.maku.system.entity.SysLogLoginEntity;
 import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.SuperAdminEnum;
 import net.maku.system.query.SysRoleUserQuery;
@@ -58,19 +59,47 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     private final FollowVpsUserService followVpsUserService;
     private final FollowVpsService followVpsService;
     private final RedisCache redisCache;
+    private final SysRoleService sysRoleService;
+    private final SysLogLoginService sysLogLoginService;
     @Override
     public PageResult<SysUserVO> page(SysUserQuery query) {
         // 查询参数
         Map<String, Object> params = getParams(query);
-
         // 分页查询
         IPage<SysUserEntity> page = getPage(query);
         params.put(Constant.PAGE, page);
-
         // 数据列表
         List<SysUserEntity> list = baseMapper.getList(params);
+        List<SysUserVO> voList = new ArrayList<>();
 
-        return new PageResult<>(SysUserConvert.INSTANCE.convertList(list), page.getTotal());
+        for (SysUserEntity entity : list) {
+            SysUserVO vo = SysUserConvert.INSTANCE.convert(entity);
+            // 添加 roleNameList
+            vo.setRoleNameList(getRoleNames(entity.getId())); // 自定义方法获取角色名称
+            // 查询sys_log_login中最新的那一条信息
+            SysLogLoginEntity sysLogLoginEntity = sysLogLoginService.getOne(Wrappers.<SysLogLoginEntity>lambdaQuery()
+                            .orderByDesc(SysLogLoginEntity::getCreateTime)
+                            .last("limit 1"));
+            vo.setLastLoginTime(sysLogLoginEntity.getCreateTime());
+            vo.setIp(sysLogLoginEntity.getIp());
+            voList.add(vo);
+        }
+
+
+        // 返回分页结果
+        return new PageResult<>(voList, page.getTotal());
+    }
+
+    private List<String> getRoleNames(Long id) {
+        List<String> vo = new ArrayList<>();
+        //通过id查询角色用户表中的role_id
+        List<Long> roleIdList = sysUserRoleService.getRoleIdList(id);
+        //通过roleIdList查询角色表中的name
+        for (Long roleId : roleIdList) {
+            String roleName = sysRoleService.getById(roleId).getName();
+            vo.add(roleName);
+        }
+        return vo;
     }
 
     private Map<String, Object> getParams(SysUserQuery query) {
