@@ -3,6 +3,7 @@ package net.maku.system.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.security.utils.TokenUtils;
@@ -43,7 +44,7 @@ public class SysAuthController {
 
     @PostMapping("login")
     @Operation(summary = "账号密码登录")
-    public Result<SysUserTokenVO> login(@RequestBody SysAccountLoginVO login) {
+    public Result<SysUserTokenVO> login(@RequestBody @Valid SysAccountLoginVO login) {
         SysUserTokenVO token = sysAuthService.loginByAccount(login);
 
         return Result.ok(token);

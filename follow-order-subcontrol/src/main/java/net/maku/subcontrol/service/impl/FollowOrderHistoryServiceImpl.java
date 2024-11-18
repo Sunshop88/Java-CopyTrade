@@ -1,5 +1,6 @@
 package net.maku.subcontrol.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -41,7 +42,9 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
 
     private LambdaQueryWrapper<FollowOrderHistoryEntity> getWrapper(FollowOrderHistoryQuery query){
         LambdaQueryWrapper<FollowOrderHistoryEntity> wrapper = Wrappers.lambdaQuery();
-
+        if (ObjectUtil.isNotEmpty(query.getTraderId())){
+            wrapper.eq(FollowOrderHistoryEntity::getTraderId,query.getTraderId());
+        }
         return wrapper;
     }
 

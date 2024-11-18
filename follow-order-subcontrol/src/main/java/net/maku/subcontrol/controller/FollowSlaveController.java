@@ -139,7 +139,6 @@ public class FollowSlaveController {
             //启动账户
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
-                followTraderService.removeById(followTraderEntity.getId());
                 return Result.error();
             }
             ThreadPoolUtils.execute(()->{
