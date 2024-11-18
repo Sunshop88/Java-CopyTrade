@@ -19,9 +19,11 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
+import net.maku.followcom.entity.ClientEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.query.FollowVpsQuery;
+import net.maku.followcom.service.ClientService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
@@ -54,6 +56,9 @@ import java.util.List;
 @Slf4j
 public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVpsEntity> implements FollowVpsService {
     private final TransService transService;
+    private final ClientService clientService;
+
+
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -96,6 +101,13 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             throw new ServerException("重复名称或ip地址,请重新输入");
         }
         baseMapper.insert(entity);
+
+
+
+//        ClientEntity clientEntity = new ClientEntity();
+//        clientEntity.setName(vo.getName());
+//        clientEntity.setIp(vo.getIpAddress());
+//        clientService.save(clientEntity);
     }
 
     @Override

@@ -1,19 +1,19 @@
 package net.maku.mascontrol.controller;
 
+import ch.qos.logback.core.net.server.Client;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.Update;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowVpsConvert;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowVpsQuery;
@@ -60,6 +60,7 @@ public class FollowVpsController {
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
     private final RedisUtil redisUtil;
+    private final ClientService clientService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -80,6 +81,11 @@ public class FollowVpsController {
     public Result<String> save(@RequestBody @Valid FollowVpsVO vo){
         followVpsService.save(vo);
 
+        ClientEntity clientEntity = new ClientEntity();
+        clientEntity.setName(vo.getName());
+        clientEntity.setIp(vo.getIpAddress());
+        clientService.save(clientEntity);
+
         return Result.ok();
     }
 
@@ -90,6 +96,17 @@ public class FollowVpsController {
     public Result<String> update(@RequestBody @Valid FollowVpsVO vo){
         followVpsService.update(vo);
 
+        UpdateWrapper<ClientEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id",vo.getId());
+        if(ObjectUtil.isNotEmpty(vo.getName())){
+            updateWrapper.set("name",vo.getName());
+        }
+        if(ObjectUtil.isNotEmpty(vo.getIpAddress())){
+            updateWrapper.set("ip",vo.getIpAddress());
+        }
+        clientService.update(updateWrapper);
+
+
         return Result.ok();
     }
 
@@ -99,6 +116,7 @@ public class FollowVpsController {
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<String> delete(@RequestBody List<Integer> idList){
         followVpsService.delete(idList);
+        clientService.delete(idList);
         return Result.ok();
     }
 

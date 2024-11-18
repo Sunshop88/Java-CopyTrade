@@ -16,4 +16,5 @@ import java.util.List;
 public interface ClientService extends BaseService<ClientEntity> {
 
 
+    void delete(List<Integer> idList);
 }

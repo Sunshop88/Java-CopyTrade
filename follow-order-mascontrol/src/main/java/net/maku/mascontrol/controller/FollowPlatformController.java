@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,9 +11,13 @@ import net.maku.api.module.system.UserApi;
 import net.maku.followcom.convert.FollowPlatformConvert;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.PlatformEntity;
+import net.maku.followcom.entity.ServerEntity;
 import net.maku.followcom.query.FollowPlatformQuery;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.PlatformService;
+import net.maku.followcom.service.ServerService;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
@@ -46,6 +51,8 @@ public class FollowPlatformController {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
     private final UserApi userApi;
+    private final PlatformService platformService;
+    private final ServerService serverService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -97,12 +104,29 @@ public class FollowPlatformController {
                     e.printStackTrace();
                 }
             });
+            PlatformEntity platformEntity = new PlatformEntity();
             list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
                 //找出最小延迟
                 FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                 //修改所有用户连接节点
                 followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
+
+                platformEntity.setDefaultServer(followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort());
             });
+
+            platformEntity.setName(bro);
+            platformEntity.setType(vo.getPlatformType());
+            platformService.save(platformEntity);
+
+            //查询新增的platformService的id
+            Integer platformId = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName,bro)).get(0).getId();
+            for (FollowBrokeServerEntity followBrokeServerEntity : list) {
+                ServerEntity serverEntity = new ServerEntity();
+                serverEntity.setPlatformId(platformId);
+                serverEntity.setPort(Integer.valueOf(followBrokeServerEntity.getServerPort()));
+                serverEntity.setHost(followBrokeServerEntity.getServerNode());
+                serverService.save(serverEntity);
+            }
         });
         return Result.ok();
     }
@@ -140,12 +164,21 @@ public class FollowPlatformController {
                         e.printStackTrace();
                     }
                 });
+                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
+                platformEntity.eq("id", vo.getId());
                 list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
                     //找出最小延迟
                     FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                     //修改所有用户连接节点
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
+
+                    platformEntity.set("defaultServer",followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort());
                 });
+
+                platformEntity.set("name",bro);
+                platformEntity.set("type",vo.getPlatformType());
+                platformService.update(platformEntity);
+
             });
         });
         return Result.ok();
@@ -160,6 +193,8 @@ public class FollowPlatformController {
     public Result<String> delete(@RequestBody List<Long> idList) {
         followPlatformService.delete(idList);
 
+        serverService.delete(idList);
+        platformService.delete(idList);
         return Result.ok();
     }
 
