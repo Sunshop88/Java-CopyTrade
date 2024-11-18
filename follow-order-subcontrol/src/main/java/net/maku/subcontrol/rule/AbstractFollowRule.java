@@ -10,7 +10,6 @@ import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
 import net.maku.subcontrol.trader.CopierApiTrader;
-import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Exception.ConnectException;
@@ -34,13 +33,13 @@ public abstract class AbstractFollowRule {
      * 链中下一元素
      */
     protected AbstractFollowRule nextRule = null;
-    protected LeaderApiTradersAdmin leaderApiTradersAdmin=SpringContextUtils.getBean(LeaderApiTradersAdmin.class);;
+    protected LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
 
     public void setNextRule(AbstractFollowRule nextRule) {
         this.nextRule = nextRule;
     }
 
-    public PermitInfo rule(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, CopierApiTrader copierApiTrader){
+    public PermitInfo rule(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, CopierApiTrader copierApiTrader) {
         PermitInfo permitInfo = permit(eaLeaderCopier, eaOrderInfo, copierApiTrader);
         if (permitInfo.getPermitted()) {
             //允许跟随
@@ -58,8 +57,8 @@ public abstract class AbstractFollowRule {
     /**
      * 计算跟单者跟随的时候，根据当前订单跟随规则，如果是强制开仓，计算完成后不足最小手数，以最小手数开仓。
      *
-     * @param masterSlave      订阅关系
-     * @param eaOrderInfo      开仓订单信息
+     * @param masterSlave     订阅关系
+     * @param eaOrderInfo     开仓订单信息
      * @param copierApiTrader 跟单者
      * @return double 跟单者开仓手数
      */
@@ -76,8 +75,8 @@ public abstract class AbstractFollowRule {
         leaderSymbolInfo = LeaderApiTrader.symbolInfo(eaOrderInfo.getOriSymbol(), true);
 
 
-        log.debug("leaderSymbolInfo {}",leaderSymbolInfo);
-        log.debug("copierSymbolInfo {}",copierSymbolInfo);
+        log.debug("leaderSymbolInfo {}", leaderSymbolInfo);
+        log.debug("copierSymbolInfo {}", copierSymbolInfo);
         switch (masterSlave.getFollowMode()) {
             case 0:
                 //按固定手数
@@ -89,8 +88,11 @@ public abstract class AbstractFollowRule {
                 break;
             case 2:
                 //按净值比例
-                lots = fixedEuqit.lots(eaOrderInfo,LeaderApiTrader.quoteClient.Equity,copierApiTrader.quoteClient.Equity);
+                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity);
                 break;
+            case 3:
+                //按资金比例(余额
+                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Balance, copierApiTrader.quoteClient.Balance);
             default:
                 lots = 0.0;
                 break;
@@ -114,12 +116,12 @@ public abstract class AbstractFollowRule {
     /**
      * 判断
      *
-     * @param leaderCopier   跟随关系
-     * @param orderInfo     交易信号
+     * @param leaderCopier    跟随关系
+     * @param orderInfo       交易信号
      * @param copierApiTrader 跟单者
      * @return PermitInfo
      */
-    protected abstract PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, CopierApiTrader copierApiTrader) ;
+    protected abstract PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, CopierApiTrader copierApiTrader);
 
 
     @Data
