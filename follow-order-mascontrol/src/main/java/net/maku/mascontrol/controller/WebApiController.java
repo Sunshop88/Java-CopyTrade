@@ -8,12 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.R;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowInsertVO;
 import net.maku.followcom.vo.SourceDelVo;
 import net.maku.followcom.vo.SourceInsertVO;
 import net.maku.followcom.vo.SourceUpdateVO;
+import net.maku.framework.common.utils.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -38,42 +38,42 @@ public class WebApiController {
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
-    public R<String> insertSource(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
+    public Result<String> insertSource(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_INSERT, vo);
 
     }
 
     @PostMapping("/source/update")
     @Operation(summary = "喊单编辑")
-    public R<String> updateSource(@RequestBody @Valid SourceUpdateVO vo, HttpServletRequest req) {
+    public Result<String> updateSource(@RequestBody @Valid SourceUpdateVO vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_UPDATE, vo);
 
     }
 
     @PostMapping("/source/delete")
     @Operation(summary = "喊单删除")
-    public R<String> delSource(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
+    public Result<String> delSource(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_DEL, vo);
 
     }
 
     @PostMapping("/follow/insert")
     @Operation(summary = "跟单添加")
-    public R<String> insertFollow(@RequestBody @Valid FollowInsertVO vo, HttpServletRequest req) {
+    public Result<String> insertFollow(@RequestBody @Valid FollowInsertVO vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_INSERT, vo);
 
     }
 
     @PostMapping("/follow/update")
     @Operation(summary = "跟单更新")
-    public R<String> updateFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
+    public Result<String> updateFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_UPDATE, vo);
 
     }
 
     @PostMapping("/follow/delete")
     @Operation(summary = "跟单删除")
-    public R<String> delFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
+    public Result<String> delFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
         return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_DEL, vo);
 
     }
@@ -82,7 +82,7 @@ public class WebApiController {
     /**
      * 远程调用方法封装
      */
-    private static <T> R<String> sendRequest(HttpServletRequest req, String host, String uri, T t) {
+    private static <T> Result<String> sendRequest(HttpServletRequest req, String host, String uri, T t) {
         //远程调用
         String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
@@ -93,7 +93,7 @@ public class WebApiController {
         try {
             jsonBody = objectMapper.writeValueAsString(t);
         } catch (JsonProcessingException e) {
-            R.error("参数转换异常");
+            return Result.error("参数转换异常");
 
         }
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
@@ -103,9 +103,9 @@ public class WebApiController {
         if (body != null && !body.getString("code").equals("0")) {
             String msg = body.getString("msg");
             log.error("远程调用异常: {}", body.get("msg"));
-            R.error("远程调用异常: " + body.get("msg"));
+            Result.error("远程调用异常: " + body.get("msg"));
         }
-        return R.ok();
+        return Result.ok();
     }
 
 }

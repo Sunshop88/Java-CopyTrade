@@ -54,7 +54,7 @@ public class FollowApiController {
     }
 
     @PostMapping("/follow/delete")
-    @Operation(summary = "跟单编辑")
+    @Operation(summary = "跟单删除")
     public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo) {
 
         return followApiService.delFollow(vo) ? Result.ok() : Result.error();

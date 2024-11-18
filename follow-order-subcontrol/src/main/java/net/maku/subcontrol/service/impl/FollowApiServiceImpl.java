@@ -6,10 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.SourceEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
@@ -24,12 +21,12 @@ import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.PlacedType;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,7 +153,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             //启动账户
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                followTraderService.removeById(followTraderEntity.getId());
+                //     followTraderService.removeById(followTraderEntity.getId());
                 return false;
             }
             ThreadPoolUtils.execute(() -> {
@@ -213,6 +210,9 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean delSource(SourceDelVo vo) {
         SourceEntity source = sourceService.getEntityById(vo.getId());
+        if (source == null) {
+            return false;
+        }
         List<Long> ids = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).list().stream().map(FollowTraderEntity::getId).toList();
         delete(ids);
         //删除从表数据
@@ -247,8 +247,15 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateFollow(FollowUpdateVO vo) {
         //查询从表
-        followService.getEntityById(vo.getId());
+        FollowEntity followEntity = followService.getEntityById(vo.getId());
+        //查询主表
+        LambdaQueryWrapper<FollowTraderEntity> query = new LambdaQueryWrapper<>();
+        query.eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId());
+        FollowTraderEntity entity = followTraderService.getOne(query);
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
+        followUpdateSalveVo.setId(entity.getId());
+        String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
+        followUpdateSalveVo.setPassword(pwd);
         // 判断主表如果保存失败，则返回false
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {
@@ -262,7 +269,12 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean delFollow(SourceDelVo vo) {
-        delete(Collections.singletonList(vo.getId()));
+        FollowEntity followEntity = followService.getEntityById(vo.getId());
+        if (followEntity == null) {
+            return false;
+        }
+        List<Long> ids = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId()).list().stream().map(FollowTraderEntity::getId).toList();
+        delete(ids);
         //删除从表数据
         followService.del(vo.getId());
         return true;
