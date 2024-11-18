@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import net.maku.followcom.entity.PlatformEntity;
 import net.maku.framework.mybatis.service.BaseService;
 
@@ -16,4 +17,8 @@ public interface PlatformService extends BaseService<PlatformEntity> {
 
 
     void delete(List<Long> idList);
+
+    void insert(PlatformEntity platformEntity);
+
+    void update(UpdateWrapper<PlatformEntity> platformEntity);
 }

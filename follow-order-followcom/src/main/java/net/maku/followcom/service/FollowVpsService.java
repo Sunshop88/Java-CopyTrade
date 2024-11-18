@@ -21,13 +21,11 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
 
     FollowVpsVO get(Long id);
 
-
-    void save(FollowVpsVO vo);
+    Boolean save(FollowVpsVO vo);
 
     void update(FollowVpsVO vo);
 
     void delete(List<Integer> idList);
-
 
     void export();
 

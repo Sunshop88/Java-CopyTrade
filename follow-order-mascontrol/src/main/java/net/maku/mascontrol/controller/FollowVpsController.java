@@ -51,7 +51,7 @@ import java.util.Objects;
  */
 @RestController
 @RequestMapping("/mascontrol/vps")
-@Tag(name="vps列表")
+@Tag(name = "vps列表")
 @AllArgsConstructor
 public class FollowVpsController {
     private final FollowVpsService followVpsService;
@@ -61,15 +61,16 @@ public class FollowVpsController {
     private final FollowVpsUserService followVpsUserService;
     private final RedisUtil redisUtil;
     private final ClientService clientService;
+    private final MasControlService masControlService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query){
+    public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query) {
         PageResult<FollowVpsVO> page = followVpsService.page(query);
         //策略数量
-        page.getList().forEach(o->{
-            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+        page.getList().forEach(o -> {
+            o.setTraderNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));
         });
         return Result.ok(page);
     }
@@ -78,64 +79,42 @@ public class FollowVpsController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> save(@RequestBody @Valid FollowVpsVO vo){
-        followVpsService.save(vo);
-
-        ClientEntity clientEntity = new ClientEntity();
-        clientEntity.setName(vo.getName());
-        clientEntity.setIp(vo.getIpAddress());
-        clientService.save(clientEntity);
-
-        return Result.ok();
+    public Result<String> save(@RequestBody @Valid FollowVpsVO vo) {
+        return masControlService.insert(vo) ? Result.ok() : Result.error();
     }
 
     @PutMapping
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> update(@RequestBody @Valid FollowVpsVO vo){
-        followVpsService.update(vo);
-
-        UpdateWrapper<ClientEntity> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",vo.getId());
-        if(ObjectUtil.isNotEmpty(vo.getName())){
-            updateWrapper.set("name",vo.getName());
-        }
-        if(ObjectUtil.isNotEmpty(vo.getIpAddress())){
-            updateWrapper.set("ip",vo.getIpAddress());
-        }
-        clientService.update(updateWrapper);
-
-
-        return Result.ok();
+    public Result<String> update(@RequestBody @Valid FollowVpsVO vo) {
+        return masControlService.update(vo) ? Result.ok() : Result.error();
     }
 
     @DeleteMapping
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> delete(@RequestBody List<Integer> idList){
-        followVpsService.delete(idList);
-        clientService.delete(idList);
-        return Result.ok();
+    public Result<String> delete(@RequestBody List<Integer> idList) {
+        return masControlService.delete(idList) ? Result.ok() : Result.error();
     }
 
     @GetMapping("connect")
     @Operation(summary = "vps连接")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<Boolean> connect(@Parameter(description = "ipAddress") String ipAddress){
+    public Result<Boolean> connect(@Parameter(description = "ipAddress") String ipAddress) {
         //进行连接
         try {
             InetAddress inet = InetAddress.getByName(ipAddress);
             boolean reachable = inet.isReachable(5000);
-            if (!reachable){
+            if (!reachable) {
                 return Result.error("地址错误,请检查");
             }
             // 检查端口 9001 是否可连接
             try (Socket socket = new Socket(ipAddress, 9001)) {
                 // 如果可以建立连接，则返回成功
                 return Result.ok(true);
-            }catch (IOException e) {
+            } catch (IOException e) {
                 return Result.error("vps服务未启动");
             }
         } catch (UnknownHostException e) {
@@ -148,11 +127,11 @@ public class FollowVpsController {
     @GetMapping("info")
     @Operation(summary = "vps统计")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<FollowVpsInfoVO> info(){
-        Integer openNum =(int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
-        Integer runningNum =(int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
-        Integer total =(int) followVpsService.count();
-        FollowVpsInfoVO followVpsInfoVO=new FollowVpsInfoVO();
+    public Result<FollowVpsInfoVO> info() {
+        Integer openNum = (int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
+        Integer runningNum = (int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
+        Integer total = (int) followVpsService.count();
+        FollowVpsInfoVO followVpsInfoVO = new FollowVpsInfoVO();
         followVpsInfoVO.setTotal(total);
         followVpsInfoVO.setOpenNum(openNum);
         followVpsInfoVO.setRunningNum(runningNum);
@@ -162,35 +141,35 @@ public class FollowVpsController {
     @GetMapping("listVps")
     @Operation(summary = "可用vps")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<List<FollowVpsVO>> listVps(){
+    public Result<List<FollowVpsVO>> listVps() {
         List<VpsUserVO> list;
         //除了admin都需要判断
-        if(!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(),"10000")){
+        if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
             //查看当前用户拥有的vps
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId()))){
-                list =(List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
-            }else {
-                List<FollowVpsUserEntity> vpsUserEntityList =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,SecurityUser.getUserId()));
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId()))) {
+                list = (List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+            } else {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, SecurityUser.getUserId()));
                 List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
-                redisCache.set(Constant.SYSTEM_VPS_USER+ SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
-                list=vpsUserVOS;
+                redisCache.set(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
+                list = vpsUserVOS;
             }
-        }else {
-            list=followVpsService.list().stream().map(o->{
+        } else {
+            list = followVpsService.list().stream().map(o -> {
                 VpsUserVO vpsUserVO = new VpsUserVO();
                 vpsUserVO.setName(o.getName());
                 vpsUserVO.setId(o.getId());
                 return vpsUserVO;
             }).toList();
         }
-        if (ObjectUtil.isEmpty(list)){
+        if (ObjectUtil.isEmpty(list)) {
             return Result.ok(null);
         }
-        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list.stream().map(o->o.getId()).toList()).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()));
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
-        followVpsVOS.forEach(o->{
-            o.setTraderNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
-            o.setFollowNum((int)followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType()).eq(FollowTraderEntity::getIpAddr,o.getIpAddress())));
+        followVpsVOS.forEach(o -> {
+            o.setTraderNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));
+            o.setFollowNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));
         });
         return Result.ok(followVpsVOS);
     }
@@ -199,21 +178,21 @@ public class FollowVpsController {
     @Operation(summary = "转移vps数据")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId,@Parameter(description = "newId") Integer newId, HttpServletRequest req){
+    public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId, @Parameter(description = "newId") Integer newId, HttpServletRequest req) {
         //清理旧账号缓存
-        followVpsService.transferVps(oldId,req);
+        followVpsService.transferVps(oldId, req);
 
         FollowVpsEntity followVpsEntity = followVpsService.getById(newId);
         //转移账号
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.set(FollowTraderEntity::getServerId,newId).
-                set(FollowTraderEntity::getServerName,followVpsEntity.getName()).
-                set(FollowTraderEntity::getIpAddr,followVpsEntity.getIpAddress()).
-                eq(FollowTraderEntity::getServerId,oldId);
+        updateWrapper.set(FollowTraderEntity::getServerId, newId).
+                set(FollowTraderEntity::getServerName, followVpsEntity.getName()).
+                set(FollowTraderEntity::getIpAddr, followVpsEntity.getIpAddress()).
+                eq(FollowTraderEntity::getServerId, oldId);
         followTraderService.update(updateWrapper);
 
         //发送请求到新VPS，启动账号
-        followVpsService.startNewVps(newId,req);
+        followVpsService.startNewVps(newId, req);
         return Result.ok();
     }
 
@@ -222,20 +201,20 @@ public class FollowVpsController {
     @Operation(summary = "清除vps数据")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<Boolean> deleteVps(@Parameter(description = "vpsId") Integer vpsId, HttpServletRequest req){
+    public Result<Boolean> deleteVps(@Parameter(description = "vpsId") Integer vpsId, HttpServletRequest req) {
         //清理旧账号缓存
-        followVpsService.transferVps(vpsId,req);
+        followVpsService.transferVps(vpsId, req);
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
         List<Long> idList = list.stream().map(FollowTraderEntity::getId).toList();
         //删除跟单关系
-        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId,idList).or().in(FollowTraderSubscribeEntity::getSlaveId,idList));
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
         //删除账号
-        followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId,vpsId));
+        followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
         return Result.ok();
     }
 
     private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
-        return list.stream().map(o->{
+        return list.stream().map(o -> {
             VpsUserVO vpsUserVO = new VpsUserVO();
             vpsUserVO.setId(o.getVpsId());
             vpsUserVO.setName(o.getVpsName());
