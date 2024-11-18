@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -78,6 +81,39 @@ public class RedisConfig {
         template.setConnectionFactory(factory);
         configureSerialization(template,factory);
         return template;
+    }
+
+    @Bean
+    @Primary
+    public RedissonClient redissonClient1(@Qualifier("redisProperties1") RedisProperties redisProperties) {
+        return createRedissonClient(redisProperties);
+    }
+
+    @Bean
+    public RedissonClient redissonClient2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
+        return createRedissonClient(redisProperties);
+    }
+
+    private RedissonClient createRedissonClient(RedisProperties redisProperties) {
+        Config config = new Config();
+
+        // 使用单机模式
+        config.useSingleServer()
+                .setAddress("redis://" + redisProperties.getHost() + ":" + redisProperties.getPort())
+                .setDatabase(redisProperties.getDatabase());
+
+        // 如果有密码，设置密码
+        if (redisProperties.getPassword() != null) {
+            config.useSingleServer().setPassword(redisProperties.getPassword());
+        }
+
+        // 连接池配置（可选）
+        config.useSingleServer()
+                .setConnectionPoolSize(64)  // 连接池大小
+                .setConnectTimeout(3000)    // 连接超时时间
+                .setIdleConnectionTimeout(10000);  // 空闲连接超时时间
+
+        return Redisson.create(config);
     }
 
     private void configureSerialization(RedisTemplate<String, Object> template,RedisConnectionFactory factory) {

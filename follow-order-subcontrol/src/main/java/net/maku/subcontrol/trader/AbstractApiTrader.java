@@ -313,9 +313,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
         }
 
         //删除redis缓存
-        redisCache.delete(Constant.TRADER_SEND+trader.getId());
-        redisCache.delete(Constant.TRADER_CLOSE+trader.getId());
-        redisCache.delete(Constant.TRADER_PLATFORM+trader.getId());
+        redisCache.deleteByPattern(trader.getId().toString());
+        redisCache.deleteByPattern(trader.getAccount());
+        //删除kafka订阅关系
+        this.cldKafkaConsumer.stopConsume();
         try {
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();
