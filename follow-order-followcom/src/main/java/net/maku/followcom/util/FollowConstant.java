@@ -5,13 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 
 /**
  * @author Shaozz
- * @since  2022/6/6 15:35
+ * @since 2022/6/6 15:35
  */
 @Slf4j
 public class FollowConstant {
@@ -20,6 +18,7 @@ public class FollowConstant {
      * 本机外网IP地址
      */
     public static String LOCAL_HOST = "";
+
     static {
         String ipServiceUrl = "http://checkip.amazonaws.com/";
         try {
@@ -31,7 +30,7 @@ public class FollowConstant {
             String publicIP = in.readLine().trim();
             in.close();
 
-            LOCAL_HOST= publicIP;
+            LOCAL_HOST = publicIP;
 //            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
 
         } catch (Exception e) {
@@ -42,7 +41,7 @@ public class FollowConstant {
     /**
      * 请求端口
      */
-    public static String VPS_PORT ="9001";
+    public static String VPS_PORT = "9001";
 
     public static String REQUEST_PORT = "9000";
 
@@ -53,18 +52,29 @@ public class FollowConstant {
 
     public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
 
-    public static String VPS_MEASURE="/subcontrol/follow/start";
+    public static String VPS_MEASURE = "/subcontrol/follow/start";
 
     /**
      * 跟单日志
      */
-    public static String FOLLOW_SEND="【策略下单跟随】";
+    public static String FOLLOW_SEND = "【策略下单跟随】";
 
-    public static String FOLLOW_CLOSE="【策略平仓跟随】";
+    public static String FOLLOW_CLOSE = "【策略平仓跟随】";
 
 
-    public static String FOLLOW_REPAIR_SEND="【策略补单下单跟随】";
-    public static String FOLLOW_REPAIR_CLOSE="【策略补单平仓跟随】";
+    public static String FOLLOW_REPAIR_SEND = "【策略补单下单跟随】";
+    public static String FOLLOW_REPAIR_CLOSE = "【策略补单平仓跟随】";
+
+    public static String SUBCONTROL_SERVER = "127.0.0.1";
+    /**
+     * 喊单
+     */
+    public static String SOURCE_INSERT = "/api/source/insert";
+    public static String SOURCE_UPDATE = "/api/source/update";
+    public static String SOURCE_DEL = "/api/source/delete";
+    public static String FOLLOW_INSERT = "/api/follow/insert";
+    public static String FOLLOW_UPDATE = "/api/follow/update";
+    public static String FOLLOW_DEL = "/api/follow/delete";
 
 
 }
