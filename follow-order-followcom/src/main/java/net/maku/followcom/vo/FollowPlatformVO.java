@@ -3,6 +3,7 @@ package net.maku.followcom.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import net.maku.framework.common.utils.DateUtils;
@@ -67,7 +68,7 @@ public class FollowPlatformVO implements Serializable {
 	private LocalDateTime updateTime;
 
 	@Schema(description = "服务名称集合")
-	@NotBlank(message = "服务名称集合不能为空")
+	@NotNull(message = "服务名称集合不能为空")
 	private List<String> platformList;
 
 }
