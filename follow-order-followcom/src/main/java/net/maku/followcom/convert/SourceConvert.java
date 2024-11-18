@@ -11,6 +11,7 @@ import net.maku.followcom.vo.SourceUpdateVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
+import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
 @Mapper
@@ -20,14 +21,23 @@ public interface SourceConvert {
     @Mappings({//喊单账号
             @Mapping(source = "serverId", target = "clientId"),
             @Mapping(source = "account", target = "user"),
+            @Mapping(source = "status", target = "status", qualifiedByName = "booleanToInt"),
             @Mapping(source = "remark", target = "comment")
     })
     SourceEntity convert(SourceInsertVO sourceInsertVO);
 
     @Mappings({//喊单账号
             @Mapping(source = "serverId", target = "clientId"),
-            @Mapping(source = "account", target = "user"),
+            @Mapping(source = "status", target = "status", qualifiedByName = "booleanToInt"),
             @Mapping(source = "remark", target = "comment")
     })
     SourceEntity convert(SourceUpdateVO sourceUpdateVO);
+
+    @Named("booleanToInt")
+    default Integer booleanToInt(Boolean status) {
+        if (status == null) {
+            return null;
+        }
+        return status ? 0 : 1;
+    }
 }

@@ -20,4 +20,6 @@ public interface FollowService extends BaseService<FollowEntity> {
 
 
     void del(Long id);
+
+    FollowEntity getEntityById(Long id);
 }

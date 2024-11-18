@@ -36,8 +36,6 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
     public void add(SourceInsertVO vo) {
         //参数转化
         SourceEntity sourceEntity = SourceConvert.INSTANCE.convert(vo);
-        //处理参数名不一致问题
-        convert(vo, sourceEntity);
         //暴力反射设置默认值
         Field[] declaredFields = sourceEntity.getClass().getDeclaredFields();
         Arrays.stream(declaredFields).forEach(x -> {
@@ -62,17 +60,7 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
         });
         //保存从表数据
         save(sourceEntity);
-    }
 
-    /**
-     * @param vo 源数据 sourceEntity 目标数据
-     */
-    private void convert(SourceInsertVO vo, SourceEntity sourceEntity) {
-        //处理参数名不一致问题
-        sourceEntity.setClientId(vo.getServerId());
-        sourceEntity.setPlatformId(vo.getPlatformId());
-        sourceEntity.setUser(vo.getAccount());
-        sourceEntity.setComment(vo.getRemark());
     }
 
 
@@ -80,8 +68,7 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void edit(SourceUpdateVO vo) {
         SourceEntity sourceEntity = SourceConvert.INSTANCE.convert(vo);
-        //处理参数名不一致问题
-        convert(vo, sourceEntity);
+        //根据平台和账号进行编辑
         updateById(sourceEntity);
     }
 
@@ -89,5 +76,11 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void del(Long id) {
         removeById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+    public SourceEntity getEntityById(Long id) {
+        return getById(id);
     }
 }

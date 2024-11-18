@@ -9,8 +9,8 @@ import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.SourceEntity;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.FollowModeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
@@ -199,8 +199,11 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateSource(SourceUpdateVO vo) {
-        FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
-        followTraderService.update(followTrader);
+        SourceEntity source = sourceService.getEntityById(vo.getId());
+        FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
+        LambdaQueryWrapper<FollowTraderEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId());
+        followTraderService.update(followTrader, lambdaQueryWrapper);
         //保存从表数据
         sourceService.edit(vo);
         return true;
@@ -209,43 +212,21 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean delSource(SourceDelVo vo) {
-        delete(Collections.singletonList(vo.getId()));
+        SourceEntity source = sourceService.getEntityById(vo.getId());
+        List<Long> ids = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).list().stream().map(FollowTraderEntity::getId).toList();
+        delete(ids);
         //删除从表数据
         sourceService.del(vo.getId());
         return true;
     }
 
-    private void convert(FollowInsertVO followInsertVO, FollowAddSalveVo followAddSalveVo) {
-        //喊单账号
-        followAddSalveVo.setTraderId(followInsertVO.getSourceId());
-        //账号
-        followAddSalveVo.setAccount(followInsertVO.getUser().toString());
-        //备注
-        followAddSalveVo.setRemark(followInsertVO.getComment());
-        //模式-跟单方向 0=正跟 1=反跟 ,
-        followAddSalveVo.setFollowDirection(followInsertVO.getDirection());
-        //跟随模式 需要转换
-        followAddSalveVo.setFollowMode(FollowModeEnum.getVal(followInsertVO.getMode()));
-        //跟单参数 q
-        followAddSalveVo.setFollowParam(followInsertVO.getModeValue());
-        //跟单状态 q
-        followAddSalveVo.setFollowStatus(followInsertVO.getStatus());
-        //跟单开仓状态不能为空
-        followAddSalveVo.setFollowOpen(followInsertVO.getOpenOrderStatus());
-        //跟单平仓状态不能为空
-        followAddSalveVo.setFollowClose(followInsertVO.getCloseOrderStatus());
-        //跟单补单状态不能为空
-        followAddSalveVo.setFollowRep(followInsertVO.getRepairStatus());
-        //下单方式
-        followAddSalveVo.setPlacedType(followInsertVO.getPlacedType());
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean insertFollow(FollowInsertVO vo) {
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
-        //  convert(vo, followAddSalveVo);  //根据平台id查询平台
+        //根据平台id查询平台
         FollowPlatformEntity platform = followPlatformService.getById(vo.getPlatformId());
         if (ObjectUtil.isEmpty(platform)) {
             throw new ServerException("暂无可用服务器商");
@@ -261,36 +242,13 @@ public class FollowApiServiceImpl implements FollowApiService {
         return true;
     }
 
- /*   private void convertUpdate(FollowUpdateVO followUpdateVO, FollowUpdateSalveVo followUpdateSalveVo) {
-        FollowPlatformEntity platform = followPlatformService.getById(followUpdateVO.getPlatformId());
-        if (ObjectUtil.isEmpty(platform)) {
-            throw new ServerException("服务商错误");
-        }
-        //备注
-        followUpdateSalveVo.setRemark(followUpdateVO.getComment());
-        //模式-跟单方向 0=正跟 1=反跟 ,
-        followUpdateSalveVo.setFollowDirection(followUpdateVO.getDirection());
-        //跟随模式 需要转换
-        followUpdateSalveVo.setFollowMode(FollowModeEnum.getVal(followUpdateVO.getMode()));
-        //跟单参数 q
-        followUpdateSalveVo.setFollowParam(followUpdateVO.getModeValue());
-        //跟单状态 q
-        followUpdateSalveVo.setFollowStatus(followUpdateVO.getStatus());
-        //跟单开仓状态不能为空
-        followUpdateSalveVo.setFollowOpen(followUpdateVO.getOpenOrderStatus());
-        //跟单平仓状态不能为空
-        followUpdateSalveVo.setFollowClose(followUpdateVO.getCloseOrderStatus());
-        //跟单补单状态不能为空
-        followUpdateSalveVo.setFollowRep(followUpdateVO.getRepairStatus());
-        //下单方式
-        followUpdateSalveVo.setPlacedType(followUpdateVO.getPlacedType());
-    }*/
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateFollow(FollowUpdateVO vo) {
+        //查询从表
+        followService.getEntityById(vo.getId());
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
-        // convertUpdate(vo, followUpdateSalveVo);
         // 判断主表如果保存失败，则返回false
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {

@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import jakarta.validation.constraints.NotNull;
 import net.maku.followcom.entity.SourceEntity;
 import net.maku.followcom.vo.SourceInsertVO;
 import net.maku.followcom.vo.SourceUpdateVO;
@@ -18,4 +19,6 @@ public interface SourceService extends BaseService<SourceEntity> {
     void edit(SourceUpdateVO vo);
 
     void del(Long id);
+
+    SourceEntity getEntityById(@NotNull(message = "Id不能为空") Long id);
 }

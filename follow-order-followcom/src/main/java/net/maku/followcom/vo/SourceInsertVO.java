@@ -41,37 +41,34 @@ public class SourceInsertVO implements Serializable {
     @NotNull(message = "状态不能为空")
     private Boolean status;
 
-    @JsonProperty(value = "closeLossPointHigh")
+    @JsonProperty(value = "CloseLossPointHigh")
     private Integer closeLossPointHigh;
 
-    @JsonProperty(value = "closeProfitPointHigh")
+    @JsonProperty(value = "CloseProfitPointHigh")
     private Integer closeProfitPointHigh;
 
-    @JsonProperty(value = "closeProfitHigh")
+    @JsonProperty(value = "CloseProfitHigh")
     private Double closeProfitHigh;
 
-    @JsonProperty(value = "closeLossHigh")
+    @JsonProperty(value = "CloseLossHigh")
     private Double closeLossHigh;
 
-    @JsonProperty(value = "closeAllProfitHigh")
+    @JsonProperty(value = "CloseAllProfitHigh")
     private Double closeAllProfitHigh;
 
-    @JsonProperty(value = "closeAllLossHigh")
+    @JsonProperty(value = "CloseAllLossHigh")
     private Double closeAllLossHigh;
 
-    @JsonProperty(value = "closeAllEquityLow")
+    @JsonProperty(value = "CloseAllEquityLow")
     private Double closeAllEquityLow;
 
-    @JsonProperty(value = "closeAllEquityHigh")
+    @JsonProperty(value = "CloseAllEquityHigh")
     private Double closeAllEquityHigh;
 
-    @JsonProperty(value = "closeAllMarginLevelLow")
+    @JsonProperty(value = "CloseAllMarginLevelLow")
     private Double closeAllMarginLevelLow;
 
-    @JsonProperty(value = "closeAllMarginLevelHigh")
+    @JsonProperty(value = "CloseAllMarginLevelHigh")
     private Double closeAllMarginLevelHigh;
-
-    public Integer getStatus() {
-        return status ? 0 : 1;
-    }
+    
 }

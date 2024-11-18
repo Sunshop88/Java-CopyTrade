@@ -33,9 +33,20 @@ public interface FollowTraderConvert {
 
     List<FollowTraderEntity> convertExcelList2(List<FollowTraderExcelVO> list);
 
+    @Mappings({//喊单账号
+            @Mapping(source = "status", target = "status", qualifiedByName = "booleanToInt")
+    })
     FollowTraderVO convert(SourceInsertVO sourceInsertVO);
 
-    FollowTraderVO convert(SourceUpdateVO sourceUpdateVO);
+/*    @Mappings({//喊单账号
+            @Mapping(source = "status", target = "status", qualifiedByName = "booleanToInt")
+    })
+    FollowTraderVO convert(SourceUpdateVO sourceUpdateVO);*/
+
+    @Mappings({//喊单账号
+            @Mapping(source = "status", target = "status", qualifiedByName = "booleanToInt")
+    })
+    FollowTraderEntity convert(SourceUpdateVO sourceUpdateVO);
 
     @Mappings({//喊单账号
             @Mapping(source = "sourceId", target = "traderId"),
@@ -67,6 +78,14 @@ public interface FollowTraderConvert {
     default Integer apiCodeToCode(Integer apiCode) {
 
         return FollowModeEnum.getVal(apiCode);
+    }
+
+    @Named("booleanToInt")
+    default Integer booleanToInt(Boolean status) {
+        if (status == null) {
+            return null;
+        }
+        return status ? 0 : 1;
     }
 
 }

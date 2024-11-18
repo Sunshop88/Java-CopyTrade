@@ -3,8 +3,14 @@ package net.maku.followcom.vo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -14,33 +20,47 @@ import java.math.BigDecimal;
  */
 @Data
 @Schema(description = "跟单者添加")
-public class FollowInsertVO {
+public class FollowInsertVO implements Serializable {
+    @Serial
+    private static final long serialVersionUID = -4978328594296263454L;
     //客户端Id
     @JsonProperty(value = "ClientId")
     private Integer clientId;
     //喊单Id
     @JsonProperty(value = "SourceId")
+    @NotNull(message = "喊单账号不能为空")
     private Long sourceId;
     //平台Id
     @JsonProperty(value = "PlatformId")
+    @NotNull(message = "平台不能为空")
     private Integer platformId;
     //账户
     @JsonProperty(value = "User")
+    @NotNull(message = "账号不能为空")
     private Long user;
     //密码
     @JsonProperty(value = "Password")
+    @NotBlank(message = "密码不能为空")
     private String password;
     //备注
     @JsonProperty(value = "Comment")
     private String comment;
     //模式 跟单方向 0=正跟 1=反跟 ,
     @JsonProperty(value = "Direction")
+    @Min(value = 0, message = "跟单方向只能为0或1")
+    @Max(value = 1, message = "跟单方向只能为0或1")
+    @NotNull(message = "平台不能为空")
     private Integer direction;
     //模式-类型 0=多空跟单 1=只跟多单 2=只跟空单 3=挂单 4=全部
     @JsonProperty(value = "Type")
+    @Min(value = 0, message = "跟随模式只能为0、1、2、3或4")
+    @Max(value = 4, message = "跟随模式只能为0、1、2、3或4")
     private Integer type;
     //模式-模式 0=资金比例(净值) 1=手数比例 2=固定手数 3=资金比例(余额) 4=自定义 ,
     @JsonProperty(value = "Mode")
+    @Min(value = 0, message = "跟随模式只能为0、1、2、3或4")
+    @Max(value = 4, message = "跟随模式只能为0、1、2、3或4")
+    @NotNull(message = "跟随模式不能为空")
     private Integer mode;
     //模式-参数
     @JsonProperty(value = "ModeValue")
@@ -49,7 +69,7 @@ public class FollowInsertVO {
     @JsonProperty(value = "RepairyPriceHigh")
     private Integer repairyPriceHigh;
     //风控-喊单手数小于
-    @JsonProperty(value = "SourceLotsLow ")
+    @JsonProperty(value = "SourceLotsLow")
     private Double sourceLotsLow;
     //风控-喊单手数大于
     @JsonProperty(value = "SourceLotsHigh")
@@ -180,6 +200,9 @@ public class FollowInsertVO {
     private String commentRegex;
     //状态
     @JsonProperty(value = "Status")
+    @Min(value = 0, message = "跟单状态只能为0或1")
+    @Max(value = 1, message = "跟单状态只能为0或1")
+    @NotNull(message = "跟单状态不能为空")
     private Integer status;
     //同步止盈止损状态
     @JsonProperty(value = "UpdateStopLossTakeProfitStatus")
@@ -189,12 +212,21 @@ public class FollowInsertVO {
     private String positionComment;
     //补单状态
     @JsonProperty(value = "RepairStatus")
+    @Min(value = 0, message = "跟单补单状态只能为0或1")
+    @Max(value = 1, message = "跟单补单状态只能为0或1")
+    @NotNull(message = "跟单补单状态不能为空")
     private Integer repairStatus;
     //开仓状态
     @JsonProperty(value = "OpenOrderStatus")
+    @Min(value = 0, message = "跟单开仓状态只能为0或1")
+    @Max(value = 1, message = "跟单开仓状态只能为0或1")
+    @NotNull(message = "跟单开仓状态不能为空")
     private Integer openOrderStatus;
     //平仓状态
     @JsonProperty(value = "CloseOrderStatus")
+    @Min(value = 0, message = "跟单平仓状态只能为0或1")
+    @Max(value = 1, message = "跟单平仓状态只能为0或1")
+    @NotNull(message = "跟单平仓状态不能为空")
     private Integer closeOrderStatus;
     //同步止损加点
     @JsonProperty(value = "UpdateStopLossOffset")
