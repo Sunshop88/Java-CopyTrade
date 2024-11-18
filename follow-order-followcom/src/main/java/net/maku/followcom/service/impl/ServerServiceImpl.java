@@ -12,6 +12,8 @@ import net.maku.followcom.entity.ServerEntity;
 import net.maku.followcom.service.ServerService;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -27,7 +29,7 @@ import java.util.List;
 @DS("slave")
 public class ServerServiceImpl extends BaseServiceImpl<ServerDao, ServerEntity> implements ServerService {
 
-
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     @Override
     public void delete(List<Long> idList) {
         for (Long platformId : idList) {
@@ -36,5 +38,11 @@ public class ServerServiceImpl extends BaseServiceImpl<ServerDao, ServerEntity> 
                     .eq(ServerEntity::getPlatformId, platformId);
             baseMapper.delete(querWrapper);
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+    @Override
+    public void insert(ServerEntity serverEntity) {
+        baseMapper.insert(serverEntity);
     }
 }

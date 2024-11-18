@@ -93,7 +93,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void save(FollowVpsVO vo) {
+    public Boolean save(FollowVpsVO vo) {
         vo.setClientId(RandomStringUtil.generateUUIDClientId());
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
         List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName,vo.getName()));
@@ -101,13 +101,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             throw new ServerException("重复名称或ip地址,请重新输入");
         }
         baseMapper.insert(entity);
-
-
-
-//        ClientEntity clientEntity = new ClientEntity();
-//        clientEntity.setName(vo.getName());
-//        clientEntity.setIp(vo.getIpAddress());
-//        clientService.save(clientEntity);
+        return true;
     }
 
     @Override

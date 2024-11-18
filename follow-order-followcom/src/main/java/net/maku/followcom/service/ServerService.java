@@ -16,4 +16,6 @@ public interface ServerService extends BaseService<ServerEntity> {
 
 
     void delete(List<Long> idList);
+
+    void insert(ServerEntity serverEntity);
 }

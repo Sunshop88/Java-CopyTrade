@@ -17,4 +17,9 @@ public interface ClientService extends BaseService<ClientEntity> {
 
 
     void delete(List<Integer> idList);
+
+
+    Boolean update(FollowVpsVO vo);
+
+    Boolean insert(FollowVpsVO vo);
 }
