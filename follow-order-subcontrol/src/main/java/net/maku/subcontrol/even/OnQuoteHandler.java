@@ -154,8 +154,7 @@ public class OnQuoteHandler implements QuoteEventHandler {
         vo.setOpenPrice(order.OpenPrice);
         vo.setMagicNumber(order.MagicNumber);
         vo.setType(order.Type.name());
-        //增加五小时
-        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),5)));
+        vo.setOpenTime(order.OpenTime);
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
     }
