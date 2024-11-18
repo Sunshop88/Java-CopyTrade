@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Redis Cache
@@ -150,10 +151,19 @@ public class RedisCache {
         return redisTemplate.opsForList().rightPop(key);
     }
 
-    public void deleteByPattern(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
+    public void deleteByPattern(String containStr) {
+        // 精确匹配包含指定字符的 key
+        Set<String> keys = redisTemplate.keys("*" + containStr + "*");
+
         if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+            // 可以添加额外的过滤逻辑
+            Set<String> filteredKeys = keys.stream()
+                    .filter(key -> key.contains(containStr))
+                    .collect(Collectors.toSet());
+
+            redisTemplate.delete(filteredKeys);
         }
     }
+
+
 }

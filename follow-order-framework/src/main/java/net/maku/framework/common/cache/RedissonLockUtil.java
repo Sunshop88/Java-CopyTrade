@@ -3,6 +3,7 @@ package net.maku.framework.common.cache;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -10,7 +11,9 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedissonLockUtil {
 
-    private final RedissonClient redissonClient;
+    @Autowired
+    @Qualifier("redissonClient1")
+    private RedissonClient redissonClient;
 
     @Autowired
     public RedissonLockUtil(RedissonClient redissonClient) {

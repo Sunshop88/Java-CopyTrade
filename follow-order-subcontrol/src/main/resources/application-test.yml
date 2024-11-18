@@ -1,11 +1,19 @@
 spring:
   data:
     redis:
-      database: 1
-      host: 39.99.136.49
-      port: 6379
-      password: d@OgcOQdvQ09
-      #timeout: 6000ms  # 连接超时时长（毫秒）
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: 39.99.136.49
+        port: 6379
+        password: d@OgcOQdvQ09
+        #timeout: 6000ms  # 连接超时时长（毫秒）
+
+      redis2:
+        database: 0
+        host: 98.142.143.187
+        port: 6379
+        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
@@ -23,16 +31,12 @@ spring:
           url: jdbc:mysql://39.99.136.49:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: xizcJWmXFkB5f4fm
-          # 达梦
-          #    driver-class-name: dm.jdbc.driver.DmDriver
-          #    url: jdbc:dm://192.168.3.19:5236/maku_boot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
-          #    username: maku_boot
-          #    password: 12345678
-          # PostgreSQL
-          #    driver-class-name: org.postgresql.Driver
-          #    url: jdbc:postgresql://192.168.3.19:5432/postgres
-          #    username: postgres
-          #    password: 123456
+
+        slave:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://39.99.136.49:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: xizcJWmXFkB5f4fm
   mqtt:
     host: tcp://localhost:1883
     username: maku

@@ -1,6 +1,5 @@
 package net.maku.subcontrol.even;
 
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import net.maku.followcom.entity.FollowOrderSendEntity;
@@ -8,33 +7,20 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowOrderSendService;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
-import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.pojo.OrderActiveInfoVOPool;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.vo.FollowOrderSendSocketVO;
 import net.maku.subcontrol.websocket.TraderOrderSendWebSocket;
-import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import online.mtapi.mt4.QuoteEventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.locks.Lock;
-import java.util.stream.Collectors;
-
-import static online.mtapi.mt4.Op.Buy;
-import static online.mtapi.mt4.Op.Sell;
 
 public class OnQuoteHandler implements QuoteEventHandler {
     private static final Logger log = LoggerFactory.getLogger(OnQuoteHandler.class);

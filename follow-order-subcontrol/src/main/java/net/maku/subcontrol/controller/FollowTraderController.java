@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.query.FollowOrderCloseQuery;
@@ -27,6 +28,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Exception.ConnectException;
@@ -65,6 +67,9 @@ public class FollowTraderController {
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVarietyService followVarietyService;
     private final FollowOrderCloseService followOrderCloseService;
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
+    private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final FollowVpsService followVpsService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -108,7 +113,6 @@ public class FollowTraderController {
         }catch (Exception e){
             log.error("保存失败"+e);
         }
-
         return Result.ok();
     }
 
@@ -130,6 +134,10 @@ public class FollowTraderController {
         followTraderService.delete(idList);
         //清空缓存
         idList.stream().forEach(o-> leaderApiTradersAdmin.removeTrader(o.toString()));
+        //清空缓存
+        idList.stream().forEach(o-> copierApiTradersAdmin.removeTrader(o.toString()));
+        //删除订阅关系
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId,idList).or().in(FollowTraderSubscribeEntity::getSlaveId,idList));
         return Result.ok();
     }
 
@@ -170,10 +178,14 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<?> orderSend(@RequestBody FollowOrderSendVO vo) {
-        // 本地处理逻辑
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             return Result.error("账号不存在");
+        }
+        //检查vps是否正常
+        FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
+        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            throw new ServerException("VPS服务异常，请检查");
         }
 
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
@@ -270,7 +282,11 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(followTraderVO)){
             throw new ServerException("账号不存在");
         }
-
+        //检查vps是否正常
+        FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
+        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            throw new ServerException("VPS服务异常，请检查");
+        }
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
         QuoteClient quoteClient = null;
         if (ObjectUtil.isEmpty(leaderApiTrader)||ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){

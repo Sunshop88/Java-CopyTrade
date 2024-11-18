@@ -72,7 +72,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             followVarietyEntityList= followVarietyService.list();
             redisUtil.set(Constant.TRADER_VARIETY,followVarietyEntityList);
         }
-        List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o -> o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
+        List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
             FollowPlatformEntity copyPlat = followTraderService.getPlatForm(copier.getId());
@@ -86,6 +86,9 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             if (ObjectUtil.isNotEmpty(collectCopy)){
                 orderInfo.setSymbolList(symbolList);
             }
+        }else {
+            //未发现品种匹配
+            log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
         }
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{

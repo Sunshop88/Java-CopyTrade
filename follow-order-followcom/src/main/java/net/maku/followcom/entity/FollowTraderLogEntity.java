@@ -62,12 +62,6 @@ public class FollowTraderLogEntity {
 	private Integer ifInitiative;
 
 	/**
-	* 单号
-	*/
-	@TableField(value = "order_no")
-	private Integer orderNo;
-
-	/**
 	* 版本号
 	*/
 	@TableField(value = "version", fill = FieldFill.INSERT)

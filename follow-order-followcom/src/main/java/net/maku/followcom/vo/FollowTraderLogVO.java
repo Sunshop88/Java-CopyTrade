@@ -43,9 +43,6 @@ public class FollowTraderLogVO implements Serializable {
 	@Schema(description = "是否主动0-否 1-是")
 	private Integer ifInitiative;
 
-	@Schema(description = "单号")
-	private Integer orderNo;
-
 	@Schema(description = "版本号")
 	private Integer version;
 
