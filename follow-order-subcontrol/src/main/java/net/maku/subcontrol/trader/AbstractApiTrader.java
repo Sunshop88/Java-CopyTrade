@@ -34,15 +34,11 @@ import online.mtapi.mt4.Exception.TimeoutException;
 import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
-import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -315,8 +311,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
         //删除redis缓存
         redisCache.deleteByPattern(trader.getId().toString());
         redisCache.deleteByPattern(trader.getAccount());
-        //删除kafka订阅关系
-        this.cldKafkaConsumer.stopConsume();
         try {
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();

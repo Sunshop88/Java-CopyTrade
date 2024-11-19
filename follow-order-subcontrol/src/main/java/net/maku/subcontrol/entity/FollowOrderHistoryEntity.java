@@ -119,6 +119,12 @@ public class FollowOrderHistoryEntity {
 	private Integer magic;
 
 	/**
+	 * 下单方式
+	 */
+	@TableField(value = "placed_type")
+	private Integer placedType;
+
+	/**
 	* MT4账号id
 	*/
 	@TableField(value = "trader_id")

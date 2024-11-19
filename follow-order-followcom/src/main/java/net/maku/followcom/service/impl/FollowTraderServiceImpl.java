@@ -37,7 +37,6 @@ import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Exception.TradeException;
-import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -211,8 +210,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
 
         updateById(entity);
-
-
     }
 
     @Override
@@ -914,6 +911,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setRemark("无效symbol"+e.getMessage());
         }
         followOrderDetailService.save(followOrderDetailEntity);
+        //todo 存入下单方式
+
     }
 
     // 示例 2: 每笔订单的下单数量为 区间内的随机值，总手数不超过 总手数，订单数量不固定

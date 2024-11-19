@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.entity.FollowVpsEntity;
@@ -39,4 +40,5 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
 
     FollowVpsEntity select(String vpsName);
 
+    FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService);
 }

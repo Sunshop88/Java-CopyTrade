@@ -10,6 +10,7 @@ import net.maku.followcom.query.FollowVarietyQuery;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.vo.FollowVarietyVO;
+import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
 public class FollowVarietyController {
     private final FollowVarietyService followVarietyService;
     private final FollowPlatformService followPlatformService;
-    private final RedisUtil redisUtil;
+    private final RedisCache redisCache;
 
     @GetMapping("pageSymbol")
     @Operation(summary = "分页")
@@ -110,7 +111,7 @@ public class FollowVarietyController {
             }
             // 导入文件
             followVarietyService.importByExcel(file,template,templateName);
-            redisUtil.del(Constant.TRADER_VARIETY);
+            redisCache.deleteByPattern(Constant.TRADER_VARIETY);
             return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());

@@ -39,4 +39,7 @@ public class FollowRedisTraderVO implements Serializable {
 	@Schema(description = "做多订单手数数量")
 	private double buyNum;
 
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
+
 }

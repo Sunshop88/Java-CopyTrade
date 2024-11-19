@@ -1,11 +1,8 @@
 package net.maku.followcom.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -13,7 +10,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
 
 /**
@@ -119,7 +115,6 @@ public class FollowTraderVO implements Serializable {
 	private String serverIp;
 
 	@Schema(description = "模板ID")
-	@NotNull(message = "模板ID不能为空")
 	private Integer templateId;
 
 }

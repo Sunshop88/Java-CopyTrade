@@ -69,6 +69,9 @@ public class FollowOrderHistoryVO implements Serializable {
 	@Schema(description = "魔数")
 	private Integer magic;
 
+	@Schema(description = "下单方式")
+	private Integer placedType;
+
 	@Schema(description = "MT4账号id")
 	private Long traderId;
 

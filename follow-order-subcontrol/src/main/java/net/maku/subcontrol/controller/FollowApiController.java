@@ -60,4 +60,11 @@ public class FollowApiController {
         return followApiService.delFollow(vo) ? Result.ok() : Result.error();
     }
 
+    @PostMapping("/active/list")
+    @Operation(summary = "查询平仓订单")
+    public Result<String> activeList(@RequestBody @Valid SourceDelVo vo) {
+
+        return followApiService.delFollow(vo) ? Result.ok() : Result.error();
+    }
+
 }

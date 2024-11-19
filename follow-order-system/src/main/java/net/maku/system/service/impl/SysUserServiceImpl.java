@@ -10,6 +10,7 @@ import lombok.SneakyThrows;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.excel.ExcelFinishCallBack;
@@ -57,7 +58,6 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     private final TokenStoreCache tokenStoreCache;
     private final TransService transService;
     private final FollowVpsUserService followVpsUserService;
-    private final FollowVpsService followVpsService;
     private final RedisCache redisCache;
     private final SysRoleService sysRoleService;
     private final SysLogLoginService sysLogLoginService;
@@ -83,6 +83,18 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
             vo.setLastLoginTime(sysLogLoginEntity.getCreateTime());
             vo.setIp(sysLogLoginEntity.getIp());
             voList.add(vo);
+            //查询Vps
+            List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, entity.getId()));
+            if (ObjectUtil.isNotEmpty(vpsUserEntities)){
+                List<VpsUserVO> vpsUserVOList = new ArrayList<>();
+                vpsUserEntities.forEach(o->{
+                    VpsUserVO vpsUserVO = new VpsUserVO();
+                    vpsUserVO.setName(o.getVpsName());
+                    vpsUserVO.setId(o.getVpsId());
+                    vpsUserVOList.add(vpsUserVO);
+                });
+                vo.setVpsList(vpsUserVOList);
+            }
         }
 
 
