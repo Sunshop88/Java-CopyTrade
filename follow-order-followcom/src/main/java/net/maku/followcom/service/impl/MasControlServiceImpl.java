@@ -24,10 +24,10 @@ import java.util.concurrent.Future;
 @Service
 @AllArgsConstructor
 public class MasControlServiceImpl implements MasControlService {
-    private final ClientService clientService;
+//    private final ClientService clientService;
     private final FollowVpsService followVpsService;
-    private final PlatformService platformService;
-    private final ServerService serverService;
+//    private final PlatformService platformService;
+//    private final ServerService serverService;
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
 
@@ -39,17 +39,17 @@ public class MasControlServiceImpl implements MasControlService {
         if (!result) {
             return false;
         }
-        clientService.insert(vo);
+//        clientService.insert(vo);
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean update(FollowVpsVO vo) {
-        Boolean result = clientService.update(vo);
-        if (!result) {
-            return false;
-        }
+//        Boolean result = clientService.update(vo);
+//        if (!result) {
+//            return false;
+//        }
         followVpsService.update(vo);
         return true;
     }
@@ -57,7 +57,7 @@ public class MasControlServiceImpl implements MasControlService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(List<Integer> idList) {
-        clientService.delete(idList);
+//        clientService.delete(idList);
         followVpsService.delete(idList);
 
         return true;
@@ -66,8 +66,8 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean deletePlatform(List<Long> idList) {
-        serverService.delete(idList);
-        platformService.delete(idList);
+//        serverService.delete(idList);
+//        platformService.delete(idList);
 
         followPlatformService.delete(idList);
         return true;
@@ -104,20 +104,20 @@ public class MasControlServiceImpl implements MasControlService {
                         e.printStackTrace();
                     }
                 });
-                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
-                platformEntity.eq("id", vo.getId());
+//                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
+//                platformEntity.eq("id", vo.getId());
                 list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o -> {
                     //找出最小延迟
                     FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                     //修改所有用户连接节点
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
 
-                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
+//                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
                 });
 
-                platformEntity.set("name", bro);
-                platformEntity.set("type", vo.getPlatformType());
-                platformService.update(platformEntity);
+//                platformEntity.set("name", bro);
+//                platformEntity.set("type", vo.getPlatformType());
+//                platformService.update(platformEntity);
 
             });
         });
@@ -152,30 +152,30 @@ public class MasControlServiceImpl implements MasControlService {
                     e.printStackTrace();
                 }
             });
-            PlatformEntity platformEntity = new PlatformEntity();
+//            PlatformEntity platformEntity = new PlatformEntity();
             list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o -> {
                 //找出最小延迟
                 FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                 //修改所有用户连接节点
                 followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
 
-                platformEntity.setDefaultServer(followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
+//                platformEntity.setDefaultServer(followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
 
 
-            platformEntity.setName(bro);
-            platformEntity.setType(vo.getPlatformType());
-            platformService.insert(platformEntity);
+//            platformEntity.setName(bro);
+//            platformEntity.setType(vo.getPlatformType());
+//            platformService.insert(platformEntity);
 //            platformService.save(platformEntity);
 
             //查询新增的platformService的id
-            for (FollowBrokeServerEntity followBrokeServerEntity : list) {
-                ServerEntity serverEntity = new ServerEntity();
-                serverEntity.setPlatformId(platformEntity.getId());
-                serverEntity.setPort(Integer.valueOf(followBrokeServerEntity.getServerPort()));
-                serverEntity.setHost(followBrokeServerEntity.getServerNode());
-                serverService.insert(serverEntity);
-            }
+//            for (FollowBrokeServerEntity followBrokeServerEntity : list) {
+//                ServerEntity serverEntity = new ServerEntity();
+//                serverEntity.setPlatformId(platformEntity.getId());
+//                serverEntity.setPort(Integer.valueOf(followBrokeServerEntity.getServerPort()));
+//                serverEntity.setHost(followBrokeServerEntity.getServerNode());
+//                serverService.insert(serverEntity);
+//            }
         });
         return true;
     }
