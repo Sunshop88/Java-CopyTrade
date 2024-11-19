@@ -95,6 +95,10 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo){
+        //查询是否有templateId，若没有直接抛出错误
+        if (ObjectUtil.isEmpty(vo.getTemplateId())){
+            return Result.error("请选择模板");
+        }
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
@@ -121,6 +125,9 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> update(@RequestBody @Valid FollowTraderVO vo){
+        if (ObjectUtil.isEmpty(vo.getTemplateId())){
+            vo.setTemplateId(1);
+        }
         followTraderService.update(vo);
 
         return Result.ok();

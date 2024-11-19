@@ -170,4 +170,10 @@ public class FollowTraderEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 模板ID
+	 */
+	@TableField(value = "template_id")
+	private Integer templateId;
+
 }

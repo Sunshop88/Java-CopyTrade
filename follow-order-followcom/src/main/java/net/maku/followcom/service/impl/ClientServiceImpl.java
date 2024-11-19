@@ -12,6 +12,7 @@ import net.maku.followcom.dao.ClientDao;
 import net.maku.followcom.entity.ClientEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.ClientService;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -45,7 +46,7 @@ public class ClientServiceImpl extends BaseServiceImpl<ClientDao, ClientEntity> 
         }
         ClientEntity clientEntity = new ClientEntity();
         clientEntity.setName(vo.getName());
-        clientEntity.setIp(vo.getIpAddress());
+        clientEntity.setIp(vo.getIpAddress() + ":" + FollowConstant.VPS_PORT);
         save(clientEntity);
         return true;
     }
@@ -66,7 +67,7 @@ public class ClientServiceImpl extends BaseServiceImpl<ClientDao, ClientEntity> 
             updateWrapper.set("name",vo.getName());
         }
         if(ObjectUtil.isNotEmpty(vo.getIpAddress())){
-            updateWrapper.set("ip",vo.getIpAddress());
+            updateWrapper.set("ip",vo.getIpAddress() + ":" + FollowConstant.VPS_PORT);
         }
         update(updateWrapper);
         return true;

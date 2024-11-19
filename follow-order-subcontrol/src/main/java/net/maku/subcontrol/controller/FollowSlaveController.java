@@ -83,6 +83,7 @@ public class FollowSlaveController {
             followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
+            followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
 
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVo);
@@ -125,6 +126,9 @@ public class FollowSlaveController {
     public Result<Boolean> updateSlave(@RequestBody FollowUpdateSalveVo vo){
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
+            if (ObjectUtil.isEmpty(vo.getTemplateId())){
+                vo.setTemplateId(1);
+            }
             BeanUtil.copyProperties(vo,followTraderEntity);
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号

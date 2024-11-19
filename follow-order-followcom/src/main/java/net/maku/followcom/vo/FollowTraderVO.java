@@ -118,4 +118,8 @@ public class FollowTraderVO implements Serializable {
 
 	private String serverIp;
 
+	@Schema(description = "模板ID")
+	@NotNull(message = "模板ID不能为空")
+	private Integer templateId;
+
 }

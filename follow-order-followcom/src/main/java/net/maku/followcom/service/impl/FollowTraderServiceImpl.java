@@ -144,6 +144,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isEmpty(followVpsEntity)){
             throw new ServerException("请先添加VPS");
         }
+        entity.setTemplateId(vo.getTemplateId());
         entity.setPlatformId(followPlatform.getId().intValue());
         entity.setIpAddr(vo.getServerIp());
         entity.setServerId(followVpsEntity.getId());

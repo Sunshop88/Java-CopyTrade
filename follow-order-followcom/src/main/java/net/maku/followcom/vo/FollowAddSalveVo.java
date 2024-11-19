@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -80,5 +81,9 @@ public class FollowAddSalveVo  implements Serializable {
     private String slaveAccount;
 
     private String masterAccount;
+
+    @Schema(description = "模板ID")
+    @NotNull(message = "模板ID不能为空")
+    private Integer templateId;
 
 }
