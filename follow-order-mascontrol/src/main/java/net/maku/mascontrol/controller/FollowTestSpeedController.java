@@ -114,6 +114,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())){
+            return Result.error("服务器列表或vps列表为空");
+        }
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
         overallResult.setDoTime(new Date());
@@ -147,13 +150,24 @@ public class FollowTestSpeedController {
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
 
-                // 将对象序列化为 JSON
-                String jsonBody = objectMapper.writeValueAsString(startRequest);
+//                // 将对象序列化为 JSON
+//                String jsonBody = objectMapper.writeValueAsString(startRequest);
+//                RestTemplate restTemplate = new RestTemplate();
+//                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+//                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+//                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+//                log.info("测速请求:" + response.getBody());
+
+                // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+                String expiryDateStr = vpsEntity.getExpiryDate().toString();
+                startRequest.setExpiryDateStr(expiryDateStr);
+
                 RestTemplate restTemplate = new RestTemplate();
                 HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+                HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
                 ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                 log.info("测速请求:" + response.getBody());
+
 
                 if (!response.getBody().getString("msg").equals("success")) {
                     log.error("测速失败ip: " + vpsEntity.getIpAddress());
@@ -234,6 +248,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())){
+            return Result.error("服务器列表或vps列表为空");
+        }
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
         FollowTestSpeedVO overallResult = followTestSpeedService.get(id);
