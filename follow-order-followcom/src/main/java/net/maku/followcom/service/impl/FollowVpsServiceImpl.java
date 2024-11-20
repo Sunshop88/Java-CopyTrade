@@ -287,7 +287,8 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         //跟单正常数量
         Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
         ls2.set(1, BigDecimal.valueOf(slaveSuccess));
-        ls2.set(1, BigDecimal.valueOf(slaveIds.size()));
+        ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
+
         for (FollowTraderEntity followTraderEntity : followTraderEntityList) {
             if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {
                 FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());

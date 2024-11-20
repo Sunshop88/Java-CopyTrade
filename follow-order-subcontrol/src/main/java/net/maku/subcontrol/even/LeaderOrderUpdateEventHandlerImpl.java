@@ -1,6 +1,7 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cld.message.pubsub.kafka.IKafkaProducer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -105,6 +106,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());
                 });
                 flag = 1;
+                //推送到redis
+                pushCache(leader.getServerId());
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
@@ -120,6 +123,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
                 flag = 1;
+                //推送到redis
+                pushCache(leader.getServerId());
                 break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
@@ -142,10 +147,10 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     /**
      * 推送redis缓存
      */
-    private void pushCache() {
+    private void pushCache(Integer vpsId) {
         ThreadPoolUtils.execute(() -> {
-            //查询所有账号
-            List<FollowTraderEntity> followTraderList = followTraderService.list();
+            //查询当前vpsId所有账号
+            List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
             //根据vpsId账号分组
             Map<Integer, List<FollowTraderEntity>> map = followTraderList.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId));
             //查询所有平台
@@ -161,7 +166,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     CountDownLatch countDownLatch = new CountDownLatch(v.size());
                     //遍历账号获取持仓订单
                     for (FollowTraderEntity h : v) {
-
                         ThreadPoolUtils.execute(() -> {
                             AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
                             List<OrderCacheVO> orderCaches = new ArrayList<>();
@@ -178,12 +182,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
                                     quoteClient = followPlatformService.tologin(h.getAccount(), h.getPassword(), h.getPlatform());
-                                    if (ObjectUtil.isEmpty(quoteClient)) {
-                                        //  throw new ServerException("账号无法登录");
-                                        //  continue;
-                                    }
                                 } catch (Exception e) {
-                                    // continue;
+                                    log.error("推送从redis数据,登录异常:" + e);
                                 }
                             } else {
                                 quoteClient = leaderApiTrader.quoteClient;
@@ -210,9 +210,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                             accountCache.setCount(accountCache.getCount() + count);
                                             break;
                                     }
-
                                     if (ObjectUtil.isNotEmpty(b)) {
-
                                         b.forEach(x -> {
                                             OrderCacheVO orderCacheVO = new OrderCacheVO();
                                             //  orderCacheVO.setId(x.);
@@ -232,7 +230,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                             orderCacheVO.setCommission(x.Commission);
                                             orderCacheVO.setComment(x.Comment);
                                             orderCacheVO.setProfit(x.Profit);
-                                            //   orderCacheVO.setPlaceType(x.p);
+                                            //  orderCacheVO.setPlaceType(h.getUpdater());
                                             orderCaches.add(orderCacheVO);
                                             accountCache.setLots(accountCache.getLots() + x.Lots);
                                             accountCache.setProfit(accountCache.getProfit() + x.Profit);
@@ -243,34 +241,41 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             }
                             accounts.add(accountCache);
                             countDownLatch.countDown();
-
                         });
-
                     }
                     try {
                         countDownLatch.await();
                     } catch (InterruptedException e) {
-
+                        log.error("推送从redis数据异常:" + e);
                     }
-                    //设置从redis数据
-                    FollowTraderCacheVO cacheVO = new FollowTraderCacheVO();
-                    cacheVO.setAccounts(accounts);
-                    cacheVO.setUpdateAt(new Date());
-                    cacheVO.setStatus(true);
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    JavaTimeModule javaTimeModule = new JavaTimeModule();
-                    //格式化时间格式
-                    javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                    objectMapper.registerModule(javaTimeModule);
-                    String json = null;
-                    try {
-                        json = objectMapper.writeValueAsString(cacheVO);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
+                    //转出json格式
+                    String json = convertJson(accounts);
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
                 }
             });
         });
+    }
+
+    /**
+     * 转成成json
+     */
+    private String convertJson(List<AccountCacheVO> accounts) {
+        //设置从redis数据
+        FollowTraderCacheVO cacheVO = new FollowTraderCacheVO();
+        cacheVO.setAccounts(accounts);
+        cacheVO.setUpdateAt(new Date());
+        cacheVO.setStatus(true);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        //格式化时间格式
+        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        objectMapper.registerModule(javaTimeModule);
+        String json = null;
+        try {
+            json = objectMapper.writeValueAsString(cacheVO);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return json;
     }
 }

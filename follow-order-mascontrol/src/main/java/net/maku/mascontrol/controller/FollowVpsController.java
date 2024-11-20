@@ -72,6 +72,15 @@ public class FollowVpsController {
         return Result.ok(page);
     }
 
+    @GetMapping("{id}")
+    @Operation(summary = "信息")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<FollowVpsVO> get(@PathVariable("id") Long id) {
+        FollowVpsVO followVpsVO = followVpsService.get(id);
+
+        return Result.ok(followVpsVO);
+    }
+
     @PostMapping
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
