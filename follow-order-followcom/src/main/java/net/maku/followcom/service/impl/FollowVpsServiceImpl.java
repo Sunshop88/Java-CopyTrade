@@ -20,16 +20,22 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
 import net.maku.followcom.entity.ClientEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.ClientService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
+import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.followcom.vo.FollowVpsExcelVO;
+import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -40,6 +46,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.ZoneId;
 import java.util.Date;
@@ -57,6 +64,7 @@ import java.util.List;
 public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVpsEntity> implements FollowVpsService {
     private final TransService transService;
     private final ClientService clientService;
+    private final RedisUtil redisUtil;
 
 
     @Override
@@ -190,5 +198,46 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Override
     public FollowVpsEntity select(String vpsName) {
         return baseMapper.selectOne(Wrappers.<FollowVpsEntity>lambdaQuery().eq(FollowVpsEntity::getName,vpsName));
+    }
+
+    @Override
+    public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService) {
+        List<FollowVpsEntity> list = this.list();
+        Integer openNum = (int)list.stream().filter(o->o.getIsOpen().equals(CloseOrOpenEnum.OPEN.getValue())).count();
+        Integer runningNum = (int)list.stream().filter(o->o.getIsActive().equals(CloseOrOpenEnum.OPEN.getValue())).count();
+        Integer closeNum = (int)list.stream().filter(o->o.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        Integer errorNum = (int)list.stream().filter(o->o.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        //账号信息
+        List<FollowTraderEntity> followTraderEntityList = followTraderService.list();
+        Integer masterSuccess =(int)followTraderEntityList.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())&&o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        Integer masterTotal =(int) followTraderEntityList.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
+        Integer slaveSuccess = (int)followTraderEntityList.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())&&o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        Integer slaveTotal = (int) followTraderEntityList.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
+        Integer orderCountTotal =0;
+        BigDecimal orderLotsTotal =BigDecimal.ZERO;
+        BigDecimal orderEquityTotal =BigDecimal.ZERO;
+        for(FollowTraderEntity followTraderEntity:followTraderEntityList){
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))){
+                FollowRedisTraderVO followRedisTraderVO =(FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
+                orderCountTotal+=followRedisTraderVO.getTotal();
+                orderLotsTotal=orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                orderEquityTotal=orderEquityTotal.add(followRedisTraderVO.getEuqit());
+            }
+        }
+        Integer total = list.size();
+        FollowVpsInfoVO followVpsInfoVO = new FollowVpsInfoVO();
+        followVpsInfoVO.setTotal(total);
+        followVpsInfoVO.setOpenNum(openNum);
+        followVpsInfoVO.setRunningNum(runningNum);
+        followVpsInfoVO.setCloseNum(closeNum);
+        followVpsInfoVO.setErrorNum(errorNum);
+        followVpsInfoVO.setMasterSuccess(masterSuccess);
+        followVpsInfoVO.setMasterTotal(masterTotal);
+        followVpsInfoVO.setSlaveSuccess(slaveSuccess);
+        followVpsInfoVO.setSlaveTotal(slaveTotal);
+        followVpsInfoVO.setOrderCountTotal(orderCountTotal);
+        followVpsInfoVO.setOrderLotsTotal(orderLotsTotal);
+        followVpsInfoVO.setOrderEquityTotal(orderEquityTotal);
+        return followVpsInfoVO;
     }
 }

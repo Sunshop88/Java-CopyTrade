@@ -64,13 +64,13 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowTraderSubscribeEntity leaderCopier = leaderCopierService.subscription(copier.getId(), orderInfo.getMasterId());
         //查看喊单账号信息
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
-        // 查看品种匹配
+        // 查看品种匹配 模板
         List<FollowVarietyEntity> followVarietyEntityList ;
-        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_VARIETY))){
-            followVarietyEntityList = (List<FollowVarietyEntity>)redisUtil.get(Constant.TRADER_VARIETY);
+        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_VARIETY+copier.getTemplateId()))){
+            followVarietyEntityList = (List<FollowVarietyEntity>)redisUtil.get(Constant.TRADER_VARIETY+copier.getTemplateId());
         }else {
-            followVarietyEntityList= followVarietyService.list();
-            redisUtil.set(Constant.TRADER_VARIETY,followVarietyEntityList);
+            followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,copier.getTemplateId()));
+            redisUtil.set(Constant.TRADER_VARIETY+copier.getTemplateId(),followVarietyEntityList);
         }
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){

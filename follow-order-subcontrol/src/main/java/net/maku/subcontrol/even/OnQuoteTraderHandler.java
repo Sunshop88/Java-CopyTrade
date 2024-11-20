@@ -68,6 +68,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 //缓存经常变动的三个值信息
                 followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
                 followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
+                followRedisTraderVO.setProfit(BigDecimal.valueOf(qc.Profit));
                 followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
                 followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
                 if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
@@ -201,6 +202,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         LambdaQueryWrapper<FollowTraderEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId());
         followTraderService.update(followTrader, lambdaQueryWrapper);
+        //重连
+        reconnect(vo.getId().toString());
         //保存从表数据
         sourceService.edit(vo);
         return true;
@@ -261,6 +264,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         if (!result) {
             return false;
         }
+        //重连
+        reconnect(vo.getId().toString());
         //处理副表数据
         followService.edit(vo);
         return true;
@@ -278,5 +283,24 @@ public class FollowApiServiceImpl implements FollowApiService {
         //删除从表数据
         followService.del(vo.getId());
         return true;
+    }
+
+    private void reconnect(String traderId) {
+        try{
+            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                leaderApiTrader.startTrade();
+            }
+        }catch (RuntimeException e){
+            throw new ServerException("请检查账号密码，稍后再试");
+        }
     }
 }

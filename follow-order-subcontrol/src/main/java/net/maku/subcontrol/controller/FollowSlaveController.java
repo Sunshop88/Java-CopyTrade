@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
@@ -28,6 +29,7 @@ import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.followcom.vo.FollowAddSalveVo;
+import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
 import net.maku.subcontrol.vo.RepairSendVO;
@@ -83,6 +85,9 @@ public class FollowSlaveController {
             followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
+            if (ObjectUtil.isEmpty(vo.getTemplateId())){
+                vo.setTemplateId(1);
+            }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
 
@@ -145,6 +150,8 @@ public class FollowSlaveController {
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
                 return Result.error();
             }
+            //重连
+            reconnect(vo.getId().toString());
             ThreadPoolUtils.execute(()->{
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
@@ -227,5 +234,24 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO){
         return Result.ok(followSubscribeOrderService.repairSend(repairSendVO));
+    }
+
+    private void reconnect(String traderId) {
+        try{
+            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                leaderApiTrader.startTrade();
+            }
+        }catch (RuntimeException e){
+            throw new ServerException("请检查账号密码，稍后再试");
+        }
     }
 }

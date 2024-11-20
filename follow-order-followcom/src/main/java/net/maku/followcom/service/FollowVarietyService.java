@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import com.esotericsoftware.kryo.util.IntArray;
 import jakarta.servlet.http.HttpServletResponse;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.query.FollowVarietyQuery;

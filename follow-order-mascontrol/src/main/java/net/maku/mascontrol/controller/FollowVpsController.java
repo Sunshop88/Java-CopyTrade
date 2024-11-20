@@ -58,8 +58,6 @@ public class FollowVpsController {
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
-    private final RedisUtil redisUtil;
-    private final ClientService clientService;
     private final MasControlService masControlService;
 
     @GetMapping("page")
@@ -127,18 +125,11 @@ public class FollowVpsController {
     @Operation(summary = "vps统计")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<FollowVpsInfoVO> info() {
-        Integer openNum = (int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
-        Integer runningNum = (int) followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
-        Integer total = (int) followVpsService.count();
-        FollowVpsInfoVO followVpsInfoVO = new FollowVpsInfoVO();
-        followVpsInfoVO.setTotal(total);
-        followVpsInfoVO.setOpenNum(openNum);
-        followVpsInfoVO.setRunningNum(runningNum);
-        return Result.ok(followVpsInfoVO);
+        return Result.ok(followVpsService.getFollowVpsInfo(followTraderService));
     }
 
     @GetMapping("listVps")
-    @Operation(summary = "可用vps")
+    @Operation(summary = "vps列表")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<List<FollowVpsVO>> listVps() {
         List<VpsUserVO> list;

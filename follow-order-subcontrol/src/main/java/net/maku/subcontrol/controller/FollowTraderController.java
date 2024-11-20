@@ -95,9 +95,9 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo){
-        //查询是否有templateId，若没有直接抛出错误
+        //默认模板1
         if (ObjectUtil.isEmpty(vo.getTemplateId())){
-            return Result.error("请选择模板");
+            vo.setTemplateId(1);
         }
         //本机处理
         try {
@@ -129,7 +129,8 @@ public class FollowTraderController {
             vo.setTemplateId(1);
         }
         followTraderService.update(vo);
-
+        //重连
+        reconnect(vo.getId().toString());
         return Result.ok();
     }
 
@@ -213,10 +214,15 @@ public class FollowTraderController {
             quoteClient = leaderApiTrader.quoteClient;
         }
 
-        Integer contract = followVarietyService.list(
-                        new LambdaQueryWrapper<FollowVarietyEntity>()
-                                .eq(FollowVarietyEntity::getStdSymbol, vo.getSymbol()))
-                .stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())).findFirst()
+        // 查看品种匹配 模板
+        List<FollowVarietyEntity> followVarietyEntityList ;
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY+followTraderVO.getTemplateId()))){
+            followVarietyEntityList = (List<FollowVarietyEntity>)redisCache.get(Constant.TRADER_VARIETY+followTraderVO.getTemplateId());
+        }else {
+            followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,followTraderVO.getTemplateId()));
+            redisCache.set(Constant.TRADER_VARIETY+followTraderVO.getTemplateId(),followVarietyEntityList);
+        }
+        Integer contract = followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getStdSymbol().equals(vo.getSymbol())).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
@@ -391,6 +397,11 @@ public class FollowTraderController {
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
+        reconnect(traderId);
+        return Result.ok();
+    }
+
+    private void reconnect(String traderId) {
         try{
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
@@ -407,7 +418,6 @@ public class FollowTraderController {
         }catch (RuntimeException e){
             throw new ServerException("请检查账号密码，稍后再试");
         }
-        return Result.ok();
     }
 
     @GetMapping("traderSymbol")
@@ -439,9 +449,18 @@ public class FollowTraderController {
             redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
         }
 
+        FollowTraderEntity followTraderEntity=followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)){
             //查看品种列表
-            List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getBrokerName, followPlatform.getBrokerName()).eq(FollowVarietyEntity::getStdSymbol, symbol));
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList ;
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId()))){
+                followVarietyEntityList = (List<FollowVarietyEntity>)redisCache.get(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId());
+            }else {
+                followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,followTraderEntity.getTemplateId()));
+                redisCache.set(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId(),followVarietyEntityList);
+            }
+            List<FollowVarietyEntity> list =followVarietyEntityList.stream().filter(o->o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
             for (FollowVarietyEntity o:list){
                 if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
                     //查看品种规格
