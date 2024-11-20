@@ -102,25 +102,29 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> importExcel(@RequestParam(value = "file",required = false) MultipartFile file,@RequestParam("template" )Integer template,@RequestParam(value = "templateName") String templateName) throws Exception {
-//        if (file.isEmpty()) {
-//            return Result.error("请选择需要上传的文件");
-//        }
-        //查询templateName是否重复
-        List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateName, templateName));
-        if (ObjectUtil.isNotEmpty(list)){
+        if (ObjectUtil.isEmpty(templateName)){
+            return Result.error("请输入模板名称");
+        }
+        List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>()
+                .eq(FollowVarietyEntity::getTemplateName, templateName)
+                .ne(FollowVarietyEntity::getTemplateId, template)
+        );
+        if (list.size()>0 ){
             return Result.error("模板名称重复，请重新输入");
         }
         try {
             // 检查文件类型
-            if (ObjectUtil.isNotEmpty(file)) {
+            if (file != null && !file.isEmpty()) {
                 if (!isExcelOrCsv(file.getOriginalFilename())) {
                     return Result.error("仅支持 Excel 和 CSV 文件");
                 }
                 // 导入文件
                 followVarietyService.importByExcel(file, template, templateName);
+            }else{
+                followVarietyService.updateTemplateName(template,templateName);
             }
             redisCache.deleteByPattern(Constant.TRADER_VARIETY);
-            return Result.ok("文件导入成功");
+            return Result.ok("导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }
