@@ -708,6 +708,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 followOrderDetailEntity.setCloseId(followOrderCloseEntity.getId());
             }
             Order orderResult;
+            followOrderDetailEntity.setRequestCloseTime(LocalDateTime.now());
             if (followOrderDetailEntity.getType()==Op.Buy.getValue()){
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), 0.0, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
@@ -871,6 +872,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
+            followOrderDetailEntity.setRequestOpenTime(LocalDateTime.now());
             if (type.equals(Op.Buy.getValue())){
                 order=oc.OrderSend(symbol, Op.Buy,lotsPerOrder,asksub,0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
@@ -884,7 +886,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),-8)));
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             followOrderDetailEntity.setOrderNo(order.Ticket);
-            followOrderDetailEntity.setRequestOpenTime(nowdate);
             followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
             followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
