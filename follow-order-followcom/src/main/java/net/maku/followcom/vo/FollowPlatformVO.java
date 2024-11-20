@@ -37,7 +37,6 @@ public class FollowPlatformVO implements Serializable {
 	private String platformType;
 
 	@Schema(description = "服务器")
-	@NotBlank(message = "服务器不能为空")
 	@Size(max = 100, message = "服务器长度不能超过100个字符")
 	private String server;
 

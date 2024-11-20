@@ -1,10 +1,12 @@
 package net.maku.followcom.enums;
 
+import lombok.Getter;
+
 /**
  * Author:  zsd
  * Date:  2024/11/15/周五 18:19
  */
-
+@Getter
 public enum FollowModeEnum {
     //跟随模式0-固定手数 1-手数比例 2-净值比例
     FIX(0, 2, "固定手数"),

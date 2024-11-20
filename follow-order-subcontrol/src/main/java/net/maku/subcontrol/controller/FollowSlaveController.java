@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.FollowModeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -74,7 +75,12 @@ public class FollowSlaveController {
             if (ObjectUtil.isEmpty(followTraderEntity)){
                 throw new ServerException("请输入正确喊单账号");
             }
-
+            //如果为固定手数和手数比例，必填参数
+            if (vo.getFollowStatus().equals(FollowModeEnum.FIX.getCode())||vo.getFollowStatus().equals(FollowModeEnum.RATIO.getCode())){
+                if (ObjectUtil.isEmpty(vo.getFollowParam())){
+                    throw new ServerException("请输入跟单参数");
+                }
+            }
             //查看是否存在循环跟单情况
             FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
             if (ObjectUtil.isNotEmpty(traderSubscribeEntity)){

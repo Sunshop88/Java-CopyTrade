@@ -8,11 +8,14 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.AcEnum;
 import net.maku.followcom.enums.OrderChangeTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.FollowTraderSubscribeService;
+import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.websocket.TraderOrderActiveWebSocket;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 import online.mtapi.mt4.OrderUpdateEventHandler;
 
@@ -36,14 +39,18 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected ScheduledThreadPoolExecutor analysisExecutorService;
 
     protected FollowSubscribeOrderService followSubscribeOrderService;
+    protected FollowTraderSubscribeService followTraderSubscribeService;
 
     protected Boolean running = Boolean.TRUE;
+    protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
 
     public OrderUpdateHandler(IKafkaProducer<String, Object> kafkaProducer) {
         this.kafkaProducer = kafkaProducer;
         this.scheduledThreadPoolExecutor = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
         this.analysisExecutorService = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
+        this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
+        this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
     }
 
     /**

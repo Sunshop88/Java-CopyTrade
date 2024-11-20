@@ -20,6 +20,8 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
 import net.maku.subcontrol.util.KafkaTopicUtil;
 import org.apache.kafka.clients.admin.*;
@@ -39,6 +41,7 @@ import java.util.concurrent.*;
 @EqualsAndHashCode(callSuper = true)
 public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
 
+    private final RedisUtil redisUtil;
     /**
      * 信号量来控制，连接任务最多支持的并发数
      */
@@ -49,7 +52,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     private Boolean launchOn = false;
 
-    public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService) {
+    public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService, RedisUtil redisUtil) {
         this.followTraderService = followTraderService;
         this.followBrokeServerService = followBrokeServerService;
         this.followTraderSubscribeService = followTraderSubscribeService;
@@ -58,6 +61,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         this.kafkaProducer = kafkaProducer;
         this.semaphore = new Semaphore(10);
         this.scheduledExecutorService = scheduledExecutorService;
+        this.redisUtil = redisUtil;
     }
 
     /**
@@ -177,11 +181,17 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity copier) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+        String serverNode;
         //优先查看平台默认节点
-        FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, copier.getPlatform()));
-        if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())) {
+        if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED+copier.getServerId(),copier.getPlatform()))){
+            serverNode=(String)redisUtil.hGet(Constant.VPS_NODE_SPEED+copier.getServerId(),copier.getPlatform());
+        }else {
+            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, copier.getPlatform()));
+            serverNode=followPlatformServiceOne.getServerNode();
+        }
+        if (ObjectUtil.isNotEmpty(serverNode)) {
             //处理节点格式
-            String[] split = followPlatformServiceOne.getServerNode().split(":");
+            String[] split = serverNode.split(":");
             conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]),kafkaProducer);
             if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接

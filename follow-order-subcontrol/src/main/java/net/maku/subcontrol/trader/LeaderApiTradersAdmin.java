@@ -18,8 +18,9 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
 import net.maku.subcontrol.util.KafkaTopicUtil;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -57,8 +58,10 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     private Boolean launchOn = false;
 
+    private final RedisUtil redisUtil;
 
-    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService) {
+    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService, RedisUtil redisUtil) {
+        this.redisUtil = redisUtil;
         this.followTraderService = eaTraderService;
         this.followBrokeServerService = eaBrokerService;
         this.ks = ks;
@@ -168,11 +171,17 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+        String serverNode;
         //优先查看平台默认节点
-        FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
-        if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())) {
+        if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform()))){
+            serverNode=(String)redisUtil.hGet(Constant.VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform());
+        }else {
+            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
+            serverNode=followPlatformServiceOne.getServerNode();
+        }
+        if (ObjectUtil.isNotEmpty(serverNode)) {
             //处理节点格式
-            String[] split = followPlatformServiceOne.getServerNode().split(":");
+            String[] split = serverNode.split(":");
             conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]),kafkaProducer);
             if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接

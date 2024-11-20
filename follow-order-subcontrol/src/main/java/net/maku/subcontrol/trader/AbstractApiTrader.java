@@ -114,6 +114,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer);
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+            }else {
+                //订单变化监听
+                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this, kafkaProducer);
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
             //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
@@ -197,11 +201,18 @@ public abstract class AbstractApiTrader extends ApiTrader {
         } catch (Exception e) {
             log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), trader.getPassword(), eurusd, e.getMessage());
             traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
-            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
-            if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
+            String serverNode;
+            //优先查看平台默认节点
+            if (ObjectUtil.isNotEmpty(redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform()))){
+                serverNode=(String)redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform());
+            }else {
+                FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
+                serverNode=followPlatformServiceOne.getServerNode();
+            }
+            if (ObjectUtil.isNotEmpty(serverNode)){
                 try {
                     //处理节点格式
-                    String[] split = followPlatformServiceOne.getServerNode().split(":");
+                    String[] split = serverNode.split(":");
                     QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
                 }catch (Exception e1){

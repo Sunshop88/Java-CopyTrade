@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
 
 /**
@@ -22,16 +23,16 @@ public class FollowConstant {
     static {
         String ipServiceUrl = "http://checkip.amazonaws.com/";
         try {
-            URL url = new URL(ipServiceUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String publicIP = in.readLine().trim();
-            in.close();
-
-            LOCAL_HOST = publicIP;
-//            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
+//            URL url = new URL(ipServiceUrl);
+//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//            connection.setRequestMethod("GET");
+//
+//            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+//            String publicIP = in.readLine().trim();
+//            in.close();
+//
+//            LOCAL_HOST = publicIP;
+            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
 
         } catch (Exception e) {
             e.printStackTrace();
