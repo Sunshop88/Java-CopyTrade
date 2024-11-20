@@ -19,6 +19,12 @@ knife4j:
     enable-footer-custom: false
     
 spring:
+  cache:
+    type: caffeine # 指定缓存类型为 Caffeine
+    cache-names: # 定义缓存的名称
+      - followVarietyCache
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=10d # 配置缓存大小和过期时间
   # 环境 dev|test|prod
   profiles:
     active: @profile.name@

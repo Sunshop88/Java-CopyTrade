@@ -36,7 +36,6 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected AbstractApiTrader abstractApiTrader;
     protected ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     protected IKafkaProducer<String, Object> kafkaProducer;
-    protected ScheduledThreadPoolExecutor analysisExecutorService;
 
     protected FollowSubscribeOrderService followSubscribeOrderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
@@ -47,7 +46,6 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     public OrderUpdateHandler(IKafkaProducer<String, Object> kafkaProducer) {
         this.kafkaProducer = kafkaProducer;
         this.scheduledThreadPoolExecutor = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
-        this.analysisExecutorService = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);

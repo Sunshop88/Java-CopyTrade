@@ -135,7 +135,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             long currentTime = System.currentTimeMillis();
             // 获取该symbol上次执行时间
             if (currentTime - lastInvokeTime >= interval) {
-                log.info("推送数据" + new Date());
                 lastInvokeTime = currentTime;
                 //发送消息
                 traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");

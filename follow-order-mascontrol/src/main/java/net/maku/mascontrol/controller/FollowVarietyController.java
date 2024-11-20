@@ -278,4 +278,19 @@ public class FollowVarietyController {
         List<FollowVarietyVO> list = followVarietyService.getListByTemplate();
         return Result.ok(list);
     }
+
+    @GetMapping("listSmybolSend")
+    @Operation(summary = "查询标准品种，标准合约")
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<PageResult<FollowVarietyVO>> listSmybolSend(@ParameterObject @Valid FollowVarietyQuery query){
+        PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
+        return Result.ok(list);
+    }
+
+    @GetMapping("ces")
+    @Operation(summary = "ces")
+    public Result<Boolean> ces() {
+        followVarietyService.getListByTemplated(1);
+        return Result.ok(true);
+    }
 }
