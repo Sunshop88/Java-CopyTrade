@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -82,44 +83,46 @@ public class MasControlServiceImpl implements MasControlService {
         //保存服务数据
         ThreadPoolUtils.execute(() -> {
             vo.getPlatformList().forEach(bro -> {
-                vo.setId(null);
-                FollowPlatformVO followPlatformVO = vo;
-                followPlatformVO.setServer(bro);
-                followPlatformVO.setCreator(userId.toString());
-                followPlatformService.save(followPlatformVO);
-                //进行测速
-                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
-                list.parallelStream().forEach(o -> {
-                    String ipAddress = o.getServerNode(); // 目标IP地址
-                    int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                    try {
-                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                        long startTime = System.currentTimeMillis(); // 记录起始时间
-                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                        // 等待连接完成
-                        future.get();
-                        long endTime = System.currentTimeMillis(); // 记录结束时间
-                        o.setSpeed((int) endTime - (int) startTime);
-                        followBrokeServerService.updateById(o);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro));
+                if (ObjectUtil.isEmpty(followPlatformEntityList)){
+                    vo.setId(null);
+                    FollowPlatformVO followPlatformVO = vo;
+                    followPlatformVO.setServer(bro);
+                    followPlatformVO.setCreator(userId.toString());
+                    followPlatformService.save(followPlatformVO);
+                    //进行测速
+                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
+                    list.parallelStream().forEach(o -> {
+                        String ipAddress = o.getServerNode(); // 目标IP地址
+                        int port = Integer.valueOf(o.getServerPort()); // 目标端口号
+                        try {
+                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                            long startTime = System.currentTimeMillis(); // 记录起始时间
+                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                            // 等待连接完成
+                            future.get();
+                            long endTime = System.currentTimeMillis(); // 记录结束时间
+                            o.setSpeed((int) endTime - (int) startTime);
+                            followBrokeServerService.updateById(o);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
-                list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o -> {
-                    //找出最小延迟
-                    FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
-                    //修改所有用户连接节点
-                    followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                    list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o -> {
+                        //找出最小延迟
+                        FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
+                        //修改所有用户连接节点
+                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
 
 //                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
-                });
+                    });
 
 //                platformEntity.set("name", bro);
 //                platformEntity.set("type", vo.getPlatformType());
 //                platformService.update(platformEntity);
-
+                }
             });
         });
         return true;

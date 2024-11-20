@@ -171,8 +171,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     @Override
     public List<FollowPlatformVO> listHavingServer(String name) {
         List<FollowPlatformEntity> serverList = list(new LambdaQueryWrapper<FollowPlatformEntity>()
-                .eq(FollowPlatformEntity::getBrokerName,name)
-                .select(FollowPlatformEntity::getServer));
+                .eq(FollowPlatformEntity::getBrokerName,name));
         return FollowPlatformConvert.INSTANCE.convertList(serverList);
     }
 

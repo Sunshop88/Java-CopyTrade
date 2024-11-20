@@ -35,6 +35,8 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.ObjectUtils;
@@ -109,6 +111,10 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
+    @CacheEvict(
+            value = "followVarietyCache", // 缓存名称
+            key = "#template"          // 缓存键
+    )
     public void importByExcel(MultipartFile file, Integer template, String templateName) throws Exception {
         String fileName = file.getOriginalFilename();
         if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
@@ -138,6 +144,16 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         updateWrapper.eq("template_id", template);
         updateWrapper.set("template_name", templateName);
         baseMapper.update(updateWrapper);
+    }
+
+    @Override
+    @Cacheable(
+            value = "followVarietyCache", // 缓存名称
+            key = "#templateId",          // 缓存键
+            unless = "#result == null || #result.isEmpty()" // 空结果不缓存
+    )
+    public List<FollowVarietyEntity> getListByTemplated(Integer templateId) {
+        return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,templateId));
     }
 
 

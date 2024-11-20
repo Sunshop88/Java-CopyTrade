@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -25,10 +26,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -65,13 +63,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         //查看喊单账号信息
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
         // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList ;
-        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_VARIETY+copier.getTemplateId()))){
-            followVarietyEntityList = (List<FollowVarietyEntity>)redisUtil.get(Constant.TRADER_VARIETY+copier.getTemplateId());
-        }else {
-            followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,copier.getTemplateId()));
-            redisUtil.set(Constant.TRADER_VARIETY+copier.getTemplateId(),followVarietyEntityList);
-        }
+        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(copier.getTemplateId());
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
@@ -103,7 +95,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
             orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
         }
-
         FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
         //  依次对备选品种进行开仓尝试
         for (String symbol : orderInfo.getSymbolList()) {

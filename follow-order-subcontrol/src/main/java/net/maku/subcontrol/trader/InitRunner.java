@@ -1,19 +1,14 @@
 package net.maku.subcontrol.trader;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.SourceEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.vo.PlatformAccount;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -21,8 +16,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Shaozz
@@ -61,9 +54,6 @@ public class InitRunner implements ApplicationRunner {
         // 连接MT4交易账户
         mt4TraderStartup();
         log.info("=============启动时加载示例内容完毕=============");
-        log.info("推送持仓信息到redis");
-        ScheduledExecutorService scheduler= ThreadPoolUtils.getScheduledExecute();
-        scheduler.scheduleAtFixedRate(this::sendAccountRedis, 0, 3, TimeUnit.SECONDS);
     }
 
 
@@ -86,15 +76,6 @@ public class InitRunner implements ApplicationRunner {
         long slave = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
         log.info("===============跟单者{}", slave);
         copierApiTradersAdmin.startUp();
-    }
-
-
-    private void sendAccountRedis() {
-        //查询外部库所有用户信息
-        List<SourceEntity> list = sourceService.list();
-        list.parallelStream().forEach(o->{
-            PlatformAccount platformAccount = new PlatformAccount();
-        });
     }
 
 }

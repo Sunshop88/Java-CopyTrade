@@ -19,6 +19,7 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.MasControlService;
 import net.maku.followcom.vo.FollowPlatformInfoVO;
 import net.maku.followcom.vo.FollowPlatformVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -169,7 +170,7 @@ public class FollowPlatformController {
         //查看是否存在该平台用户
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatformId, idList));
         if (ObjectUtil.isNotEmpty(list)) {
-
+            throw new ServerException("请先删除该平台用户");
         }
 //        followPlatformService.delete(idList);
 //

@@ -63,7 +63,7 @@ public class AbstractOperation {
 
     public AbstractOperation(FollowTraderEntity trader) {
         this.mapKey = trader.getId() + "#" + trader.getAccount();
-        redisUtil = SpringContextUtils.getBean(RedisUtil.class);
+        this.redisUtil = SpringContextUtils.getBean(RedisUtil.class);
         leaderCopierService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
         openOrderMappingService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
         this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();

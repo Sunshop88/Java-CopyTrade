@@ -123,8 +123,7 @@ public class FollowVarietyController {
             }else{
                 followVarietyService.updateTemplateName(template,templateName);
             }
-            redisCache.deleteByPattern(Constant.TRADER_VARIETY);
-            return Result.ok("导入成功");
+            return Result.ok("文件导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }

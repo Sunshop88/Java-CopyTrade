@@ -93,6 +93,11 @@ public class FollowVpsController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<String> delete(@RequestBody List<Integer> idList) {
+        //查看该vps是否还有用户
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getServerId, idList));
+        if (ObjectUtil.isNotEmpty(list)){
+            throw new ServerException("请先清空vps内账户");
+        }
         return masControlService.delete(idList) ? Result.ok() : Result.error();
     }
 

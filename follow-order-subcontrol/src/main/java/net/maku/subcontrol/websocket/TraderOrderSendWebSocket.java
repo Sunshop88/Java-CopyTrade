@@ -97,13 +97,7 @@ public class TraderOrderSendWebSocket {
             }
 
             // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList ;
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY+leaderApiTrader.getTrader().getTemplateId()))){
-                followVarietyEntityList = (List<FollowVarietyEntity>)redisCache.get(Constant.TRADER_VARIETY+leaderApiTrader.getTrader().getTemplateId());
-            }else {
-                followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,leaderApiTrader.getTrader().getTemplateId()));
-                redisCache.set(Constant.TRADER_VARIETY+leaderApiTrader.getTrader().getTemplateId(),followVarietyEntityList);
-            }
+            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(leaderApiTrader.getTrader().getTemplateId());
             List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
 
             for (FollowVarietyEntity o:listv){

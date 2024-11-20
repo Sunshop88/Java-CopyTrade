@@ -7,6 +7,7 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 
+import java.util.Date;
 import java.util.List;
 /**
  * @author Samson Bruce
@@ -15,6 +16,11 @@ import java.util.List;
 public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     AbstractApiTrader copier4ApiTrader;
 
+    // 上次执行时间
+    private long lastInvokeTime=0;
+
+    // 设定时间间隔，单位为毫秒
+    private final long interval = 1000; // 1秒间隔
     public CopierOrderUpdateEventHandlerImpl(AbstractApiTrader abstract4ApiTrader, IKafkaProducer<String, Object> kafkaProducer) {
         super(kafkaProducer);
         this.copier4ApiTrader = abstract4ApiTrader;
@@ -42,7 +48,15 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
             list.forEach(o->{
                 //发送消息
-                traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(),leader.getId().toString());
+                // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
+                // 获取当前系统时间
+                long currentTime = System.currentTimeMillis();
+                // 获取该symbol上次执行时间
+                if (currentTime - lastInvokeTime  >= interval) {
+                    lastInvokeTime=currentTime;
+                    //发送消息
+                    traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(),"0");
+                }
             });
         }
     }
