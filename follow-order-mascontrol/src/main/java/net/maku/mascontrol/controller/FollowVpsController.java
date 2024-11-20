@@ -220,7 +220,6 @@ public class FollowVpsController {
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<List<List<BigDecimal>>> getStatByVpsId(@Parameter(description = "vpsId") Integer vpsId, @Parameter(description = "traderId") Long traderId) {
 
-
         return Result.ok(followVpsService.getStatByVpsId(vpsId, traderId, followTraderService));
     }
 
