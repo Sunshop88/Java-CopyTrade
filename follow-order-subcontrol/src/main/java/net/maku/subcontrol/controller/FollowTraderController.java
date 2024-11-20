@@ -13,10 +13,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
-import net.maku.followcom.query.FollowOrderCloseQuery;
-import net.maku.followcom.query.FollowOrderSendQuery;
-import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
@@ -53,7 +50,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/subcontrol/trader")
-@Tag(name="mt4账号")
+@Tag(name = "mt4账号")
 @AllArgsConstructor
 public class FollowTraderController {
     private static final Logger log = LoggerFactory.getLogger(FollowTraderController.class);
@@ -74,7 +71,7 @@ public class FollowTraderController {
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowTraderVO>> page(@ParameterObject @Valid FollowTraderQuery query){
+    public Result<PageResult<FollowTraderVO>> page(@ParameterObject @Valid FollowTraderQuery query) {
         query.setServerIp(FollowConstant.LOCAL_HOST);
         PageResult<FollowTraderVO> page = followTraderService.page(query);
         return Result.ok(page);
@@ -84,7 +81,7 @@ public class FollowTraderController {
     @GetMapping("{id}")
     @Operation(summary = "信息")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<FollowTraderVO> get(@PathVariable("id") Long id){
+    public Result<FollowTraderVO> get(@PathVariable("id") Long id) {
         FollowTraderVO data = followTraderService.get(id);
 
         return Result.ok(data);
@@ -94,9 +91,9 @@ public class FollowTraderController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<String> save(@RequestBody @Valid FollowTraderVO vo){
+    public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
         //默认模板1
-        if (ObjectUtil.isEmpty(vo.getTemplateId())){
+        if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(1);
         }
         //本机处理
@@ -105,17 +102,17 @@ public class FollowTraderController {
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(vo);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
+            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error();
             }
-            ThreadPoolUtils.execute(()->{
+            ThreadPoolUtils.execute(() -> {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTrader.startTrade();
-                followTraderService.saveQuo(leaderApiTrader.quoteClient,convert);
+                followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
-        }catch (Exception e){
-            log.error("保存失败"+e);
+        } catch (Exception e) {
+            log.error("保存失败" + e);
         }
         return Result.ok();
     }
@@ -124,8 +121,8 @@ public class FollowTraderController {
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<String> update(@RequestBody @Valid FollowTraderVO vo){
-        if (ObjectUtil.isEmpty(vo.getTemplateId())){
+    public Result<String> update(@RequestBody @Valid FollowTraderVO vo) {
+        if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(1);
         }
         followTraderService.update(vo);
@@ -138,14 +135,14 @@ public class FollowTraderController {
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<String> delete(@RequestBody List<Long> idList){
+    public Result<String> delete(@RequestBody List<Long> idList) {
         followTraderService.delete(idList);
         //清空缓存
-        idList.stream().forEach(o-> leaderApiTradersAdmin.removeTrader(o.toString()));
+        idList.stream().forEach(o -> leaderApiTradersAdmin.removeTrader(o.toString()));
         //清空缓存
-        idList.stream().forEach(o-> copierApiTradersAdmin.removeTrader(o.toString()));
+        idList.stream().forEach(o -> copierApiTradersAdmin.removeTrader(o.toString()));
         //删除订阅关系
-        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId,idList).or().in(FollowTraderSubscribeEntity::getSlaveId,idList));
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
         return Result.ok();
     }
 
@@ -161,14 +158,14 @@ public class FollowTraderController {
     @GetMapping("listSymbol/{id}")
     @Operation(summary = "账号品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<List<FollowSysmbolSpecificationEntity> > listSymbol(@PathVariable("id") Long traderId){
+    public Result<List<FollowSysmbolSpecificationEntity>> listSymbol(@PathVariable("id") Long traderId) {
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>)redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
-        }else {
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
+            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
+        } else {
             //查询改账号的品种规格
             followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
+            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
         }
         return Result.ok(followSysmbolSpecificationEntityList);
     }
@@ -176,7 +173,7 @@ public class FollowTraderController {
     @GetMapping("listOrderSymbol")
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<List<String> > listSymbol(){
+    public Result<List<String>> listSymbol() {
         List<String> collect = detailService.list().stream().map(FollowOrderDetailEntity::getSymbol).distinct().collect(Collectors.toList());
         return Result.ok(collect);
     }
@@ -192,7 +189,7 @@ public class FollowTraderController {
         }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
-        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
 
@@ -215,20 +212,20 @@ public class FollowTraderController {
         }
 
         // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList ;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY+followTraderVO.getTemplateId()))){
-            followVarietyEntityList = (List<FollowVarietyEntity>)redisCache.get(Constant.TRADER_VARIETY+followTraderVO.getTemplateId());
-        }else {
-            followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,followTraderVO.getTemplateId()));
-            redisCache.set(Constant.TRADER_VARIETY+followTraderVO.getTemplateId(),followVarietyEntityList);
+        List<FollowVarietyEntity> followVarietyEntityList;
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY + followTraderVO.getTemplateId()))) {
+            followVarietyEntityList = (List<FollowVarietyEntity>) redisCache.get(Constant.TRADER_VARIETY + followTraderVO.getTemplateId());
+        } else {
+            followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, followTraderVO.getTemplateId()));
+            redisCache.set(Constant.TRADER_VARIETY + followTraderVO.getTemplateId(), followVarietyEntityList);
         }
-        Integer contract = followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getStdSymbol().equals(vo.getSymbol())).findFirst()
+        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(vo.getSymbol())).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
         String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
         vo.setSymbol(symbol1);
-        log.info("标准合约大小{}",contract);
+        log.info("标准合约大小{}", contract);
         try {
             double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
         } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
@@ -249,13 +246,13 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderSendVO>> orderSendList(@ParameterObject @Valid FollowOrderSendQuery query) {
         PageResult<FollowOrderSendVO> page = followOrderSendService.page(query);
-        return  Result.ok(page);
+        return Result.ok(page);
     }
 
     @GetMapping("orderSlipPoint")
     @Operation(summary = "滑点分析列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public  Result<PageResult<FollowOrderSlipPointVO>>  orderSlipPoint(@ParameterObject @Valid FollowOrderSpliListQuery query) {
+    public Result<PageResult<FollowOrderSlipPointVO>> orderSlipPoint(@ParameterObject @Valid FollowOrderSpliListQuery query) {
 
         if (ObjectUtil.isNotEmpty(query.getSymbol())) {
             query.setSymbolList(Arrays.asList(query.getSymbol().split(",")));
@@ -264,8 +261,8 @@ public class FollowTraderController {
             query.setTraderIdList(Arrays.asList(query.getTraderId().split(",")));
         }
         PageResult<FollowOrderSlipPointVO> followOrderSlipPointVOPageResult = followTraderService.pageSlipPoint(query);
-        Integer total = followOrderSlipPointVOPageResult.getList().stream().mapToInt(FollowOrderSlipPointVO::getSymbolNum).sum();;
-        followOrderSlipPointVOPageResult.getList().stream().forEach(o->o.setTotalNum(total));
+        Integer total = followOrderSlipPointVOPageResult.getList().stream().mapToInt(FollowOrderSlipPointVO::getSymbolNum).sum();
+        followOrderSlipPointVOPageResult.getList().stream().forEach(o -> o.setTotalNum(total));
         List<FollowOrderSlipPointVO> collect = followOrderSlipPointVOPageResult.getList().stream().sorted(Comparator.comparing(FollowOrderSlipPointVO::getTraderId)).collect(Collectors.toList());
         followOrderSlipPointVOPageResult.setList(collect);
         return Result.ok(followOrderSlipPointVOPageResult);
@@ -274,58 +271,58 @@ public class FollowTraderController {
     @GetMapping("orderSlipDetail")
     @Operation(summary = "订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowOrderDetailVO>>  orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
+    public Result<PageResult<FollowOrderDetailVO>> orderSlipDetail(@ParameterObject @Valid FollowOrderSendQuery query) {
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
-        return  Result.ok(followOrderDetailVOPageResult);
+        return Result.ok(followOrderDetailVOPageResult);
     }
 
     @GetMapping("orderDoing/{traderId}")
     @Operation(summary = "正在进行订单详情")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<FollowOrderSendEntity>  orderDoing(@PathVariable("traderId") Long traderId) {
-        return  Result.ok(followTraderService.orderDoing(traderId));
+    public Result<FollowOrderSendEntity> orderDoing(@PathVariable("traderId") Long traderId) {
+        return Result.ok(followTraderService.orderDoing(traderId));
     }
 
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> orderClose(@RequestBody FollowOrderSendCloseVO vo){
+    public Result<Boolean> orderClose(@RequestBody FollowOrderSendCloseVO vo) {
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
-        if (ObjectUtil.isEmpty(followTraderVO)){
+        if (ObjectUtil.isEmpty(followTraderVO)) {
             throw new ServerException("账号不存在");
         }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
-        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())||followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
         QuoteClient quoteClient = null;
-        if (ObjectUtil.isEmpty(leaderApiTrader)||ObjectUtil.isEmpty(leaderApiTrader.quoteClient)||!leaderApiTrader.quoteClient.Connected()){
+        if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
             quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
-            if (ObjectUtil.isEmpty(quoteClient)){
+            if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException("账号无法登录");
             }
-        }else {
-            quoteClient=leaderApiTrader.quoteClient;
+        } else {
+            quoteClient = leaderApiTrader.quoteClient;
         }
 
-        if (ObjectUtil.isNotEmpty(vo.getSymbol())){
+        if (ObjectUtil.isNotEmpty(vo.getSymbol())) {
             String symbol1 = getSymbol(vo.getTraderId(), vo.getSymbol());
             vo.setSymbol(symbol1);
             try {
                 // 获取报价信息
-                double ask = getQuoteOrRetry(quoteClient,vo.getSymbol());
+                double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
             } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
                 throw new ServerException(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
             } catch (InterruptedException e) {
                 throw new ServerException(vo.getAccount() + " 操作被中断", e);
             }
         }
-        boolean result = followTraderService.orderClose(vo,quoteClient);
-        if (!result){
-            return Result.error(followTraderVO.getAccount()+"正在平仓,请稍后再试");
+        boolean result = followTraderService.orderClose(vo, quoteClient);
+        if (!result) {
+            return Result.error(followTraderVO.getAccount() + "正在平仓,请稍后再试");
         }
         return Result.ok(true);
     }
@@ -333,9 +330,9 @@ public class FollowTraderController {
     @GetMapping("traderOverview")
     @Operation(summary = "数据概览")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<TraderOverviewVO>  traderOverview(HttpServletRequest request) {
+    public Result<TraderOverviewVO> traderOverview(HttpServletRequest request) {
         String serverIp = FollowConstant.LOCAL_HOST;
-        return  Result.ok(followTraderService.traderOverview(serverIp));
+        return Result.ok(followTraderService.traderOverview(serverIp));
     }
 
 
@@ -348,31 +345,31 @@ public class FollowTraderController {
         query.setPage(1);
         query.setLimit(100000);
         //处理平台查询逻辑，找出相关账号查询
-        List<Long> collectPlat=new ArrayList<>() ;
-        List<Long> collectBroke=new ArrayList<>() ;
+        List<Long> collectPlat = new ArrayList<>();
+        List<Long> collectBroke = new ArrayList<>();
         //处理券商查询逻辑，找出相关账号查询
-        if (ObjectUtil.isNotEmpty(query.getBrokeName())){
+        if (ObjectUtil.isNotEmpty(query.getBrokeName())) {
             List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(query.getBrokeName());
-            if (ObjectUtil.isNotEmpty(serverEntityList)){
+            if (ObjectUtil.isNotEmpty(serverEntityList)) {
                 List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatform, serverEntityList.stream().map(FollowBrokeServerEntity::getServerName).collect(Collectors.toList())));
                 collectBroke = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
             }
         }
-        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+        if (ObjectUtil.isNotEmpty(query.getPlatform())) {
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getPlatform, query.getPlatform()));
             collectPlat = list.stream().map(entity -> entity.getId()).collect(Collectors.toList());
         }
         // 计算交集
         if (ObjectUtil.isNotEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
             collectPlat.retainAll(collectBroke); // collectPlat 会变成 collectPlat 和 collectBroke 的交集
-        }else  if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
-            collectPlat=collectBroke;
+        } else if (ObjectUtil.isEmpty(collectPlat) && ObjectUtil.isNotEmpty(collectBroke)) {
+            collectPlat = collectBroke;
         }
-        if (ObjectUtil.isNotEmpty(collectPlat)){
+        if (ObjectUtil.isNotEmpty(collectPlat)) {
             query.setTraderIdList(collectPlat);
         }
 
-        if (ObjectUtil.isEmpty(query.getStartTime())|| ObjectUtil.isEmpty(query.getEndTime())) {
+        if (ObjectUtil.isEmpty(query.getStartTime()) || ObjectUtil.isEmpty(query.getEndTime())) {
             return Result.error("开仓时间为必填项");
         }
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
@@ -386,9 +383,9 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "traderId") String traderId) {
         Boolean result = followTraderService.stopOrder(type, traderId);
-        if (!result){
+        if (!result) {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            return Result.error(followTraderEntity.getAccount()+"暂无进行中下单/平仓操作");
+            return Result.error(followTraderEntity.getAccount() + "暂无进行中下单/平仓操作");
         }
         return Result.ok();
     }
@@ -402,7 +399,7 @@ public class FollowTraderController {
     }
 
     private void reconnect(String traderId) {
-        try{
+        try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -415,7 +412,7 @@ public class FollowTraderController {
                 log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
             }
-        }catch (RuntimeException e){
+        } catch (RuntimeException e) {
             throw new ServerException("请检查账号密码，稍后再试");
         }
     }
@@ -423,9 +420,9 @@ public class FollowTraderController {
     @GetMapping("traderSymbol")
     @Operation(summary = "获取对应Symbol")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<String>  traderSymbol(@Parameter(description = "symbol") String symbol, @Parameter(description = "traderId") Long traderId) {
+    public Result<String> traderSymbol(@Parameter(description = "symbol") String symbol, @Parameter(description = "traderId") Long traderId) {
         String symbol1 = getSymbol(traderId, symbol);
-        return  Result.ok(symbol1);
+        return Result.ok(symbol1);
     }
 
     @GetMapping("orderCloseList")
@@ -433,39 +430,47 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderCloseVO>> orderSendList(@ParameterObject @Valid FollowOrderCloseQuery query) {
         PageResult<FollowOrderCloseVO> page = followOrderCloseService.page(query);
-        return  Result.ok(page);
+        return Result.ok(page);
     }
 
-    private String getSymbol(Long traderId,String symbol){
+    @GetMapping("specificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<PageResult<FollowSysmbolSpecificationVO>> page(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
+        PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.page(query);
+        return Result.ok(page);
+    }
+
+
+    private String getSymbol(Long traderId, String symbol) {
         //查询平台信息
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(traderId);
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>)redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
-        }else {
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
+            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
+        } else {
             //查询改账号的品种规格
             followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
+            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
         }
 
-        FollowTraderEntity followTraderEntity=followTraderService.getById(traderId);
-        if (ObjectUtil.isNotEmpty(symbol)){
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        if (ObjectUtil.isNotEmpty(symbol)) {
             //查看品种列表
             // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList ;
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId()))){
-                followVarietyEntityList = (List<FollowVarietyEntity>)redisCache.get(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId());
-            }else {
-                followVarietyEntityList= followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,followTraderEntity.getTemplateId()));
-                redisCache.set(Constant.TRADER_VARIETY+followTraderEntity.getTemplateId(),followVarietyEntityList);
+            List<FollowVarietyEntity> followVarietyEntityList;
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_VARIETY + followTraderEntity.getTemplateId()))) {
+                followVarietyEntityList = (List<FollowVarietyEntity>) redisCache.get(Constant.TRADER_VARIETY + followTraderEntity.getTemplateId());
+            } else {
+                followVarietyEntityList = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, followTraderEntity.getTemplateId()));
+                redisCache.set(Constant.TRADER_VARIETY + followTraderEntity.getTemplateId(), followVarietyEntityList);
             }
-            List<FollowVarietyEntity> list =followVarietyEntityList.stream().filter(o->o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
-            for (FollowVarietyEntity o:list){
-                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+            List<FollowVarietyEntity> list = followVarietyEntityList.stream().filter(o -> o.getBrokerName().equals(followPlatform.getBrokerName()) && o.getStdSymbol().equals(symbol)).toList();
+            for (FollowVarietyEntity o : list) {
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
                     //查看品种规格
                     Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationEntityList.stream().filter(fl -> ObjectUtil.equals(o.getBrokerSymbol(), fl.getSymbol())).findFirst();
-                    if (specificationEntity.isPresent()){
+                    if (specificationEntity.isPresent()) {
                         return o.getBrokerSymbol();
                     }
                 }
