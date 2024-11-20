@@ -353,6 +353,14 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         return statList;
     }
 
+    @Override
+    public void updateStatus(FollowVpsEntity vpsEntity) {
+        UpdateWrapper<FollowVpsEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", vpsEntity.getId());
+        updateWrapper.set("connection_status", vpsEntity.getConnectionStatus());
+        baseMapper.update(updateWrapper);
+    }
+
     /**
      * 初始化iniList
      */

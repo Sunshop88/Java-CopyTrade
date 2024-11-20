@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -76,6 +77,12 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo) {
+        List<FollowPlatformEntity> serverList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>()
+                .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName()));
+        if (serverList.size() > 0) {
+            vo.setServerList(serverList.stream().map(FollowPlatformEntity::getServer).collect(Collectors.toList()));
+        }
+
         followPlatformService.update(vo);
         Long userId = SecurityUser.getUserId();
         //保存服务数据

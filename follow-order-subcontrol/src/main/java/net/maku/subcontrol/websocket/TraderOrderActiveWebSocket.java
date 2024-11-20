@@ -63,9 +63,7 @@ public class TraderOrderActiveWebSocket {
 
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private  RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
-    private ScheduledExecutorService scheduler;
     private FollowSubscribeOrderService followSubscribeOrderService= SpringContextUtils.getBean( FollowSubscribeOrderServiceImpl.class);;
-    private FollowOrderDetailService followOrderDetailService= SpringContextUtils.getBean( FollowOrderDetailServiceImpl.class);;
     private LeaderApiTradersAdmin leaderApiTradersAdmin= SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin= SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
@@ -81,20 +79,18 @@ public class TraderOrderActiveWebSocket {
             Set<Session> sessionSet = sessionPool.getOrDefault(traderId + slaveId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(traderId + slaveId, sessionSet);
-
-            // 启动每两秒推送一次消息的任务
-            scheduler = Executors.newSingleThreadScheduledExecutor();
-            scheduler.scheduleAtFixedRate(this::sendPeriodicMessage, 0, 2, TimeUnit.SECONDS);
+            sendPeriodicMessage(traderId,slaveId);
         } catch (Exception e) {
-            scheduler.shutdown();
             log.info("连接异常" + e);
             onClose();
             throw new RuntimeException(e);
         }
     }
 
-    private void sendPeriodicMessage() {
+    public void sendPeriodicMessage(String traderId,String slaveId) {
         try {
+            Set<Session> sessionSet = sessionPool.get(traderId+slaveId);
+            if (ObjectUtil.isEmpty(sessionSet))return;
             String accountId=slaveId;
             if (slaveId.equals("0")){
                 //喊单
@@ -181,7 +177,6 @@ public class TraderOrderActiveWebSocket {
     public void onClose() {
         try {
             sessionPool.get(traderId+slaveId).remove(session);
-            scheduler.shutdown();
         } catch (Exception e) {
             e.printStackTrace();
         }

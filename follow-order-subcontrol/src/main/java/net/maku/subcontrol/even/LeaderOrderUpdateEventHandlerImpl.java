@@ -47,6 +47,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderService.class);
     private FollowPlatformService followPlatformService = SpringContextUtils.getBean(FollowPlatformService.class);
 
+    // 上次执行时间
+    private long lastInvokeTime=0;
+
+    // 设定时间间隔，单位为毫秒
+    private final long interval = 1000; // 1秒间隔
     public LeaderOrderUpdateEventHandlerImpl(AbstractApiTrader abstractApiTrader, IKafkaProducer<String, Object> kafkaProducer) {
         super(kafkaProducer);
         this.abstractApiTrader = abstractApiTrader;
@@ -81,7 +86,10 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             return;
         }
         Order order = orderUpdateEventArgs.Order;
+
         String currency = abstractApiTrader.quoteClient.Account().currency;
+        //发送websocket消息标识
+        int flag=0;
         switch (orderUpdateEventArgs.Action) {
             case PositionOpen:
             case PendingFill:
@@ -95,7 +103,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }
                     send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());
                 });
-
+                flag=1;
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
@@ -110,9 +118,22 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
+                flag=1;
                 break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
+        }
+        if (flag==1){
+            // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
+            // 获取当前系统时间
+            long currentTime = System.currentTimeMillis();
+            // 获取该symbol上次执行时间
+            if (currentTime - lastInvokeTime  >= interval) {
+                log.info("推送数据"+new Date());
+                lastInvokeTime=currentTime;
+                //发送消息
+                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(),"0");
+            }
         }
     }
 

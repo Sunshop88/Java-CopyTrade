@@ -1,14 +1,13 @@
 package net.maku.subcontrol.even;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cld.message.pubsub.kafka.IKafkaProducer;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.subcontrol.trader.AbstractApiTrader;
-import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 
-import static online.mtapi.mt4.Op.Buy;
-import static online.mtapi.mt4.Op.Sell;
-
+import java.util.List;
 /**
  * @author Samson Bruce
  */
@@ -23,35 +22,28 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
     @Override
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
+        int flag=0;
         try {
-            Order order = orderUpdateEventArgs.Order;
+            //发送websocket消息标识
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
-                    break;
-                case PositionClose:
-                    break;
-                case PositionModify:
-                    break;
-                case PendingOpen:
-                case PendingClose:
-                    log.info("此处只处理已经开仓的订单的修改，挂单的修改不做处理。");
-                    break;
-                case PendingModify:
-                    break;
                 case PendingFill:
-                    log.info("挂单触发");
-                    break;
-                case Balance:
-                    log.info("存取款");
-                    break;
-                case Credit:
-                    log.info("赠金出入金");
+                case PositionClose:
+                    flag=1;
                     break;
                 default:
-                    throw new IllegalStateException("Unexpected value: " + orderUpdateEventArgs.Action);
+                    log.error("Unexpected value: " + orderUpdateEventArgs.Action);
             }
         } catch (IllegalStateException e) {
             e.printStackTrace();
+        }
+        if (flag==1){
+            //查看喊单信息
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
+            list.forEach(o->{
+                //发送消息
+                traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(),leader.getId().toString());
+            });
         }
     }
 }
