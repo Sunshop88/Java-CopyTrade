@@ -268,4 +268,11 @@ public class FollowVarietyController {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybolList(query);
         return Result.ok(list);
     }
+
+    @GetMapping("templateName")
+    @Operation(summary = "模板名称")
+    public Result<List<FollowVarietyVO>> listTemplate() {
+        List<FollowVarietyVO> list = followVarietyService.getListByTemplate();
+        return Result.ok(list);
+    }
 }
