@@ -433,7 +433,7 @@ public class FollowTraderController {
         return Result.ok(page);
     }
 
-    @GetMapping("specificationList")
+    @GetMapping("/specificationList")
     @Operation(summary = "品种规格列表")
     public Result<PageResult<FollowSysmbolSpecificationVO>> page(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
         PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.page(query);
