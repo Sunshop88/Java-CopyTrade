@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -129,6 +130,14 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 .orderByAsc(FollowVarietyEntity::getTemplateId));
 
         return FollowVarietyConvert.INSTANCE.convertList(list);
+    }
+
+    @Override
+    public void updateTemplateName(Integer template, String templateName) {
+        UpdateWrapper<FollowVarietyEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("template_id", template);
+        updateWrapper.set("template_name", templateName);
+        baseMapper.update(updateWrapper);
     }
 
 

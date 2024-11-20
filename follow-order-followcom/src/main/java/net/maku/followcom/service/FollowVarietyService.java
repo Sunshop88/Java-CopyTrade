@@ -49,4 +49,6 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     void importByExcel(MultipartFile file, Integer template,String templateName) throws Exception;
 
     List<FollowVarietyVO> getListByTemplate();
+
+    void updateTemplateName(Integer template, String templateName);
 }
