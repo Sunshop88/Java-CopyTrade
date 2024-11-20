@@ -37,4 +37,6 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> listBroke();
 
     String listByServerName(String serverName);
+
+    List<FollowPlatformVO> listHavingServer(String name);
 }

@@ -121,6 +121,16 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
+    @Override
+    public List<FollowVarietyVO> getListByTemplate() {
+        List<FollowVarietyEntity> list = list(new LambdaQueryWrapper<FollowVarietyEntity>()
+                .select(FollowVarietyEntity::getTemplateId, FollowVarietyEntity::getTemplateName)
+                .groupBy(FollowVarietyEntity::getTemplateId, FollowVarietyEntity::getTemplateName)
+                .orderByAsc(FollowVarietyEntity::getTemplateId));
+
+        return FollowVarietyConvert.INSTANCE.convertList(list);
+    }
+
 
     public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
