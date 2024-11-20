@@ -1,16 +1,39 @@
 package net.maku.subcontrol.even;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.cld.message.pubsub.kafka.IKafkaProducer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTraderConvert;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.OrderChangeTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.AccountCacheVO;
+import net.maku.followcom.vo.FollowTraderCacheVO;
+import net.maku.followcom.vo.OrderCacheVO;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.util.KafkaTopicUtil;
+import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
+import online.mtapi.mt4.QuoteClient;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * mtapi.online 监听MT4账户订单变化
@@ -19,6 +42,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
+    private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
+    private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
+    private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderService.class);
+    private FollowPlatformService followPlatformService = SpringContextUtils.getBean(FollowPlatformService.class);
+
     public LeaderOrderUpdateEventHandlerImpl(AbstractApiTrader abstractApiTrader, IKafkaProducer<String, Object> kafkaProducer) {
         super(kafkaProducer);
         this.abstractApiTrader = abstractApiTrader;
@@ -53,7 +81,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             return;
         }
         Order order = orderUpdateEventArgs.Order;
-
         String currency = abstractApiTrader.quoteClient.Account().currency;
         switch (orderUpdateEventArgs.Action) {
             case PositionOpen:
@@ -68,6 +95,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }
                     send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());
                 });
+
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
@@ -86,5 +114,145 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
+    }
+
+
+    /**
+     * 判断是否同一个vps订单
+     */
+    /**
+     * 判断是否同一个vps订单
+     */
+
+    private void isVps() {
+        ThreadPoolUtils.execute(() -> {
+            //查询所有账号
+            List<FollowTraderEntity> followTraderList = followTraderService.list();
+            //根据vpsId账号分组
+            Map<Integer, List<FollowTraderEntity>> map = followTraderList.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId));
+            //查询所有平台
+            List<FollowPlatformEntity> platformList = followPlatformService.list();
+            Map<Long, List<FollowPlatformEntity>> platformMap = platformList.stream().collect(Collectors.groupingBy(FollowPlatformEntity::getId));
+            String key = "VPS:PUSH:";
+            map.forEach((k, v) -> {
+                //多线程写
+                boolean flag = redisUtil.setnx(key + k, k, 2);
+                //设置成功过表示超过2秒内
+                if (flag) {
+                    List<AccountCacheVO> accounts = new ArrayList<>();
+                    CountDownLatch countDownLatch = new CountDownLatch(v.size());
+                    //遍历账号获取持仓订单
+                    for (FollowTraderEntity h : v) {
+
+                        ThreadPoolUtils.execute(() -> {
+                            AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
+                            List<OrderCacheVO> orderCaches = new ArrayList<>();
+                            //根据id
+                            String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
+                            accountCache.setKey(akey);
+                            String group = h.getId() + " " + h.getAccount();
+                            accountCache.setGroup(group);
+                            String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
+                            accountCache.setPlatformType(platformType);
+                            //订单信息
+                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId());
+                            QuoteClient quoteClient = null;
+                            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
+                                try {
+                                    quoteClient = followPlatformService.tologin(h.getAccount(), h.getPassword(), h.getPlatform());
+                                    if (ObjectUtil.isEmpty(quoteClient)) {
+                                        //  throw new ServerException("账号无法登录");
+                                        //  continue;
+                                    }
+                                } catch (Exception e) {
+                                    // continue;
+                                }
+                            } else {
+                                quoteClient = leaderApiTrader.quoteClient;
+                            }
+                            //所有持仓
+                            if (ObjectUtil.isNotEmpty(quoteClient)) {
+                                Order[] orders = quoteClient.GetOpenedOrders();
+                                Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
+                                accountCache.setLots(0.00);
+                                accountCache.setCount(0);
+                                accountCache.setBuy(0);
+                                accountCache.setSell(0);
+                                accountCache.setProfit(0.00);
+                                orderMap.forEach((a, b) -> {
+                                    switch (a) {
+                                        case Buy:
+                                            accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                            break;
+                                        case Sell:
+                                            accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                            break;
+                                        default:
+                                            Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
+                                            accountCache.setCount(accountCache.getCount() + count);
+                                            break;
+                                    }
+
+                                    if (ObjectUtil.isNotEmpty(b)) {
+
+                                        b.forEach(x -> {
+                                            OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                            //  orderCacheVO.setId(x.);
+                                            //    orderCacheVO.setLogin(x.);
+                                            orderCacheVO.setTicket(x.Ticket);
+                                            orderCacheVO.setOpenTime(x.OpenTime);
+                                            orderCacheVO.setCloseTime(x.CloseTime);
+                                            orderCacheVO.setType(x.Type);
+                                            orderCacheVO.setLots(x.Lots);
+                                            orderCacheVO.setSymbol(x.Symbol);
+                                            orderCacheVO.setOpenPrice(x.OpenPrice);
+                                            orderCacheVO.setStopLoss(x.StopLoss);
+                                            orderCacheVO.setTakeProfit(x.TakeProfit);
+                                            orderCacheVO.setClosePrice(x.ClosePrice);
+                                            orderCacheVO.setMagicNumber(x.MagicNumber);
+                                            orderCacheVO.setSwap(x.Swap);
+                                            orderCacheVO.setCommission(x.Commission);
+                                            orderCacheVO.setComment(x.Comment);
+                                            orderCacheVO.setProfit(x.Profit);
+                                            //   orderCacheVO.setPlaceType(x.p);
+                                            orderCaches.add(orderCacheVO);
+                                            accountCache.setLots(accountCache.getLots() + x.Lots);
+                                            accountCache.setProfit(accountCache.getProfit() + x.Profit);
+                                        });
+                                    }
+                                    accountCache.setOrders(orderCaches);
+                                });
+                            }
+                            accounts.add(accountCache);
+                            countDownLatch.countDown();
+
+                        });
+
+                    }
+                    try {
+                        countDownLatch.await();
+                    } catch (InterruptedException e) {
+
+                    }
+                    //设置从redis数据
+                    FollowTraderCacheVO cacheVO = new FollowTraderCacheVO();
+                    cacheVO.setAccounts(accounts);
+                    cacheVO.setUpdateAt(new Date());
+                    cacheVO.setStatus(true);
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    JavaTimeModule javaTimeModule = new JavaTimeModule();
+                    //格式化时间格式
+                    javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    objectMapper.registerModule(javaTimeModule);
+                    String json = null;
+                    try {
+                        json = objectMapper.writeValueAsString(cacheVO);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+                }
+            });
+        });
     }
 }

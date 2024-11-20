@@ -74,10 +74,30 @@ public interface FollowTraderConvert {
     })
     FollowUpdateSalveVo convert(FollowUpdateVO followUpdateVO);
 
+    @Mappings({//喊单账号
+            @Mapping(source = "type", target = "type", qualifiedByName = "intToString"),
+            @Mapping(source = "remark", target = "comment"),
+            @Mapping(source = "platform", target = "platformName"),
+            @Mapping(source = "status", target = "status", qualifiedByName = "intToBoolean"),
+            @Mapping(source = "account", target = "user"),
+            @Mapping(source = "euqit", target = "equity"),
+            @Mapping(source = "marginProportion", target = "margin"),
+            @Mapping(source = "serverName", target = "server")
+    })
+    AccountCacheVO convertCache(FollowTraderEntity entity);
+
     @Named("apiCodeToCode")
     default Integer apiCodeToCode(Integer apiCode) {
 
         return FollowModeEnum.getVal(apiCode);
+    }
+
+    @Named("intToBoolean")
+    default Boolean intToBoolean(Integer status) {
+        if (status == null) {
+            return null;
+        }
+        return status == 0 ? true : false;
     }
 
     @Named("booleanToInt")
@@ -86,6 +106,14 @@ public interface FollowTraderConvert {
             return null;
         }
         return status ? 0 : 1;
+    }
+
+    @Named("intToString")
+    default String intToString(Integer type) {
+        if (type == null) {
+            return null;
+        }
+        return type == 0 ? "SOURCE" : "FOLLOW";
     }
 
 }
