@@ -23,7 +23,6 @@ import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
-import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -36,6 +35,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -212,5 +212,16 @@ public class FollowVpsController {
         }).toList();
     }
 
-    
+    /**
+     * 统计vps
+     */
+    @GetMapping("getStatByVpsId")
+    @Operation(summary = "统计")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<List<List<BigDecimal>>> getStatByVpsId(@Parameter(description = "vpsId") Integer vpsId, @Parameter(description = "traderId") Long traderId) {
+
+
+        return Result.ok(followVpsService.getStatByVpsId(vpsId, traderId, followTraderService));
+    }
+
 }

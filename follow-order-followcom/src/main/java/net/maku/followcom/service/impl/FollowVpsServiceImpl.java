@@ -16,12 +16,14 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.ClientService;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -43,6 +45,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -60,7 +64,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     private final TransService transService;
     private final ClientService clientService;
     private final RedisUtil redisUtil;
-
+    private final FollowTraderSubscribeService followTraderSubscribeService;
 
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
@@ -249,5 +253,101 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         //总盈亏
         followVpsInfoVO.setOrderProfitTotal(orderProfitTotal);
         return followVpsInfoVO;
+    }
+
+    @Override
+    public List<List<BigDecimal>> getStatByVpsId(Integer vpsId, Long traderId, FollowTraderService followTraderService) {
+        if (vpsId == null) {
+            throw new ServerException("vpsId不能为空");
+        }
+        if (traderId == null) {
+            throw new ServerException("策略部不能为空");
+        }
+        List<List<BigDecimal>> statList = new ArrayList<>();
+        List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        List<BigDecimal> ls3 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, traderId));
+        List<Long> slaveIds = list.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+        statList.add(ls1);
+        statList.add(ls2);
+        statList.add(ls3);
+        List<FollowTraderEntity> followTraderEntityList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+        //策略总数量
+        Integer masterTotal = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
+        ls1.set(0, BigDecimal.valueOf(masterTotal));
+        //策略正常数量
+        Integer masterSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        ls2.set(0, BigDecimal.valueOf(masterSuccess));
+        //跟单总数量
+        Integer slaveTotal = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
+        ls1.set(1, BigDecimal.valueOf(slaveTotal));
+        //跟单正常数量
+        Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        ls2.set(1, BigDecimal.valueOf(slaveSuccess));
+        ls2.set(1, BigDecimal.valueOf(slaveIds.size()));
+        for (FollowTraderEntity followTraderEntity : followTraderEntityList) {
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {
+                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
+                //总持仓
+                ls1.set(2, ls1.get(2) == null ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls1.get(2).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                //做多
+                ls1.set(4, ls1.get(4) == null ? BigDecimal.valueOf(followRedisTraderVO.getBuyNum()) : ls1.get(4).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum())));
+                //做空
+                ls1.set(5, ls1.get(5) == null ? BigDecimal.valueOf(followRedisTraderVO.getSellNum()) : ls1.get(5).add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())));
+                //总持仓手数
+                //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                ls1.set(3, ls1.get(4).add(ls1.get(5)));
+                //总净值
+                ls1.set(6, ls1.get(6) == null ? followRedisTraderVO.getEuqit() : ls1.get(6).add(followRedisTraderVO.getEuqit()));
+                //总倍数
+                ls1.set(7, ls1.get(7) == null ? followRedisTraderVO.getEuqit() : ls1.get(7).add(followRedisTraderVO.getEuqit()));
+                //总盈亏
+                ls1.set(8, ls1.get(8) == null ? followRedisTraderVO.getProfit() : ls1.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                //开启中
+                if (followTraderEntity.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                    //总持仓
+                    ls2.set(2, ls2.get(2) == null ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(2).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                    //总持仓手数
+                    //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                    //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                    //做多
+                    ls2.set(4, ls2.get(4) == null ? BigDecimal.valueOf(followRedisTraderVO.getBuyNum()) : ls2.get(4).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum())));
+                    //做空
+                    ls2.set(5, ls2.get(5) == null ? BigDecimal.valueOf(followRedisTraderVO.getSellNum()) : ls2.get(5).add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())));
+
+                    ls2.set(3, ls2.get(4).add(ls2.get(5)));
+                    //总净值
+                    ls2.set(6, ls2.get(6) == null ? followRedisTraderVO.getEuqit() : ls2.get(6).add(followRedisTraderVO.getEuqit()));
+                    //总倍数
+                    ls2.set(7, ls2.get(7) == null ? BigDecimal.valueOf(followTraderEntity.getLeverage()) : ls2.get(7).add(BigDecimal.valueOf(followTraderEntity.getLeverage())));
+                    //总盈亏
+                    ls2.set(8, ls2.get(8) == null ? followRedisTraderVO.getProfit() : ls2.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                }
+                //当前策略
+                if (slaveIds.contains(followTraderEntity.getId())) {
+                    //总持仓
+                    ls3.set(2, ls3.get(2) == null ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls3.get(2).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                    //总持仓手数
+                    //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                    //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                    //做多
+                    ls3.set(4, ls3.get(4) == null ? BigDecimal.valueOf(followRedisTraderVO.getBuyNum()) : ls3.get(4).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum())));
+                    //做空
+                    ls3.set(5, ls3.get(5) == null ? BigDecimal.valueOf(followRedisTraderVO.getSellNum()) : ls3.get(5).add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())));
+
+                    ls3.set(3, ls3.get(4).add(ls3.get(5)));
+                    //总净值
+                    ls3.set(6, ls3.get(6) == null ? followRedisTraderVO.getEuqit() : ls2.get(6).add(followRedisTraderVO.getEuqit()));
+                    //总倍数
+                    ls3.set(7, ls3.get(7) == null ? BigDecimal.valueOf(followTraderEntity.getLeverage()) : ls3.get(7).add(BigDecimal.valueOf(followTraderEntity.getLeverage())));
+                    //总盈亏
+                    ls3.set(8, ls3.get(8) == null ? followRedisTraderVO.getProfit() : ls3.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                }
+            }
+        }
+
+
+        return statList;
     }
 }

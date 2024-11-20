@@ -1,13 +1,14 @@
 package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
-import net.maku.followcom.vo.FollowVpsInfoVO;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.query.FollowVpsQuery;
+import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.utils.PageResult;
+import net.maku.framework.mybatis.service.BaseService;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -41,4 +42,6 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
     FollowVpsEntity select(String vpsName);
 
     FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService);
+
+    List<List<BigDecimal>> getStatByVpsId(Integer vpsId, Long traderId, FollowTraderService followTraderService);
 }
