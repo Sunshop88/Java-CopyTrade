@@ -71,4 +71,7 @@ public class FollowPlatformVO implements Serializable {
 	@NotNull(message = "服务名称集合不能为空")
 	private List<String> platformList;
 
+	@Schema(description = "服务名称已有集合")
+	private List<String> serverList;
+
 }

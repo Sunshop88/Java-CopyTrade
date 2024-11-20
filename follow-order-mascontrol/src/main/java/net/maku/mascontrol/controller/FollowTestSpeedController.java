@@ -21,6 +21,7 @@ import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -35,6 +36,10 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -114,7 +119,7 @@ public class FollowTestSpeedController {
     @Operation(summary = "测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
-        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())){
+        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())) {
             return Result.error("服务器列表或vps列表为空");
         }
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
@@ -142,6 +147,25 @@ public class FollowTestSpeedController {
         List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
 
         for (FollowVpsEntity vpsEntity : vpsList) {
+            //平台点击测速的时候，断开连接的VPS不需要发起测速请求
+            try {
+                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+                boolean reachable = inet.isReachable(5000);
+                if (!reachable) {
+                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                    continue;
+                }
+                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
+                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
+                } catch (IOException e) {
+                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                    continue;
+                }
+            } catch (IOException e) {
+                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
+                continue;
+            }
+
             futures.add(executorService.submit(() -> {
                 String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
 
@@ -248,7 +272,7 @@ public class FollowTestSpeedController {
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
-        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())){
+        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())) {
             return Result.error("服务器列表或vps列表为空");
         }
         List<String> servers = request.getServers();
