@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.system.convert.SysRoleConvert;
 import net.maku.system.dao.SysRoleDao;
+import net.maku.system.entity.SysOrgEntity;
 import net.maku.system.entity.SysRoleEntity;
 import net.maku.system.enums.DataScopeEnum;
 import net.maku.system.query.SysRoleQuery;
@@ -63,7 +65,8 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
     @Transactional(rollbackFor = Exception.class)
     public void save(SysRoleVO vo) {
         SysRoleEntity entity = SysRoleConvert.INSTANCE.convert(vo);
-
+        //检查角色名称唯一
+        checkNameUnique(entity.getName(),null);
         // 保存角色
         entity.setDataScope(DataScopeEnum.SELF.getValue());
         baseMapper.insert(entity);
@@ -72,11 +75,22 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
         sysRoleMenuService.saveOrUpdate(entity.getId(), vo.getMenuIdList());
     }
 
+    /**
+     * 检查角色名称唯一性
+     * */
+    private void checkNameUnique(String roleName, Long rolId) {
+        Long count = lambdaQuery().eq(SysRoleEntity::getName, roleName).ne(rolId != null, SysRoleEntity::getId, rolId).count();
+        if (count!=null && count>0){
+            throw new ServerException("角色名称已存在，请勿重复添加");
+        }
+
+    }
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(SysRoleVO vo) {
         SysRoleEntity entity = SysRoleConvert.INSTANCE.convert(vo);
-
+        //检查角色名称唯一
+        checkNameUnique(entity.getName(),entity.getId());
         // 更新角色
         updateById(entity);
 
