@@ -6,10 +6,11 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.*;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.FollowModeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
@@ -29,7 +30,6 @@ import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
-import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
@@ -41,6 +41,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/subcontrol/follow")
-@Tag(name="mt4账号")
+@Tag(name = "mt4账号")
 @AllArgsConstructor
 public class FollowSlaveController {
     private static final Logger log = LoggerFactory.getLogger(FollowSlaveController.class);
@@ -69,21 +70,21 @@ public class FollowSlaveController {
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> addSlave(@RequestBody FollowAddSalveVo vo){
+    public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
-            if (ObjectUtil.isEmpty(followTraderEntity)){
+            if (ObjectUtil.isEmpty(followTraderEntity)) {
                 throw new ServerException("请输入正确喊单账号");
             }
             //如果为固定手数和手数比例，必填参数
-            if (vo.getFollowStatus().equals(FollowModeEnum.FIX.getCode())||vo.getFollowStatus().equals(FollowModeEnum.RATIO.getCode())){
-                if (ObjectUtil.isEmpty(vo.getFollowParam())){
+            if (vo.getFollowStatus().equals(FollowModeEnum.FIX.getCode()) || vo.getFollowStatus().equals(FollowModeEnum.RATIO.getCode())) {
+                if (ObjectUtil.isEmpty(vo.getFollowParam())) {
                     throw new ServerException("请输入跟单参数");
                 }
             }
             //查看是否存在循环跟单情况
             FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
-            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)){
+            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)) {
                 throw new ServerException("存在循环跟单,请检查");
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
@@ -91,7 +92,7 @@ public class FollowSlaveController {
             followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
-            if (ObjectUtil.isEmpty(vo.getTemplateId())){
+            if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(1);
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
@@ -100,15 +101,15 @@ public class FollowSlaveController {
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVo);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(convert);
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
+            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error();
             }
-            ThreadPoolUtils.execute(()->{
+            ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-                followTraderService.saveQuo(copierApiTrader.quoteClient,convert);
+                followTraderService.saveQuo(copierApiTrader.quoteClient, convert);
                 //设置下单方式
-                copierApiTrader.orderClient.PlacedType=PlacedType.forValue(vo.getPlacedType());;
+                copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
                 //建立跟单关系
                 vo.setSlaveId(followTraderVO.getId());
                 vo.setSlaveAccount(vo.getAccount());
@@ -116,16 +117,16 @@ public class FollowSlaveController {
                 followTraderSubscribeService.addSubscription(vo);
                 copierApiTrader.startTrade();
                 //保存状态到redis
-                Map<String,Object> map=new HashMap<>();
-                map.put("followStatus",vo.getFollowStatus());
-                map.put("followOpen",vo.getFollowOpen());
-                map.put("followClose",vo.getFollowClose());
-                map.put("followRep",vo.getFollowRep());
+                Map<String, Object> map = new HashMap<>();
+                map.put("followStatus", vo.getFollowStatus());
+                map.put("followOpen", vo.getFollowOpen());
+                map.put("followClose", vo.getFollowClose());
+                map.put("followRep", vo.getFollowRep());
                 //设置跟单关系缓存值 保存状态
-                redisCache.set(Constant.FOLLOW_MASTER_SLAVE+followTraderEntity.getAccount()+":"+vo.getAccount(), JSONObject.toJSON(map));
+                redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getAccount() + ":" + vo.getAccount(), JSONObject.toJSON(map));
             });
-        }catch (Exception e){
-            throw new ServerException("保存失败"+e);
+        } catch (Exception e) {
+            throw new ServerException("保存失败" + e);
         }
 
         return Result.ok();
@@ -134,38 +135,38 @@ public class FollowSlaveController {
     @PostMapping("updateSlave")
     @Operation(summary = "修改跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> updateSlave(@RequestBody FollowUpdateSalveVo vo){
+    public Result<Boolean> updateSlave(@RequestBody @Valid FollowUpdateSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
-            if (ObjectUtil.isEmpty(vo.getTemplateId())){
+            if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(1);
             }
-            BeanUtil.copyProperties(vo,followTraderEntity);
+            BeanUtil.copyProperties(vo, followTraderEntity);
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
-                    .eq(FollowTraderSubscribeEntity::getSlaveId,vo.getId()));
-            BeanUtil.copyProperties(vo,followTraderSubscribeEntity,"id");
+                    .eq(FollowTraderSubscribeEntity::getSlaveId, vo.getId()));
+            BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
             //更新订阅状态
             followTraderSubscribeService.updateById(followTraderSubscribeEntity);
-            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE+followTraderSubscribeEntity.getMasterAccount()+":"+followTraderEntity.getAccount());
+            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterAccount() + ":" + followTraderEntity.getAccount());
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             //启动账户
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)){
+            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 return Result.error();
             }
             //重连
             reconnect(vo.getId().toString());
-            ThreadPoolUtils.execute(()->{
+            ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
-                copierApiTrader.orderClient.PlacedType=PlacedType.forValue(vo.getPlacedType());;
+                copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
                 copierApiTrader.startTrade();
             });
-        }catch (Exception e){
-            throw new ServerException("修改失败"+e);
+        } catch (Exception e) {
+            throw new ServerException("修改失败" + e);
         }
 
         return Result.ok();
@@ -175,8 +176,8 @@ public class FollowSlaveController {
     @GetMapping("slaveList")
     @Operation(summary = "跟单账号列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowTraderVO>> slaveList(@ParameterObject @Valid FollowTraderQuery query){
-        if (ObjectUtil.isEmpty(query.getTraderId())){
+    public Result<PageResult<FollowTraderVO>> slaveList(@ParameterObject @Valid FollowTraderQuery query) {
+        if (ObjectUtil.isEmpty(query.getTraderId())) {
             throw new ServerException("请求异常");
         }
         List<Long> collect = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, query.getTraderId())).stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
@@ -188,22 +189,22 @@ public class FollowSlaveController {
     @GetMapping("transferVps")
     @Operation(summary = "旧账号清理缓存")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> transferVps(){
+    public Result<Boolean> transferVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
-        list.forEach(o->leaderApiTradersAdmin.removeTrader(o.getId().toString()));
+        list.forEach(o -> leaderApiTradersAdmin.removeTrader(o.getId().toString()));
         return Result.ok(true);
     }
 
     @GetMapping("startNewVps")
     @Operation(summary = "新账号启动")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> startNewVps(){
+    public Result<Boolean> startNewVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         try {
-            leaderApiTradersAdmin.startUp(list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
-            copierApiTradersAdmin.startUp(list.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList());
-        }catch (Exception e){
-            throw new ServerException("新Vps账号启动异常"+e);
+            leaderApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
+            copierApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList());
+        } catch (Exception e) {
+            throw new ServerException("新Vps账号启动异常" + e);
         }
         return Result.ok(true);
     }
@@ -212,7 +213,7 @@ public class FollowSlaveController {
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowOrderHistoryVO>> histotyOrderList(@ParameterObject FollowOrderHistoryQuery followOrderHistoryQuery){
+    public Result<PageResult<FollowOrderHistoryVO>> histotyOrderList(@ParameterObject FollowOrderHistoryQuery followOrderHistoryQuery) {
         return Result.ok(followOrderHistoryService.page(followOrderHistoryQuery));
     }
 
@@ -225,7 +226,7 @@ public class FollowSlaveController {
         Integer testId = request.getTestId();
 
         // 批量调用服务进行测速
-        boolean isSuccess =followTestSpeedService.measure(servers,vpsEntity,testId);
+        boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId);
         if (isSuccess) {
             return Result.ok();
         } else {
@@ -238,12 +239,12 @@ public class FollowSlaveController {
     @PostMapping("repairSend")
     @Operation(summary = "漏单处理")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO){
+    public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO) {
         return Result.ok(followSubscribeOrderService.repairSend(repairSendVO));
     }
 
     private void reconnect(String traderId) {
-        try{
+        try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -256,7 +257,7 @@ public class FollowSlaveController {
                 log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
             }
-        }catch (RuntimeException e){
+        } catch (RuntimeException e) {
             throw new ServerException("请检查账号密码，稍后再试");
         }
     }
