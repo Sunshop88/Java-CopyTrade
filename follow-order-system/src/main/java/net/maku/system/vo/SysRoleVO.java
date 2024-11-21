@@ -43,6 +43,8 @@ public class SysRoleVO implements Serializable {
 
     @Schema(description = "机构ID列表")
     private List<Long> orgIdList;
+    @Schema(description = "用户数量")
+    private Integer userNum;
 
     @Schema(description = "创建时间")
     @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)

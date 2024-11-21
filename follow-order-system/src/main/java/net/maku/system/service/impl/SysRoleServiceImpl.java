@@ -1,5 +1,6 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -12,6 +13,7 @@ import net.maku.system.convert.SysRoleConvert;
 import net.maku.system.dao.SysRoleDao;
 import net.maku.system.entity.SysOrgEntity;
 import net.maku.system.entity.SysRoleEntity;
+import net.maku.system.entity.SysUserRoleEntity;
 import net.maku.system.enums.DataScopeEnum;
 import net.maku.system.query.SysRoleQuery;
 import net.maku.system.service.*;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 角色
@@ -40,8 +44,16 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
     @Override
     public PageResult<SysRoleVO> page(SysRoleQuery query) {
         IPage<SysRoleEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
-
-        return new PageResult<>(SysRoleConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+         //查询用户角色中间
+        List<SysUserRoleEntity> userRoles = sysUserRoleService.list();
+        List<SysRoleVO> sysRoleList = SysRoleConvert.INSTANCE.convertList(page.getRecords());
+        if(ObjectUtil.isNotEmpty(userRoles)){
+            Map<Long, List<SysUserRoleEntity>> map = userRoles.stream().collect(Collectors.groupingBy(SysUserRoleEntity::getRoleId));
+            sysRoleList.forEach(sysRole -> {
+                List<SysUserRoleEntity> userList = map.get(sysRole.getId());
+                sysRole.setUserNum(userList==null?0:userList.size());});
+        }
+        return new PageResult<>(sysRoleList, page.getTotal());
     }
 
     @Override
