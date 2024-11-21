@@ -24,7 +24,6 @@ import net.maku.framework.security.utils.TokenUtils;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.dao.SysUserDao;
 import net.maku.system.entity.SysLogLoginEntity;
-import net.maku.system.entity.SysRoleEntity;
 import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.SuperAdminEnum;
 import net.maku.system.query.SysRoleUserQuery;
@@ -164,6 +163,12 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         }
         //检查邮箱是否已存在
         checkEmailUnique(entity.getEmail(), null);
+
+        // 检查 roleIdList 是否为空
+        if (ObjectUtil.isEmpty(vo.getRoleIdList())) {
+            throw new ServerException("所属角色不能为空");
+        }
+
         // 保存用户
         baseMapper.insert(entity);
 
@@ -338,6 +343,12 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         transService.transBatch(userExcelVOS);
         // 写到浏览器打开
         ExcelUtils.excelExport(SysUserExcelVO.class, "用户管理", null, userExcelVOS);
+    }
+
+    @Override
+    public SysUserVO getByUsername(String username) {
+        SysUserEntity user = baseMapper.selectOne(Wrappers.<SysUserEntity>lambdaQuery().eq(SysUserEntity::getUsername, username));
+        return SysUserConvert.INSTANCE.convert(user);
     }
 
 }

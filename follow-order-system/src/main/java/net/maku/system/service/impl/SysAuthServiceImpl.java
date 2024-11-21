@@ -12,6 +12,7 @@ import net.maku.framework.security.mobile.MobileAuthenticationToken;
 import net.maku.framework.security.third.ThirdAuthenticationToken;
 import net.maku.framework.security.third.ThirdLogin;
 import net.maku.framework.security.user.UserDetail;
+import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.LoginOperationEnum;
 import net.maku.system.service.*;
 import net.maku.system.vo.*;
@@ -47,6 +48,12 @@ public class SysAuthServiceImpl implements SysAuthService {
             sysLogLoginService.save(login.getUsername(), Constant.FAIL, LoginOperationEnum.CAPTCHA_FAIL.getValue());
 
             throw new ServerException("验证码错误");
+        }
+
+        //用户是禁用状态，直接抛出异常
+        SysUserVO SysUserVO = sysUserService.getByUsername(login.getUsername());
+        if (SysUserVO.getStatus() == 0) {
+            throw new ServerException("您的账户已被禁用，请联系管理员。");
         }
 
         Authentication authentication;
