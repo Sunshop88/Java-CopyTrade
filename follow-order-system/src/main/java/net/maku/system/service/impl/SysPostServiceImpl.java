@@ -1,10 +1,12 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.system.convert.SysPostConvert;
@@ -68,6 +70,16 @@ public class SysPostServiceImpl extends BaseServiceImpl<SysPostDao, SysPostEntit
 
     @Override
     public void save(SysPostVO vo) {
+        SysPostEntity postCode = baseMapper.selectOne(new LambdaQueryWrapper<SysPostEntity>()
+                .eq(SysPostEntity::getPostCode, vo.getPostCode()));
+        if (ObjectUtil.isNotEmpty(postCode)) {
+            throw new ServerException("岗位编码已存在");
+        }
+        SysPostEntity postName = baseMapper.selectOne(new LambdaQueryWrapper<SysPostEntity>()
+                .eq(SysPostEntity::getPostName, vo.getPostName()));
+        if (ObjectUtil.isNotEmpty(postName)) {
+            throw new ServerException("岗位名称已存在");
+        }
         SysPostEntity entity = SysPostConvert.INSTANCE.convert(vo);
 
         baseMapper.insert(entity);
@@ -75,6 +87,18 @@ public class SysPostServiceImpl extends BaseServiceImpl<SysPostDao, SysPostEntit
 
     @Override
     public void update(SysPostVO vo) {
+        SysPostEntity postCode = baseMapper.selectOne(new LambdaQueryWrapper<SysPostEntity>()
+                .eq(SysPostEntity::getPostCode, vo.getPostCode())
+                .ne(SysPostEntity::getId, vo.getId()));
+        if (ObjectUtil.isNotEmpty(postCode)) {
+            throw new ServerException("岗位编码已存在");
+        }
+        SysPostEntity postName = baseMapper.selectOne(new LambdaQueryWrapper<SysPostEntity>()
+                .eq(SysPostEntity::getPostName, vo.getPostName())
+                .ne(SysPostEntity::getId, vo.getId()));
+        if (ObjectUtil.isNotEmpty(postName)) {
+            throw new ServerException("岗位名称已存在");
+        }
         SysPostEntity entity = SysPostConvert.INSTANCE.convert(vo);
 
         updateById(entity);
@@ -83,6 +107,9 @@ public class SysPostServiceImpl extends BaseServiceImpl<SysPostDao, SysPostEntit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
+        if (ObjectUtil.isEmpty(idList)){
+            throw new ServerException("参数不能为空");
+        }
         // 删除岗位
         removeByIds(idList);
 
