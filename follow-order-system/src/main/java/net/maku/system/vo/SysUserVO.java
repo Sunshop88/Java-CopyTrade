@@ -54,6 +54,7 @@ public class SysUserVO implements Serializable, TransPojo {
 
     @Schema(description = "邮箱")
     @Email(message = "邮箱格式不正确")
+    @NotBlank(message = "邮箱不能为空")
     private String email;
 
     @Schema(description = "手机号", required = true)
@@ -70,6 +71,7 @@ public class SysUserVO implements Serializable, TransPojo {
     private Integer status;
 
     @Schema(description = "角色ID列表")
+    @NotNull(message = "角色不能为空")
     private List<Long> roleIdList;
 
     @Schema(description = "岗位ID列表")

@@ -119,7 +119,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         params.put("username", query.getUsername());
         params.put("mobile", query.getMobile());
         params.put("gender", query.getGender());
-
+        params.put("email", query.getEmail());
         // 数据权限
         params.put(Constant.DATA_SCOPE, getDataScope("t1", null));
 
@@ -133,7 +133,17 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         return params;
     }
 
-
+    /**
+     * 检查邮箱唯一性
+     * */
+    private void checkEmailUnique(String email, Long userId) {
+        if (ObjectUtil.isNotEmpty(email)){
+            Long count = lambdaQuery().eq(SysUserEntity::getEmail, email).ne(userId != null, SysUserEntity::getId, userId).count();
+            if (count!=null && count>0){
+                throw new ServerException("邮箱已存在");
+            }
+        }
+    }
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(SysUserVO vo) {
@@ -150,6 +160,13 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         user = baseMapper.getByMobile(entity.getMobile());
         if (user != null) {
             throw new ServerException("手机号已经存在");
+        }
+        //检查邮箱是否已存在
+        checkEmailUnique(entity.getEmail(), null);
+
+        // 检查 roleIdList 是否为空
+        if (ObjectUtil.isEmpty(vo.getRoleIdList())) {
+            throw new ServerException("所属角色不能为空");
         }
 
         // 保存用户
@@ -191,7 +208,8 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         if (user != null && !user.getId().equals(entity.getId())) {
             throw new ServerException("手机号已经存在");
         }
-
+        //检查邮箱是否已存在
+        checkEmailUnique(entity.getEmail(), entity.getId());
         // 更新用户
         updateById(entity);
 
@@ -325,6 +343,12 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         transService.transBatch(userExcelVOS);
         // 写到浏览器打开
         ExcelUtils.excelExport(SysUserExcelVO.class, "用户管理", null, userExcelVOS);
+    }
+
+    @Override
+    public SysUserVO getByUsername(String username) {
+        SysUserEntity user = baseMapper.selectOne(Wrappers.<SysUserEntity>lambdaQuery().eq(SysUserEntity::getUsername, username));
+        return SysUserConvert.INSTANCE.convert(user);
     }
 
 }

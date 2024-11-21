@@ -79,7 +79,7 @@ public class FollowPlatformController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:platform')")
-    public Result<String> save(@RequestBody FollowPlatformVO vo) {
+    public Result<String> save(@RequestBody @Valid FollowPlatformVO vo) {
 //        Long userId = SecurityUser.getUserId();
 //        //判断是否已存在服务名称
 //        vo.getPlatformList().forEach(bro->{

@@ -51,16 +51,28 @@ public class SysOrgServiceImpl extends BaseServiceImpl<SysOrgDao, SysOrgEntity> 
     public void save(SysOrgVO vo) {
         SysOrgEntity entity = SysOrgConvert.INSTANCE.convert(vo);
         //校验机构名是否重复
-        checkNameUnique(entity.getName(),null);
+        checkNameUnique(entity.getName(), null, entity.getPid());
         baseMapper.insert(entity);
     }
+
     /**
      * 检查机构名称唯一性
-     * */
-    private void checkNameUnique(String orgName, Long orgId) {
-        Long count = lambdaQuery().eq(SysOrgEntity::getName, orgName).ne(orgId != null, SysOrgEntity::getId, orgId).count();
-        if (count!=null && count>0){
-           throw new ServerException("机构名称已存在，请勿重复添加");
+     */
+    private void checkNameUnique(String orgName, Long orgId, Long pid) {
+        Long count;
+        if (pid == null) {
+            // 当 pid 为空时，检查所有父级的机构
+            count = lambdaQuery().eq(SysOrgEntity::getName, orgName)
+                    .isNull(SysOrgEntity::getPid) // 检查 pid 为空的情况
+                    .ne(orgId != null, SysOrgEntity::getId, orgId).count();
+        } else {
+            // 当 pid 不为空时，检查特定父级下的机构
+            count = lambdaQuery().eq(SysOrgEntity::getName, orgName)
+                    .eq(SysOrgEntity::getPid, pid)
+                    .ne(orgId != null, SysOrgEntity::getId, orgId).count();
+        }
+        if (count != null && count > 0) {
+            throw new ServerException("机构名称已存在，请勿重复添加");
         }
 
     }
@@ -71,7 +83,7 @@ public class SysOrgServiceImpl extends BaseServiceImpl<SysOrgDao, SysOrgEntity> 
 
         SysOrgEntity entity = SysOrgConvert.INSTANCE.convert(vo);
         //校验机构名是否重复
-        checkNameUnique(vo.getName(),entity.getId());
+        checkNameUnique(vo.getName(), entity.getId(),entity.getPid());
         // 上级机构不能为自身
         if (entity.getId().equals(entity.getPid())) {
             throw new ServerException("上级机构不能为自身");

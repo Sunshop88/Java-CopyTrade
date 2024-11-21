@@ -67,4 +67,6 @@ public interface SysUserService extends BaseService<SysUserEntity> {
      * 导出用户信息表格
      */
     void export();
+
+    SysUserVO getByUsername(String username);
 }
