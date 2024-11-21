@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
@@ -150,6 +151,11 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         user = baseMapper.getByMobile(entity.getMobile());
         if (user != null) {
             throw new ServerException("手机号已经存在");
+        }
+
+        // 检查 roleIdList 是否为空
+        if (ObjectUtil.isEmpty(vo.getRoleIdList())) {
+            throw new ServerException("所属角色不能为空");
         }
 
         // 保存用户
@@ -325,6 +331,12 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         transService.transBatch(userExcelVOS);
         // 写到浏览器打开
         ExcelUtils.excelExport(SysUserExcelVO.class, "用户管理", null, userExcelVOS);
+    }
+
+    @Override
+    public SysUserVO getByUsername(String username) {
+        SysUserEntity user = baseMapper.selectOne(Wrappers.<SysUserEntity>lambdaQuery().eq(SysUserEntity::getUsername, username));
+        return SysUserConvert.INSTANCE.convert(user);
     }
 
 }
