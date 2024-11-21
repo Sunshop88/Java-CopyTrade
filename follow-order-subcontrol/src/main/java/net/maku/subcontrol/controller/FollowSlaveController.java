@@ -128,7 +128,12 @@ public class FollowSlaveController {
                 redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getAccount() + ":" + vo.getAccount(), JSONObject.toJSON(map));
             });
         } catch (Exception e) {
-            throw new ServerException("保存失败" + e);
+            if(e instanceof ServerException) {
+                throw e;
+            }else{
+                throw new ServerException("保存失败" + e);
+            }
+
         }
 
         return Result.ok();

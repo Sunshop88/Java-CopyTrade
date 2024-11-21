@@ -18,6 +18,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderCloseEnum;
 import net.maku.followcom.enums.TraderRepairEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -137,7 +138,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //查看是否已存在该账号
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()).eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         if (ObjectUtil.isNotEmpty(followTraderEntity)) {
-            throw new ServerException("该账号已存在");
+            if(followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                throw new ServerException("策略账号，不允许跟单");
+            }else{
+                throw new ServerException("跟单账户已存在");
+            }
+
         }
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()));
