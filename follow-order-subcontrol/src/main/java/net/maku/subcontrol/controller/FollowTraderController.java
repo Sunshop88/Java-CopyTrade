@@ -293,7 +293,7 @@ public class FollowTraderController {
     @Operation(summary = "平仓")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> orderClose(@RequestBody FollowOrderSendCloseVO vo){
+    public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo){
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)){
             throw new ServerException("账号不存在");
