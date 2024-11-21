@@ -7,10 +7,13 @@
 		select t1.*
 			from sys_user t1 where t1.super_admin = 0 and t1.deleted = 0
 		<if test="username != null and username.trim() != ''">
-			and t1.username = #{username}
+			and t1.username LIKE CONCAT("%",#{username},"%")
 		</if>
 		<if test="mobile != null and mobile.trim() != ''">
-			and t1.mobile = #{mobile}
+			and t1.mobile  LIKE CONCAT("%",#{mobile},"%")
+		</if>
+		<if test="email != null and email.trim() != ''">
+			and t1.email  LIKE CONCAT("%",#{email},"%")
 		</if>
 		<if test="orgList != null">
 			and t1.org_id in
