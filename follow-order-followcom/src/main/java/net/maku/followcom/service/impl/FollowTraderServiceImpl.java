@@ -501,7 +501,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderCloseEntity.setTotalNum(orderCount);
         }
         if (ObjectUtil.isEmpty(orderCount) || orderCount == 0 || list.size() == 0 || orderActive.size() == 0) {
-            throw new ServerException(vo.getAccount() + "暂无可平仓订单");
+            throw new ServerException((ObjectUtil.isNotEmpty(vo.getAccount())?vo.getAccount():"") + "暂无可平仓订单");
         }
         followOrderCloseService.save(followOrderCloseEntity);
         // 无间隔时间下单时并发执行
