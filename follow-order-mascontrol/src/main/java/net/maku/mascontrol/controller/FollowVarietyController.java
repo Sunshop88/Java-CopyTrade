@@ -123,7 +123,7 @@ public class FollowVarietyController {
             }else{
                 followVarietyService.updateTemplateName(template,templateName);
             }
-            return Result.ok("文件导入成功");
+            return Result.ok("导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }
@@ -214,7 +214,7 @@ public class FollowVarietyController {
 
 
     @GetMapping("listSmybol")
-    @Operation(summary = "查询标准品种，标准合约")
+    @Operation(summary = "页面展示")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
@@ -293,4 +293,12 @@ public class FollowVarietyController {
         followVarietyService.getListByTemplated(1);
         return Result.ok(true);
     }
+
+    @GetMapping("listSymbol")
+    @Operation(summary = "查询所有品种")
+    public Result<List<FollowVarietyVO>> listSymbol(){
+        List<FollowVarietyVO> list = followVarietyService.listSymbol();
+        return Result.ok(list);
+    }
+
 }

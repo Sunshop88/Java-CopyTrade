@@ -37,7 +37,7 @@ public class FollowAddSalveVo  implements Serializable {
     @Schema(description = "跟单方向0-正向1-反向")
     @Min(value = 0, message = "跟单方向只能为0或1")
     @Max(value = 1, message = "跟单方向只能为0或1")
-    @NotNull(message = "平台不能为空")
+    @NotNull(message = "跟单方向不能为空")
     private Integer followDirection;
 
     @Schema(description = "跟随模式0-固定手数 1-手数比例 2-净值比例")

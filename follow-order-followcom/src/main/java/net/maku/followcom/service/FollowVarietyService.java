@@ -1,10 +1,8 @@
 package net.maku.followcom.service;
 
-import com.esotericsoftware.kryo.util.IntArray;
 import jakarta.servlet.http.HttpServletResponse;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.query.FollowVarietyQuery;
-import net.maku.followcom.vo.FollowVarietyExcelVO;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
@@ -53,4 +51,6 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     List<FollowVarietyVO> getListByTemplate();
 
     void updateTemplateName(Integer template, String templateName);
+
+    List<FollowVarietyVO> listSymbol();
 }

@@ -1,11 +1,13 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +32,7 @@ import net.maku.framework.security.user.SecurityUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -67,6 +70,7 @@ public class FollowTestSpeedController {
     private final FollowVpsService followVpsService;
     private final FollowPlatformService followPlatformService;
     private final RedisUtil redisUtil;
+    private final ObjectMapper objectMapper;
 
     @GetMapping("{id}")
     @Operation(summary = "信息")
@@ -131,6 +135,10 @@ public class FollowTestSpeedController {
         overallResult.setCreateTime(LocalDateTime.now());
         overallResult.setTestName(SecurityUser.getUser().getUsername());
         followTestSpeedService.saveTestSpeed(overallResult);
+        // 保存到 Redis
+        String testId = overallResult.getId().toString();
+        redisUtil.set("speed:"+testId + ":servers", objectMapper.writeValueAsString(request.getServers()));
+        redisUtil.set("speed:"+testId + ":vps", objectMapper.writeValueAsString(request.getVps()));
         List<String> servers = request.getServers();
         List<String> vps = request.getVps();
 
@@ -271,12 +279,25 @@ public class FollowTestSpeedController {
     @PostMapping("remeasure")
     @Operation(summary = "重新测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, @RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
-        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())) {
-            return Result.error("服务器列表或vps列表为空");
+    public Result<FollowTestDetailVO> remeasure(@RequestParam Long id, HttpServletRequest req) throws Exception {
+//        if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())) {
+//            return Result.error("服务器列表或vps列表为空");
+//        }
+
+//        List<String> servers = request.getServers();
+//        List<String> vps = request.getVps();
+
+        // 从 Redis 中获取服务器和 VPS 列表
+        String serversJson = (String) redisUtil.get("speed:"+id + ":servers");
+        String vpsJson = (String) redisUtil.get("speed:"+id + ":vps");
+
+        if (ObjectUtil.isEmpty(serversJson) || ObjectUtil.isEmpty(vpsJson)) {
+            return Result.error("未找到对应的服务器列表或 VPS 列表");
         }
-        List<String> servers = request.getServers();
-        List<String> vps = request.getVps();
+        // 将 JSON 字符串转换为 List
+        List<String> servers = objectMapper.readValue(serversJson, new TypeReference<List<String>>() {});
+        List<String> vps = objectMapper.readValue(vpsJson, new TypeReference<List<String>>() {});
+
         FollowTestSpeedVO overallResult = followTestSpeedService.get(id);
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
         UpdateWrapper<FollowTestSpeedEntity> updateWrapper = new UpdateWrapper<>();

@@ -2,7 +2,6 @@ package net.maku.followcom.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -12,37 +11,29 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowVarietyConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
-import net.maku.followcom.query.FollowPlatformQuery;
 import net.maku.followcom.query.FollowVarietyQuery;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.followcom.dao.FollowVarietyDao;
 import net.maku.followcom.service.FollowVarietyService;
 import com.fhs.trans.service.impl.TransService;
-import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowVarietyExcelVO;
-import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
-import cn.hutool.core.util.ObjectUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -144,6 +135,15 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         updateWrapper.eq("template_id", template);
         updateWrapper.set("template_name", templateName);
         baseMapper.update(updateWrapper);
+    }
+
+    @Override
+    public List<FollowVarietyVO> listSymbol() {
+        //查询所有的品种名称，不能重复
+        List<FollowVarietyEntity> list = baseMapper.selectList(new LambdaQueryWrapper<FollowVarietyEntity>()
+                .select(FollowVarietyEntity::getStdSymbol)
+                .groupBy(FollowVarietyEntity::getStdSymbol));
+        return FollowVarietyConvert.INSTANCE.convertList(list);
     }
 
     @Override
