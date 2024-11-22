@@ -21,8 +21,6 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -31,7 +29,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     private static final Logger log = LoggerFactory.getLogger(OnQuoteTraderHandler.class);
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
-    protected ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     protected FollowTraderService followTraderService;
     protected Boolean running = Boolean.TRUE;
     protected RedisCache redisCache;
@@ -50,7 +47,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 
     public OnQuoteTraderHandler(AbstractApiTrader abstractApiTrader ) {
         this.abstractApiTrader=abstractApiTrader;
-        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();;
         followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
         redisCache=SpringContextUtils.getBean(RedisCache.class);
     }

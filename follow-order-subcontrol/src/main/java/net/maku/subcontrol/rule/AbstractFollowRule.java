@@ -97,19 +97,7 @@ public abstract class AbstractFollowRule {
                 lots = 0.0;
                 break;
         }
-        // 判断是否强制开仓，如果是强制开仓，那么开仓手数小于最小手数，会以最小手数开仓 -默认强制开仓
-        boolean forceOpen = true;
-        double mLots = forceOpen ? Math.max(lots, copierSymbolInfo.getMinVolume()) : lots;
-        if (mLots >= copierSymbolInfo.getMinVolume()) {
-            // 确保开仓手数是否符合步长，保证开仓手数是步长的整数倍。
-            // 比如有些品种的步长是0.02,最小手数是0.02，那么开仓0.09就会失败，因为开仓手数必须是0.02的倍数
-            // 加0.1是为了精度丢失
-            int step = (int) (((mLots - copierSymbolInfo.getMinVolume()) / copierSymbolInfo.getStepVolume()) + 0.1);
-            mLots = step * copierSymbolInfo.getStepVolume() + copierSymbolInfo.getMinVolume();
-        } else {
-            mLots = lots;
-        }
-        BigDecimal lots2digits = BigDecimal.valueOf(mLots).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lots2digits = BigDecimal.valueOf(lots).setScale(2, RoundingMode.HALF_UP);
         return lots2digits.doubleValue();
     }
 

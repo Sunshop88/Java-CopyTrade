@@ -113,7 +113,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     @Override
     @CacheEvict(
             value = "followVarietyCache", // 缓存名称
-            key = "#template"          // 缓存键
+            key = "#template"
     )
     public void importByExcel(MultipartFile file, Integer template, String templateName) throws Exception {
         String fileName = file.getOriginalFilename();
@@ -575,9 +575,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
-                .eq(FollowVarietyEntity::getTemplateId, query.getTemplate())
-                .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
-                .like(StrUtil.isNotBlank(query.getStdSymbol()), FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+                .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract);
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }

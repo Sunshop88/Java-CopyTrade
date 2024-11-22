@@ -13,6 +13,7 @@ import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.strategy.IOperationStrategy;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -49,7 +50,7 @@ public class AbstractKafkaMessageCallback {
 
     public AbstractKafkaMessageCallback() {
         this.eaServerService = SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);
-        this.scheduledExecutorService = SpringContextUtils.getBean("scheduledExecutorService", ScheduledExecutorService.class);
+        this.scheduledExecutorService = ThreadPoolUtils.getScheduledExecute();
         this.eaMasterSlaveService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
         this.eaTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
         this.redisUtil = SpringContextUtils.getBean(RedisUtil.class);
@@ -91,6 +92,7 @@ public class AbstractKafkaMessageCallback {
         }
 
         IOperationStrategy iOperationStrategy = operationStrategy.get(ac) == null ? operationStrategy.get(AcEnum.OTHERS) : operationStrategy.get(ac);
+        log.info("跟单时间{}",consumerRecord.key());
         iOperationStrategy.operate(consumerRecord, 2);
     }
 }

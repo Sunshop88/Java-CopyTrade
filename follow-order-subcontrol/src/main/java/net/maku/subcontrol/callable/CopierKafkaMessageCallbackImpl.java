@@ -59,8 +59,10 @@ public class CopierKafkaMessageCallbackImpl extends AbstractKafkaMessageCallback
         EaOrderInfo orderInfo = (EaOrderInfo) consumerRecord.value();
         Map<String, Object> status = followTraderSubscribeService.getStatus(orderInfo.getAccount(), copier.getAccount());
         //开始跟单
+        log.info("跟单时间{}",consumerRecord.key());
         scheduledExecutorService.submit(() -> {
             try {
+                log.info("跟单时间{}",consumerRecord.key());
                 tradeOperation(consumerRecord,status);
             } catch (ConnectException | TimeoutException e) {
                 e.printStackTrace();

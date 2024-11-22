@@ -62,9 +62,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowTraderSubscribeEntity leaderCopier = leaderCopierService.subscription(copier.getId(), orderInfo.getMasterId());
         //查看喊单账号信息
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
+        log.info("跟单时间3{}",consumerRecord.key());
         // 查看品种匹配 模板
         List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(copier.getTemplateId());
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
+        log.info("跟单时间4{}",consumerRecord.key());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
             FollowPlatformEntity copyPlat = followTraderService.getPlatForm(copier.getId());
@@ -82,6 +84,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             //未发现品种匹配
             log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
         }
+        log.info("跟单时间{}",consumerRecord.key());
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
                 //如果没有此品种匹配，校验是否可以获取报价
@@ -96,6 +99,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
         }
         FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
+        log.info("跟单时间{}",consumerRecord.key());
         //  依次对备选品种进行开仓尝试
         for (String symbol : orderInfo.getSymbolList()) {
             orderInfo.setSymbol(symbol);
@@ -106,6 +110,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setFlag(permitInfo.getPermit());
             openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
+            log.info("跟单时间{}",consumerRecord.key());
             if (sendOrder(orderInfo, leaderCopier, openOrderMapping,flag)) {
                 break;
             }
