@@ -128,6 +128,7 @@ public class FollowSlaveController {
                 redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getAccount() + ":" + vo.getAccount(), JSONObject.toJSON(map));
             });
         } catch (Exception e) {
+            log.error("跟单账号保存失败:", e);
             if(e instanceof ServerException) {
                 throw e;
             }else{
