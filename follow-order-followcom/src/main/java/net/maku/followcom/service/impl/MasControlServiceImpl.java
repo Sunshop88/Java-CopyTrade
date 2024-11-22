@@ -79,6 +79,26 @@ public class MasControlServiceImpl implements MasControlService {
     @Override
     public boolean updatePlatform(FollowPlatformVO vo) {
         followPlatformService.update(vo);
+
+        // 获取当前数据库中已有的服务器列表
+        List<String> existingServers = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>()
+                        .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName()))
+                .stream()
+                .map(FollowPlatformEntity::getServer)
+                .collect(Collectors.toList());
+
+        // 找出需要删除的服务器
+        List<String> serversToRemove = existingServers.stream()
+                .filter(server -> !vo.getPlatformList().contains(server))
+                .collect(Collectors.toList());
+
+        // 删除已移除的服务器
+        if (!serversToRemove.isEmpty()) {
+            followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
+                    .in(FollowPlatformEntity::getServer, serversToRemove));
+        }
+
         Long userId = SecurityUser.getUserId();
         //保存服务数据
         ThreadPoolUtils.execute(() -> {
@@ -103,6 +123,7 @@ public class MasControlServiceImpl implements MasControlService {
                             future.get();
                             long endTime = System.currentTimeMillis(); // 记录结束时间
                             o.setSpeed((int) endTime - (int) startTime);
+                            System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
                             followBrokeServerService.updateById(o);
                         } catch (Exception e) {
                             e.printStackTrace();
