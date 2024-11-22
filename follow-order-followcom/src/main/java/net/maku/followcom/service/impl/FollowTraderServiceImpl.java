@@ -138,10 +138,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //查看是否已存在该账号
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatform, vo.getPlatform()).eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         if (ObjectUtil.isNotEmpty(followTraderEntity)) {
-            if(followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
                 throw new ServerException("策略账号，不允许跟单");
-            }else{
-                throw new ServerException("跟单账户已存在");
+            } else {
+                throw new ServerException((vo.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "策略" : "跟单") + "账户已存在");
             }
 
         }
