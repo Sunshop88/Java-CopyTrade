@@ -10,10 +10,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.TraderStatusEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.query.FollowOrderCloseQuery;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
@@ -299,6 +296,9 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo) {
+        if ((vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()) && vo.getNum()==null) {
+            throw new ServerException("总单数最少一单");
+        }
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             throw new ServerException("账号不存在");

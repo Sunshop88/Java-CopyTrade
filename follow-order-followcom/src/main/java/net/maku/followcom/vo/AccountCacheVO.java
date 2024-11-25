@@ -50,7 +50,7 @@ public class AccountCacheVO {
     private BigDecimal equity;
     //
     @JsonProperty(value = "Credit")
-    private BigDecimal credit;
+    private Double credit;
     //
     @JsonProperty(value = "Profit")
     private Double profit;

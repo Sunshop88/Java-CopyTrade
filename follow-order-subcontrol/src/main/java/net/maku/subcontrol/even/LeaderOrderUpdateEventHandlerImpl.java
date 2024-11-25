@@ -24,10 +24,7 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.util.KafkaTopicUtil;
-import online.mtapi.mt4.Op;
-import online.mtapi.mt4.Order;
-import online.mtapi.mt4.OrderUpdateEventArgs;
-import online.mtapi.mt4.QuoteClient;
+import online.mtapi.mt4.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -186,10 +183,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 }
                             } else {
                                 quoteClient = leaderApiTrader.quoteClient;
+
                             }
                             //所有持仓
                             if (ObjectUtil.isNotEmpty(quoteClient)) {
                                 Order[] orders = quoteClient.GetOpenedOrders();
+                                //账号信息
+                                ConGroup account = quoteClient.Account();
+                                accountCache.setCredit(account.credit);
                                 Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
                                 accountCache.setLots(0.00);
                                 accountCache.setCount(0);
