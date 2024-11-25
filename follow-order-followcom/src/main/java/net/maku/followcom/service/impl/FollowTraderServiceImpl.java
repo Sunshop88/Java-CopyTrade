@@ -75,6 +75,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final RedisCache redisCache;
     private final FollowPlatformService followPlatformService;
     private final FollowOrderCloseService followOrderCloseService;
+    private final FollowTraderSubscribeService followTraderSubscribeService;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -83,6 +84,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
+        Map<Long, List<FollowTraderSubscribeEntity>> traderSubscribes = new HashMap<>();
+        //查询跟单状态是否开启，只有差策略账号的时候才做处理
+        if (ObjectUtil.isNotEmpty(query.getType()) && query.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
+            List<Long> masterIds = followTraderVOS.stream().filter(o -> o.getType() == TraderTypeEnum.MASTER_REAL.getType()).map(FollowTraderVO::getId).toList();
+            if (ObjectUtil.isNotEmpty(masterIds)) {
+                List<FollowTraderSubscribeEntity> ls = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, masterIds).eq(FollowTraderSubscribeEntity::getFollowStatus, CloseOrOpenEnum.OPEN.getValue()));
+                traderSubscribes = ls.stream().collect(Collectors.groupingBy(FollowTraderSubscribeEntity::getMasterId));
+            }
+        }
+        Map<Long, List<FollowTraderSubscribeEntity>> finalTraderSubscribes = traderSubscribes;
         followTraderVOS.parallelStream().forEach(o -> {
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
                 FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
@@ -93,6 +104,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal()) ? followRedisTraderVO.getTotal() : 0);
                 o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum()) ? followRedisTraderVO.getBuyNum() : 0);
                 o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum()) ? followRedisTraderVO.getSellNum() : 0);
+                Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
+                o.setFollowStatus(followStatus);
+                o.setProfit(followRedisTraderVO.getProfit());
             }
         });
         return new PageResult<>(followTraderVOS, page.getTotal());
@@ -504,7 +518,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderCloseEntity.setTotalNum(orderCount);
         }
         if (ObjectUtil.isEmpty(orderCount) || orderCount == 0 || list.size() == 0 || orderActive.size() == 0) {
-            throw new ServerException((ObjectUtil.isNotEmpty(vo.getAccount())?vo.getAccount():"") + "暂无可平仓订单");
+            throw new ServerException((ObjectUtil.isNotEmpty(vo.getAccount()) ? vo.getAccount() : "") + "暂无可平仓订单");
         }
         followOrderCloseService.save(followOrderCloseEntity);
         // 无间隔时间下单时并发执行
@@ -951,6 +965,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //todo 存入下单方式
 
     }
+
 
     // 示例 2: 每笔订单的下单数量为 区间内的随机值，总手数不超过 总手数，订单数量不固定
     public void executeOrdersRandomTotalLots(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, double totalLots, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo) {

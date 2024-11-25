@@ -49,6 +49,11 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "状态0-正常 1-异常")
 	private Integer status;
 
+	@Schema(description = "跟单状态0-未开启 1-已开启")
+	private Integer followStatus;
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
+
 	@Schema(description = "异常信息")
 	private String statusExtra;
 

@@ -1,5 +1,6 @@
 package net.maku.followcom.dao;
 
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import net.maku.followcom.entity.FollowTraderLogEntity;
 import net.maku.followcom.query.FollowTraderLogQuery;
@@ -40,7 +41,8 @@ public interface FollowTraderLogDao extends BaseDao<FollowTraderLogEntity> {
             " and  type =#{query.type} ",
             " </if>",
             "</where>",
+            "ORDER BY create_time desc",
             "</script>",
     })
-    Page<FollowTraderLogEntity> selectFollowTraderLogByPage(@Param("page") Page<FollowTraderLogEntity> page, @Param("query") FollowTraderLogQuery query);
+    Page<FollowTraderLogEntity> selectFollowTraderLogByPage(@Param("page") Page<FollowTraderLogEntity> page,@Param("query") FollowTraderLogQuery query);
 }
