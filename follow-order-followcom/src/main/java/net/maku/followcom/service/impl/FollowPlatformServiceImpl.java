@@ -81,6 +81,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 .set(FollowPlatformEntity::getRemark, vo.getRemark())
                 .set(FollowPlatformEntity::getUpdateTime,LocalDateTime.now())
                 .set(FollowPlatformEntity::getUpdater,SecurityUser.getUserId())
+                .set(FollowPlatformEntity::getPlatformType, vo.getPlatformType())
                 .eq(FollowPlatformEntity::getBrokerName, followPlatformEntity.getBrokerName())));
 
 
