@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.rmi.ServerException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -101,6 +102,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     @CacheEvict(
             value = "followVarietyCache", // 缓存名称
@@ -153,13 +155,14 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             unless = "#result == null || #result.isEmpty()" // 空结果不缓存
     )
     public List<FollowVarietyEntity> getListByTemplated(Integer templateId) {
-        return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId,templateId));
+        return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, templateId));
     }
 
 
     public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+        try {
+            InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
             for (CSVRecord record : csvParser) {
                 String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
@@ -239,11 +242,13 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         .set(FollowVarietyEntity::getTemplateName, templateName);
                 baseMapper.update(updateWrapper);
             }
+        } catch (Exception e) {
         }
     }
 
     public void importExcel(MultipartFile file, Integer template, String templateName) throws IOException {
-        try (InputStream inputStream = file.getInputStream()) {
+        try {
+            InputStream inputStream = file.getInputStream();
             Workbook workbook = new XSSFWorkbook(inputStream);
             Sheet sheet = workbook.getSheetAt(0);
             // 获取表头
@@ -345,9 +350,12 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         .set(FollowVarietyEntity::getTemplateName, templateName);
                 baseMapper.update(updateWrapper);
             }
+        } catch (Exception e) {
+            throw new ServerException("无法读取文件");
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void addByExcel(MultipartFile file, String templateName) throws Exception {
         String fileName = file.getOriginalFilename();
@@ -370,9 +378,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
-    public void addCsv(MultipartFile file, Integer template, String templateName) throws IOException {
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+
+    public void addCsv(MultipartFile file, Integer template, String templateName) throws Exception {
+        try {
+            InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
 
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
 
@@ -435,12 +445,15 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     baseMapper.insert(entity);
                 }
             }
+        } catch (Exception e) {
+            throw new ServerException("无法读取文件");
         }
     }
 
 
     public void addExcel(MultipartFile file, Integer template, String templateName) throws IOException {
-        try (InputStream inputStream = file.getInputStream()) {
+        try {
+            InputStream inputStream = file.getInputStream();
             Workbook workbook = new XSSFWorkbook(inputStream);
             Sheet sheet = workbook.getSheetAt(0);
             // 获取表头
@@ -524,6 +537,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     }
                 }
             }
+        } catch (Exception e) {
+            throw new ServerException("无法读取文件");
         }
     }
 
@@ -575,7 +590,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     public PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query) {
         LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
-                .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract);
+                .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
+                .eq(FollowVarietyEntity::getTemplateId, query.getTemplate());
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }

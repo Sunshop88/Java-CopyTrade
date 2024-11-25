@@ -163,7 +163,7 @@ public class FollowVarietyController {
             }
             // 导入文件
             followVarietyService.addByExcel(file,templateName);
-            return Result.ok("文件导入成功");
+            return Result.ok("导入成功");
         } catch (Exception e) {
             return Result.error("文件导入失败：" + e.getMessage());
         }
@@ -219,6 +219,13 @@ public class FollowVarietyController {
     public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
         List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
+
+        // 去重后的券商名称列表
+        List<String> uniqueBrokerNames = followPlatformEntityList.stream()
+                .map(FollowPlatformEntity::getBrokerName)
+                .distinct() // 去重
+                .collect(Collectors.toList());
+
         // 根据 template 过滤 FollowVarietyEntity
         List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list()
                 .stream()
@@ -233,23 +240,23 @@ public class FollowVarietyController {
                 ));
 
         List<String[]> listString = new ArrayList<>();
-        String[] header = new String[followPlatformEntityList.size() + 2]; // +2 for stdContract and stdSymbol
+        String[] header = new String[uniqueBrokerNames.size() + 2]; // +2 for stdContract and stdSymbol
         header[0] = "标准合约";
         header[1] = "品种名称";
-        for (int i = 0; i < followPlatformEntityList.size(); i++) {
-            header[i + 2] = followPlatformEntityList.get(i).getBrokerName(); // 券商名称
+        for (int i = 0; i < uniqueBrokerNames.size(); i++) {
+            header[i + 2] = uniqueBrokerNames.get(i); // 唯一的券商名称
         }
         listString.add(header);
 
         // 填充数据
         for (FollowVarietyVO o : list.getList()) {
-            String[] strings = new String[followPlatformEntityList.size() + 2];
+            String[] strings = new String[uniqueBrokerNames.size() + 2];
             strings[0] = o.getStdContract() != null ? o.getStdContract().toString() : ""; // 品种合约
             strings[1] = o.getStdSymbol(); // 标准品种
 
-            for (int i = 0; i < followPlatformEntityList.size(); i++) {
-                FollowPlatformEntity plat = followPlatformEntityList.get(i);
-                String key = o.getStdSymbol() + "_" + plat.getBrokerName();
+            for (int i = 0; i < uniqueBrokerNames.size(); i++) {
+                String brokerName = uniqueBrokerNames.get(i);
+                String key = o.getStdSymbol() + "_" + brokerName;
                 List<String> collect = varietyMap.getOrDefault(key, Collections.emptyList());
 
                 // 检查是否有数据，如果有数据但含有 "null"，则替换为空字符串
