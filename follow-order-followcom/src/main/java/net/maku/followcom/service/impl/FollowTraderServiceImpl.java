@@ -110,6 +110,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getTraderList())) {
             wrapper.in(FollowTraderEntity::getId, query.getTraderList());
         }
+        if (ObjectUtil.isNotEmpty(query.getType())) {
+            wrapper.eq(FollowTraderEntity::getType, query.getType());
+        }
         //根据更新时间进行降序
         wrapper.orderByDesc(FollowTraderEntity::getCreateTime);
         return wrapper;

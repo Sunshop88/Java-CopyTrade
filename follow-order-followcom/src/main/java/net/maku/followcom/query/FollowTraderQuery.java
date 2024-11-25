@@ -1,5 +1,6 @@
 package net.maku.followcom.query;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,6 +26,11 @@ public class FollowTraderQuery extends Query {
     private String account;
 
     private Long traderId;
+
+    /**
+     * 类型0-信号源 1-跟单者
+     */
+    private Integer type;
 
     private List<Long> traderList;
 
