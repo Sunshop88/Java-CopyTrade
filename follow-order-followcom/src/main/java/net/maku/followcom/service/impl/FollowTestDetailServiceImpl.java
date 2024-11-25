@@ -59,7 +59,10 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         }
 
         List<String[]> dataRows = new ArrayList<>();
-        for (Map.Entry<String, Map<String, Double>> entry : speedMap.entrySet()) {
+        List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
+        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
+
+        for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
             String key = entry.getKey();
             String[] keyParts = key.split("_");
             String serverName = keyParts[0];

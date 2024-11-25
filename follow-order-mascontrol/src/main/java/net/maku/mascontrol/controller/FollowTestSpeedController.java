@@ -122,7 +122,7 @@ public class FollowTestSpeedController {
     @PostMapping("measure")
     @Operation(summary = "测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<FollowTestSpeedVO> measure(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+    public Result<FollowTestSpeedVO> measure(@RequestBody @Valid MeasureRequestVO request, HttpServletRequest req) throws Exception {
         if (ObjectUtil.isEmpty(request.getServers()) || ObjectUtil.isEmpty(request.getVps())) {
             return Result.error("服务器列表或vps列表为空");
         }
