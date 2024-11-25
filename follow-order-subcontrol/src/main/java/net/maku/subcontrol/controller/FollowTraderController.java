@@ -11,10 +11,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
-import net.maku.followcom.query.FollowOrderCloseQuery;
-import net.maku.followcom.query.FollowOrderSendQuery;
-import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
@@ -407,6 +404,12 @@ public class FollowTraderController {
     public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
         reconnect(traderId);
         return Result.ok();
+    }
+    @GetMapping("/specificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<PageResult<FollowSysmbolSpecificationVO>> page(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
+        PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.page(query);
+        return Result.ok(page);
     }
 
     private void reconnect(String traderId) {

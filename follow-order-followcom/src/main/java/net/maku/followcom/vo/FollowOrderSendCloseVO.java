@@ -34,8 +34,8 @@ public class FollowOrderSendCloseVO implements Serializable {
     private String account;
 
     @Schema(description = "类型0-buy 1-sell")
-    @Min(value =0, message = "订单方向只能0、1或2")
-    @Max(value =2, message = "订单方向只能0、1或2")
+    @Min(value =0, message = "订单方向参数不合法")
+    @Max(value =2, message = "订单方向参数不合法")
     @NotNull(message = "订单方向不能为空")
     private Integer type;
 

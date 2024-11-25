@@ -30,8 +30,8 @@ public class FollowTraderVO implements Serializable {
 	private String account;
 
 	@Schema(description = "类型0-信号源 1-跟单者")
-	@Min(value = 0, message = "类型只能为0或1")
-	@Max(value = 1, message = "类型只能为0或1")
+	@Min(value = 0, message = "账号类型参数不合法")
+	@Max(value = 1, message = "账号类型参数不合法")
 	@NotNull(message = "账号类型不能为空")
 	private Integer type;
 

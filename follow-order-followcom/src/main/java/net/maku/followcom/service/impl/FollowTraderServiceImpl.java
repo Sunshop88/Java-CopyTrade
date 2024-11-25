@@ -107,6 +107,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
                 o.setFollowStatus(followStatus);
                 o.setProfit(followRedisTraderVO.getProfit());
+
             }
         });
         return new PageResult<>(followTraderVOS, page.getTotal());
