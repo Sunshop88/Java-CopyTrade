@@ -303,9 +303,22 @@ public class FollowVarietyController {
 
     @GetMapping("listSymbol")
     @Operation(summary = "查询所有品种")
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<List<FollowVarietyVO>> listSymbol(){
         List<FollowVarietyVO> list = followVarietyService.listSymbol();
         return Result.ok(list);
+    }
+
+    @DeleteMapping("deleteTemplate")
+    @Operation(summary = "删除模板")
+    @OperateLog(type = OperateTypeEnum.DELETE)
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
+        boolean b = followVarietyService.deleteTemplate(idList);
+        if(b){
+            return Result.ok("删除成功");
+        }
+        return Result.error("删除失败");
     }
 
 }

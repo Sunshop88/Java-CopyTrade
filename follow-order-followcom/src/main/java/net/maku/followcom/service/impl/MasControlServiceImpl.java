@@ -80,7 +80,7 @@ public class MasControlServiceImpl implements MasControlService {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+//    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo) {
         Long userId = SecurityUser.getUserId();
@@ -95,12 +95,6 @@ public class MasControlServiceImpl implements MasControlService {
         List<String> serversToRemove = existingServers.stream()
                 .filter(server -> !vo.getPlatformList().contains(server))
                 .collect(Collectors.toList());
-        // 删除已移除的服务器
-        if (!serversToRemove.isEmpty()) {
-            followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
-                    .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
-                    .in(FollowPlatformEntity::getServer, serversToRemove));
-        }
 
         CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
         //保存服务数据
@@ -169,6 +163,12 @@ public class MasControlServiceImpl implements MasControlService {
                 e.printStackTrace();
             }
         followPlatformService.update(vo);
+        // 删除已移除的服务器
+        if (!serversToRemove.isEmpty()) {
+            followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
+                    .in(FollowPlatformEntity::getServer, serversToRemove));
+        }
         return true;
     }
 

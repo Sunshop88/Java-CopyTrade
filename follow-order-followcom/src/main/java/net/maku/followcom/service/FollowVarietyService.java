@@ -53,4 +53,6 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     void updateTemplateName(Integer template, String templateName);
 
     List<FollowVarietyVO> listSymbol();
+
+    boolean deleteTemplate(List<Integer> idList);
 }
