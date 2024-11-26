@@ -55,6 +55,6 @@ public class FollowOrderSendCloseVO implements Serializable {
 
     @Schema(description = "手数")
     private double size;
-    @Schema(description = "是否全屏1全屏0或者空不是")
+    @Schema(description = "mt4全平1全平0或者空不是")
     private Integer isCloseAll;
 }

@@ -122,4 +122,7 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "模板ID")
 	private Integer templateId;
 
+	@Schema(description = "下单类型")
+	private Integer placedType;
+
 }

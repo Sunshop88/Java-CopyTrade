@@ -451,10 +451,10 @@ public class FollowTraderController {
         if (vo.getNum()==null && vo.getFlag().equals( TraderRepairEnum.SEND.getType())) {
             throw new ServerException("总单数最少一单");
         }
-        if(ObjectUtil.isEmpty(vo.getSymbol())){
+        if(ObjectUtil.isEmpty(vo.getSymbol()) && vo.getFlag().equals( TraderRepairEnum.SEND.getType())){
             throw  new ServerException("品种不能为空");
         }
-        if(ObjectUtil.isEmpty(vo.getType())){
+        if(ObjectUtil.isEmpty(vo.getType()) && vo.getFlag().equals( TraderRepairEnum.SEND.getType())){
             throw  new ServerException("订单方向不能为空");
         }
         if(ObjectUtil.isEmpty(vo.getFlag())){

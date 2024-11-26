@@ -118,7 +118,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         LambdaQueryWrapper<FollowTraderEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowTraderEntity::getDeleted, query.getDeleted());
         //根据vps地址查询
-        wrapper.eq(FollowTraderEntity::getIpAddr, query.getServerIp());
+        wrapper.eq(ObjectUtil.isNotEmpty(query.getServerIp()),FollowTraderEntity::getIpAddr, query.getServerIp());
         if (ObjectUtil.isNotEmpty(query.getAccount())) {
             wrapper.eq(FollowTraderEntity::getAccount, query.getAccount());
         }

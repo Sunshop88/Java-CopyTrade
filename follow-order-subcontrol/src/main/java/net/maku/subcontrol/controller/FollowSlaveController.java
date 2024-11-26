@@ -48,6 +48,7 @@ import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 跟单
@@ -188,9 +189,12 @@ public class FollowSlaveController {
         if (ObjectUtil.isEmpty(query.getTraderId())) {
             throw new ServerException("请求异常");
         }
-        List<Long> collect = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, query.getTraderId())).stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+        List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, query.getTraderId()));
+        List<Long> collect = list.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+        Map<Long, List<FollowTraderSubscribeEntity>> map = list.stream().collect(Collectors.groupingBy(FollowTraderSubscribeEntity::getSlaveId));
         query.setTraderList(collect);
         PageResult<FollowTraderVO> page = followTraderService.page(query);
+        page.getList().stream().forEach(o->{o.setPlacedType(map.get(o.getId()).get(0).getPlacedType());});
         return Result.ok(page);
     }
 

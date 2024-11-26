@@ -183,6 +183,12 @@ public class FollowVpsController {
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId, @Parameter(description = "newId") Integer newId, HttpServletRequest req) {
+        if (ObjectUtil.isEmpty(oldId)){
+            throw new ServerException("请选择原vps");
+        }
+        if (ObjectUtil.isEmpty(newId)){
+            throw new ServerException("请选择目标vps");
+        }
         //清理旧账号缓存
         followVpsService.transferVps(oldId, req);
 
