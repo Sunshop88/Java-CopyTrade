@@ -149,6 +149,16 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
+    public boolean deleteTemplate(List<Integer> idList) {
+        if (idList.isEmpty()){
+            return false;
+        }
+        //根据templateId删除数据
+        baseMapper.delete(new LambdaQueryWrapper<FollowVarietyEntity>().in(FollowVarietyEntity::getTemplateId, idList));
+        return true;
+    }
+
+    @Override
     @Cacheable(
             value = "followVarietyCache", // 缓存名称
             key = "#templateId",          // 缓存键
