@@ -23,7 +23,7 @@ public class FollowOrderSendCloseVO implements Serializable {
     private Long id;
 
     @Schema(description = "品种类型")
-    @NotBlank(message = "品种不能为空")
+    //@NotBlank(message = "品种不能为空")
     private String symbol;
 
     @Schema(description = "账号id")
@@ -36,7 +36,7 @@ public class FollowOrderSendCloseVO implements Serializable {
     @Schema(description = "类型0-buy 1-sell")
     @Min(value =0, message = "订单方向参数不合法")
     @Max(value =2, message = "订单方向参数不合法")
-    @NotNull(message = "订单方向不能为空")
+   // @NotNull(message = "订单方向不能为空")
     private Integer type;
 
     @Schema(description = "总单数")
@@ -47,7 +47,7 @@ public class FollowOrderSendCloseVO implements Serializable {
     private Integer intervalTime;
 
     @Schema(description = "是否全平")
-    @NotNull(message = "是否全平不能为空")
+    //@NotNull(message = "是否全平不能为空")
     private Integer flag;
 
     @Schema(description = "订单号")

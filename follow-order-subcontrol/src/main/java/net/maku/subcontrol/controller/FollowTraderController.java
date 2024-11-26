@@ -293,8 +293,8 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo) {
-        if ((vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()) && vo.getNum()==null) {
-            throw new ServerException("总单数最少一单");
+        if(vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()){
+             checkParams(vo);
         }
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
@@ -445,6 +445,21 @@ public class FollowTraderController {
     public Result<PageResult<FollowOrderCloseVO>> orderSendList(@ParameterObject @Valid FollowOrderCloseQuery query) {
         PageResult<FollowOrderCloseVO> page = followOrderCloseService.page(query);
         return Result.ok(page);
+    }
+
+    private void  checkParams(FollowOrderSendCloseVO vo){
+        if (vo.getNum()==null && vo.getFlag().equals( TraderRepairEnum.SEND.getType())) {
+            throw new ServerException("总单数最少一单");
+        }
+        if(ObjectUtil.isEmpty(vo.getSymbol())){
+            throw  new ServerException("品种不能为空");
+        }
+        if(ObjectUtil.isEmpty(vo.getType())){
+            throw  new ServerException("订单方向不能为空");
+        }
+        if(ObjectUtil.isEmpty(vo.getFlag())){
+            throw  new ServerException("是否全平不能为空");
+        }
     }
 
     private String getSymbol(Long traderId, String symbol) {
