@@ -214,7 +214,8 @@ public class FollowVpsController {
         if (ObjectUtil.isEmpty(list)) {
             return Result.ok(null);
         }
-        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()));
+        //.eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()))
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
         followVpsVOS.forEach(o -> {
             o.setTraderNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));

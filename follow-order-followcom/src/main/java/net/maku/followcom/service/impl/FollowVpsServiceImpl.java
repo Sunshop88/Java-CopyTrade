@@ -343,7 +343,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                     //总持仓手数
                     ls3.set(3, ls3.get(4).add(ls3.get(5)));
                     //总净值
-                    ls3.set(6, ls2.get(6).add(followRedisTraderVO.getEuqit()));
+                    ls3.set(6, ls3.get(6).add(followRedisTraderVO.getEuqit()));
                     //总倍数
                     ls3.set(7, ls3.get(7).add(new BigDecimal(followTraderEntity.getLeverage().toString())));
                     //总盈亏
