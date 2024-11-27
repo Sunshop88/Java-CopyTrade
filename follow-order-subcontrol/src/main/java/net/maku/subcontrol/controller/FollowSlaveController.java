@@ -194,7 +194,9 @@ public class FollowSlaveController {
         Map<Long, List<FollowTraderSubscribeEntity>> map = list.stream().collect(Collectors.groupingBy(FollowTraderSubscribeEntity::getSlaveId));
         query.setTraderList(collect);
         PageResult<FollowTraderVO> page = followTraderService.page(query);
-        page.getList().stream().forEach(o->{o.setPlacedType(map.get(o.getId()).get(0).getPlacedType());});
+        page.getList().stream().forEach(o->{
+            List<FollowTraderSubscribeEntity> subscribes = map.get(o.getId());
+            if(ObjectUtil.isNotEmpty(subscribes)){ o.setPlacedType(subscribes.get(0).getPlacedType()); } ;});
         return Result.ok(page);
     }
 
