@@ -329,8 +329,8 @@ public class FollowTestSpeedController {
     @GetMapping("listServer")
     @Operation(summary = "查询服务器清单")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<List<FollowBrokeServerVO>> listServer() {
-        List<FollowBrokeServerVO> list = followBrokeServerService.listByServer();
+    public Result<List<FollowPlatformVO>> listServer() {
+        List<FollowPlatformVO> list = followPlatformService.listByServer();
 
         return Result.ok(list);
     }

@@ -316,7 +316,7 @@ public class FollowVarietyController {
     public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
         boolean b = followVarietyService.deleteTemplate(idList);
         if(b){
-            return Result.ok("删除成功");
+            return Result.ok();
         }
         return Result.error("删除失败");
     }
