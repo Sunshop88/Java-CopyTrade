@@ -18,6 +18,11 @@
 			<groupId>org.quartz-scheduler</groupId>
 			<artifactId>quartz</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>net.maku</groupId>
+			<artifactId>follow-order-system</artifactId>
+			<version>4.5.0</version>
+		</dependency>
 	</dependencies>
 
 </project>
