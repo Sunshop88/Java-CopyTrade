@@ -1,5 +1,7 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowBrokeServerVO;
@@ -33,10 +35,8 @@ public interface FollowBrokeServerService extends BaseService<FollowBrokeServerE
     void saveList(List<FollowBrokeServerVO> list);
 
     List<FollowBrokeServerEntity> listByServerName(String name);
+
     List<FollowBrokeServerEntity> listByServerName(List<String> name);
 
-
     List<FollowBrokeServerEntity> listByServerNameGroup(String name);
-
-    List<FollowBrokeServerVO> listByServer();
 }

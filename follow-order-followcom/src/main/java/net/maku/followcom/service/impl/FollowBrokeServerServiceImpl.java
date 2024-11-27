@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowPlatformConvert;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowBrokeServerConvert;
@@ -115,14 +118,4 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
         }
     }
 
-    @Override
-    public List<FollowBrokeServerVO> listByServer() {
-        // 查询所有服务器名称
-        LambdaQueryWrapper<FollowBrokeServerEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.select(FollowBrokeServerEntity::getServerName)
-                .groupBy(FollowBrokeServerEntity::getServerName);
-        List<FollowBrokeServerEntity> list = baseMapper.selectList(wrapper);
-        return FollowBrokeServerConvert.INSTANCE.convertList(list);
-
-    }
 }

@@ -28,6 +28,7 @@ import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.trader.strategy.OrderCloseCopier;
+//import net.maku.subcontrol.trader.strategy.OrderSendCopier;
 import net.maku.subcontrol.trader.strategy.OrderSendCopier;
 import net.maku.subcontrol.vo.RepairSendVO;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -53,6 +54,8 @@ public class FollowSubscribeOrderServiceImpl extends BaseServiceImpl<FollowSubsc
     private final RedisUtil redisUtil;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final RedissonLockUtil redissonLockUtil;
+    private final OrderSendCopier orderSendCopier;
+    private final OrderCloseCopier orderCloseCopier;
     @Override
     public PageResult<FollowSubscribeOrderVO> page(FollowSubscribeOrderQuery query) {
         IPage<FollowSubscribeOrderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -129,9 +132,7 @@ public class FollowSubscribeOrderServiceImpl extends BaseServiceImpl<FollowSubsc
                         return eaOrderInfo.getTicket().equals(repairSendVO.getOrderNo());
                     }).toList().stream().findFirst();
                     if (first.isPresent()){
-                        ConsumerRecord consumerRecord= new ConsumerRecord<>("send",1,1,"send",first.get());
-                        OrderSendCopier orderSendCopier = new OrderSendCopier(copierApiTrader);
-                        orderSendCopier.operate(consumerRecord,1);
+                        orderSendCopier.operate(copierApiTrader,(EaOrderInfo) first.get(),1);
                         redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + traderSubscribeEntity.getId(),1,first.get());
                     }else {
                         throw new ServerException("暂无订单需处理");
@@ -141,9 +142,7 @@ public class FollowSubscribeOrderServiceImpl extends BaseServiceImpl<FollowSubsc
                     List<Object> objects = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + traderSubscribeEntity.getId(),0,-1);
                     Optional<Object> first = objects.stream().filter(o -> ((EaOrderInfo)o).getTicket().equals(repairSendVO.getOrderNo())).toList().stream().findFirst();
                     if (first.isPresent()){
-                        ConsumerRecord consumerRecord= new ConsumerRecord<>("close",1,1,"close",first.get());
-                        OrderCloseCopier orderCloseCopier = new OrderCloseCopier(copierApiTrader);
-                        orderCloseCopier.operate(consumerRecord,1);
+                        orderCloseCopier.operate(copierApiTrader,(EaOrderInfo) first.get(),1);
                         redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + traderSubscribeEntity.getId(),1,first.get());
                     }else {
                         throw new ServerException("暂无订单需处理");

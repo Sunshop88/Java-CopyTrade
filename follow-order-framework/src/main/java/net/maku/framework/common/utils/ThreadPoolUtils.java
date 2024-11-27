@@ -2,23 +2,31 @@ package net.maku.framework.common.utils;
 
 import cn.hutool.core.thread.ThreadFactoryBuilder;
 import cn.hutool.core.thread.ThreadUtil;
+import lombok.Getter;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ThreadPoolUtils {
 
     // 定义一个固定大小的线程池
-    private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(30,"POOLFIXED",true);
+    private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(200,"POOLFIXED",true);
 
     // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(500);
+    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);
+    private static final ScheduledThreadPoolExecutor scheduledExecutorServiceStart= ThreadUtil.createScheduledExecutor(200);
 
+    // 用户下单及平仓线程处理
+    @Getter
+    private static final ThreadPoolExecutor scheduledExecutorSend=new ThreadPoolExecutor(
+            100, // 核心线程数
+            500, // 最大线程数
+            60L, TimeUnit.SECONDS, // 空闲线程存活时间
+            new LinkedBlockingQueue<>(10000), // 队列大小
+            new ThreadPoolExecutor.CallerRunsPolicy() // 队列满时执行的策略
+    );
     public static ExecutorService getExecutor() {
         return executorService;
     }
-
     /**
      * 提交任务到线程池执行
      *
@@ -42,6 +50,13 @@ public class ThreadPoolUtils {
      */
     public static ScheduledThreadPoolExecutor getScheduledExecute() {
         return scheduledExecutorService;
+    }
+
+    /**
+     * 提交延时任务到线程池执行
+     */
+    public static ScheduledThreadPoolExecutor getScheduledExecuteStart() {
+        return scheduledExecutorServiceStart;
     }
 
     /**

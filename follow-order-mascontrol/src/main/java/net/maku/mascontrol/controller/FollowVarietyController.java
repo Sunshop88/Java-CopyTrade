@@ -294,13 +294,6 @@ public class FollowVarietyController {
         return Result.ok(list);
     }
 
-    @GetMapping("ces")
-    @Operation(summary = "ces")
-    public Result<Boolean> ces() {
-        followVarietyService.getListByTemplated(1);
-        return Result.ok(true);
-    }
-
     @GetMapping("listSymbol")
     @Operation(summary = "查询所有品种")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -316,7 +309,7 @@ public class FollowVarietyController {
     public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
         boolean b = followVarietyService.deleteTemplate(idList);
         if(b){
-            return Result.ok("删除成功");
+            return Result.ok();
         }
         return Result.error("删除失败");
     }

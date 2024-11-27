@@ -6,10 +6,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {"net.maku.framework","net.maku.followcom", "net.maku.subcontrol"})
 @MapperScan(basePackages = {"net.maku.followcom.dao","net.maku.subcontrol.dao"})
+@EnableAsync
 public class FollowOrderSubcontrolApplication extends SpringBootServletInitializer {
     public static void main(String[] args) {
         SpringApplication.run(FollowOrderSubcontrolApplication.class, args);

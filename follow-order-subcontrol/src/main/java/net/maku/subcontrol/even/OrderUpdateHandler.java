@@ -1,7 +1,5 @@
 package net.maku.subcontrol.even;
 
-import com.cld.message.pubsub.kafka.CldProducerRecord;
-import com.cld.message.pubsub.kafka.IKafkaProducer;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -11,7 +9,6 @@ import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -35,17 +32,14 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
     protected ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
-    protected IKafkaProducer<String, Object> kafkaProducer;
 
     protected FollowSubscribeOrderService followSubscribeOrderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
 
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
-
-    public OrderUpdateHandler(IKafkaProducer<String, Object> kafkaProducer) {
-        this.kafkaProducer = kafkaProducer;
-        this.scheduledThreadPoolExecutor = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
+    public OrderUpdateHandler() {
+        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
@@ -60,15 +54,13 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
      * @param currency     喊单者的存款货币
      * @param detectedDate 侦测到交易动作的时间
      */
-    protected void send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate) {
+    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate) {
 
-        // KAFKA传输的信息需要序列化，所以需要将OrderInfo构建为EaOrderInfo,
         // 并且要给EaOrderInfo添加额外的信息：喊单者id+喊单者账号+喊单者服务器
         // #84 喊单者发送订单前需要处理前后缀
         EaOrderInfo orderInfo = new EaOrderInfo(order, leader.getId() ,leader.getAccount(), leader.getServerName(), equity, currency, Boolean.FALSE);
         assembleOrderInfo(type, orderInfo, detectedDate);
-        CldProducerRecord<String, Object> cldProducerRecord = new CldProducerRecord<>(KafkaTopicPrefixSuffix.TENANT, topic, type.getValue(), orderInfo);
-        kafkaProducer.send(cldProducerRecord);
+        return orderInfo;
     }
 
 

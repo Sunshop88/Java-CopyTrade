@@ -176,6 +176,16 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return FollowPlatformConvert.INSTANCE.convertList(serverList);
     }
 
+    @Override
+    public List<FollowPlatformVO> listByServer() {
+        // 查询所有服务器名称
+        LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowPlatformEntity::getServer)
+                .groupBy(FollowPlatformEntity::getServer);
+        List<FollowPlatformEntity> list = baseMapper.selectList(wrapper);
+        return FollowPlatformConvert.INSTANCE.convertList(list);
+    }
+
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {
 //        if (idList.isEmpty()) {

@@ -136,7 +136,7 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
 
             if (!ObjectUtils.isEmpty(masterSlave)) {
                 //数据库中存在
-                this.redisUtil.hSet(Constant.FOLLOW_SUB_TRADER+slaveId.toString(), masterId.toString(), masterSlave);
+                this.redisUtil.hSet(Constant.FOLLOW_SUB_TRADER+slaveId, masterId.toString(), masterSlave);
                 return masterSlave;
             } else {
                 //数据库中不存在
@@ -152,18 +152,18 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
     }
 
     @Override
-    public Map<String, Object> getStatus(String masterAccount, String slaveAccount) {
-        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterAccount+":"+slaveAccount))){
-            return (Map<String, Object>)redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterAccount+":"+slaveAccount);
+    public Map<String, Object> getStatus(String masterId, String slaveId) {
+        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterId+":"+slaveId))){
+            return (Map<String, Object>)redisUtil.get(Constant.FOLLOW_MASTER_SLAVE+masterId+":"+slaveId);
         }else {
-            FollowTraderSubscribeEntity traderSubscribeEntity = this.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, masterAccount).eq(FollowTraderSubscribeEntity::getSlaveAccount, slaveAccount));
+            FollowTraderSubscribeEntity traderSubscribeEntity = this.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, masterId).eq(FollowTraderSubscribeEntity::getSlaveAccount, slaveId));
             Map<String,Object> map=new HashMap<>();
             map.put("followStatus",traderSubscribeEntity.getFollowStatus());
             map.put("followOpen",traderSubscribeEntity.getFollowOpen());
             map.put("followClose",traderSubscribeEntity.getFollowClose());
             map.put("followRep",traderSubscribeEntity.getFollowRep());
             //设置跟单关系缓存值 保存状态
-            redisUtil.set(Constant.FOLLOW_MASTER_SLAVE+traderSubscribeEntity.getMasterAccount()+":"+traderSubscribeEntity.getSlaveAccount(), JSONObject.toJSON(map));
+            redisUtil.set(Constant.FOLLOW_MASTER_SLAVE+traderSubscribeEntity.getMasterId()+":"+traderSubscribeEntity.getSlaveId(), JSONObject.toJSON(map));
             return map;
         }
     }

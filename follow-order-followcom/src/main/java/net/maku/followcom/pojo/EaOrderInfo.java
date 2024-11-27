@@ -2,6 +2,8 @@ package net.maku.followcom.pojo;
 
 
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.annotation.JSONField;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -127,6 +129,8 @@ public class EaOrderInfo implements Serializable {
      */
     private String slaveComment;
 
+    private String slaveId;
+
 
     public EaOrderInfo(Order order) {
         if (order != null) {
@@ -163,16 +167,20 @@ public class EaOrderInfo implements Serializable {
         this.arrears = arrears;
     }
 
+    // 自定义构造函数用于字段校验
+    public static EaOrderInfo fromJSON(String json) {
+        // 处理嵌套 JSON 字符串
+        if (json.startsWith("\"") && json.endsWith("\"")) {
+            json = json.substring(1, json.length() - 1).replace("\\\"", "\"");
+        }
 
-    /**
-     * 跟单者补全前后缀
-     *
-     * @param modSymbolMap     修正映射
-     * @param prefixSuffixList 前后对配对组
-     */
-    public void addSymbolPrefixSuffix(Map<String, String> modSymbolMap, List<String> prefixSuffixList) {
+        EaOrderInfo info = JSON.parseObject(json, EaOrderInfo.class);
 
-
+        // 初始化 BigDecimal 字段
+        if (info.getProfit() == null) info.setProfit(BigDecimal.ZERO);
+        if (info.getCommission() == null) info.setCommission(BigDecimal.ZERO);
+        if (info.getSwap() == null) info.setSwap(BigDecimal.ZERO);
+        info.setOrderType(Op.forValue(info.getType()));
+        return info;
     }
-
 }

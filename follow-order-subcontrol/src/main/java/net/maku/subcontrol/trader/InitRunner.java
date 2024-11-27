@@ -47,6 +47,8 @@ public class InitRunner implements ApplicationRunner {
 
     @Autowired
     private FollowService followService;
+    @Autowired
+    private FollowTraderSubscribeService followTraderSubscribeService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {

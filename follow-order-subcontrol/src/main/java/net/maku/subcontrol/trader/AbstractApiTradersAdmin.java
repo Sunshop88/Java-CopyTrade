@@ -1,7 +1,5 @@
 package net.maku.subcontrol.trader;
 
-import com.cld.message.pubsub.kafka.IKafkaProducer;
-import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.Data;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.ConCodeEnum;
@@ -11,7 +9,8 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
-import org.apache.kafka.clients.admin.AdminClient;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import java.util.List;
@@ -28,25 +27,19 @@ public abstract class AbstractApiTradersAdmin {
     protected FollowBrokeServerService followBrokeServerService;
     protected FollowTraderService followTraderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
-    protected IKafkaProducer<String, Object> kafkaProducer;
-    protected AdminClient adminClient;
-    protected ScheduledExecutorService scheduledExecutorService;
+    protected ThreadPoolExecutor scheduledExecutorService;
     protected FollowPlatformService followPlatformService;
-    protected Ks ks;
+    protected RedisUtil redisUtil;
+
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
-        scheduledExecutorService=Executors.newScheduledThreadPool(100);
+        scheduledExecutorService= ThreadPoolUtils.getScheduledExecute();
         this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
         this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
-
     }
 
     protected int traderCount = 0;
-    protected ExecutorService kafkaConsumerCachedThreadPool = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<Runnable>(),
-            new CustomizableThreadFactory("MT-Kafka消费线程-"));
 
     /**
      * 启动
