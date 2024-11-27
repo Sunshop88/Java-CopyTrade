@@ -73,7 +73,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     OnQuoteTraderHandler onQuoteTraderHandler;
     OnQuoteHandler onQuoteHandler;
     OrderUpdateHandler orderUpdateHandler;
-    protected RedisCache redisCache;
+    protected final RedisCache redisCache =SpringContextUtils.getBean(RedisCache.class);;
     static {
         availableException4.add("Market is closed");
         availableException4.add("Invalid volume");
@@ -81,22 +81,14 @@ public abstract class AbstractApiTrader extends ApiTrader {
         availableException4.add("Trade is disabled");
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader,  String host, int port) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port);
         this.trader = trader;
-        this.kafkaProducer = kafkaProducer;
-        initService();
-        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
-        this.redisCache=SpringContextUtils.getBean(RedisCache.class);
     }
 
-    public AbstractApiTrader(FollowTraderEntity trader, IKafkaProducer<String, Object> kafkaProducer, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
+    public AbstractApiTrader(FollowTraderEntity trader, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
         quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
         this.trader = trader;
-        this.kafkaProducer = kafkaProducer;
-        initService();
-        this.cldKafkaConsumer = new CldKafkaConsumer<>(CldKafkaConsumer.defaultProperties((Ks) SpringContextUtils.getBean(HumpLine.pascalToHump(Ks.class.getSimpleName())), this.trader.getId().toString()));
-        this.redisCache=SpringContextUtils.getBean(RedisCache.class);
     }
 
     /**
@@ -105,18 +97,18 @@ public abstract class AbstractApiTrader extends ApiTrader {
     protected void connect2Broker() throws Exception {
         this.initPrefixSuffix = Boolean.FALSE;
         this.quoteClient.Connect();
-        if (quoteClient.OrderClient == null) {
+        if (this.quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
         }
         if (this.onQuoteTraderHandler==null){
             boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
             if (isLeader){
                 //订单变化监听
-                this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this, kafkaProducer);
+                this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }else {
                 //订单变化监听
-                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this, kafkaProducer);
+                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
             //账号监听

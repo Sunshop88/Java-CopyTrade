@@ -14,6 +14,7 @@ import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -33,8 +34,6 @@ public class ApiTrader {
     public static String EURUSD = "eurusd";
     protected String eurusd = "EURUSD";
     protected Pattern pattern = Pattern.compile(eurusd, Pattern.CASE_INSENSITIVE);
-    @Getter
-    protected IKafkaProducer<String, Object> kafkaProducer;
     protected CldKafkaConsumer<String, Object> cldKafkaConsumer;
     @Getter
     protected String prefixSuffix;
@@ -43,19 +42,11 @@ public class ApiTrader {
     @Getter
     protected Map<String, String> correctSymbolMap = new HashMap<>();
     @Getter
-    protected FollowTraderService traderService;
-    protected FollowBrokeServerService followBrokeServerService;
+    protected final FollowTraderService traderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);;
+    protected final FollowBrokeServerService followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);;
 
-    protected ScheduledExecutorService scheduledExecutorService;
-    protected FollowTraderSubscribeService followTraderSubscribeService;
-    protected FollowPlatformService followPlatformService;
-
-    void initService() {
-        this.traderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
-        this.followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);
-        this.scheduledExecutorService = SpringContextUtils.getBean("scheduledExecutorService", ScheduledThreadPoolExecutor.class);
-        this.followTraderSubscribeService= SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-        this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
-    }
+    protected final ScheduledExecutorService scheduledExecutorService=ThreadPoolUtils.getScheduledExecute();;
+    protected final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);;
+    protected final FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);;
 
 }

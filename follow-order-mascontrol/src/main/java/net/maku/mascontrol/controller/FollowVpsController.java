@@ -59,7 +59,6 @@ public class FollowVpsController {
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
-
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")

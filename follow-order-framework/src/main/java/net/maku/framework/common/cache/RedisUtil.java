@@ -3,6 +3,7 @@ package net.maku.framework.common.cache;
 import net.maku.framework.common.exception.ServerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -820,6 +821,51 @@ public class RedisUtil {
      */
     private Long zCount(String key, double min, double max) {
         return this.redisTemplate.opsForZSet().count(key, min, max);
+    }
+
+    /**
+     * 根据匹配的 key 集合批量获取对应的值
+     *
+     * @param pattern 模糊匹配的模式
+     * @return 匹配的 key-value 映射
+     */
+    public Map<String, Object> getValuesByPattern(String pattern) {
+        Set<String> keys = getKeysByPattern(pattern);
+        Map<String, Object> resultMap = new HashMap<>();
+
+        if (!keys.isEmpty()) {
+            for (String key : keys) {
+                resultMap.put(key, get(key)); // 调用已有的 get 方法
+            }
+        }
+
+        return resultMap;
+    }
+
+    /**
+     * 使用 RedisConnection 执行 SCAN 命令实现模糊查询
+     *
+     * @param pattern 模糊匹配的模式 (如 "prefix*")
+     * @return 匹配的 key 集合
+     */
+    public Set<String> getKeysByPattern(String pattern) {
+        try {
+            // 获取 Redis 连接
+            RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
+
+            Set<String> keys = new HashSet<>();
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                }
+            }
+
+            return keys;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptySet();
+        }
     }
 
     /**

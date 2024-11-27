@@ -1,6 +1,10 @@
 package net.maku.framework.common.config;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.parser.ParserConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
@@ -12,6 +16,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,5 +46,25 @@ public class JacksonConfig {
             builder.failOnUnknownProperties(false);
             builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         };
+    }
+
+    public static ObjectMapper getObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // 注册 Java 8 时间模块
+        mapper.registerModule(new JavaTimeModule());
+
+        // 禁用数组格式的时间序列化
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // 设置全局日期格式（如果需要）
+        mapper.setDateFormat(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+
+        return mapper;
+    }
+
+
+    public static <T> T parse(String json, Class<T> clazz) {
+        return JSON.parseObject(json, clazz);
     }
 }

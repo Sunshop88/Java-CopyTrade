@@ -31,6 +31,7 @@ spring:
   application:
     name: follow-order-subcontrol
   jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
   servlet:
     multipart:
@@ -38,6 +39,14 @@ spring:
       max-request-size: 1024MB
   main:
     allow-bean-definition-overriding: true
+  task:
+    execution:
+      pool:
+        core-size: 10           # 核心线程数
+        max-size: 50            # 最大线程数
+        queue-capacity: 100     # 队列容量
+        keep-alive: 60s         # 线程空闲时间
+      thread-name-prefix: "async-exec-"  # 线程名
 
 storage:
   enabled: true

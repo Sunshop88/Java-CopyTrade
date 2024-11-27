@@ -8,12 +8,29 @@ spring:
         port: 6379
         password: d@OgcOQdvQ09
         #timeout: 6000ms  # 连接超时时长（毫秒）
-
       redis2:
-        database: 0
-        host: 98.142.143.187
+        database: 2
+        host: 39.99.136.49
         port: 6379
-        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+        password: d@OgcOQdvQ09
+#      redis2:
+#        database: 0
+#        host: 98.142.143.187
+#        port: 6379
+#        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+
+  kafka:
+    bootstrap-servers: 39.99.136.49:9092
+    consumer:
+      group-id: order-group  # 消费者组 ID
+      auto-offset-reset: earliest  # 消费起始位置
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 1000 # 每次批量拉取消息数量
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
@@ -44,13 +61,3 @@ spring:
     clientId: maku_boot_service_dev
     default-topic: topic_default
 
-
-cld:
-  kafka:
-    servers: 39.99.136.49:9092
-    partition: 1
-    replication: 1
-    maxIdle: 20
-    minIdle: 10
-    # block synchronous callback 三种发送模式
-    sendMode: callback

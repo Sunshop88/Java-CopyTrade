@@ -9,6 +9,7 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
@@ -39,7 +40,7 @@ public abstract class AbstractFollowRule {
         this.nextRule = nextRule;
     }
 
-    public PermitInfo rule(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, CopierApiTrader copierApiTrader) {
+    public PermitInfo rule(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, AbstractApiTrader copierApiTrader) {
         PermitInfo permitInfo = permit(eaLeaderCopier, eaOrderInfo, copierApiTrader);
         if (permitInfo.getPermitted()) {
             //允许跟随
@@ -62,7 +63,7 @@ public abstract class AbstractFollowRule {
      * @param copierApiTrader 跟单者
      * @return double 跟单者开仓手数
      */
-    public double lots(FollowTraderSubscribeEntity masterSlave, EaOrderInfo eaOrderInfo, CopierApiTrader copierApiTrader) throws InvalidSymbolException, ConnectException, TimeoutException {
+    public double lots(FollowTraderSubscribeEntity masterSlave, EaOrderInfo eaOrderInfo, AbstractApiTrader copierApiTrader) throws InvalidSymbolException, ConnectException, TimeoutException {
         double lots = 0;
         if (ObjectUtils.isEmpty(masterSlave)) {
             return 0.0;
@@ -109,7 +110,7 @@ public abstract class AbstractFollowRule {
      * @param copierApiTrader 跟单者
      * @return PermitInfo
      */
-    protected abstract PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, CopierApiTrader copierApiTrader);
+    protected abstract PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, AbstractApiTrader copierApiTrader);
 
 
     @Data

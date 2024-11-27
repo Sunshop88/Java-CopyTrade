@@ -22,10 +22,6 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
-import net.maku.subcontrol.util.KafkaTopicUtil;
-import org.apache.kafka.clients.admin.*;
-import org.apache.kafka.common.KafkaFuture;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -52,15 +48,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     private Boolean launchOn = false;
 
-    public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService, RedisUtil redisUtil) {
+    public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, RedisUtil redisUtil) {
         this.followTraderService = followTraderService;
         this.followBrokeServerService = followBrokeServerService;
         this.followTraderSubscribeService = followTraderSubscribeService;
-        this.ks = ks;
-        this.adminClient = adminClient;
-        this.kafkaProducer = kafkaProducer;
         this.semaphore = new Semaphore(10);
-        this.scheduledExecutorService = scheduledExecutorService;
         this.redisUtil = redisUtil;
     }
 
@@ -79,23 +71,6 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity slave : slaves) {
             scheduledExecutorService.submit(() -> {
                 try {
-                    ListTopicsResult listTopicsResult = adminClient.listTopics();
-                    Collection<String> hostTopicNames = listTopicsResult.names().get();
-                    List<String> topics = Collections.singletonList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(slave));
-                    hostTopicNames.retainAll(topics);
-                    if (!hostTopicNames.isEmpty()) {
-                        //这里需要删除主题，因为有可能主题的分区配置变化了
-                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
-
-                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
-                        map.values().forEach(value -> {
-                            try {
-                                value.get();
-                            } catch (Exception e) {
-                                log.error("", e);
-                            }
-                        });
-                    }
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !slave.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
@@ -127,22 +102,6 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity copier : list) {
             scheduledExecutorService.submit(() -> {
                 try {
-                    //这里需要删除主题，因为有可能主题的分区配置变化了
-                    ListTopicsResult listTopicsResult = adminClient.listTopics();
-                    Collection<String> hostTopicNames = listTopicsResult.names().get();
-
-                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(copier), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.copierAccountTopic(copier));
-                    hostTopicNames.retainAll(topics);
-                    if (!hostTopicNames.isEmpty()) {
-                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
-                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
-                        map.values().forEach(value -> {
-                            try {
-                                value.get();
-                            } catch (Exception ignored) {
-                            }
-                        });
-                    }
                     ConCodeEnum conCodeEnum = addTrader(copier);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !copier.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
@@ -192,13 +151,13 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         if (ObjectUtil.isNotEmpty(serverNode)) {
             //处理节点格式
             String[] split = serverNode.split(":");
-            conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]),kafkaProducer);
+            conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]));
             if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接
                 List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(copier.getPlatform());
                 for (FollowBrokeServerEntity address : serverEntityList) {
                     // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()),kafkaProducer);
+                    conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
                     if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
                         break;
                     }
@@ -209,9 +168,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     }
 
 
-    private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport, IKafkaProducer<String, Object> kafkaProducer) {
+    private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
         try {
-            CopierApiTrader copierApiTrader = new CopierApiTrader(copier,kafkaProducer, serverNode, Integer.valueOf(serverport));
+            CopierApiTrader copierApiTrader = new CopierApiTrader(copier,serverNode, Integer.valueOf(serverport));
             CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore);
             FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) scheduledExecutorService.submit(connectionTask);
             CopierApiTradersAdmin.ConnectionResult result = submit.get();

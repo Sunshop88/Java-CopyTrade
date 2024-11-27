@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.CopyTradeFlag;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTrader;
+import org.checkerframework.checker.units.qual.A;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.ObjectUtils;
 
@@ -15,7 +17,7 @@ import org.springframework.util.ObjectUtils;
 public class Subscription extends AbstractFollowRule {
 
     @Override
-    protected PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, CopierApiTrader copier4ApiTrader) {
+    protected PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, AbstractApiTrader copier4ApiTrader) {
         return getPermitInfo(leaderCopier, orderInfo);
     }
 

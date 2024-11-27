@@ -21,18 +21,9 @@ import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.subcontrol.constants.KafkaTopicPrefixSuffix;
-import net.maku.subcontrol.util.KafkaTopicUtil;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.DeleteTopicsResult;
-import org.apache.kafka.clients.admin.ListTopicsResult;
-import org.apache.kafka.common.KafkaFuture;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -43,11 +34,6 @@ import java.util.concurrent.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
-    /**
-     * 线程池对象
-     */
-    private final ScheduledExecutorService scheduledExecutorService;
-
     /**
      * 信号量来控制，连接任务最多支持的并发数
      */
@@ -60,16 +46,11 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
 
     private final RedisUtil redisUtil;
 
-    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, Ks ks, AdminClient adminClient, IKafkaProducer<String, Object> kafkaProducer, ScheduledExecutorService scheduledExecutorService, RedisUtil redisUtil) {
+    public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, RedisUtil redisUtil) {
         this.redisUtil = redisUtil;
         this.followTraderService = eaTraderService;
         this.followBrokeServerService = eaBrokerService;
-        this.ks = ks;
-        this.adminClient = adminClient;
-        this.kafkaProducer = kafkaProducer;
         this.semaphore = new Semaphore(10);
-        this.scheduledExecutorService = scheduledExecutorService;
-        this.followPlatformService=followPlatformService;
     }
 
     /**
@@ -87,22 +68,6 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity leader : leaders) {
             scheduledExecutorService.submit(() -> {
                 try {
-                    //这里需要删除主题，因为有可能主题的分区配置变化了
-                    ListTopicsResult listTopicsResult = adminClient.listTopics();
-                    Collection<String> hostTopicNames = listTopicsResult.names().get();
-
-                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader));
-                    hostTopicNames.retainAll(topics);
-                    if (!hostTopicNames.isEmpty()) {
-                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
-                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
-                        map.values().forEach(value -> {
-                            try {
-                                value.get();
-                            } catch (Exception ignored) {
-                            }
-                        });
-                    }
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
@@ -134,22 +99,6 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity leader : list) {
             scheduledExecutorService.submit(() -> {
                 try {
-                    //这里需要删除主题，因为有可能主题的分区配置变化了
-                    ListTopicsResult listTopicsResult = adminClient.listTopics();
-                    Collection<String> hostTopicNames = listTopicsResult.names().get();
-
-                    Collection<String> topics = Arrays.asList(KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderAccountTopic(leader), KafkaTopicPrefixSuffix.TENANT + KafkaTopicUtil.leaderTradeSignalTopic(leader));
-                    hostTopicNames.retainAll(topics);
-                    if (!hostTopicNames.isEmpty()) {
-                        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(hostTopicNames);
-                        Map<String, KafkaFuture<Void>> map = deleteTopicsResult.topicNameValues();
-                        map.values().forEach(value -> {
-                            try {
-                                value.get();
-                            } catch (Exception ignored) {
-                            }
-                        });
-                    }
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
@@ -182,13 +131,13 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         if (ObjectUtil.isNotEmpty(serverNode)) {
             //处理节点格式
             String[] split = serverNode.split(":");
-            conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]),kafkaProducer);
+            conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
             if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接
                 List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
                 for (FollowBrokeServerEntity address : serverEntityList) {
                     // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()),kafkaProducer);
+                    conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
                     if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
                         break;
                     }
@@ -198,9 +147,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         return conCodeEnum;
     }
 
-    private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport, IKafkaProducer<String, Object> kafkaProducer) {
+    private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
         try {
-            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader,kafkaProducer, serverNode, Integer.valueOf(serverport));
+            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
             ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
             FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) scheduledExecutorService.submit(connectionTask);
             ConnectionResult result = submit.get();

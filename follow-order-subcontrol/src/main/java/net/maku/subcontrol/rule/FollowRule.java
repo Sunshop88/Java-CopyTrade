@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.CopyTradeFlag;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -41,8 +42,8 @@ public class FollowRule {
      * @return PermitInfo
      */
 
-    public AbstractFollowRule.PermitInfo permit(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, CopierApiTrader copier4ApiTrader) {
-        AbstractFollowRule.PermitInfo permitInfo = subscription.rule(eaLeaderCopier, eaOrderInfo, copier4ApiTrader);
+    public AbstractFollowRule.PermitInfo permit(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo, AbstractApiTrader copier4ApiTrader) {
+        AbstractFollowRule.PermitInfo permitInfo = new AbstractFollowRule.PermitInfo();
         try {
             permitInfo.setLots(subscription.lots(eaLeaderCopier, eaOrderInfo, copier4ApiTrader));
         } catch (InvalidSymbolException e) {

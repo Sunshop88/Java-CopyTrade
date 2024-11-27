@@ -126,7 +126,7 @@ public class FollowSlaveController {
                 map.put("followClose", vo.getFollowClose());
                 map.put("followRep", vo.getFollowRep());
                 //设置跟单关系缓存值 保存状态
-                redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getAccount() + ":" + vo.getAccount(), JSONObject.toJSON(map));
+                redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);
@@ -158,7 +158,7 @@ public class FollowSlaveController {
             BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
             //更新订阅状态
             followTraderSubscribeService.updateById(followTraderSubscribeEntity);
-            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterAccount() + ":" + followTraderEntity.getAccount());
+            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             //启动账户

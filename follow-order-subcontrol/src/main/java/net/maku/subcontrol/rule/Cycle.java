@@ -3,6 +3,7 @@ package net.maku.subcontrol.rule;
 
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,7 +18,7 @@ public class Cycle extends AbstractFollowRule {
      * @return PermitInfo
      */
     @Override
-    protected PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, CopierApiTrader copier4ApiTrader) {
+    protected PermitInfo permit(FollowTraderSubscribeEntity leaderCopier, EaOrderInfo orderInfo, AbstractApiTrader copier4ApiTrader) {
         return getPermitInfo(leaderCopier, orderInfo);
     }
 
