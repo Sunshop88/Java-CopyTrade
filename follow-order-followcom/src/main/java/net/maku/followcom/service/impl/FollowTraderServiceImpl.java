@@ -880,6 +880,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 order=oc.OrderSend(symbol, Op.Sell,lotsPerOrder,bidsub, 0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
+            log.info("下单账号{},下单平台{}，节点{}:{}",account,platform,oc.QuoteClient.Host,oc.QuoteClient.Port);
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
             log.info("订单"+orderId+"开仓时刻数据价格:"+order.OpenPrice+" 时间"+order.OpenTime);
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
