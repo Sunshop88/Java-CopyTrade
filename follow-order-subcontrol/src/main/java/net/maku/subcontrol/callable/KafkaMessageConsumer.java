@@ -2,6 +2,7 @@ package net.maku.subcontrol.callable;
 
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderLogEntity;
@@ -32,11 +33,12 @@ import java.time.LocalDateTime;
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class KafkaMessageConsumer {
-    private final FollowSubscribeOrderService openOrderMappingService=SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
-    private final RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);
-    private final FollowVpsService followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
-    private final FollowTraderLogService followTraderLogService=SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
+    private final FollowSubscribeOrderService openOrderMappingService;
+    private final RedisUtil redisUtil;
+    private final FollowVpsService followVpsService;
+    private final FollowTraderLogService followTraderLogService;
     /**
      * 消费者监听指定 Topic
      */

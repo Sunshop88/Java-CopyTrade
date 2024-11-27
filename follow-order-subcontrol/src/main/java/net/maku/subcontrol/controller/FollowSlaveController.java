@@ -30,6 +30,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.query.FollowOrderHistoryQuery;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
+import net.maku.subcontrol.service.FollowSlaveService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
@@ -67,8 +68,7 @@ public class FollowSlaveController {
     private final RedisCache redisCache;
     private final FollowTestSpeedService followTestSpeedService;
     private final FollowTestDetailService followTestDetailService;
-    private final FollowSubscribeOrderService followSubscribeOrderService;
-
+    private final FollowSlaveService followSlaveService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -252,7 +252,7 @@ public class FollowSlaveController {
     @Operation(summary = "漏单处理")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO) {
-        return Result.ok(followSubscribeOrderService.repairSend(repairSendVO));
+        return Result.ok(followSlaveService.repairSend(repairSendVO));
     }
 
     private void reconnect(String traderId) {

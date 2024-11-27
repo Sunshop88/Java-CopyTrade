@@ -30,6 +30,4 @@ public interface FollowSubscribeOrderService extends BaseService<FollowSubscribe
 
 
     void export();
-
-    Boolean repairSend(RepairSendVO repairSendVO);
 }
