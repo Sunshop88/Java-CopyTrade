@@ -93,7 +93,6 @@ public class OnQuoteHandler implements QuoteEventHandler {
         //所有持仓
         List<Order> openedOrders = Arrays.stream(qc.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
         //账户信息
-        log.info("OnQuote监听：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
         List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,abstractApiTrader.getTrader().getAccount());
 
         List<FollowOrderSendEntity> list;
