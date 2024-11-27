@@ -104,7 +104,12 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public Boolean save(FollowVpsVO vo) {
         vo.setClientId(RandomStringUtil.generateUUIDClientId());
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
-        List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName, vo.getName()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
+        LambdaQueryWrapper<FollowVpsEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and((x)->{
+            x.eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName, vo.getName());
+        });
+        wrapper.eq(FollowVpsEntity::getDeleted,VpsSpendEnum.FAILURE.getType());
+        List<FollowVpsEntity> list = this.list(wrapper);
         if (ObjectUtil.isNotEmpty(list)) {
             throw new ServerException("重复名称或ip地址,请重新输入");
         }

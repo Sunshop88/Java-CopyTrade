@@ -17,6 +17,7 @@ import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowRedisTraderVO;
@@ -215,7 +216,8 @@ public class FollowVpsController {
             return Result.ok(null);
         }
         //.eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()))
-        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue()));
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue())
+                .eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
         followVpsVOS.forEach(o -> {
             o.setTraderNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));
