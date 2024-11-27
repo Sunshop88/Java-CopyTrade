@@ -148,10 +148,14 @@ public class FollowTraderController {
             }
         }
         followTraderService.delete(idList);
+
         //清空缓存
-        idList.stream().forEach(o -> leaderApiTradersAdmin.removeTrader(o.toString()));
-        //清空缓存
-        idList.stream().forEach(o -> copierApiTradersAdmin.removeTrader(o.toString()));
+        list.stream().forEach(o ->{
+            leaderApiTradersAdmin.removeTrader(o.getId().toString());
+            copierApiTradersAdmin.removeTrader(o.getId().toString());
+            redisCache.deleteByPattern(o.getId().toString());
+            redisCache.deleteByPattern(o.getAccount());
+        });
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
         return Result.ok();

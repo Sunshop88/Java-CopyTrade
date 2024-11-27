@@ -311,9 +311,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
         }
 
-        //删除redis缓存
-        redisCache.deleteByPattern(trader.getId().toString());
-        redisCache.deleteByPattern(trader.getAccount());
         try {
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();

@@ -89,6 +89,7 @@ public class TraderOrderActiveWebSocket {
 
     public void sendPeriodicMessage(String traderId,String slaveId) {
         try {
+            returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId+slaveId);
             if (ObjectUtil.isEmpty(sessionSet))return;
             String accountId=slaveId;
