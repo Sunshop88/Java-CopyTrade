@@ -364,6 +364,11 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         baseMapper.update(updateWrapper);
     }
 
+    @Override
+    public FollowVpsEntity getVps(String ip) {
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, ip));
+    }
+
     /**
      * 初始化iniList
      */

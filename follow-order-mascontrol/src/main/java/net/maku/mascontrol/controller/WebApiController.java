@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowInsertVO;
@@ -35,50 +37,68 @@ import java.text.MessageFormat;
 @AllArgsConstructor
 public class WebApiController {
     private static final Logger log = LoggerFactory.getLogger(WebApiController.class);
+    private final FollowVpsService followVpsService;
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
     public Result<String> insertSource(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_INSERT, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getServerId());
+        return sendRequest(req, host, FollowConstant.SOURCE_INSERT, vo);
 
     }
 
     @PostMapping("/source/update")
     @Operation(summary = "喊单编辑")
     public Result<String> updateSource(@RequestBody @Valid SourceUpdateVO vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_UPDATE, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getServerId());
+        return sendRequest(req, host, FollowConstant.SOURCE_UPDATE, vo);
 
     }
 
     @PostMapping("/source/delete")
     @Operation(summary = "喊单删除")
     public Result<String> delSource(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.SOURCE_DEL, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getServerId());
+        return sendRequest(req, host, FollowConstant.SOURCE_DEL, vo);
 
     }
 
     @PostMapping("/follow/insert")
     @Operation(summary = "跟单添加")
     public Result<String> insertFollow(@RequestBody @Valid FollowInsertVO vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_INSERT, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.FOLLOW_INSERT, vo);
 
     }
 
     @PostMapping("/follow/update")
     @Operation(summary = "跟单更新")
     public Result<String> updateFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_UPDATE, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getServerId());
+        return sendRequest(req, host, FollowConstant.FOLLOW_UPDATE, vo);
 
     }
 
     @PostMapping("/follow/delete")
     @Operation(summary = "跟单删除")
     public Result<String> delFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
-        return sendRequest(req, FollowConstant.SUBCONTROL_SERVER, FollowConstant.FOLLOW_DEL, vo);
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getServerId());
+        return sendRequest(req, host, FollowConstant.FOLLOW_DEL, vo);
 
     }
-
-
+    /**
+     * 根据vpsId查询vpsip
+     * **/
+    private String getServerIp(Integer serverId){
+        FollowVpsEntity vps = followVpsService.getById(serverId);
+        return vps.getIpAddress();
+    }
     /**
      * 远程调用方法封装
      */
