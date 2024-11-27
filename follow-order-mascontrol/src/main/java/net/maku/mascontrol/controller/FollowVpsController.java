@@ -224,7 +224,7 @@ public class FollowVpsController {
         return Result.ok(followVpsVOS);
     }
 
-    @PostMapping("transferVps")
+    @GetMapping("transferVps")
     @Operation(summary = "转移vps数据")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId, @Parameter(description = "newId") Integer newId, HttpServletRequest req) {
