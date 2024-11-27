@@ -19,10 +19,12 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.followcom.vo.FollowVpsInfoVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -40,7 +42,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * vps列表
@@ -57,6 +62,7 @@ public class FollowVpsController {
     private final FollowTraderService followTraderService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final RedisCache redisCache;
+    private final RedisUtil redisUtil;
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
 
@@ -65,10 +71,45 @@ public class FollowVpsController {
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query) {
         PageResult<FollowVpsVO> page = followVpsService.page(query);
+        List<Integer> ipList = page.getList().stream().map(FollowVpsVO::getId).toList();
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(ipList),FollowTraderEntity::getServerId, ipList));
+        Map<Integer, Map<Integer, List<FollowTraderEntity>>> map = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId, Collectors.groupingBy(FollowTraderEntity::getType)));
         //策略数量
+
         page.getList().forEach(o -> {
-            o.setTraderNum((int) followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, o.getIpAddress())));
+            Map<Integer, List<FollowTraderEntity>> vpsMap = map.get(o.getId());
+            int followNum = 0;
+            int traderNum =0;
+            o.setTotal(0);
+            o.setEuqit(BigDecimal.ZERO);
+            o.setProfit(BigDecimal.ZERO);
+            o.setLots(BigDecimal.ZERO);
+            if(ObjectUtil.isNotEmpty(vpsMap)){
+                List<FollowTraderEntity> followTraderEntities = vpsMap.get(TraderTypeEnum.SLAVE_REAL.getType());
+                List<FollowTraderEntity> masterTraderEntities = vpsMap.get(TraderTypeEnum.MASTER_REAL.getType());
+                followNum=  ObjectUtil.isNotEmpty(followTraderEntities)?followTraderEntities.size():0;
+                traderNum=  ObjectUtil.isNotEmpty( masterTraderEntities)?masterTraderEntities.size():0;
+                Stream<FollowTraderEntity> stream = Stream.concat(followTraderEntities.stream(), masterTraderEntities.stream());
+                stream.parallel().forEach(x->{
+                    //获取redis内的下单信息
+                    if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId()))) {
+                        FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
+                        o.setTotal(o.getTotal()+followRedisTraderVO.getTotal());
+                        o.setProfit(o.getProfit().add(followRedisTraderVO.getProfit()));
+                        o.setEuqit(o.getEuqit().add(followRedisTraderVO.getEuqit()));
+                        BigDecimal lots = new BigDecimal(followRedisTraderVO.getBuyNum() + "").add(new BigDecimal(followRedisTraderVO.getSellNum() + ""));
+                        o.setLots(o.getLots().add(lots));
+                    }
+                });
+            }
+            o.setEuqit(o.getEuqit().setScale(2, BigDecimal.ROUND_HALF_UP));
+            o.setProfit(o.getProfit().setScale(2, BigDecimal.ROUND_HALF_UP));
+            o.setLots(o.getLots().setScale(2, BigDecimal.ROUND_HALF_UP));
+            o.setFollowNum(followNum);
+            o.setTraderNum(traderNum);
+
         });
+
         return Result.ok(page);
     }
 
@@ -77,7 +118,12 @@ public class FollowVpsController {
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<FollowVpsVO> get(@PathVariable("id") Long id) {
         FollowVpsVO followVpsVO = followVpsService.get(id);
-
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(id),FollowTraderEntity::getServerId, id));
+        Map<Integer, List<FollowTraderEntity>> vpsMap = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getType));
+        List<FollowTraderEntity> followTraderEntities = vpsMap.get(TraderTypeEnum.SLAVE_REAL.getType());
+        List<FollowTraderEntity> masterTraderEntities = vpsMap.get(TraderTypeEnum.MASTER_REAL.getType());
+        followVpsVO.setFollowNum( ObjectUtil.isNotEmpty(followTraderEntities)?followTraderEntities.size():0);
+        followVpsVO.setTraderNum( ObjectUtil.isNotEmpty( masterTraderEntities)?masterTraderEntities.size():0);
         return Result.ok(followVpsVO);
     }
 
@@ -178,9 +224,8 @@ public class FollowVpsController {
         return Result.ok(followVpsVOS);
     }
 
-    @GetMapping("transferVps")
+    @PostMapping("transferVps")
     @Operation(summary = "转移vps数据")
-    @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<Boolean> transferVps(@Parameter(description = "oldId") Integer oldId, @Parameter(description = "newId") Integer newId, HttpServletRequest req) {
         if (ObjectUtil.isEmpty(oldId)){

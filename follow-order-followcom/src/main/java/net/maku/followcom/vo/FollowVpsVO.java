@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -67,4 +68,13 @@ public class FollowVpsVO implements Serializable {
 
 	@Schema(description = "跟单数量")
 	private Integer followNum;
+
+	@Schema(description = "总持仓订单数量")
+	private Integer total;
+	@Schema(description = "净值")
+	private BigDecimal euqit;
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
+	@Schema(description = "总手数")
+	private BigDecimal lots;
 }

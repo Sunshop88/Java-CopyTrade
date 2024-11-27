@@ -20,6 +20,7 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.ClientService;
 import net.maku.followcom.service.FollowTraderService;
@@ -103,7 +104,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public Boolean save(FollowVpsVO vo) {
         vo.setClientId(RandomStringUtil.generateUUIDClientId());
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
-        List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName, vo.getName()));
+        List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName, vo.getName()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         if (ObjectUtil.isNotEmpty(list)) {
             throw new ServerException("重复名称或ip地址,请重新输入");
         }
@@ -201,7 +202,8 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
 
     @Override
     public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService) {
-        List<FollowVpsEntity> list = this.list();
+        //过滤被删除的数据
+        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted,VpsSpendEnum.FAILURE).list();
         Integer openNum = (int) list.stream().filter(o -> o.getIsOpen().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer runningNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer closeNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
