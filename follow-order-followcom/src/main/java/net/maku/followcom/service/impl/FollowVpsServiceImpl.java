@@ -65,7 +65,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
         //过滤vpsPage
         //除了admin都需要判断
-        List<VpsUserVO> list=new ArrayList<>();
+        List<VpsUserVO> list = new ArrayList<>();
         //除了admin都需要判断
         if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
             //查看当前用户拥有的vps
@@ -79,7 +79,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             }
         }
         LambdaQueryWrapper<FollowVpsEntity> wrapper = getWrapper(query);
-        wrapper.in(ObjectUtil.isNotEmpty(list),FollowVpsEntity::getId,list.stream().map(VpsUserVO::getId).toList());
+        wrapper.in(ObjectUtil.isNotEmpty(list), FollowVpsEntity::getId, list.stream().map(VpsUserVO::getId).toList());
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
         followVpsVOS.stream().forEach(o -> {
@@ -94,6 +94,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }
+
     private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
         return list.stream().map(o -> {
             VpsUserVO vpsUserVO = new VpsUserVO();
@@ -102,10 +103,11 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             return vpsUserVO;
         }).toList();
     }
+
     private LambdaQueryWrapper<FollowVpsEntity> getWrapper(FollowVpsQuery query) {
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowVpsEntity::getDeleted, query.getDeleted());
-        wrapper.eq(ObjectUtil.isNotEmpty(query.getName()),FollowVpsEntity::getName, query.getName());
+        wrapper.like(ObjectUtil.isNotEmpty(query.getName()), FollowVpsEntity::getName, query.getName());
         return wrapper;
     }
 
@@ -124,10 +126,10 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         vo.setClientId(RandomStringUtil.generateUUIDClientId());
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
         LambdaQueryWrapper<FollowVpsEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.and((x)->{
+        wrapper.and((x) -> {
             x.eq(FollowVpsEntity::getIpAddress, vo.getIpAddress()).or().eq(FollowVpsEntity::getName, vo.getName());
         });
-        wrapper.eq(FollowVpsEntity::getDeleted,VpsSpendEnum.FAILURE.getType());
+        wrapper.eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType());
         List<FollowVpsEntity> list = this.list(wrapper);
         if (ObjectUtil.isNotEmpty(list)) {
             throw new ServerException("重复名称或ip地址,请重新输入");
@@ -227,7 +229,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Override
     public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService) {
         //过滤被删除的数据
-        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted,VpsSpendEnum.FAILURE).list();
+        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE).list();
         Integer openNum = (int) list.stream().filter(o -> o.getIsOpen().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer runningNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer closeNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())).count();

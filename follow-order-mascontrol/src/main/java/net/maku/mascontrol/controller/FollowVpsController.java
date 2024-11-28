@@ -99,7 +99,7 @@ public class FollowVpsController {
                         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId()))) {
                             FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
                             o.setTotal(o.getTotal() + followRedisTraderVO.getTotal());
-                            o.setProfit(o.getProfit().add(followRedisTraderVO.getProfit()));
+                            o.setProfit(o.getProfit().add(ObjectUtil.isNotEmpty(followRedisTraderVO.getProfit()) ? followRedisTraderVO.getProfit() : BigDecimal.ZERO));
                             o.setEuqit(o.getEuqit().add(followRedisTraderVO.getEuqit()));
                             BigDecimal lots = new BigDecimal(followRedisTraderVO.getBuyNum() + "").add(new BigDecimal(followRedisTraderVO.getSellNum() + ""));
                             o.setLots(o.getLots().add(lots));
