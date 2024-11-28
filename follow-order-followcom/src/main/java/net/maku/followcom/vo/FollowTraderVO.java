@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -124,5 +125,12 @@ public class FollowTraderVO implements Serializable {
 
 	@Schema(description = "下单类型")
 	private Integer placedType;
+
+
+	/**
+	 * 跟随模式0-固定手数 1-手数比例 2-净值比例
+	 */
+	@TableField(value = "跟随模式")
+	private Integer followMode;
 
 }
