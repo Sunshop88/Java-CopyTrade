@@ -104,8 +104,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal()) ? followRedisTraderVO.getTotal() : 0);
                 o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum()) ? followRedisTraderVO.getBuyNum() : 0);
                 o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum()) ? followRedisTraderVO.getSellNum() : 0);
-                Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
-                o.setFollowStatus(followStatus);
+              //  Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
+               // o.setFollowStatus(followStatus);
                 o.setProfit(followRedisTraderVO.getProfit());
 
             }
@@ -145,7 +145,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FollowTraderVO save(FollowTraderVO vo) {
-        vo.setServerIp(FollowConstant.LOCAL_HOST);
+       vo.setServerIp(FollowConstant.LOCAL_HOST);
         if (ObjectUtil.isEmpty(vo.getPlatform())) {
             throw new ServerException("服务商错误");
         }

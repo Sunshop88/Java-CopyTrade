@@ -90,7 +90,10 @@ public class FollowVpsController {
                 List<FollowTraderEntity> masterTraderEntities = vpsMap.get(TraderTypeEnum.MASTER_REAL.getType());
                 followNum=  ObjectUtil.isNotEmpty(followTraderEntities)?followTraderEntities.size():0;
                 traderNum=  ObjectUtil.isNotEmpty( masterTraderEntities)?masterTraderEntities.size():0;
-                Stream<FollowTraderEntity> stream = Stream.concat(followTraderEntities.stream(), masterTraderEntities.stream());
+                Stream<FollowTraderEntity> stream =ObjectUtil.isNotEmpty(followTraderEntities)?followTraderEntities.stream():Stream.empty();
+                if(ObjectUtil.isNotEmpty(masterTraderEntities)){
+                    stream = Stream.concat(stream, masterTraderEntities.stream());
+                }
                 stream.parallel().forEach(x->{
                     //获取redis内的下单信息
                     if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId()))) {
