@@ -28,6 +28,12 @@ public class FollowPlatformEntity {
 	private String brokerName;
 
 	/**
+	 * 券商logo
+	 */
+	@TableField(value = "logo")
+	private String logo;
+
+	/**
 	 * 平台类型
 	 */
 	@TableField(value = "platform_type")
