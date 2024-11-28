@@ -14,6 +14,7 @@ import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
@@ -68,6 +69,7 @@ public class TraderOrderActiveWebSocket {
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
+    private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
 
 
     @OnOpen
@@ -117,7 +119,7 @@ public class TraderOrderActiveWebSocket {
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")){
                 log.info("follow sub"+slaveId+":"+traderId);
-                FollowTraderSubscribeEntity followTraderSubscribe = (FollowTraderSubscribeEntity) redisUtil.hGet(Constant.FOLLOW_SUB_TRADER + slaveId, traderId);
+                FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId),Long.valueOf(traderId));
 
                 List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 0, -1);
                 List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 0, -1);
