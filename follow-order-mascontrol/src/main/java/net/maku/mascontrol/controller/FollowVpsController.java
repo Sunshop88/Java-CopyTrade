@@ -90,9 +90,6 @@ public class FollowVpsController {
                 followNum = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.size() : 0;
                 traderNum = ObjectUtil.isNotEmpty(masterTraderEntities) ? masterTraderEntities.size() : 0;
                 Stream<FollowTraderEntity> stream = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.stream() : Stream.empty();
-                if (ObjectUtil.isNotEmpty(masterTraderEntities)) {
-                    stream = Stream.concat(stream, masterTraderEntities.stream());
-                }
                 if (ObjectUtil.isNotEmpty(stream)) {
                     stream.parallel().forEach(x -> {
                         //获取redis内的下单信息

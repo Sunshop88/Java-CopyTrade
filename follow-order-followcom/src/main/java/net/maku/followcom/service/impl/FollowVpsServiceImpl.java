@@ -325,62 +325,64 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
 
         for (FollowTraderEntity followTraderEntity : followTraderEntityList) {
-            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {
-                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
-                //总持仓
-                ls1.set(2, ls1.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
-                //做多
-                ls1.set(4, ls1.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
-                //做空
-                ls1.set(5, ls1.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
-                //总持仓手数
-                //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
-                ls1.set(3, ls1.get(4).add(ls1.get(5)));
-                //总净值
-                ls1.set(6, ls1.get(6).add(followRedisTraderVO.getEuqit()));
-                //总倍数
-                ls1.set(7, ls1.get(7).add(followRedisTraderVO.getEuqit()));
-                //总盈亏
-                ls1.set(8, ls1.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
-                //开启中
-                if (followTraderEntity.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+            if(followTraderEntity.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())) {
+                if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {
+                    FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
                     //总持仓
-                    ls2.set(2, ls2.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
+                    ls1.set(2, ls1.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
+                    //做多
+                    ls1.set(4, ls1.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
+                    //做空
+                    ls1.set(5, ls1.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
                     //总持仓手数
                     //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
-                    //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
-                    //做多
-                    ls2.set(4, ls2.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
-                    //做空
-                    ls2.set(5, ls2.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
+                    ls1.set(3, ls1.get(4).add(ls1.get(5)));
+                    //总净值
+                    ls1.set(6, ls1.get(6).add(followRedisTraderVO.getEuqit()));
+                    //总倍数
+                    ls1.set(7, ls1.get(7).add(followRedisTraderVO.getEuqit()));
+                    //总盈亏
+                    ls1.set(8, ls1.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                    //开启中
+                    if (followTraderEntity.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                        //总持仓
+                        ls2.set(2, ls2.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
+                        //总持仓手数
+                        //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                        //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                        //做多
+                        ls2.set(4, ls2.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
+                        //做空
+                        ls2.set(5, ls2.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
 
-                    ls2.set(3, ls2.get(4).add(ls2.get(5)));
-                    //总净值
-                    ls2.set(6, ls2.get(6).add(followRedisTraderVO.getEuqit()));
-                    //总倍数
-                    ls2.set(7, ls2.get(7).add(new BigDecimal(followTraderEntity.getLeverage().toString())));
-                    //总盈亏
-                    ls2.set(8, ls2.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
-                }
-                //当前策略
-                if (slaveIds.contains(followTraderEntity.getId())) {
-                    //总持仓
-                    ls3.set(2, ls3.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
-                    //总持仓手数
-                    //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
-                    //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
-                    //做多
-                    ls3.set(4, ls3.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
-                    //做空
-                    ls3.set(5, ls3.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
-                    //总持仓手数
-                    ls3.set(3, ls3.get(4).add(ls3.get(5)));
-                    //总净值
-                    ls3.set(6, ls3.get(6).add(followRedisTraderVO.getEuqit()));
-                    //总倍数
-                    ls3.set(7, ls3.get(7).add(new BigDecimal(followTraderEntity.getLeverage().toString())));
-                    //总盈亏
-                    ls3.set(8, ls3.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                        ls2.set(3, ls2.get(4).add(ls2.get(5)));
+                        //总净值
+                        ls2.set(6, ls2.get(6).add(followRedisTraderVO.getEuqit()));
+                        //总倍数
+                        ls2.set(7, ls2.get(7).add(new BigDecimal(followTraderEntity.getLeverage().toString())));
+                        //总盈亏
+                        ls2.set(8, ls2.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                    }
+                    //当前策略
+                    if (slaveIds.contains(followTraderEntity.getId())) {
+                        //总持仓
+                        ls3.set(2, ls3.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
+                        //总持仓手数
+                        //  BigDecimal orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                        //    ls2.set(3, (ls2.get(3) == null) ? BigDecimal.valueOf(followRedisTraderVO.getTotal()) : ls2.get(3).add(BigDecimal.valueOf(followRedisTraderVO.getTotal())));
+                        //做多
+                        ls3.set(4, ls3.get(4).add(new BigDecimal(followRedisTraderVO.getBuyNum() + "")));
+                        //做空
+                        ls3.set(5, ls3.get(5).add(new BigDecimal(followRedisTraderVO.getSellNum() + "")));
+                        //总持仓手数
+                        ls3.set(3, ls3.get(4).add(ls3.get(5)));
+                        //总净值
+                        ls3.set(6, ls3.get(6).add(followRedisTraderVO.getEuqit()));
+                        //总倍数
+                        ls3.set(7, ls3.get(7).add(new BigDecimal(followTraderEntity.getLeverage().toString())));
+                        //总盈亏
+                        ls3.set(8, ls3.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
+                    }
                 }
             }
         }

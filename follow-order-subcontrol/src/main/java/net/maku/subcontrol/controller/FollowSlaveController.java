@@ -196,7 +196,10 @@ public class FollowSlaveController {
         PageResult<FollowTraderVO> page = followTraderService.page(query);
         page.getList().stream().forEach(o->{
             List<FollowTraderSubscribeEntity> subscribes = map.get(o.getId());
-            if(ObjectUtil.isNotEmpty(subscribes)){ o.setPlacedType(subscribes.get(0).getPlacedType()); } ;});
+            if(ObjectUtil.isNotEmpty(subscribes)){
+                o.setPlacedType(subscribes.get(0).getPlacedType());
+                o.setFollowMode(subscribes.get(0).getFollowMode());
+            } ;});
         return Result.ok(page);
     }
 
