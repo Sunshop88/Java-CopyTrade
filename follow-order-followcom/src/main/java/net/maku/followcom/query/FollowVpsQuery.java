@@ -20,5 +20,8 @@ public class FollowVpsQuery extends Query {
      * 名称
      */
     private String name;
-
+    /**
+     * 是否状态，0为停止，1为运行
+     */
+    private Integer isActive;
 }

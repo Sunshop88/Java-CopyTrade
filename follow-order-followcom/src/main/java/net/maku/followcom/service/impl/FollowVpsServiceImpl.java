@@ -108,6 +108,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowVpsEntity::getDeleted, query.getDeleted());
         wrapper.like(ObjectUtil.isNotEmpty(query.getName()), FollowVpsEntity::getName, query.getName());
+        wrapper.eq(ObjectUtil.isNotEmpty(query.getIsActive()), FollowVpsEntity::getIsActive, query.getIsActive());
         return wrapper;
     }
 
