@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -64,9 +62,13 @@ public class FollowOrderSendVO implements Serializable {
 	private BigDecimal trueSzie;
 
 	@Schema(description = "开始手数范围from")
+	@NotNull(message = "开始手数范围不能为空")
+	@DecimalMin(value = "0.01", message = "手数大于0.01")
 	private BigDecimal startSize;
 
 	@Schema(description = "结束手数范围to")
+	@NotNull(message = "结束手数范围不能为空")
+	@DecimalMin(value = "0.01", message = "手数大于0.01")
 	private BigDecimal endSize;
 
 	@Schema(description = "状态0-进行中 1-已完成")

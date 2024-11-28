@@ -202,6 +202,9 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(followTraderVO)) {
             return Result.error("账号不存在");
         }
+        if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
+            return Result.error("开始手数不能大于结束手数");
+        }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
         if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {

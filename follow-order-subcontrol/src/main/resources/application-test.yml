@@ -27,9 +27,12 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       max-poll-records: 1000 # 每次批量拉取消息数量
+      enable-auto-commit: false # 禁用自动提交，改为手动提交
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      type: batch # 设置监听器类型为批量
 
   datasource:
     dynamic:

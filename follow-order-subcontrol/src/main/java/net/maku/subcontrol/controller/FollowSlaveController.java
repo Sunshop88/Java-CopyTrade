@@ -46,6 +46,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,8 +82,8 @@ public class FollowSlaveController {
             }
             //如果为固定手数和手数比例，必填参数
             if (vo.getFollowStatus().equals(FollowModeEnum.FIX.getCode()) || vo.getFollowStatus().equals(FollowModeEnum.RATIO.getCode())) {
-                if (ObjectUtil.isEmpty(vo.getFollowParam())) {
-                    throw new ServerException("请输入跟单参数");
+                if (ObjectUtil.isEmpty(vo.getFollowParam())||vo.getFollowParam().compareTo(new BigDecimal("0.01"))<0) {
+                    throw new ServerException("请输入正确跟单参数");
                 }
             }
             //查看是否存在循环跟单情况

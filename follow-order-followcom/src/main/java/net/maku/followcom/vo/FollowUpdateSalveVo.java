@@ -66,6 +66,7 @@ public class FollowUpdateSalveVo implements Serializable {
     private Integer followRep;
 
     @Schema(description = "下单方式")
+    @NotNull(message = "密码不能为空")
     private Integer placedType;
 
     private Long slaveAccount;

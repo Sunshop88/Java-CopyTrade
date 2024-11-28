@@ -101,6 +101,9 @@ public class TraderOrderActiveWebSocket {
             if (ObjectUtil.isEmpty(leaderApiTrader)){
                 leaderApiTrader =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
             }
+            if (ObjectUtil.isEmpty(leaderApiTrader)){
+                log.info(traderId+"websocket登录异常");
+            }
             //所有持仓
             List<Order> openedOrders = Arrays.stream(leaderApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
             List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,leaderApiTrader.getTrader().getAccount());
@@ -111,6 +114,7 @@ public class TraderOrderActiveWebSocket {
 
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")){
+                log.info("follow sub"+slaveId+":"+traderId);
                 FollowTraderSubscribeEntity followTraderSubscribe = (FollowTraderSubscribeEntity) redisUtil.hGet(Constant.FOLLOW_SUB_TRADER + slaveId, traderId);
 
                 List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(),0,-1);
@@ -152,7 +156,7 @@ public class TraderOrderActiveWebSocket {
                 });
                 closeRepairToExtract.parallelStream().forEach(o->{
                     //通过备注查询未平仓记录
-                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
+                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveId,slaveId).eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
                     if (ObjectUtil.isNotEmpty(detailServiceOne)){
                         OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                         BeanUtil.copyProperties(detailServiceOne,orderRepairInfoVO);

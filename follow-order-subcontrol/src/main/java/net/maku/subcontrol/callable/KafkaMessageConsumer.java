@@ -27,9 +27,11 @@ import net.maku.subcontrol.trader.OrderResultEvent;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -42,11 +44,19 @@ public class KafkaMessageConsumer {
     /**
      * 消费者监听指定 Topic
      */
-    @KafkaListener(topics = "order-send", groupId = "order-group")
-    public void consumeMessageMasterSend(String o) {
-        OrderResultEvent orderResultEvent = JSON.parseObject(o,OrderResultEvent.class);
-        // 处理消息逻辑
-        handleOrderResult(orderResultEvent.getOrder(),orderResultEvent.getOrderInfo(),orderResultEvent.getOpenOrderMapping(),orderResultEvent.getCopier(),orderResultEvent.getFlag());
+    @KafkaListener(topics = "order-send", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
+    public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
+        messages.forEach(message -> {
+            OrderResultEvent orderResultEvent = JSON.parseObject(message, OrderResultEvent.class);
+            handleOrderResult(
+                    orderResultEvent.getOrder(),
+                    orderResultEvent.getOrderInfo(),
+                    orderResultEvent.getOpenOrderMapping(),
+                    orderResultEvent.getCopier(),
+                    orderResultEvent.getFlag()
+            );
+        });
+        acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
     }
 
     private void handleOrderResult(Order order, EaOrderInfo orderInfo,
@@ -93,6 +103,7 @@ public class KafkaMessageConsumer {
 
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag) {
         FollowTraderLogEntity logEntity = new FollowTraderLogEntity();
+        log.info("获得followVPs"+copier);
         FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
         logEntity.setVpsClient(followVpsEntity.getClientId());
         logEntity.setVpsId(copier.getServerId());

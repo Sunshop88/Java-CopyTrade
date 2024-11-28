@@ -1,5 +1,7 @@
 package net.maku.subcontrol.trader;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -48,7 +50,7 @@ public class InitRunner implements ApplicationRunner {
     @Autowired
     private FollowService followService;
     @Autowired
-    private FollowTraderSubscribeService followTraderSubscribeService;
+    private FollowTraderService followTraderService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -70,6 +72,8 @@ public class InitRunner implements ApplicationRunner {
                 .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
                 .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
                 .orderByAsc(FollowTraderEntity::getCreateTime));
+        //默认异常
+        followTraderService.update(new LambdaUpdateWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId,mt4TraderList.stream().map(FollowTraderEntity::getId).toList()).set(FollowTraderEntity::getStatus,CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra,"账号异常"));
         // 分类MASTER和SLAVE
         long masters = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
         log.info("===============喊单者{}", masters);

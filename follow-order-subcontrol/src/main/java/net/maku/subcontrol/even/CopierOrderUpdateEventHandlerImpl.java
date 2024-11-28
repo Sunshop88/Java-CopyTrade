@@ -55,7 +55,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     // 获取当前系统时间
                     lastInvokeTime = currentTime;
                     //发送消息
-                    traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
+                    traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), leader.getId().toString());
                 });
             }
         }
