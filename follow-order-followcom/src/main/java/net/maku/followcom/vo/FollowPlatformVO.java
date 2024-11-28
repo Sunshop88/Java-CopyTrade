@@ -71,9 +71,6 @@ public class FollowPlatformVO implements Serializable {
 	@NotNull(message = "服务名称集合不能为空")
 	private List<String> platformList;
 
-	@Schema(description = "券商logo")
-	private MultipartFile logoImage;
-
 	@Schema(description = "图片地址")
 	private String logo;
 

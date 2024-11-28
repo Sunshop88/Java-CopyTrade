@@ -83,6 +83,7 @@ public class FollowAddSalveVo  implements Serializable {
     private String masterAccount;
 
     @Schema(description = "模板ID")
+    @NotNull(message = "模板ID不能为空")
     private Integer templateId;
 
     @Schema(description = "手数取余")
