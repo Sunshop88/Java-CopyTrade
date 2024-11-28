@@ -47,15 +47,13 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             // 获取该symbol上次执行时间
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastInvokeTime >= interval) {
+                lastInvokeTime = currentTime;
                 //查看喊单信息
                 List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
                 list.forEach(o -> {
                     //发送消息
-                    // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-                    // 获取当前系统时间
-                    lastInvokeTime = currentTime;
-                    //发送消息
-                    traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
+                    log.info("跟单websocket"+leader.getId());
+                    traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), leader.getId().toString());
                 });
             }
         }

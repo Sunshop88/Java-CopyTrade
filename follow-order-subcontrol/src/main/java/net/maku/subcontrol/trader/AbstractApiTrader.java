@@ -322,7 +322,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         } catch (Exception e) {
             log.error("停止失败", e);
         }
-        return this.cldKafkaConsumer.stopConsume();
+        return true;
     }
 
     /**

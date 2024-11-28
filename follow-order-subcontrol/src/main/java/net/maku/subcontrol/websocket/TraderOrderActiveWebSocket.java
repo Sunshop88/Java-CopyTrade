@@ -11,8 +11,11 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
+import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
@@ -28,6 +31,7 @@ import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
+import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
@@ -37,6 +41,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -62,6 +69,7 @@ public class TraderOrderActiveWebSocket {
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
+    private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
 
 
     @OnOpen
@@ -97,6 +105,9 @@ public class TraderOrderActiveWebSocket {
             if (ObjectUtil.isEmpty(leaderApiTrader)) {
                 leaderApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
             }
+            if (ObjectUtil.isEmpty(leaderApiTrader)){
+                log.info(traderId+"websocket登录异常");
+            }
             //所有持仓
             List<Order> openedOrders = Arrays.stream(leaderApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
             List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, leaderApiTrader.getTrader().getAccount());
@@ -106,8 +117,9 @@ public class TraderOrderActiveWebSocket {
             redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
-            if (!slaveId.equals("0")) {
-                FollowTraderSubscribeEntity followTraderSubscribe = (FollowTraderSubscribeEntity) redisUtil.hGet(Constant.FOLLOW_SUB_TRADER + slaveId, traderId);
+            if (!slaveId.equals("0")){
+                log.info("follow sub"+slaveId+":"+traderId);
+                FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId),Long.valueOf(traderId));
 
                 List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 0, -1);
                 List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 0, -1);
@@ -154,8 +166,8 @@ public class TraderOrderActiveWebSocket {
                 });
                 closeRepairToExtract.parallelStream().forEach(o -> {
                     //通过备注查询未平仓记录
-                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
-                    if (ObjectUtil.isNotEmpty(detailServiceOne)) {
+                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveId,slaveId).eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
+                    if (ObjectUtil.isNotEmpty(detailServiceOne)){
                         OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                         BeanUtil.copyProperties(detailServiceOne, orderRepairInfoVO);
                         orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());

@@ -145,6 +145,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 //生成日志
                 FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
                 followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
+                log.info("平仓日志"+copier);
                 FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
                 followTraderLogEntity.setVpsId(followVpsEntity.getId());
                 followTraderLogEntity.setVpsClient(followVpsEntity.getClientId());

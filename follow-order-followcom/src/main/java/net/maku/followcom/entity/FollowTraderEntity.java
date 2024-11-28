@@ -178,7 +178,7 @@ public class FollowTraderEntity {
 
 
 	/**
-	 * 模板ID
+	 * 跟单状态
 	 */
 	@TableField(value = "follow_status")
 	private Integer followStatus;

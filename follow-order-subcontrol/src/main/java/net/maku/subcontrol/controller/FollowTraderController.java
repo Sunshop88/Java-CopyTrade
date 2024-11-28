@@ -23,6 +23,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
@@ -198,10 +199,13 @@ public class FollowTraderController {
     @Operation(summary = "下单")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<?> orderSend(@RequestBody FollowOrderSendVO vo) {
+    public Result<?> orderSend(@RequestBody @Valid FollowOrderSendVO vo) {
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             return Result.error("账号不存在");
+        }
+        if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
+            return Result.error("开始手数不能大于结束手数");
         }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
@@ -310,15 +314,20 @@ public class FollowTraderController {
         if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
-        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+        AbstractApiTrader abstractApiTrader;
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+        }else {
+            abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+        }
         QuoteClient quoteClient = null;
-        if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
+        if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
             quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
             if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException("账号无法登录");
             }
         } else {
-            quoteClient = leaderApiTrader.quoteClient;
+            quoteClient = abstractApiTrader.quoteClient;
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())) {

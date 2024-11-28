@@ -166,42 +166,49 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
         if (flag == 1) {
-            //查询订阅关系
-            Map<String, Object> valuesByPattern = redisUtil.getValuesByPattern(Constant.FOLLOW_MASTER_SLAVE + leader.getId()+"*");
-            valuesByPattern.forEach((key, value) -> {
-                String slaveId = AssertUtils.getLastNumber(key);
-                Map<String, Object> status = (Map<String, Object>) value;
-                if (ObjectUtil.isNotEmpty(status)) {
-                    if (status.get("followStatus").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                        log.info("未开通跟单状态");
-                        return;
+            //查看喊单账号是否开启跟单
+            if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                //查询订阅关系
+                Map<String, Object> valuesByPattern = redisUtil.getValuesByPattern(Constant.FOLLOW_MASTER_SLAVE + leader.getId() + "*");
+                valuesByPattern.forEach((key, value) -> {
+                    String slaveId = AssertUtils.getLastNumber(key);
+                    Map<String, Object> status = (Map<String, Object>) value;
+                    if (ObjectUtil.isNotEmpty(status)) {
+                        if (status.get("followStatus").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                            log.info("未开通跟单状态");
+                            return;
+                        }
+                        if (orderUpdateEventArgs.Action == PositionClose && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                            log.info("未开通跟单平仓状态");
+                            return;
+                        }
+                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                            log.info("未开通跟单下单状态");
+                            return;
+                        }
                     }
-                    if (orderUpdateEventArgs.Action == PositionClose && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                        log.info("未开通跟单平仓状态");
-                        return;
+                    // 构造订单信息并发布
+                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
+                    eaOrderInfo.setSlaveId(slaveId);
+                    if (orderUpdateEventArgs.Action == PositionClose) {
+                        ThreadPoolUtils.getScheduledExecute().execute(() -> {
+                            //跟单平仓
+                            //发送MT4处理请求
+                            strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                        });
+                    } else {
+                        ThreadPoolUtils.getScheduledExecute().execute(() -> {
+                            //跟单开仓
+                            //发送MT4处理请求
+                            strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                        });
                     }
-                    if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                        log.info("未开通跟单下单状态");
-                        return;
-                    }
-                }
-                // 构造订单信息并发布
-                EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
-                eaOrderInfo.setSlaveId(slaveId);
-                if (orderUpdateEventArgs.Action == PositionClose){
-                    ThreadPoolUtils.getScheduledExecute().execute(()->{
-                        //跟单平仓
-                        //发送MT4处理请求
-                        strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId),eaOrderInfo,0);
-                    });
-                }else {
-                    ThreadPoolUtils.getScheduledExecute().execute(()->{
-                        //跟单开仓
-                        //发送MT4处理请求
-                        strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId),eaOrderInfo,0);
-                    });
-                }
-            });
+                });
+            } else {
+                //喊单账号未开启
+                log.info(leader.getId()+"喊单账号状态未开启");
+            }
+
             // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
             // 获取当前系统时间
             long currentTime = System.currentTimeMillis();

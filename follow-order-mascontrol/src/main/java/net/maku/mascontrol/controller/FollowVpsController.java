@@ -267,7 +267,6 @@ public class FollowVpsController {
 
     @GetMapping("deleteVps")
     @Operation(summary = "清除vps数据")
-    @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<Boolean> deleteVps(@Parameter(description = "vpsId") Integer vpsId, HttpServletRequest req) {
         //清理旧账号缓存
