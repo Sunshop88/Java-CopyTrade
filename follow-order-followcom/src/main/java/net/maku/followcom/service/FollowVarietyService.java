@@ -55,4 +55,6 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     List<FollowVarietyVO> listSymbol();
 
     boolean deleteTemplate(List<Integer> idList);
+
+    int getLatestTemplateId();
 }
