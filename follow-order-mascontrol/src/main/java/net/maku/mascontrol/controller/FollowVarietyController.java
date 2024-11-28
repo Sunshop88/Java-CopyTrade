@@ -19,6 +19,8 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -45,6 +47,7 @@ import java.util.stream.Collectors;
 @Tag(name="品种匹配")
 @AllArgsConstructor
 public class FollowVarietyController {
+    private static final Logger log = LoggerFactory.getLogger(FollowVarietyController.class);
     private final FollowVarietyService followVarietyService;
     private final FollowPlatformService followPlatformService;
     private final RedisCache redisCache;
@@ -123,9 +126,9 @@ public class FollowVarietyController {
             }else{
                 followVarietyService.updateTemplateName(template,templateName);
             }
-            return Result.ok("导入成功");
+            return Result.ok("修改成功");
         } catch (Exception e) {
-            return Result.error("文件导入失败：" + e.getMessage());
+            return Result.error("修改失败：" + e.getMessage());
         }
     }
 
@@ -163,9 +166,9 @@ public class FollowVarietyController {
             }
             // 导入文件
             followVarietyService.addByExcel(file,templateName);
-            return Result.ok("导入成功");
+            return Result.ok("新增成功");
         } catch (Exception e) {
-            return Result.error("文件导入失败：" + e.getMessage());
+            return Result.error("新增失败：" + e.getMessage());
         }
     }
 
@@ -218,11 +221,16 @@ public class FollowVarietyController {
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
-        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
+//        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
 
         // 去重后的券商名称列表
-        List<String> uniqueBrokerNames = followPlatformEntityList.stream()
-                .map(FollowPlatformEntity::getBrokerName)
+//        List<String> uniqueBrokerNames = followPlatformEntityList.stream()
+//                .map(FollowPlatformEntity::getBrokerName)
+//                .distinct() // 去重
+//                .collect(Collectors.toList());
+        List<String> uniqueBrokerNames = followVarietyService.list().stream()
+                .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
+                .map(FollowVarietyEntity::getBrokerName)
                 .distinct() // 去重
                 .collect(Collectors.toList());
 
@@ -313,5 +321,4 @@ public class FollowVarietyController {
         }
         return Result.error("删除失败");
     }
-
 }

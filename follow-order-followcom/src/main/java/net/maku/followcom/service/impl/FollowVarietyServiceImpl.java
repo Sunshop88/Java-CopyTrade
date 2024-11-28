@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowVarietyConvert;
@@ -39,7 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.rmi.ServerException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -150,12 +150,21 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     @Override
     public boolean deleteTemplate(List<Integer> idList) {
-        if (idList.isEmpty()){
+        if (idList.isEmpty()) {
             return false;
         }
         //根据templateId删除数据
         baseMapper.delete(new LambdaQueryWrapper<FollowVarietyEntity>().in(FollowVarietyEntity::getTemplateId, idList));
         return true;
+    }
+
+    @Override
+    public int getLatestTemplateId() {
+        //数据库中模板id全为空抛异常
+        if (baseMapper.selectCount(new LambdaQueryWrapper<FollowVarietyEntity>().isNull(FollowVarietyEntity::getTemplateId)).equals(baseMapper.selectCount(new LambdaQueryWrapper<FollowVarietyEntity>()))) {
+            throw new ServerException("模板id不能为空");
+        }
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVarietyEntity>().orderByDesc(FollowVarietyEntity::getTemplateId).last("limit 1")).getTemplateId();
     }
 
     @Override

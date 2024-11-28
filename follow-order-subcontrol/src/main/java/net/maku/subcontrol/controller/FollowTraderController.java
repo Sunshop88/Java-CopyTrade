@@ -93,7 +93,7 @@ public class FollowTraderController {
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
         //默认模板最新的模板id
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(getLatestTemplateId());
+            vo.setTemplateId(followVarietyService.getLatestTemplateId());
         }
         //本机处理
         try {
@@ -121,10 +121,6 @@ public class FollowTraderController {
         return Result.ok();
     }
 
-    private Integer getLatestTemplateId() {
-        //获取最新的模板id
-        return followVarietyService.getListByTemplate().stream().map(FollowVarietyVO::getId).max(Integer::compareTo).orElse(null);
-    }
 
     @PutMapping
     @Operation(summary = "修改")
@@ -132,7 +128,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> update(@RequestBody @Valid FollowTraderVO vo) {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(getLatestTemplateId());
+            vo.setTemplateId(followVarietyService.getLatestTemplateId());
         }
         followTraderService.update(vo);
         //重连

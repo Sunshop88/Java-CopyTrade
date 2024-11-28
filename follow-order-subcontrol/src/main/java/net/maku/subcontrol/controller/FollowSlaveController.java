@@ -95,7 +95,7 @@ public class FollowSlaveController {
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getLatestTemplateId());
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
@@ -140,10 +140,6 @@ public class FollowSlaveController {
         return Result.ok();
     }
 
-    private Integer getLatestTemplateId() {
-        //获取最新的模板id
-        return followVarietyService.getListByTemplate().stream().map(FollowVarietyVO::getId).max(Integer::compareTo).orElse(null);
-    }
 
     @PostMapping("updateSlave")
     @Operation(summary = "修改跟单账号")
@@ -152,13 +148,19 @@ public class FollowSlaveController {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getLatestTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
                     .eq(FollowTraderSubscribeEntity::getSlaveId, vo.getId()));
+            if(ObjectUtil.isNotEmpty(followTraderSubscribeEntity)) {
+                BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
+                //更新订阅状态
+                followTraderSubscribeService.updateById(followTraderSubscribeEntity);
+                redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
+            }
             BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
             //更新订阅状态
             followTraderSubscribeService.updateById(followTraderSubscribeEntity);
