@@ -104,7 +104,7 @@ public class FollowSlaveController {
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(convert);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
-                return Result.error();
+                return Result.error("账号无法连接");
             }
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
