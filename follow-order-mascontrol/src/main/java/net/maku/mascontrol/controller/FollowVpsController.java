@@ -17,6 +17,7 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
@@ -95,7 +96,7 @@ public class FollowVpsController {
                 if (ObjectUtil.isNotEmpty(stream)) {
                     stream.parallel().forEach(x -> {
                         //获取redis内的下单信息
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId()))) {
+                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus()== TraderStatusEnum.NORMAL.getValue()) {
                             FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
                             o.setTotal(o.getTotal() + followRedisTraderVO.getTotal());
                             o.setProfit(o.getProfit().add(ObjectUtil.isNotEmpty(followRedisTraderVO.getProfit()) ? followRedisTraderVO.getProfit() : BigDecimal.ZERO));
