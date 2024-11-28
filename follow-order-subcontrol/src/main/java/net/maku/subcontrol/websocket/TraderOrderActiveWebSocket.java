@@ -11,10 +11,8 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import net.maku.followcom.entity.*;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.pojo.EaOrderInfo;
-import net.maku.followcom.service.FollowOrderDetailService;
-import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
@@ -30,7 +28,6 @@ import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
-import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
@@ -40,9 +37,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -59,13 +53,13 @@ public class TraderOrderActiveWebSocket {
 
     private String slaveId;
 
-    private RedisCache redisCache= SpringContextUtils.getBean( RedisCache.class);
+    private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
 
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
-    private  RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
-    private FollowSubscribeOrderService followSubscribeOrderService= SpringContextUtils.getBean( FollowSubscribeOrderServiceImpl.class);;
-    private LeaderApiTradersAdmin leaderApiTradersAdmin= SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
-    private CopierApiTradersAdmin copierApiTradersAdmin= SpringContextUtils.getBean(CopierApiTradersAdmin.class);
+    private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
+    private FollowSubscribeOrderService followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
+    private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
+    private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
 
@@ -79,7 +73,7 @@ public class TraderOrderActiveWebSocket {
             Set<Session> sessionSet = sessionPool.getOrDefault(traderId + slaveId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(traderId + slaveId, sessionSet);
-            sendPeriodicMessage(traderId,slaveId);
+            sendPeriodicMessage(traderId, slaveId);
         } catch (Exception e) {
             log.info("连接异常" + e);
             onClose();
@@ -87,34 +81,36 @@ public class TraderOrderActiveWebSocket {
         }
     }
 
-    public void sendPeriodicMessage(String traderId,String slaveId) {
+    public void sendPeriodicMessage(String traderId, String slaveId) {
         try {
             returnObjectsInBatch();
-            Set<Session> sessionSet = sessionPool.get(traderId+slaveId);
-            if (ObjectUtil.isEmpty(sessionSet))return;
-            String accountId=slaveId;
-            if (slaveId.equals("0")){
-                //喊单
-                accountId=traderId;
+            Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
+            if (ObjectUtil.isEmpty(sessionSet)) {
+                return;
             }
-            AbstractApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
-            if (ObjectUtil.isEmpty(leaderApiTrader)){
-                leaderApiTrader =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
+            String accountId = slaveId;
+            if (slaveId.equals("0")) {
+                //喊单
+                accountId = traderId;
+            }
+            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
+            if (ObjectUtil.isEmpty(leaderApiTrader)) {
+                leaderApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
             }
             //所有持仓
             List<Order> openedOrders = Arrays.stream(leaderApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
-            List<OrderActiveInfoVO> orderActiveInfoList=converOrderActive(openedOrders,leaderApiTrader.getTrader().getAccount());
+            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, leaderApiTrader.getTrader().getAccount());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             //存入redis
             redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
-            if (!slaveId.equals("0")){
+            if (!slaveId.equals("0")) {
                 FollowTraderSubscribeEntity followTraderSubscribe = (FollowTraderSubscribeEntity) redisUtil.hGet(Constant.FOLLOW_SUB_TRADER + slaveId, traderId);
 
-                List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(),0,-1);
-                List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(),0,-1);
+                List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 0, -1);
+                List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 0, -1);
                 // 数据处理逻辑（如前面的代码示例）
                 List<Object> sendRepairToRemove = new ArrayList<>();
                 List<Object> sendRepairToExtract = new ArrayList<>();
@@ -122,24 +118,30 @@ public class TraderOrderActiveWebSocket {
                 for (Object repairObj : sendRepair) {
                     EaOrderInfo repairComment = (EaOrderInfo) repairObj;
                     boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> repairComment.getSlaveComment().equalsIgnoreCase(order.getComment()));
-                    if (existsInActive) sendRepairToRemove.add(repairObj);
-                    else sendRepairToExtract.add(repairObj);
+                    if (existsInActive) {
+                        sendRepairToRemove.add(repairObj);
+                    } else {
+                        sendRepairToExtract.add(repairObj);
+                    }
                 }
-                sendRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(),1, repair));
+                sendRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 1, repair));
 
                 List<Object> closeRepairToRemove = new ArrayList<>();
                 List<Object> closeRepairToExtract = new ArrayList<>();
                 for (Object repairObj : closeRepair) {
                     EaOrderInfo repairComment = (EaOrderInfo) repairObj;
                     boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> repairComment.getSlaveComment().equalsIgnoreCase(order.getComment()));
-                    if (!existsInActive) closeRepairToRemove.add(repairObj);
-                    else closeRepairToExtract.add(repairObj);
+                    if (!existsInActive) {
+                        closeRepairToRemove.add(repairObj);
+                    } else {
+                        closeRepairToExtract.add(repairObj);
+                    }
                 }
-                closeRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(),1,  repair));
+                closeRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 1, repair));
 
-                List<OrderRepairInfoVO> list=new ArrayList<>();
-                sendRepairToExtract.parallelStream().forEach(o->{
-                    EaOrderInfo eaOrderInfo=(EaOrderInfo) o;
+                List<OrderRepairInfoVO> list = new ArrayList<>();
+                sendRepairToExtract.parallelStream().forEach(o -> {
+                    EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                     orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
                     orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
@@ -150,12 +152,12 @@ public class TraderOrderActiveWebSocket {
                     orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
                     list.add(orderRepairInfoVO);
                 });
-                closeRepairToExtract.parallelStream().forEach(o->{
+                closeRepairToExtract.parallelStream().forEach(o -> {
                     //通过备注查询未平仓记录
                     FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
-                    if (ObjectUtil.isNotEmpty(detailServiceOne)){
+                    if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                         OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                        BeanUtil.copyProperties(detailServiceOne,orderRepairInfoVO);
+                        BeanUtil.copyProperties(detailServiceOne, orderRepairInfoVO);
                         orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
                         orderRepairInfoVO.setMasterLots(detailServiceOne.getMasterLots().doubleValue());
                         orderRepairInfoVO.setMasterProfit(detailServiceOne.getMasterProfit().doubleValue());
@@ -177,7 +179,7 @@ public class TraderOrderActiveWebSocket {
     @OnClose
     public void onClose() {
         try {
-            sessionPool.get(traderId+slaveId).remove(session);
+            sessionPool.get(traderId + slaveId).remove(session);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -186,10 +188,12 @@ public class TraderOrderActiveWebSocket {
     /**
      * 服务器端推送消息
      */
-    public void  pushMessage(String traderId,String slaveId, String message) {
+    public void pushMessage(String traderId, String slaveId, String message) {
         try {
-            Set<Session> sessionSet = sessionPool.get(traderId+slaveId);
-            if (ObjectUtil.isEmpty(sessionSet))return;
+            Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
+            if (ObjectUtil.isEmpty(sessionSet)) {
+                return;
+            }
             for (Session session : sessionSet) {
                 if (session.isOpen()) {
                     synchronized (session) {
@@ -206,8 +210,8 @@ public class TraderOrderActiveWebSocket {
     public void onMessage(String message) {
     }
 
-    public Boolean isConnection(String traderId,String slaveId) {
-        return sessionPool.containsKey(traderId+slaveId);
+    public Boolean isConnection(String traderId, String slaveId) {
+        return sessionPool.containsKey(traderId + slaveId);
     }
 
 
@@ -242,8 +246,8 @@ public class TraderOrderActiveWebSocket {
         vo.setMagicNumber(order.MagicNumber);
         vo.setType(order.Type.name());
         //增加五小时
-      //  vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime),5)));
-        vo.setOpenTime(order.OpenTime);
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
+        // vo.setOpenTime(order.OpenTime);
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
     }
