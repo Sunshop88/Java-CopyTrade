@@ -16,10 +16,7 @@ import net.maku.followcom.enums.FollowModeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
-import net.maku.followcom.service.FollowTestDetailService;
-import net.maku.followcom.service.FollowTestSpeedService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -70,6 +67,7 @@ public class FollowSlaveController {
     private final FollowTestSpeedService followTestSpeedService;
     private final FollowTestDetailService followTestDetailService;
     private final FollowSlaveService followSlaveService;
+    private final FollowVarietyService followVarietyService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -97,7 +95,7 @@ public class FollowSlaveController {
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(1);
+                vo.setTemplateId(getLatestTemplateId());
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
@@ -142,6 +140,11 @@ public class FollowSlaveController {
         return Result.ok();
     }
 
+    private Integer getLatestTemplateId() {
+        //获取最新的模板id
+        return followVarietyService.getListByTemplate().stream().map(FollowVarietyVO::getId).max(Integer::compareTo).orElse(null);
+    }
+
     @PostMapping("updateSlave")
     @Operation(summary = "修改跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -149,7 +152,7 @@ public class FollowSlaveController {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(1);
+                vo.setTemplateId(getLatestTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
             followTraderService.updateById(followTraderEntity);

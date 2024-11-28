@@ -90,9 +90,9 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
-        //默认模板1
+        //默认模板最新的模板id
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(1);
+            vo.setTemplateId(getLatestTemplateId());
         }
         //本机处理
         try {
@@ -120,13 +120,18 @@ public class FollowTraderController {
         return Result.ok();
     }
 
+    private Integer getLatestTemplateId() {
+        //获取最新的模板id
+        return followVarietyService.getListByTemplate().stream().map(FollowVarietyVO::getId).max(Integer::compareTo).orElse(null);
+    }
+
     @PutMapping
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> update(@RequestBody @Valid FollowTraderVO vo) {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(1);
+            vo.setTemplateId(getLatestTemplateId());
         }
         followTraderService.update(vo);
         //重连
