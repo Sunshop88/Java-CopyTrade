@@ -154,10 +154,12 @@ public class FollowSlaveController {
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
                     .eq(FollowTraderSubscribeEntity::getSlaveId, vo.getId()));
-            BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
-            //更新订阅状态
-            followTraderSubscribeService.updateById(followTraderSubscribeEntity);
-            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
+            if(ObjectUtil.isNotEmpty(followTraderSubscribeEntity)) {
+                BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
+                //更新订阅状态
+                followTraderSubscribeService.updateById(followTraderSubscribeEntity);
+                redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
+            }
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             //启动账户
