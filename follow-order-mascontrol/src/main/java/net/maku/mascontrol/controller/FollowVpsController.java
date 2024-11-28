@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -41,6 +42,7 @@ import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -217,8 +219,14 @@ public class FollowVpsController {
         if (ObjectUtil.isEmpty(list)) {
             return Result.ok(null);
         }
+        List<Integer> ids =new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            FollowVpsVO followVpsVO = JSON.parseObject(JSON.toJSONString(list.get(i)), FollowVpsVO.class);
+            ids.add(followVpsVO.getId() );
+        }
         //.eq(FollowVpsEntity::getIsActive, CloseOrOpenEnum.OPEN.getValue()))
-        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, list.stream().map(o -> o.getId()).toList()).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue())
+       //list.stream().map(o -> o.getId()).toList()这种写法有问题
+        List<FollowVpsEntity> listvps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId, ids).eq(FollowVpsEntity::getIsOpen, CloseOrOpenEnum.OPEN.getValue())
                 .eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(listvps);
         followVpsVOS.forEach(o -> {
