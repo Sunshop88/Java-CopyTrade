@@ -192,6 +192,9 @@ public class FollowSlaveController {
         }
         List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, query.getTraderId()));
         List<Long> collect = list.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+        if(ObjectUtil.isEmpty(collect)) {
+            return Result.ok();
+        }
         Map<Long, List<FollowTraderSubscribeEntity>> map = list.stream().collect(Collectors.groupingBy(FollowTraderSubscribeEntity::getSlaveId));
         query.setTraderList(collect);
         PageResult<FollowTraderVO> page = followTraderService.page(query);
