@@ -73,4 +73,6 @@ public class FollowUpdateSalveVo implements Serializable {
     @Schema(description = "模板ID")
     private Integer templateId;
 
+    @Schema(description = "手数取余")
+    private Integer remainder;
 }
