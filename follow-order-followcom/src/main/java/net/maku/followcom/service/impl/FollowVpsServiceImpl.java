@@ -199,7 +199,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Override
     public List<FollowVpsVO> listByVps() {
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.select(FollowVpsEntity::getName)
+        wrapper.select(FollowVpsEntity::getName).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType())
                 .groupBy(FollowVpsEntity::getName);
         List<FollowVpsEntity> list = baseMapper.selectList(wrapper);
         return FollowVpsConvert.INSTANCE.convertList(list);
