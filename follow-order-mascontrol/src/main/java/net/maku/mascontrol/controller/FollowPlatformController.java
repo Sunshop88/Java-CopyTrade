@@ -99,7 +99,7 @@ public class FollowPlatformController {
             });
             list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
                 //找出最小延迟
-                FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
+                FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                 //修改所有用户连接节点
                 followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
             });
@@ -142,7 +142,7 @@ public class FollowPlatformController {
                 });
                 list.stream().map(FollowBrokeServerEntity::getServerName).distinct().forEach(o->{
                     //找出最小延迟
-                    FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
+                    FollowBrokeServerEntity followBrokeServer = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, o).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed)).get(0);
                     //修改所有用户连接节点
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
                 });
