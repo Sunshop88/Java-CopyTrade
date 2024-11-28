@@ -21,6 +21,7 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
@@ -325,7 +326,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
 
         for (FollowTraderEntity followTraderEntity : followTraderEntityList) {
-            if(followTraderEntity.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())) {
+            if(followTraderEntity.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && followTraderEntity.getStatus()== TraderStatusEnum.NORMAL.getValue()) {
                 if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {
                     FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
                     //总持仓

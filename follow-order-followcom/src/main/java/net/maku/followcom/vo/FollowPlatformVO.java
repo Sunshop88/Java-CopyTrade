@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import net.maku.framework.common.utils.DateUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -69,5 +70,11 @@ public class FollowPlatformVO implements Serializable {
 	@Schema(description = "服务名称集合")
 	@NotNull(message = "服务名称集合不能为空")
 	private List<String> platformList;
+
+	@Schema(description = "券商logo")
+	private MultipartFile logoImage;
+
+	@Schema(description = "图片地址")
+	private String logo;
 
 }

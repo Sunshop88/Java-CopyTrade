@@ -1,8 +1,10 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,25 +19,30 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.MasControlService;
+import net.maku.followcom.vo.FollowLogoUploadVO;
 import net.maku.followcom.vo.FollowPlatformInfoVO;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
-import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
-import net.maku.framework.security.user.SecurityUser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import jakarta.validation.Valid;
-
-import java.net.InetSocketAddress;
-import java.nio.channels.AsynchronousSocketChannel;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -49,11 +56,16 @@ import java.util.stream.Collectors;
 @Tag(name = "平台管理")
 @AllArgsConstructor
 public class FollowPlatformController {
+    private static final Logger log = LoggerFactory.getLogger(FollowPlatformController.class);
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
     private final UserApi userApi;
     private final FollowTraderService followTraderService;
     private final MasControlService masControlService;
+//    @Value("${storage.local.path}")
+//    private static String windowsPath;
+    @Value("${storage.local.linuxpath}")
+    private static String linuxPath;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -79,7 +91,7 @@ public class FollowPlatformController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:platform')")
-    public Result<String> save(@RequestBody @Valid FollowPlatformVO vo) {
+    public Result<String> save(@RequestBody @Valid FollowPlatformVO vo) throws Exception{
 //        Long userId = SecurityUser.getUserId();
 //        //判断是否已存在服务名称
 //        vo.getPlatformList().forEach(bro->{
@@ -112,7 +124,6 @@ public class FollowPlatformController {
 //                followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
 //            });
 //        });
-//        return Result.ok();
         return masControlService.insertPlatform(vo) ? Result.ok() : Result.error();
     }
 
@@ -161,6 +172,73 @@ public class FollowPlatformController {
         return masControlService.updatePlatform(vo) ? Result.ok() : Result.error();
     }
 
+    @PostMapping("upload")
+    @Operation(summary = "上传")
+    @OperateLog(type = OperateTypeEnum.INSERT)
+    public Result<FollowLogoUploadVO> uploadLogo(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return Result.error("请选择需要上传的图片");
+        }
+
+        String path = getPath() + "/" + getNewFileName(file.getOriginalFilename());
+//        String uploadPath = isWindows() ? windowsPath : linuxPath;
+//        String fullPath = uploadPath  + "/" + path;
+        String fullPath = linuxPath + "/" + path;
+
+        // 上传文件
+        String url = upload(new ByteArrayInputStream(file.getBytes()), fullPath);
+
+        FollowLogoUploadVO vo = new FollowLogoUploadVO();
+        vo.setUrl(url);
+        vo.setSize(file.getSize());
+        vo.setName(file.getOriginalFilename());
+        return Result.ok(vo);
+    }
+
+    public String upload(InputStream inputStream, String path) {
+        try {
+            // 设置文件存储的本地路径
+            File uploadDirectory = new File(path);
+            if (!uploadDirectory.exists()) {
+                uploadDirectory.mkdirs();
+            }
+
+            // 生成文件名，防止同名文件被覆盖
+            String fileName = FileNameUtil.getName(path);
+            File targetFile = new File(uploadDirectory, fileName);
+
+            // 将文件写入linux中
+            FileUtil.writeFromStream(inputStream, targetFile);
+//            Files.copy(inputStream, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            // 返回文件的 URL 或路径
+            return targetFile.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("文件上传失败", e);
+        }
+    }
+
+    public String getNewFileName(String fileName) {
+        // 主文件名，不包含扩展名
+        String prefix = FileNameUtil.getPrefix(fileName);
+        // 文件扩展名
+        String suffix = FileNameUtil.getSuffix(fileName);
+        // 把当天HH:mm:ss，转换成秒
+        long time = DateUtil.timeToSecond(DateUtil.formatTime(new Date()));
+        // 新文件名
+        return prefix + "_" + time + "." + suffix;
+    }
+
+    public String getPath() {
+        // 文件路径
+        String path = DateUtil.format(new Date(), "yyyyMMdd");
+        return path;
+    }
+
+    private boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
+    }
 
     @DeleteMapping
     @Operation(summary = "删除")
