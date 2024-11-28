@@ -1,5 +1,9 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -148,4 +152,6 @@ public class FollowTraderSubscribeEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	@TableField(value = "remainder")
+	private Integer remainder;
 }

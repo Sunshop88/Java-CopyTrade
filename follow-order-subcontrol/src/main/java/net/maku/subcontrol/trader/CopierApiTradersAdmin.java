@@ -22,6 +22,7 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -152,17 +153,17 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             //处理节点格式
             String[] split = serverNode.split(":");
             conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]));
-            if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
-                //循环连接
-                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(copier.getPlatform());
-                for (FollowBrokeServerEntity address : serverEntityList) {
-                    // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                    if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
-                        break;
-                    }
-                }
-            }
+//            if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
+//                //循环连接
+//                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(copier.getPlatform());
+//                for (FollowBrokeServerEntity address : serverEntityList) {
+//                    // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+//                    conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
+//                    if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+//                        break;
+//                    }
+//                }
+//            }
         }
         return conCodeEnum;
     }
@@ -220,7 +221,8 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 this.copierApiTrader.connect2Broker();
             } catch (Exception e) {
                 log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", copier.getId(), copier.getAccount(), copier.getServerName(), e.getClass().getSimpleName() + e.getMessage());
-                return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
+                throw new ServerException("账号连接异常");
+                //                return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
             } finally {
                 if (aq) {
                     semaphore.release();

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.FollowRemainderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
@@ -98,7 +100,12 @@ public abstract class AbstractFollowRule {
                 lots = 0.0;
                 break;
         }
-        BigDecimal lots2digits = BigDecimal.valueOf(lots).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lots2digits;
+        if (masterSlave.getRemainder().equals(FollowRemainderEnum.ROUND_IT_UP.getValue())){
+            lots2digits = BigDecimal.valueOf(lots).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            lots2digits = BigDecimal.valueOf(lots).setScale(2, RoundingMode.DOWN);
+        }
         return lots2digits.doubleValue();
     }
 

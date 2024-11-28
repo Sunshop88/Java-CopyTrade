@@ -41,7 +41,7 @@ public class FollowOrderSendVO implements Serializable {
 	private String account;
 
 	@Schema(description = "类型0-buy 1-sell")
-	@NotBlank(message = "类型不能为空")
+	@NotNull(message = "类型不能为空")
 	@Min(value = 0, message = "类型只能为0或1")
 	@Max(value = 1, message = "类型只能为0或1")
 	private Integer type;
@@ -64,11 +64,13 @@ public class FollowOrderSendVO implements Serializable {
 	@Schema(description = "开始手数范围from")
 	@NotNull(message = "开始手数范围不能为空")
 	@DecimalMin(value = "0.01", message = "手数大于0.01")
+	@NotBlank(message = "开始手数范围不能为空白") // 确保不是空字符串
 	private BigDecimal startSize;
 
 	@Schema(description = "结束手数范围to")
 	@NotNull(message = "结束手数范围不能为空")
 	@DecimalMin(value = "0.01", message = "手数大于0.01")
+	@NotBlank(message = "结束手数范围不能为空白") // 确保不是空字符串
 	private BigDecimal endSize;
 
 	@Schema(description = "状态0-进行中 1-已完成")

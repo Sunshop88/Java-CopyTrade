@@ -75,5 +75,8 @@ public class FollowUpdateSalveVo implements Serializable {
     private Integer templateId;
 
     @Schema(description = "手数取余")
+    @NotNull(message = "手数取余不能为空")
+    @Min(value = 0, message = "手数取余参数不合法")
+    @Max(value = 1, message = "手数取余参数不合法")
     private Integer remainder;
 }

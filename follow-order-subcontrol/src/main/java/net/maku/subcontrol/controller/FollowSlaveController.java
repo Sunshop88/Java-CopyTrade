@@ -162,7 +162,12 @@ public class FollowSlaveController {
             BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
             //更新订阅状态
             followTraderSubscribeService.updateById(followTraderSubscribeEntity);
-            redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
+            Map<String,Object> map=new HashMap<>();
+            map.put("followStatus",vo.getFollowStatus());
+            map.put("followOpen",vo.getFollowOpen());
+            map.put("followClose",vo.getFollowClose());
+            map.put("followRep",vo.getFollowRep());
+            redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId(),map);
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             //启动账户
