@@ -176,4 +176,11 @@ public class FollowTraderEntity {
 	@TableField(value = "template_id")
 	private Integer templateId;
 
+
+	/**
+	 * 模板ID
+	 */
+	@TableField(value = "follow_status")
+	private Integer followStatus;
+
 }
