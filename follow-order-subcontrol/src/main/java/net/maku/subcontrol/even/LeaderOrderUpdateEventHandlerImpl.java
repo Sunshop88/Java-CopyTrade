@@ -178,11 +178,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             log.info("未开通跟单状态");
                             return;
                         }
-                        if (orderUpdateEventArgs.Action == PositionClose && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                        if (orderUpdateEventArgs.Action == PositionClose && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
                             log.info("未开通跟单平仓状态");
                             return;
                         }
-                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
                             log.info("未开通跟单下单状态");
                             return;
                         }

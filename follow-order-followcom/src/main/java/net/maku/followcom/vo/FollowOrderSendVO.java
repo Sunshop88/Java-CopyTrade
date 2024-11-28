@@ -34,7 +34,7 @@ public class FollowOrderSendVO implements Serializable {
 	private String platform;
 
 	@Schema(description = "账号id")
-	@NotBlank(message = "账号id不能为空")
+	@NotNull(message = "账号id不能为空")
 	private Long traderId;
 
 	@Schema(description = "账号")
@@ -64,13 +64,11 @@ public class FollowOrderSendVO implements Serializable {
 	@Schema(description = "开始手数范围from")
 	@NotNull(message = "开始手数范围不能为空")
 	@DecimalMin(value = "0.01", message = "手数大于0.01")
-	@NotBlank(message = "开始手数范围不能为空白") // 确保不是空字符串
 	private BigDecimal startSize;
 
 	@Schema(description = "结束手数范围to")
 	@NotNull(message = "结束手数范围不能为空")
 	@DecimalMin(value = "0.01", message = "手数大于0.01")
-	@NotBlank(message = "结束手数范围不能为空白") // 确保不是空字符串
 	private BigDecimal endSize;
 
 	@Schema(description = "状态0-进行中 1-已完成")

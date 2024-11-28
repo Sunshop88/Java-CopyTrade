@@ -199,7 +199,7 @@ public class FollowTraderController {
     @Operation(summary = "下单")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<?> orderSend(@RequestBody FollowOrderSendVO vo) {
+    public Result<?> orderSend(@RequestBody @Valid FollowOrderSendVO vo) {
         FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             return Result.error("账号不存在");
