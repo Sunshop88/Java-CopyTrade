@@ -63,14 +63,15 @@ public class FollowVpsController {
     private final FollowTraderService followTraderService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final RedisCache redisCache;
-    private final RedisUtil redisUtil;
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query) {
+
         PageResult<FollowVpsVO> page = followVpsService.page(query);
+
         List<Integer> ipList = page.getList().stream().map(FollowVpsVO::getId).toList();
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(ipList),FollowTraderEntity::getServerId, ipList));
         Map<Integer, Map<Integer, List<FollowTraderEntity>>> map = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId, Collectors.groupingBy(FollowTraderEntity::getType)));

@@ -18,20 +18,15 @@ import net.maku.followcom.dao.FollowVpsDao;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
-import net.maku.followcom.service.ClientService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowRedisTraderVO;
-import net.maku.followcom.vo.FollowVpsExcelVO;
-import net.maku.followcom.vo.FollowVpsInfoVO;
-import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -39,6 +34,7 @@ import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
+import net.maku.framework.security.user.SecurityUser;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,10 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -66,10 +59,28 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     private final ClientService clientService;
     private final RedisUtil redisUtil;
     private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final FollowVpsUserService followVpsUserService;
 
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
-        IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        //过滤vpsPage
+        //除了admin都需要判断
+        List<VpsUserVO> list=new ArrayList<>();
+        //除了admin都需要判断
+        if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
+            //查看当前用户拥有的vps
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId()))) {
+                list = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+            } else {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, SecurityUser.getUserId()));
+                List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
+                redisUtil.set(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
+                list = vpsUserVOS;
+            }
+        }
+        LambdaQueryWrapper<FollowVpsEntity> wrapper = getWrapper(query);
+        wrapper.in(ObjectUtil.isNotEmpty(list),FollowVpsEntity::getId,list.stream().map(VpsUserVO::getId).toList());
+        IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
         followVpsVOS.stream().forEach(o -> {
             Date startDate = DateUtil.offsetDay(Date.from(o.getExpiryDate().atZone(ZoneId.systemDefault()).toInstant()), 0);
@@ -83,7 +94,14 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }
-
+    private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
+        return list.stream().map(o -> {
+            VpsUserVO vpsUserVO = new VpsUserVO();
+            vpsUserVO.setId(o.getVpsId());
+            vpsUserVO.setName(o.getVpsName());
+            return vpsUserVO;
+        }).toList();
+    }
     private LambdaQueryWrapper<FollowVpsEntity> getWrapper(FollowVpsQuery query) {
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowVpsEntity::getDeleted, query.getDeleted());
