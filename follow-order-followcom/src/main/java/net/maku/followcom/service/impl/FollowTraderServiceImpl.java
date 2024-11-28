@@ -15,10 +15,7 @@ import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.dao.FollowTraderDao;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.TraderCloseEnum;
-import net.maku.followcom.enums.TraderRepairEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -164,7 +161,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         }
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
-        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()));
+        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         if (ObjectUtil.isEmpty(followVpsEntity)) {
             throw new ServerException("请先添加VPS");
         }
