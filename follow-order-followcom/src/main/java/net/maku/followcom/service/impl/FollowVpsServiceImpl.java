@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -79,7 +80,12 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             }
         }
         LambdaQueryWrapper<FollowVpsEntity> wrapper = getWrapper(query);
-        wrapper.in(ObjectUtil.isNotEmpty(list), FollowVpsEntity::getId, list.stream().map(VpsUserVO::getId).toList());
+        List<Integer> ids =new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            FollowVpsVO followVpsVO = JSON.parseObject(JSON.toJSONString(list.get(i)), FollowVpsVO.class);
+            ids.add(followVpsVO.getId() );
+        }
+        wrapper.in(ObjectUtil.isNotEmpty(list), FollowVpsEntity::getId,ids);
         IPage<FollowVpsEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         List<FollowVpsVO> followVpsVOS = FollowVpsConvert.INSTANCE.convertList(page.getRecords());
         followVpsVOS.stream().forEach(o -> {
