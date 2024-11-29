@@ -35,6 +35,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "FROM follow_order_detail " +
             "<where>" +
             " AND order_no is not null" +
+            "<if test='query.serverId != null '> and trader_id IN ( SELECT trader_id FROM follow_trader WHERE  server_id=#{query.serverId}) </if> \n" +
             "<if test='query.traderIdList != null and query.traderIdList.size > 0'> AND trader_id in \n" +
             "  <foreach collection='query.traderIdList' item='item' open='(' separator=',' close=')'>\n" +
             "    #{item}\n" +
@@ -51,6 +52,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "<if test='query.endTime != null and query.endTime != \"\"'> AND open_time &lt;= #{query.endTime} </if>" +
             "</where>" +
             "GROUP BY trader_id,symbol" +
+            " ORDER BY trader_id,create_time DESC "+
             "</script>")
     Page<FollowOrderSlipPointVO> getFollowOrderDetailStats(Page<?> page, @Param("query") FollowOrderSpliListQuery query);
 }

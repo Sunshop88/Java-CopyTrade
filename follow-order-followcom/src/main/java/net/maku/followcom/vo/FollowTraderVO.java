@@ -133,4 +133,38 @@ public class FollowTraderVO implements Serializable {
 	@TableField(value = "跟随模式")
 	private Integer followMode;
 
+
+	/**
+	 * 跟单开仓状态 0-未开启 1-开启
+	 */
+	@TableField(value = "follow_open")
+	private Integer followOpen;
+
+	/**
+	 * 跟单平仓状态 0-未开启 1-开启
+	 */
+	@TableField(value = "follow_close")
+	private Integer followClose;
+
+	/**
+	 * 跟单补单状态 0-未开启 1-开启
+	 */
+	@TableField(value = "follow_rep")
+	private Integer followRep;
+
+
+	/**
+	 * 跟单比例
+	 */
+	@TableField(value = "follow_param")
+	private BigDecimal followParam;
+
+	/**
+	 * 跟单方向0-正向1-反向
+	 */
+	@TableField(value = "follow_direction")
+	private Integer followDirection;
+
+	private Integer remainder;
+
 }

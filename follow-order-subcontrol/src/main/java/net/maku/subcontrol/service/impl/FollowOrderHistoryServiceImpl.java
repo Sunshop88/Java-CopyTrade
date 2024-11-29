@@ -45,6 +45,8 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
         if (ObjectUtil.isNotEmpty(query.getTraderId())){
             wrapper.eq(FollowOrderHistoryEntity::getTraderId,query.getTraderId());
         }
+        wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()),FollowOrderHistoryEntity::getCloseTime,query.getStartTime());
+        wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()),FollowOrderHistoryEntity::getCloseTime,query.getEndTime());
         return wrapper;
     }
 

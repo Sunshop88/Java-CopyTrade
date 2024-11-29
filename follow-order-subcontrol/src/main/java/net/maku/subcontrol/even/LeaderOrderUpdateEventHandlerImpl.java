@@ -23,6 +23,7 @@ import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.AssertUtils;
+import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -36,6 +37,7 @@ import online.mtapi.mt4.*;
 import org.springframework.kafka.core.KafkaTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -218,9 +220,27 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 //发送消息
                 traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
             }
+            //获取历史数据
+
         }
     }
-
+    //记录历史订单
+    private  void saveOrderHistory(QuoteClient quoteClient){
+        try {
+            //日历往前追溯3个月
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MONTH,-3);
+            //获取mt4历史订单
+            Order[] orders = quoteClient.DownloadOrderHistory(LocalDateTime.parse(DateUtils.format(cal.getTime(), DateUtils.DATE_PATTERN)), LocalDateTime.now());
+            //保存历史订单
+            Arrays.stream(orders).forEach(order -> {
+                FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
+                historyEntity.setOrderNo(order.Ticket);
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * 推送redis缓存

@@ -1,6 +1,7 @@
 package net.maku.followcom.query;
 
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,4 +25,8 @@ public class FollowVpsQuery extends Query {
      * 是否状态，0为停止，1为运行
      */
     private Integer isActive;
+    /**
+     * 是否对外开放，0为否，1为是
+     */
+    private Integer isOpen;
 }

@@ -18,4 +18,10 @@ public class FollowOrderHistoryQuery extends Query {
 
     @Schema(description = "账号ID")
     private Long traderId;
+
+    @Schema(description = "时间-开始")
+    private String startTime;
+
+    @Schema(description = "时间-结束")
+    private String endTime;
 }
