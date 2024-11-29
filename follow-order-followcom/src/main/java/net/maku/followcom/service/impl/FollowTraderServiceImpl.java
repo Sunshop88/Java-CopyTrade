@@ -1308,5 +1308,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         vo.setTakeProfit(order.TakeProfit);
     }
 
-
+    /**
+     * 根据vpsId,排除新vps已经存在的
+     * @param oldId 旧vpsID
+     * @param newId 新vpdId
+     * */
+    @Override
+    public List<Long> getShare(Integer oldId, Integer newId) {
+        return baseMapper.getShare(oldId,newId);
+    }
 }

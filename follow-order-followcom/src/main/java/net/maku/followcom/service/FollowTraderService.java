@@ -74,4 +74,8 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     Boolean stopOrder(Integer type, String traderId);
 
     FollowPlatformEntity getPlatForm(Long masterId);
+     /**
+      * 筛选出共同的账号
+      * */
+    List<Long> getShare(Integer oldId, Integer newId);
 }

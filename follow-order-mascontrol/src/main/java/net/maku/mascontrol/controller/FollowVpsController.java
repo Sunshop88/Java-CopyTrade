@@ -251,12 +251,17 @@ public class FollowVpsController {
         followVpsService.transferVps(oldId, req);
 
         FollowVpsEntity followVpsEntity = followVpsService.getById(newId);
+        //查询
+       List<Long>  excludeIds=followTraderService.getShare(oldId,newId);
         //转移账号
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(FollowTraderEntity::getServerId, newId).
                 set(FollowTraderEntity::getServerName, followVpsEntity.getName()).
                 set(FollowTraderEntity::getIpAddr, followVpsEntity.getIpAddress()).
-                eq(FollowTraderEntity::getServerId, oldId);
+                eq(FollowTraderEntity::getServerId, oldId)
+                .notIn(ObjectUtil.isNotEmpty(excludeIds),FollowTraderEntity::getId, excludeIds);
+       //删除旧的账号
+        followTraderService.remove( new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId,oldId)) ;
         followTraderService.update(updateWrapper);
 
         //发送请求到新VPS，启动账号

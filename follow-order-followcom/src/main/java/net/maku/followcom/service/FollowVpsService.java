@@ -48,4 +48,5 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
     void updateStatus(FollowVpsEntity vpsEntity);
 
     FollowVpsEntity getVps(String ip);
+
 }
