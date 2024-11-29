@@ -1,6 +1,5 @@
 package net.maku.followcom.service;
 
-import net.maku.followcom.vo.FollowBrokeServerVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.entity.FollowPlatformEntity;
@@ -42,4 +41,6 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> listHavingServer(String name);
 
     List<FollowPlatformVO> listByServer();
+
+    void updateLogo(FollowPlatformVO avatar);
 }

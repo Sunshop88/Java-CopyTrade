@@ -221,17 +221,22 @@ public class FollowVarietyController {
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
         PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
-//        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
+        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
 
         // 去重后的券商名称列表
-//        List<String> uniqueBrokerNames = followPlatformEntityList.stream()
-//                .map(FollowPlatformEntity::getBrokerName)
-//                .distinct() // 去重
-//                .collect(Collectors.toList());
-        List<String> uniqueBrokerNames = followVarietyService.list().stream()
+        List<String> platformBrokerNames = followPlatformEntityList.stream()
+                .map(FollowPlatformEntity::getBrokerName)
+                .distinct() // 去重
+                .collect(Collectors.toList());
+        //品种列表的平台名称
+        List<String> varietyBrokerNames = followVarietyService.list().stream()
                 .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
                 .map(FollowVarietyEntity::getBrokerName)
                 .distinct() // 去重
+                .collect(Collectors.toList());
+        //两者共同有的平台名称
+        List<String> uniqueBrokerNames = platformBrokerNames.stream()
+                .filter(varietyBrokerNames::contains)
                 .collect(Collectors.toList());
 
         // 根据 template 过滤 FollowVarietyEntity
@@ -315,6 +320,8 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
+        //如果策略者或者跟单者绑定了该模板，就不能删除
+
         boolean b = followVarietyService.deleteTemplate(idList);
         if(b){
             return Result.ok();

@@ -186,6 +186,14 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return FollowPlatformConvert.INSTANCE.convertList(list);
     }
 
+    @Override
+    public void updateLogo(FollowPlatformVO avatar) {
+        FollowPlatformEntity entity = new FollowPlatformEntity();
+        entity.setId(avatar.getId());
+        entity.setLogo(avatar.getLogo());
+        updateById(entity);
+    }
+
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {
 //        if (idList.isEmpty()) {

@@ -1,8 +1,5 @@
 package net.maku.mascontrol.controller;
 
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,7 +16,6 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.MasControlService;
-import net.maku.followcom.vo.FollowLogoUploadVO;
 import net.maku.followcom.vo.FollowPlatformInfoVO;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.exception.ServerException;
@@ -34,14 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.Date;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -172,74 +161,6 @@ public class FollowPlatformController {
         return masControlService.updatePlatform(vo) ? Result.ok() : Result.error();
     }
 
-    @PostMapping("upload")
-    @Operation(summary = "上传")
-    @OperateLog(type = OperateTypeEnum.INSERT)
-    public Result<FollowLogoUploadVO> uploadLogo(@RequestParam("file") MultipartFile file) throws Exception {
-        if (file.isEmpty()) {
-            return Result.error("请选择需要上传的图片");
-        }
-
-        String path = getPath() + "/" + getNewFileName(file.getOriginalFilename());
-//        String uploadPath = isWindows() ? windowsPath : linuxPath;
-//        String fullPath = uploadPath  + "/" + path;
-        String fullPath = linuxPath + "/" + path;
-
-        // 上传文件
-        String url = upload(new ByteArrayInputStream(file.getBytes()), fullPath);
-
-        FollowLogoUploadVO vo = new FollowLogoUploadVO();
-        vo.setUrl(url);
-        vo.setSize(file.getSize());
-        vo.setName(file.getOriginalFilename());
-        return Result.ok(vo);
-    }
-
-    public String upload(InputStream inputStream, String path) {
-        try {
-            // 设置文件存储的本地路径
-            File uploadDirectory = new File(path);
-            if (!uploadDirectory.exists()) {
-                uploadDirectory.mkdirs();
-            }
-
-            // 生成文件名，防止同名文件被覆盖
-            String fileName = FileNameUtil.getName(path);
-            File targetFile = new File(uploadDirectory, fileName);
-
-            // 将文件写入linux中
-            FileUtil.writeFromStream(inputStream, targetFile);
-//            Files.copy(inputStream, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-            // 返回文件的 URL 或路径
-            return targetFile.getAbsolutePath();
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("文件上传失败", e);
-        }
-    }
-
-    public String getNewFileName(String fileName) {
-        // 主文件名，不包含扩展名
-        String prefix = FileNameUtil.getPrefix(fileName);
-        // 文件扩展名
-        String suffix = FileNameUtil.getSuffix(fileName);
-        // 把当天HH:mm:ss，转换成秒
-        long time = DateUtil.timeToSecond(DateUtil.formatTime(new Date()));
-        // 新文件名
-        return prefix + "_" + time + "." + suffix;
-    }
-
-    public String getPath() {
-        // 文件路径
-        String path = DateUtil.format(new Date(), "yyyyMMdd");
-        return path;
-    }
-
-    private boolean isWindows() {
-        return System.getProperty("os.name").toLowerCase().contains("win");
-    }
-
     @DeleteMapping
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
@@ -322,5 +243,14 @@ public class FollowPlatformController {
     public Result<List<FollowPlatformVO>> listHavingServer(@Parameter(description = "name") String name) {
         List<FollowPlatformVO> list = followPlatformService.listHavingServer(name);
         return Result.ok(list);
+    }
+
+    @PutMapping("logo")
+    @Operation(summary = "修改券商logo")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    public Result<String> avatar(@RequestBody FollowPlatformVO avatar) {
+        followPlatformService.updateLogo(avatar);
+
+        return Result.ok();
     }
 }
