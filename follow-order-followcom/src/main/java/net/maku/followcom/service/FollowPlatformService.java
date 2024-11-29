@@ -41,6 +41,4 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> listHavingServer(String name);
 
     List<FollowPlatformVO> listByServer();
-
-    void updateLogo(FollowPlatformVO avatar);
 }

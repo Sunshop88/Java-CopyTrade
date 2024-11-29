@@ -245,12 +245,4 @@ public class FollowPlatformController {
         return Result.ok(list);
     }
 
-    @PutMapping("logo")
-    @Operation(summary = "修改券商logo")
-    @OperateLog(type = OperateTypeEnum.UPDATE)
-    public Result<String> avatar(@RequestBody FollowPlatformVO avatar) {
-        followPlatformService.updateLogo(avatar);
-
-        return Result.ok();
-    }
 }

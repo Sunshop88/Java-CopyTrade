@@ -78,6 +78,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         FollowPlatformEntity followPlatformEntity = baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
                 .eq(FollowPlatformEntity::getId, vo.getId()));
         baseMapper.update((Wrappers.<FollowPlatformEntity>lambdaUpdate().set(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
+                .set(ObjectUtil.isNotEmpty(vo.getLogo()),FollowPlatformEntity::getLogo,vo.getLogo())
                 .set(FollowPlatformEntity::getRemark, vo.getRemark())
                 .set(FollowPlatformEntity::getUpdateTime,LocalDateTime.now())
                 .set(FollowPlatformEntity::getUpdater,SecurityUser.getUserId())
@@ -186,13 +187,6 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return FollowPlatformConvert.INSTANCE.convertList(list);
     }
 
-    @Override
-    public void updateLogo(FollowPlatformVO avatar) {
-        FollowPlatformEntity entity = new FollowPlatformEntity();
-        entity.setId(avatar.getId());
-        entity.setLogo(avatar.getLogo());
-        updateById(entity);
-    }
 
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {
