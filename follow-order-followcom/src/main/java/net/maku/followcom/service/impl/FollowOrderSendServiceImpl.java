@@ -49,6 +49,7 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
     private LambdaQueryWrapper<FollowOrderSendEntity> getWrapper(FollowOrderSendQuery query){
         LambdaQueryWrapper<FollowOrderSendEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowOrderSendEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+        wrapper.in(ObjectUtil.isNotEmpty(query.getTraderIdList()),FollowOrderSendEntity::getTraderId,query.getTraderIdList());
         if (ObjectUtil.isNotEmpty(query.getTraderId())){
             wrapper.eq(FollowOrderSendEntity::getTraderId,query.getTraderId());
         }

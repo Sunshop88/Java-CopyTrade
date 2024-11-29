@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,8 +78,9 @@ public class FollowVpsController {
         List<Integer> ipList = page.getList().stream().map(FollowVpsVO::getId).toList();
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(ipList), FollowTraderEntity::getServerId, ipList));
         Map<Integer, Map<Integer, List<FollowTraderEntity>>> map = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId, Collectors.groupingBy(FollowTraderEntity::getType)));
+        //查询订阅关系
+        Map<Long, Long> subscribeMap = followTraderSubscribeService.list().stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
         //策略数量
-
         page.getList().forEach(o -> {
             Map<Integer, List<FollowTraderEntity>> vpsMap = map.get(o.getId());
             int followNum = 0;
@@ -93,16 +95,23 @@ public class FollowVpsController {
                 followNum = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.size() : 0;
                 traderNum = ObjectUtil.isNotEmpty(masterTraderEntities) ? masterTraderEntities.size() : 0;
                 Stream<FollowTraderEntity> stream = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.stream() : Stream.empty();
+                Map<Long, FollowTraderEntity> masterTrader = masterTraderEntities.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
                 if (ObjectUtil.isNotEmpty(stream)) {
                     stream.parallel().forEach(x -> {
-                        //获取redis内的下单信息
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus()== TraderStatusEnum.NORMAL.getValue()) {
-                            FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
-                            o.setTotal(o.getTotal() + followRedisTraderVO.getTotal());
-                            o.setProfit(o.getProfit().add(ObjectUtil.isNotEmpty(followRedisTraderVO.getProfit()) ? followRedisTraderVO.getProfit() : BigDecimal.ZERO));
-                            o.setEuqit(o.getEuqit().add(followRedisTraderVO.getEuqit()));
-                            BigDecimal lots = new BigDecimal(followRedisTraderVO.getBuyNum() + "").add(new BigDecimal(followRedisTraderVO.getSellNum() + ""));
-                            o.setLots(o.getLots().add(lots));
+                        //拿到masterid
+                        Long masterId = subscribeMap.get(x.getId());
+                        //获取master喊单者,开启了的才统计
+                        FollowTraderEntity masterTraderEntity = masterTrader.get(masterId);
+                        if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue()) {
+                            //获取redis内的下单信息
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus() == TraderStatusEnum.NORMAL.getValue() && x.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue()) {
+                                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
+                                o.setTotal(o.getTotal() + followRedisTraderVO.getTotal());
+                                o.setProfit(o.getProfit().add(ObjectUtil.isNotEmpty(followRedisTraderVO.getProfit()) ? followRedisTraderVO.getProfit() : BigDecimal.ZERO));
+                                o.setEuqit(o.getEuqit().add(followRedisTraderVO.getEuqit()));
+                                BigDecimal lots = new BigDecimal(followRedisTraderVO.getBuyNum() + "").add(new BigDecimal(followRedisTraderVO.getSellNum() + ""));
+                                o.setLots(o.getLots().add(lots));
+                            }
                         }
                     });
                 }
