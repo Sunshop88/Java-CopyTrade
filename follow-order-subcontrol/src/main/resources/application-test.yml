@@ -22,7 +22,6 @@ spring:
   kafka:
     bootstrap-servers: 39.99.136.49:9092
     consumer:
-      group-id: order-group  # 消费者组 ID
       auto-offset-reset: earliest  # 消费起始位置
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -33,6 +32,10 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     listener:
       type: batch # 设置监听器类型为批量
+    groupIdMap:
+      "39.99.136.49": "order-group-a"
+      "39.98.109.212": "order-group-b"
+      "39.101.133.150": "order-group-c"
 
   datasource:
     dynamic:

@@ -23,16 +23,16 @@ public class FollowConstant {
     static {
         String ipServiceUrl = "http://checkip.amazonaws.com/";
         try {
-            URL url = new URL(ipServiceUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String publicIP = in.readLine().trim();
-            in.close();
-
-            LOCAL_HOST = publicIP;
-//            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
+//            URL url = new URL(ipServiceUrl);
+//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//            connection.setRequestMethod("GET");
+//
+//            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+//            String publicIP = in.readLine().trim();
+//            in.close();
+//
+//            LOCAL_HOST = publicIP;
+            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -54,6 +54,9 @@ public class FollowConstant {
     public static String VPS_STARTNEWVPS = "/subcontrol/follow/startNewVps";
 
     public static String VPS_MEASURE = "/subcontrol/follow/start";
+
+    public static String VPS_UPDATE_CACHE= "/subcontrol/follow/updateCache";
+
 
     /**
      * 跟单日志
