@@ -163,6 +163,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
                 historyEntity.setSl(BigDecimal.valueOf(order.StopLoss));
                 historyEntity.setCreateTime(LocalDateTime.now());
                 historyEntity.setVersion(0);
+                historyEntity.setCommission(BigDecimal.valueOf(order.Commission));
                 list.add(historyEntity);
             });
             customBatchSaveOrUpdate(list);
