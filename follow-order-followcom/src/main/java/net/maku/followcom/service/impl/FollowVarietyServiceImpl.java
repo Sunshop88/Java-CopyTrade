@@ -184,6 +184,15 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
+    @CacheEvict(
+            value = "followVarietyCache", // 缓存名称
+            key = "#template"
+    )
+    public Boolean updateCache(Integer template) {
+        return true;
+    }
+
+    @Override
     @Cacheable(
             value = "followVarietyCache", // 缓存名称
             key = "#templateId",          // 缓存键

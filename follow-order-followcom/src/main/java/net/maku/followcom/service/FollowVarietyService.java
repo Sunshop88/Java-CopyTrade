@@ -59,4 +59,6 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
     int getLatestTemplateId();
 
     boolean checkTemplate(List<Integer> idList);
+
+    Boolean updateCache(Integer template);
 }
