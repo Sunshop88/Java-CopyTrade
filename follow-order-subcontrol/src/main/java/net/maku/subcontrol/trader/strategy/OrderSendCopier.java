@@ -15,6 +15,7 @@ import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -37,6 +38,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowTraderEntity copier = trader.getTrader();
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
         FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
+        //存入下单方式
+        orderInfo.setPlaceType(leaderCopier.getPlacedType());
         //查看喊单账号信息
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
         // 查看品种匹配 模板
@@ -95,15 +98,31 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         ThreadPoolUtils.getScheduledExecutorSend().submit(() -> {
             try {
                 log.info("请求进入时间开始:"+trader.getTrader().getId());
-                Order order = trader.orderClient.OrderSend(
-                        orderInfo.getSymbol(), op(orderInfo, leaderCopier),
-                        openOrderMapping.getSlaveLots().doubleValue(),
-                        0.0, Integer.MAX_VALUE, BigDecimal.ZERO.doubleValue(),
-                        BigDecimal.ZERO.doubleValue(), comment(orderInfo).toUpperCase(),
-                        Integer.parseInt(orderInfo.getAccount().trim()), null
-                );
+
+                QuoteClient quoteClient=trader.quoteClient;
+                FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(trader.getTrader().getId()));
+                if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(trader.quoteClient)
+                        || !trader.quoteClient.Connected()) {
+                    quoteClient = followPlatformService.tologin(followTraderEntity);
+                    if (ObjectUtil.isEmpty(quoteClient)) {
+                        throw new RuntimeException("登录异常"+trader.getTrader().getId());
+                    }
+                }
+                double asksub = quoteClient.GetQuote(orderInfo.getSymbol()).Ask;
+                double bidsub = quoteClient.GetQuote(orderInfo.getSymbol()).Bid;
+                LocalDateTime startTime = LocalDateTime.now();
+                double startPrice = trader.getTrader().getType().equals(Op.Buy.getValue())?asksub:bidsub;
+                Order order = quoteClient.OrderClient.OrderSend(
+                            orderInfo.getSymbol(), op(orderInfo, leaderCopier),
+                            openOrderMapping.getSlaveLots().doubleValue(),
+                            trader.getTrader().getType().equals(Op.Buy.getValue())?asksub:bidsub, Integer.MAX_VALUE, BigDecimal.ZERO.doubleValue(),
+                            BigDecimal.ZERO.doubleValue(), comment(orderInfo).toUpperCase(),
+                            Integer.parseInt(orderInfo.getAccount().trim()), null
+                    );
+                LocalDateTime endTime = LocalDateTime.now();
+                log.info("下单详情 账号:"+trader.getTrader().getId()+"平台:"+trader.getTrader().getPlatform()+"节点:"+quoteClient.Host+":"+quoteClient.Port);
                 log.info("请求进入时间结束:"+trader.getTrader().getId());
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, trader.getTrader(), flag);
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, trader.getTrader(), flag,startTime,endTime,startPrice);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = mapper.writeValueAsString(event);
                 // 保存到批量发送队列

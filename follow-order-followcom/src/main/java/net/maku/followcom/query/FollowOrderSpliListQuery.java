@@ -35,4 +35,5 @@ public class FollowOrderSpliListQuery extends Query {
 
     private List<String> symbolList;
     private List<String> traderIdList;
+    private String server;
 }

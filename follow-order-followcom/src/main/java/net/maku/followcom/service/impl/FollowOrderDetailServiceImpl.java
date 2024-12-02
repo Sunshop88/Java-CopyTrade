@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -103,6 +104,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
     @Override
     public PageResult<FollowOrderSlipPointVO> listFollowOrderSlipPoint(FollowOrderSpliListQuery query) {
         Page<?> pageRequest = new Page<>(query.getPage(), query.getLimit());
+        query.setServer(FollowConstant.LOCAL_HOST);
         Page<FollowOrderSlipPointVO> page = followOrderDetailDao.getFollowOrderDetailStats(pageRequest,query);
         return new PageResult<>(page.getRecords(), page.getTotal());
     }

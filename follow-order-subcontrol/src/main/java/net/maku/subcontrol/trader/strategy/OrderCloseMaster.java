@@ -53,27 +53,6 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             o.setDetectedCloseTime(orderInfo.getDetectedCloseTime());
             followSubscribeOrderService.updateById(o);
         });
-        BigDecimal leaderProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add(orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
-        //生成历史订单
-        log.info("生成历史订单"+orderInfo.getTicket());
-        FollowOrderHistoryEntity followOrderHistory=new FollowOrderHistoryEntity();
-        followOrderHistory.setTraderId(trader.getId());
-        followOrderHistory.setAccount(trader.getAccount());
-        followOrderHistory.setOrderNo(orderInfo.getTicket());
-        followOrderHistory.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
-        followOrderHistory.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
-        followOrderHistory.setOpenTime(orderInfo.getOpenTime());
-        followOrderHistory.setCloseTime(orderInfo.getCloseTime());
-        followOrderHistory.setProfit(leaderProfit);
-        followOrderHistory.setComment(orderInfo.getComment());
-        followOrderHistory.setSize(BigDecimal.valueOf(orderInfo.getLots()));
-        followOrderHistory.setType(orderInfo.getType());
-        followOrderHistory.setSwap(orderInfo.getSwap());
-        followOrderHistory.setMagic((int)orderInfo.getMagic());
-        followOrderHistory.setTp(BigDecimal.valueOf(orderInfo.getTp()));
-        followOrderHistory.setSl(BigDecimal.valueOf(orderInfo.getSl()));
-        followOrderHistory.setSymbol(orderInfo.getSymbol());
-        followOrderHistoryService.save(followOrderHistory);
         //查看跟单关系
         List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId())
                 .eq(FollowTraderSubscribeEntity::getFollowStatus, CloseOrOpenEnum.OPEN.getValue())

@@ -14,6 +14,8 @@ import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
@@ -23,6 +25,7 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
+import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.enums.TraderRepairOrderEnum;
 import net.maku.subcontrol.pojo.OrderActiveInfoVOPool;
@@ -35,6 +38,7 @@ import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
+import online.mtapi.mt4.QuoteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -70,8 +74,8 @@ public class TraderOrderActiveWebSocket {
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
     private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-
-
+    private FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+    private FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "slaveId") String slaveId) {
         try {
@@ -97,20 +101,27 @@ public class TraderOrderActiveWebSocket {
                 return;
             }
             String accountId = slaveId;
+            AbstractApiTrader abstractApiTrader ;
+            FollowTraderEntity followTraderEntity;
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
+                followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
+                abstractApiTrader=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
+            }else {
+                followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
+                abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
             }
-            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
-            if (ObjectUtil.isEmpty(leaderApiTrader)) {
-                leaderApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
-            }
-            if (ObjectUtil.isEmpty(leaderApiTrader)){
-                log.info(traderId+"websocket登录异常");
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                    || !abstractApiTrader.quoteClient.Connected()) {
+                QuoteClient quoteClient = followPlatformService.tologin(followTraderEntity);
+                if (ObjectUtil.isEmpty(quoteClient)) {
+                    throw new RuntimeException("登录异常"+accountId);
+                }
             }
             //所有持仓
-            List<Order> openedOrders = Arrays.stream(leaderApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
-            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, leaderApiTrader.getTrader().getAccount());
+            List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             //存入redis
@@ -172,7 +183,7 @@ public class TraderOrderActiveWebSocket {
                         BeanUtil.copyProperties(detailServiceOne, orderRepairInfoVO);
                         orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
                         orderRepairInfoVO.setMasterLots(detailServiceOne.getMasterLots().doubleValue());
-                        orderRepairInfoVO.setMasterProfit(detailServiceOne.getMasterProfit().doubleValue());
+                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(detailServiceOne.getMasterProfit())?detailServiceOne.getMasterProfit().doubleValue():0);
                         orderRepairInfoVO.setMasterType(Op.forValue(detailServiceOne.getMasterType()).name());
                         orderRepairInfoVO.setSlaveLots(detailServiceOne.getSlaveLots().doubleValue());
                         orderRepairInfoVO.setSlaveType(Op.forValue(detailServiceOne.getSlaveType()).name());

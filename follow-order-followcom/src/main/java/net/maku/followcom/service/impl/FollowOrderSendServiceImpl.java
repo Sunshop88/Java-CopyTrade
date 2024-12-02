@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowOrderSendConvert;
@@ -49,6 +50,8 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
     private LambdaQueryWrapper<FollowOrderSendEntity> getWrapper(FollowOrderSendQuery query){
         LambdaQueryWrapper<FollowOrderSendEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowOrderSendEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+        //当前VPS
+        wrapper.eq(FollowOrderSendEntity::getIpAddr, FollowConstant.LOCAL_HOST);
         wrapper.in(ObjectUtil.isNotEmpty(query.getTraderIdList()),FollowOrderSendEntity::getTraderId,query.getTraderIdList());
         if (ObjectUtil.isNotEmpty(query.getTraderId())){
             wrapper.eq(FollowOrderSendEntity::getTraderId,query.getTraderId());

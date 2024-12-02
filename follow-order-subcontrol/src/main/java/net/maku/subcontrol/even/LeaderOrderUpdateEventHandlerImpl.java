@@ -115,7 +115,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             return;
         }
         Order order = orderUpdateEventArgs.Order;
-
         String currency = abstractApiTrader.quoteClient.Account().currency;
         //发送websocket消息标识
         int flag = 0;
@@ -259,7 +258,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
-                                    quoteClient = followPlatformService.tologin(h.getAccount(), h.getPassword(), h.getPlatform());
+                                    quoteClient = followPlatformService.tologin(h);
                                 } catch (Exception e) {
                                     log.error("推送从redis数据,登录异常:" + e);
                                 }

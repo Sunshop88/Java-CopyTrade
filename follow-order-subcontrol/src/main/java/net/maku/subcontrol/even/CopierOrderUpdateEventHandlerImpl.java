@@ -52,8 +52,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
                 list.forEach(o -> {
                     //发送消息
-                    log.info("跟单websocket"+leader.getId());
-                    traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), leader.getId().toString());
+                    traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
                 });
             }
         }

@@ -41,6 +41,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "  </foreach>\n" +
             "</if>" +
             "<if test='query.account != null and query.account != \"\"'> AND account = #{query.account} </if>" +
+            "<if test='query.server != null and query.server != \"\"'> AND ip_addr = #{query.server} </if>" +
             "<if test='query.platform != null and query.platform != \"\"'> AND server = #{query.platform} </if>" +
             "<if test='query.symbolList != null and query.symbolList.size > 0'> AND symbol in \n" +
             "  <foreach collection='query.symbolList' item='item' open='(' separator=',' close=')'>\n" +

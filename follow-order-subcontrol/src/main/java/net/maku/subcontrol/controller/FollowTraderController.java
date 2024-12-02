@@ -200,7 +200,7 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<?> orderSend(@RequestBody @Valid FollowOrderSendVO vo) {
-        FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
+        FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             return Result.error("账号不存在");
         }
@@ -219,11 +219,7 @@ public class FollowTraderController {
 
         if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
                 || !leaderApiTrader.quoteClient.Connected()) {
-            quoteClient = followPlatformService.tologin(
-                    followTraderVO.getAccount(),
-                    followTraderVO.getPassword(),
-                    followTraderVO.getPlatform()
-            );
+            quoteClient = followPlatformService.tologin(followTraderVO);
             if (ObjectUtil.isEmpty(quoteClient)) {
                 return Result.error("账号无法登录");
             }
@@ -248,7 +244,7 @@ public class FollowTraderController {
             return Result.error(followTraderVO.getAccount() + " 操作被中断");
         }
 
-        boolean result = followTraderService.orderSend(vo, quoteClient, followTraderVO, contract);
+        boolean result = followTraderService.orderSend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
         if (!result) {
             return Result.error(followTraderVO.getAccount() + "下单失败,该账号正在下单中");
         }
@@ -305,7 +301,7 @@ public class FollowTraderController {
         if(vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()){
              checkParams(vo);
         }
-        FollowTraderVO followTraderVO = followTraderService.get(vo.getTraderId());
+        FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             throw new ServerException("账号不存在");
         }
@@ -322,7 +318,7 @@ public class FollowTraderController {
         }
         QuoteClient quoteClient = null;
         if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
-            quoteClient = followPlatformService.tologin(followTraderVO.getAccount(), followTraderVO.getPassword(), followTraderVO.getPlatform());
+            quoteClient = followPlatformService.tologin(followTraderVO);
             if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException("账号无法登录");
             }
