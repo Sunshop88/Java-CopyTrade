@@ -60,8 +60,16 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         // 解析字符串为 LocalDateTime
-        LocalDateTime startTime = LocalDateTime.parse(query.getStartTime(), formatter);
-        LocalDateTime endTime = LocalDateTime.parse(query.getEndTime(), formatter);
+        LocalDateTime startTime =null;
+        if (ObjectUtil.isNotEmpty(query.getStartTime())) {
+            startTime = LocalDateTime.parse(query.getStartTime(), formatter);
+        }
+        LocalDateTime endTime =null;
+        if (ObjectUtil.isNotEmpty(query.getEndTime())) {
+            endTime =  LocalDateTime.parse(query.getEndTime(), formatter);
+        }
+
+
         wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()), FollowOrderHistoryEntity::getCloseTime, startTime);
         wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()), FollowOrderHistoryEntity::getCloseTime, endTime);
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderHistoryEntity::getType, query.getType());
