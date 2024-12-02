@@ -873,13 +873,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
             followOrderDetailEntity.setRequestOpenTime(LocalDateTime.now());
+            log.info("当前时间开始"+LocalDateTime.now());
             if (type.equals(Op.Buy.getValue())){
                 order=oc.OrderSend(symbol, Op.Buy,lotsPerOrder,asksub,0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
+                log.info("当前时间结束"+LocalDateTime.now());
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
             }else {
                 order=oc.OrderSend(symbol, Op.Sell,lotsPerOrder,bidsub, 0,0,0,"", Integer.valueOf(RandomStringUtil.generateNumeric(5)),null);
                 followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
+                log.info("当前时间结束"+LocalDateTime.now());
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
             log.info("下单账号{},下单平台{}，节点{}:{}",account,platform,oc.QuoteClient.Host,oc.QuoteClient.Port);
