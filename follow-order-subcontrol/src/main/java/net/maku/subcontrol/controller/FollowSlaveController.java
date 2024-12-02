@@ -173,6 +173,7 @@ public class FollowSlaveController {
             redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId(),map);
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
+            redisCache.delete(Constant.FOLLOW_SUB_TRADER+vo.getId().toString());
             //启动账户
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
@@ -284,17 +285,22 @@ public class FollowSlaveController {
     private void reconnect(String traderId) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
             if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
-                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
-                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
-                leaderApiTrader.startTrade();
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                copierApiTrader.startTrade();
             }
+            //重新记录订单关系
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, traderId));
+            list.forEach(o->{
+                redisCache.hSet(Constant.FOLLOW_SUB_TRADER+o.getSlaveId(),o.getMasterId().toString(),o);
+            });
         } catch (RuntimeException e) {
             throw new ServerException("请检查账号密码，稍后再试");
         }

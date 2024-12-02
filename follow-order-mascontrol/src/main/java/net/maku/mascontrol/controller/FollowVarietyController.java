@@ -42,6 +42,8 @@ import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static net.maku.followcom.util.RestUtil.getHeader;
+
 /**
  * 品种匹配
  *
@@ -133,12 +135,15 @@ public class FollowVarietyController {
                 followVarietyService.updateTemplateName(template,templateName);
             }
             //修改缓存
+            String authorization=req.getHeader("Authorization");
             ThreadPoolUtils.execute(()->{
                 for (FollowVpsEntity o : followVpsService.list()){
                     String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE);
                     JSONObject jsonObject=new JSONObject();
                     jsonObject.put("template",template);
-                    JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), jsonObject, null, JSONObject.class).getBody();
+                    HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                    header.add("Authorization", authorization);
+                    JSONObject body = RestUtil.request(url, HttpMethod.GET,header, jsonObject, null, JSONObject.class).getBody();
                     log.info("修改缓存"+body.toString());
                 }
             });

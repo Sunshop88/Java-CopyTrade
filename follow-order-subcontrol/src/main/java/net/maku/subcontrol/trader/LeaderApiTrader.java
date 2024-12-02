@@ -31,6 +31,7 @@ public class LeaderApiTrader extends AbstractApiTrader {
 //    }
 
     public Boolean startTrade() {
+        //建立跟单关系
         super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(this), 6, 90, TimeUnit.SECONDS);
         return true;
     }

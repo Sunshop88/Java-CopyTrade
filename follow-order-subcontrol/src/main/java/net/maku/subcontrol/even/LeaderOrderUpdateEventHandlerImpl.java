@@ -209,15 +209,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info(leader.getId() + "喊单账号状态未开启");
             }
 
-            // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
-            // 获取当前系统时间
-            long currentTime = System.currentTimeMillis();
-            // 获取该symbol上次执行时间
-            if (currentTime - lastInvokeTime >= interval) {
-                lastInvokeTime = currentTime;
-                //发送消息
-                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
-            }
+            //发送消息
+            traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
             //保存历史数据
             followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
         }

@@ -66,6 +66,7 @@ public class KafkaMessageConsumer {
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
             OrderResultEvent orderResultEvent = JSON.parseObject(message, OrderResultEvent.class);
+            log.info("kafka消费"+orderResultEvent);
             if (orderResultEvent.getCopier().getIpAddr().equals(FollowConstant.LOCAL_HOST)){
                 handleOrderResult(
                         orderResultEvent.getOrder(),

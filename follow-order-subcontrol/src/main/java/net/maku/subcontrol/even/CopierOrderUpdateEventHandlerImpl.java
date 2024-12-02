@@ -49,20 +49,15 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             e.printStackTrace();
         }
         if (flag == 1) {
-            // 获取该symbol上次执行时间
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastInvokeTime >= interval) {
-                lastInvokeTime = currentTime;
-                //查看喊单信息
-                List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
-                list.forEach(o -> {
-                    //发送消息
-                    log.info("跟单websocket" + leader.getId());
-                    traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), leader.getId().toString());
-                });
-            }
+            //查看喊单信息
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
+            list.forEach(o -> {
+                //发送消息
+                log.info("跟单websocket" + copier4ApiTrader.getTrader().getId());
+                traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
+            });
             //保存历史数据
-            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
+            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, copier4ApiTrader.getTrader());
         }
     }
 

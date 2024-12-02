@@ -1,5 +1,6 @@
 package net.maku.subcontrol.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -137,7 +138,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
             //日历往前追溯3个月
             //    cal.add(Calendar.MONTH,-3);
             //获取mt4历史订单
-            Order[] orders = quoteClient.DownloadOrderHistory(LocalDateTime.parse(DateUtils.format(cal.getTime(), DateUtils.DATE_PATTERN)), LocalDateTime.now());
+            Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)), LocalDateTime.now());
             //保存历史订单
             List<FollowOrderHistoryEntity> list=new ArrayList<>();
             Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell) || order.Type.equals(Op.Balance)).forEach(order -> {
