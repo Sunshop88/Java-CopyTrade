@@ -1,10 +1,12 @@
 package net.maku.subcontrol.service;
 
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.subcontrol.query.FollowOrderHistoryQuery;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
+import online.mtapi.mt4.QuoteClient;
 
 import java.util.List;
 
@@ -29,4 +31,8 @@ public interface FollowOrderHistoryService extends BaseService<FollowOrderHistor
 
 
     void export();
+
+    void customBatchSaveOrUpdate(FollowOrderHistoryEntity historyEntity);
+
+    void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader);
 }

@@ -18,6 +18,9 @@ public class FollowOrderSpliListQuery extends Query {
     @Schema(description = "账户id")
     private String traderId;
 
+    @Schema(description = "vpsId")
+    private Integer serverId;
+
     @Schema(description = "账户")
     private String account;
 

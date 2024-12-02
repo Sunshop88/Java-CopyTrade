@@ -213,6 +213,12 @@ public class FollowSlaveController {
             if(ObjectUtil.isNotEmpty(subscribes)){
                 o.setPlacedType(subscribes.get(0).getPlacedType());
                 o.setFollowMode(subscribes.get(0).getFollowMode());
+                o.setFollowOpen(subscribes.get(0).getFollowOpen());
+                o.setFollowClose(subscribes.get(0).getFollowClose());
+                o.setFollowRep(subscribes.get(0).getFollowRep());
+                o.setFollowParam(subscribes.get(0).getFollowParam());
+                o.setFollowDirection(subscribes.get(0).getFollowDirection());
+                o.setRemainder(subscribes.get(0).getRemainder());
             } ;});
         return Result.ok(page);
     }
