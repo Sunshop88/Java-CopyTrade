@@ -24,4 +24,6 @@ public class FollowOrderHistoryQuery extends Query {
 
     @Schema(description = "时间-结束")
     private String endTime;
+
+    private Integer type;
 }

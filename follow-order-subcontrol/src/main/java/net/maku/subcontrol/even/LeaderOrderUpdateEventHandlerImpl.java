@@ -2,49 +2,44 @@ package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.*;
+import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.enums.AcEnum;
+import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.OrderChangeTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
-import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.AccountCacheVO;
 import net.maku.followcom.vo.FollowTraderCacheVO;
 import net.maku.followcom.vo.OrderCacheVO;
 import net.maku.framework.common.cache.RedisUtil;
-import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.AssertUtils;
-import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
-import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
-import net.maku.subcontrol.rule.AbstractFollowRule;
-import net.maku.subcontrol.rule.FollowRule;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
-import net.maku.subcontrol.trader.*;
+import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
+import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.trader.strategy.*;
 import online.mtapi.mt4.*;
-import org.springframework.kafka.core.KafkaTemplate;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.Instant;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import static online.mtapi.mt4.Op.Buy;
-import static online.mtapi.mt4.Op.Sell;
+
 import static online.mtapi.mt4.UpdateAction.*;
 
 /**
@@ -76,12 +71,12 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         super();
         this.abstractApiTrader = abstractApiTrader;
         this.leader = this.abstractApiTrader.getTrader();
-        this.followOrderHistoryService=SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
-        this.followVarietyService=SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
-        this.followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
-        this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
-        this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
-        this.followTraderLogService=SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
+        this.followOrderHistoryService = SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
+        this.followVarietyService = SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
+        this.followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
+        this.followPlatformService = SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+        this.followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+        this.followTraderLogService = SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
         this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         strategyMap = new HashMap<>();
         strategyMap.put(AcEnum.MO, SpringContextUtils.getBean(OrderSendMaster.class));
@@ -135,14 +130,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());
                     //喊单开仓
                     //发送MT4处理请求
-                    strategyMap.get(AcEnum.MO).operate(abstractApiTrader,eaOrderInfo,0);
+                    strategyMap.get(AcEnum.MO).operate(abstractApiTrader, eaOrderInfo, 0);
                 });
                 flag = 1;
                 //推送到redis
 //                pushCache(leader.getServerId());
                 break;
             case PositionClose:
-                log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(),new EaOrderInfo(order));
+                log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 //持仓时间小于2秒，则延迟一秒发送平仓信号，避免客户测试的时候平仓信号先于开仓信号到达
                 int delaySendCloseSignal = delaySendCloseSignal(order.OpenTime, order.CloseTime);
                 if (delaySendCloseSignal == 0) {
@@ -150,14 +145,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
                         //发送MT4处理请求
-                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader,eaOrderInfo,0);
+                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                     });
                 } else {
                     scheduledThreadPoolExecutor.schedule(() -> {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
                         //发送MT4处理请求
-                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader,eaOrderInfo,0);
+                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
                 flag = 1;
@@ -208,7 +203,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
             } else {
                 //喊单账号未开启
-                log.info(leader.getId()+"喊单账号状态未开启");
+                log.info(leader.getId() + "喊单账号状态未开启");
             }
 
             // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间
@@ -220,27 +215,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 //发送消息
                 traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
             }
-            //获取历史数据
+            //保存历史数据
+            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
+        }
+    }
 
-        }
-    }
-    //记录历史订单
-    private  void saveOrderHistory(QuoteClient quoteClient){
-        try {
-            //日历往前追溯3个月
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.MONTH,-3);
-            //获取mt4历史订单
-            Order[] orders = quoteClient.DownloadOrderHistory(LocalDateTime.parse(DateUtils.format(cal.getTime(), DateUtils.DATE_PATTERN)), LocalDateTime.now());
-            //保存历史订单
-            Arrays.stream(orders).forEach(order -> {
-                FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
-                historyEntity.setOrderNo(order.Ticket);
-            });
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     /**
      * 推送redis缓存

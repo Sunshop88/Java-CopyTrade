@@ -3,17 +3,21 @@ package net.maku.subcontrol.even;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.util.SpringContextUtils;
+import net.maku.subcontrol.service.FollowOrderHistoryService;
+import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 
-import java.util.Date;
 import java.util.List;
+
 /**
  * @author Samson Bruce
  */
 @Slf4j
 public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     AbstractApiTrader copier4ApiTrader;
+    protected FollowOrderHistoryService followOrderHistoryService;
 
     // 上次执行时间
     private long lastInvokeTime = 0;
@@ -24,6 +28,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     public CopierOrderUpdateEventHandlerImpl(AbstractApiTrader abstract4ApiTrader) {
         super();
         this.copier4ApiTrader = abstract4ApiTrader;
+        this.followOrderHistoryService = SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
     }
 
     @Override
@@ -52,10 +57,14 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
                 list.forEach(o -> {
                     //发送消息
-                    log.info("跟单websocket"+leader.getId());
+                    log.info("跟单websocket" + leader.getId());
                     traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), leader.getId().toString());
                 });
             }
+            //保存历史数据
+            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
         }
     }
+
+
 }

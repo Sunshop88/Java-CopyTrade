@@ -43,10 +43,7 @@ import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -95,13 +92,17 @@ public class FollowVpsController {
                 followNum = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.size() : 0;
                 traderNum = ObjectUtil.isNotEmpty(masterTraderEntities) ? masterTraderEntities.size() : 0;
                 Stream<FollowTraderEntity> stream = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.stream() : Stream.empty();
-                Map<Long, FollowTraderEntity> masterTrader = masterTraderEntities.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
+                Map<Long, FollowTraderEntity> masterTrader =new HashMap<>();
+                if(ObjectUtil.isNotEmpty(masterTraderEntities)){
+                   masterTrader = masterTraderEntities.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
+                }
                 if (ObjectUtil.isNotEmpty(stream)) {
+                    Map<Long, FollowTraderEntity> finalMasterTrader = masterTrader;
                     stream.parallel().forEach(x -> {
                         //拿到masterid
                         Long masterId = subscribeMap.get(x.getId());
                         //获取master喊单者,开启了的才统计
-                        FollowTraderEntity masterTraderEntity = masterTrader.get(masterId);
+                        FollowTraderEntity masterTraderEntity = finalMasterTrader.get(masterId);
                         if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue()) {
                             //获取redis内的下单信息
                             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus() == TraderStatusEnum.NORMAL.getValue() && x.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue()) {
