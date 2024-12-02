@@ -154,7 +154,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
         FollowVpsVO followVpsVO = this.get(Long.valueOf(vo.getId()));
         if (ObjectUtil.notEqual(vo.getName(), followVpsVO.getName())) {
-            List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vo.getName()));
+            List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vo.getName()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
             if (ObjectUtil.isNotEmpty(list)) {
                 throw new ServerException("重复名称,请重新输入");
             }
@@ -202,7 +202,9 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Override
     public List<FollowVpsVO> listByVps() {
         LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
-        wrapper.select(FollowVpsEntity::getName).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType())
+        wrapper.select(FollowVpsEntity::getName)
+                .eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType())
+                .eq(FollowVpsEntity::getIsActive, VpsSpendEnum.IN_PROGRESS.getType())
                 .groupBy(FollowVpsEntity::getName);
         List<FollowVpsEntity> list = baseMapper.selectList(wrapper);
         return FollowVpsConvert.INSTANCE.convertList(list);
@@ -239,13 +241,15 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     @Override
     public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService) {
         //过滤被删除的数据
-        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE).list();
+        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).list();
         Integer openNum = (int) list.stream().filter(o -> o.getIsOpen().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer runningNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer closeNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
         Integer errorNum = (int) list.stream().filter(o -> o.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        //有效的vpsId
+        List<Integer> vpsIds = list.stream().map(FollowVpsEntity::getId).toList();
         //账号信息
-        List<FollowTraderEntity> followTraderEntityList = followTraderService.list();
+        List<FollowTraderEntity> followTraderEntityList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getServerId, vpsIds));
         Integer masterSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
         Integer masterTotal = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).count();
         Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
@@ -255,7 +259,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         BigDecimal orderEquityTotal = BigDecimal.ZERO;
         BigDecimal orderProfitTotal = BigDecimal.ZERO;
         //过滤出为跟单的
-        List<FollowTraderEntity> slaveTraderEntityList = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).collect(Collectors.toList());
+        List<FollowTraderEntity> slaveTraderEntityList = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())  ).collect(Collectors.toList());
         //followTraderEntityList 替换出slaveTraderEntityList
         for (FollowTraderEntity followTraderEntity : slaveTraderEntityList) {
             if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId())) && followTraderEntity.getStatus()==TraderStatusEnum.NORMAL.getValue()) {

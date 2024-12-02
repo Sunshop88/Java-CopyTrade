@@ -51,10 +51,6 @@ public class FollowPlatformController {
     private final UserApi userApi;
     private final FollowTraderService followTraderService;
     private final MasControlService masControlService;
-//    @Value("${storage.local.path}")
-//    private static String windowsPath;
-    @Value("${storage.local.linuxpath}")
-    private static String linuxPath;
 
     @GetMapping("page")
     @Operation(summary = "分页")

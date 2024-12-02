@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 /**
  * 所有MT4账号的历史订单
  *
@@ -44,7 +46,9 @@ public interface FollowOrderHistoryDao extends BaseDao<FollowOrderHistoryEntity>
             "updater,",
             "update_time,",
             "placed_type",
-            ") values  (",
+            ") values " ,
+            " <foreach collection='list' item='historyEntity'  separator=','>",
+            " (",
             "#{historyEntity.orderNo},",
             "#{historyEntity.type},",
             "#{historyEntity.openTime},",
@@ -71,8 +75,9 @@ public interface FollowOrderHistoryDao extends BaseDao<FollowOrderHistoryEntity>
             "#{historyEntity.updateTime},",
             "#{historyEntity.placedType}",
             ")",
+            "</foreach>",
             "ON DUPLICATE KEY UPDATE update_time = now() , version=version+1",
             "</script>",
     })
-  public   void customBatchSaveOrUpdate(@Param("historyEntity") FollowOrderHistoryEntity historyEntity);
+  public   void customBatchSaveOrUpdate(@Param("list") List<FollowOrderHistoryEntity> list);
 }

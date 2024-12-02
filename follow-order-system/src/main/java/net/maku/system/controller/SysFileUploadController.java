@@ -87,17 +87,26 @@ public class SysFileUploadController {
     @PostMapping("uploads")
     @Operation(summary = "上传")
     @OperateLog(type = OperateTypeEnum.INSERT)
-    public SysFileUploadVO uploads(@RequestParam("file") MultipartFile file) throws Exception {
+    public SysFileUploadVO uploads(@RequestParam(value = "file", required = false) MultipartFile file) throws Exception {
+        SysFileUploadVO vo = new SysFileUploadVO();
         if (file.isEmpty()) {
-            throw new ServerException("请选择需要上传的文件");
+//            throw new ServerException("请选择需要上传的文件");
+            return vo;
         }
-
+        String contentType = file.getContentType();
+        if (!"image/png".equals(contentType)) {
+            throw new ServerException("上传的文件必须为 PNG 格式");
+        }
+        // 检查文件大小
+        long maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.getSize() > maxSize) {
+            throw new ServerException("上传的文件大小不能超过 10MB");
+        }
         // 上传路径
         String path = storageService.getPath(file.getOriginalFilename());
         // 上传文件
         String url = storageService.upload(file.getBytes(), path);
 
-        SysFileUploadVO vo = new SysFileUploadVO();
         vo.setUrl(url);
         vo.setName(file.getOriginalFilename());
 

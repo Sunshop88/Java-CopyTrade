@@ -25,10 +25,7 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.RandomStringUtil;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.common.utils.*;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.framework.security.user.SecurityUser;
 import online.mtapi.mt4.*;
@@ -172,6 +169,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         entity.setServerName(followVpsEntity.getName());
         entity.setCreator(SecurityUser.getUserId());
         entity.setCreateTime(LocalDateTime.now());
+        entity.setFollowStatus(vo.getFollowStatus());
         baseMapper.insert(entity);
         FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(entity);
         followTraderVO.setId(entity.getId());
@@ -327,7 +325,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
 
-            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
             // 解析字符串为 LocalDateTime
             LocalDateTime startTime = LocalDateTime.parse(query.getStartTime(), formatter);

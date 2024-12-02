@@ -32,7 +32,7 @@ public interface FollowOrderHistoryService extends BaseService<FollowOrderHistor
 
     void export();
 
-    void customBatchSaveOrUpdate(FollowOrderHistoryEntity historyEntity);
+    void customBatchSaveOrUpdate(List<FollowOrderHistoryEntity> list);
 
     void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader);
 }
