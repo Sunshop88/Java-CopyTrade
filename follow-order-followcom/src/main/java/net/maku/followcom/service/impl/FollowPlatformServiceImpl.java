@@ -79,7 +79,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         FollowPlatformEntity followPlatformEntity = baseMapper.selectOne(Wrappers.<FollowPlatformEntity>lambdaQuery()
                 .eq(FollowPlatformEntity::getId, vo.getId()));
         baseMapper.update((Wrappers.<FollowPlatformEntity>lambdaUpdate().set(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
-                .set(ObjectUtil.isNotEmpty(vo.getLogo()),FollowPlatformEntity::getLogo,vo.getLogo())
+                .set(FollowPlatformEntity::getLogo,vo.getLogo())
                 .set(FollowPlatformEntity::getRemark, vo.getRemark())
                 .set(FollowPlatformEntity::getUpdateTime,LocalDateTime.now())
                 .set(FollowPlatformEntity::getUpdater,SecurityUser.getUserId())
