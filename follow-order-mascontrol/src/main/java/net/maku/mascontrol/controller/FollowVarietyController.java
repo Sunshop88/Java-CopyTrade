@@ -1,31 +1,36 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.query.FollowVarietyQuery;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowVarietyService;
+import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 
+import org.apache.ibatis.javassist.compiler.ast.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +38,7 @@ import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,7 +57,7 @@ public class FollowVarietyController {
     private final FollowVarietyService followVarietyService;
     private final FollowPlatformService followPlatformService;
     private final RedisCache redisCache;
-
+    private final FollowVpsService followVpsService;
     @GetMapping("pageSymbol")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -104,7 +110,7 @@ public class FollowVarietyController {
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> importExcel(@RequestParam(value = "file",required = false) MultipartFile file,@RequestParam("template" )Integer template,@RequestParam(value = "templateName") String templateName) throws Exception {
+    public Result<String> importExcel(@RequestParam(value = "file",required = false) MultipartFile file,@RequestParam("template" )Integer template,@RequestParam(value = "templateName") String templateName, HttpServletRequest req) {
         if (ObjectUtil.isEmpty(templateName)){
             return Result.error("请输入模板名称");
         }
@@ -126,6 +132,16 @@ public class FollowVarietyController {
             }else{
                 followVarietyService.updateTemplateName(template,templateName);
             }
+            //修改缓存
+            ThreadPoolUtils.execute(()->{
+                for (FollowVpsEntity o : followVpsService.list()){
+                    String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE);
+                    JSONObject jsonObject=new JSONObject();
+                    jsonObject.put("template",template);
+                    JSONObject body = RestUtil.request(url, HttpMethod.GET, RestUtil.getHeaderApplicationJsonAndToken(req), jsonObject, null, JSONObject.class).getBody();
+                    log.info("修改缓存"+body.toString());
+                }
+            });
             return Result.ok("修改成功");
         } catch (Exception e) {
             return Result.error("修改失败：" + e.getMessage());

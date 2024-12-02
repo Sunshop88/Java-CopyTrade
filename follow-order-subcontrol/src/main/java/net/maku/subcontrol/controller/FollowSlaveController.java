@@ -299,4 +299,11 @@ public class FollowSlaveController {
             throw new ServerException("请检查账号密码，稍后再试");
         }
     }
+
+    @GetMapping("updateCache")
+    @Operation(summary = "更新缓存")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> updateCache(@RequestParam("template") Integer template) {
+        return Result.ok(followVarietyService.updateCache(template));
+    }
 }
