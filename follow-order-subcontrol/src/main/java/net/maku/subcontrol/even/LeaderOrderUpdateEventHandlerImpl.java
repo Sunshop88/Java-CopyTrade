@@ -2,44 +2,47 @@ package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.enums.AcEnum;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.OrderChangeTypeEnum;
+import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.AccountCacheVO;
 import net.maku.followcom.vo.FollowTraderCacheVO;
 import net.maku.followcom.vo.OrderCacheVO;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.AssertUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.rule.AbstractFollowRule;
+import net.maku.subcontrol.rule.FollowRule;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
-import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.trader.CopierApiTradersAdmin;
-import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
+import net.maku.subcontrol.trader.*;
 import net.maku.subcontrol.trader.strategy.*;
 import online.mtapi.mt4.*;
-
+import org.springframework.kafka.core.KafkaTemplate;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
-
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
 import static online.mtapi.mt4.UpdateAction.*;
 
 /**
@@ -258,7 +261,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
-                                    quoteClient = followPlatformService.tologin(h.getAccount(), h.getPassword(), h.getPlatform());
+                                    quoteClient = followPlatformService.tologin(h);
                                 } catch (Exception e) {
                                     log.error("推送从redis数据,登录异常:" + e);
                                 }

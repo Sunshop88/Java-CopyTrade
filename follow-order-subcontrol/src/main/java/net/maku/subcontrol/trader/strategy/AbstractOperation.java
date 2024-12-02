@@ -6,6 +6,7 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -45,7 +46,8 @@ public class AbstractOperation {
     protected FollowTraderLogService followTraderLogService;
     protected List<String> kafkaMessages ;
     private KafkaTemplate<Object, Object> kafkaTemplate;
-
+    protected FollowOrderDetailService followOrderDetailService;
+    protected FollowSysmbolSpecificationService followSysmbolSpecificationService;
     public AbstractOperation() {
         this.redisUtil = SpringContextUtils.getBean(RedisUtil.class);
         followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
@@ -60,6 +62,8 @@ public class AbstractOperation {
         this.followTraderLogService=SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
         this.kafkaMessages= new CopyOnWriteArrayList<>();
         this.kafkaTemplate = SpringContextUtils.getBean(KafkaTemplate.class);
+        this.followOrderDetailService=SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
+        this.followSysmbolSpecificationService=SpringContextUtils.getBean(FollowSysmbolSpecificationServiceImpl.class);
         startBatchSender();
     }
 

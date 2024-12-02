@@ -130,6 +130,8 @@ public class EaOrderInfo implements Serializable {
     private String slaveComment;
 
     private String slaveId;
+    private Integer placeType;
+
 
 
     public EaOrderInfo(Order order) {

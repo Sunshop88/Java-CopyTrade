@@ -7,9 +7,11 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -40,8 +42,7 @@ import java.util.List;
 @Slf4j
 public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao, FollowPlatformEntity> implements FollowPlatformService {
     private final TransService transService;
-    private final FollowBrokeServerService followBrokeServerService;
-
+    private final RedisCache redisCache;
     @Override
     public PageResult<FollowPlatformVO> page(FollowPlatformQuery query) {
         IPage<FollowPlatformEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -116,39 +117,29 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     }
 
     @Override
-    public QuoteClient tologin(String account, String password, String platform) {
+    public QuoteClient tologin(FollowTraderEntity trader) {
         try {
-            //优先查看平台默认节点
-            FollowPlatformEntity followPlatformServiceOne = this.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform));
-            if (ObjectUtil.isNotEmpty(followPlatformServiceOne.getServerNode())){
-                //处理节点格式
-                String[] split = followPlatformServiceOne.getServerNode().split(":");
-                QuoteClient quoteClient = new QuoteClient(Integer.parseInt(account), password,  split[0], Integer.valueOf(split[1]));
+            String serverNode;
+            if (ObjectUtil.isNotEmpty(redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform()))){
+                serverNode=(String)redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform());
+            }else {
+                FollowPlatformEntity followPlatformServiceOne = this.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
+                serverNode=followPlatformServiceOne.getServerNode();
+            }
+            if (ObjectUtil.isNotEmpty(serverNode)){
                 try {
+                    //处理节点格式
+                    String[] split = serverNode.split(":");
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
+                    return quoteClient;
                 }catch (Exception e1){
                     if (e1.getMessage().contains("Invalid account")){
                         log.info("账号密码错误");
                         throw new ServerException("账号密码错误");
                     }else {
-                        List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(platform);
-                        for (FollowBrokeServerEntity address : serverEntityList) {
-                             quoteClient = new QuoteClient(Integer.parseInt(account), password, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                            try {
-                                quoteClient.Connect();
-                            }catch (Exception e){
-                                if (e.getMessage().contains("Invalid account")){
-                                    log.info("账号密码错误");
-                                    throw new ServerException("账号密码错误");
-                                }else{
-                                    log.info("重试"+e);
-                                    continue;
-                                }
-                            }
-                            if (quoteClient.Connected()) {
-                                return quoteClient;
-                            }
-                        }
+                        //重连失败
+                        log.info("重连失败{}",trader.getId());
                     }
                 }
             }
