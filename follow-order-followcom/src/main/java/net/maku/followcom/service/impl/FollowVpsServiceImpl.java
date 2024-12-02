@@ -154,7 +154,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         FollowVpsEntity entity = FollowVpsConvert.INSTANCE.convert(vo);
         FollowVpsVO followVpsVO = this.get(Long.valueOf(vo.getId()));
         if (ObjectUtil.notEqual(vo.getName(), followVpsVO.getName())) {
-            List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vo.getName()));
+            List<FollowVpsEntity> list = this.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vo.getName()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
             if (ObjectUtil.isNotEmpty(list)) {
                 throw new ServerException("重复名称,请重新输入");
             }
