@@ -169,6 +169,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         entity.setServerName(followVpsEntity.getName());
         entity.setCreator(SecurityUser.getUserId());
         entity.setCreateTime(LocalDateTime.now());
+        entity.setFollowStatus(vo.getFollowStatus());
         baseMapper.insert(entity);
         FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(entity);
         followTraderVO.setId(entity.getId());

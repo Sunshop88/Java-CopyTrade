@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -56,8 +58,12 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
             wrapper.eq(FollowOrderHistoryEntity::getTraderId, query.getTraderId());
         }
-        wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()), FollowOrderHistoryEntity::getCloseTime, query.getStartTime());
-        wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()), FollowOrderHistoryEntity::getCloseTime, query.getEndTime());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        // 解析字符串为 LocalDateTime
+        LocalDateTime startTime = LocalDateTime.parse(query.getStartTime(), formatter);
+        LocalDateTime endTime = LocalDateTime.parse(query.getEndTime(), formatter);
+        wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()), FollowOrderHistoryEntity::getCloseTime, startTime);
+        wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()), FollowOrderHistoryEntity::getCloseTime, endTime);
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderHistoryEntity::getType, query.getType());
         return wrapper;
     }
@@ -110,8 +116,8 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
      * 自定义保存或者更新，根据唯一约束处理
      */
     @Override
-    public void customBatchSaveOrUpdate(FollowOrderHistoryEntity historyEntity) {
-        baseMapper.customBatchSaveOrUpdate(historyEntity);
+    public void customBatchSaveOrUpdate(List<FollowOrderHistoryEntity> list) {
+        baseMapper.customBatchSaveOrUpdate(list);
     }
 
     @Override
@@ -125,6 +131,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
             //获取mt4历史订单
             Order[] orders = quoteClient.DownloadOrderHistory(LocalDateTime.parse(DateUtils.format(cal.getTime(), DateUtils.DATE_PATTERN)), LocalDateTime.now());
             //保存历史订单
+            List<FollowOrderHistoryEntity> list=new ArrayList<>();
             Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell) || order.Type.equals(Op.Balance)).forEach(order -> {
                 FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
                 historyEntity.setTraderId(leader.getId());
@@ -148,8 +155,9 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
                 historyEntity.setSl(BigDecimal.valueOf(order.StopLoss));
                 historyEntity.setCreateTime(LocalDateTime.now());
                 historyEntity.setVersion(0);
-                customBatchSaveOrUpdate(historyEntity);
+                list.add(historyEntity);
             });
+            customBatchSaveOrUpdate(list);
         } catch (Exception e) {
             log.error("保存历史数据失败");
         }

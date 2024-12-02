@@ -94,6 +94,7 @@ public class FollowSlaveController {
             followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
+            followTraderVo.setFollowStatus(vo.getFollowStatus());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(followVarietyService.getLatestTemplateId());
             }
