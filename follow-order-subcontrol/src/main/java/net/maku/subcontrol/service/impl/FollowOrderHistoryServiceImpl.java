@@ -167,7 +167,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
             });
             customBatchSaveOrUpdate(list);
         } catch (Exception e) {
-            log.error("保存历史数据失败");
+            log.error("保存历史数据失败"+e);
         }
     }
 
