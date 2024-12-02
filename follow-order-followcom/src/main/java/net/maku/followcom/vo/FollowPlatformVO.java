@@ -72,7 +72,6 @@ public class FollowPlatformVO implements Serializable {
 	private List<String> platformList;
 
 	@Schema(description = "图片地址")
-	@NotBlank(message = "图片地址不能为空")
 	private String logo;
 
 }

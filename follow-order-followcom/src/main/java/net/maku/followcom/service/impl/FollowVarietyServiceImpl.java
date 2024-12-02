@@ -435,6 +435,10 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         log.warn("Invalid stdContract value: " + stdContractStr);
                     }
                 }
+
+                // 更新所有具有相同 stdSymbol 的记录的 stdContract 值
+                baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
+
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
                 for (int i = 2; i < record.size(); i++) {
                     String brokerName = brokerNames.get(i);
