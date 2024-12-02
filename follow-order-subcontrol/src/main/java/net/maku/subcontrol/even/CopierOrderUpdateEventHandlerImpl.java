@@ -62,7 +62,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
             }
             //保存历史数据
-            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
+            followOrderHistoryService.saveOrderHistory(copier4ApiTrader.quoteClient, copier4ApiTrader.getTrader());
         }
     }
 
