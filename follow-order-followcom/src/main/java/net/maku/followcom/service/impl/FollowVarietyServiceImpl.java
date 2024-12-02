@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -57,6 +59,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     private final TransService transService;
     private final ResourceLoader resourceLoader;
     private final FollowPlatformServiceImpl followPlatformServiceImpl;
+    private final FollowTraderService followTraderService;
 
     @Override
     public PageResult<FollowVarietyVO> page(FollowVarietyQuery query) {
@@ -165,6 +168,19 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new ServerException("模板id不能为空");
         }
         return baseMapper.selectOne(new LambdaQueryWrapper<FollowVarietyEntity>().orderByDesc(FollowVarietyEntity::getTemplateId).last("limit 1")).getTemplateId();
+    }
+
+    @Override
+    public boolean checkTemplate(List<Integer> idList) {
+        //策略者或者跟单者绑定了该模板就不能删除
+        for (Integer id : idList) {
+            if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
+                    .eq(FollowTraderEntity::getTemplateId, id))
+                    .size() == 0){
+               throw new ServerException("策略者或者跟单者绑定了该模板不能删除");
+            }
+        }
+        return true;
     }
 
     @Override
