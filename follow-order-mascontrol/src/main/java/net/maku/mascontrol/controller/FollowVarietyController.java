@@ -320,13 +320,11 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
-        //如果策略者或者跟单者绑定了该模板，就不能删除
-        if(followVarietyService.checkTemplate(idList)){
-            return Result.error("模板被使用，不能删除");
-        }
-        boolean b = followVarietyService.deleteTemplate(idList);
-        if(b){
-            return Result.ok();
+        if(followVarietyService.checkTemplate(idList)) {
+            boolean b = followVarietyService.deleteTemplate(idList);
+            if (b) {
+                return Result.ok();
+            }
         }
         return Result.error("删除失败");
     }
