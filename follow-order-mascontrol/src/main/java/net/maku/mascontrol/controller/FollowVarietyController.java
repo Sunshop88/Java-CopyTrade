@@ -127,11 +127,6 @@ public class FollowVarietyController {
                 if (!isExcelOrCsv(file.getOriginalFilename())) {
                     return Result.error("仅支持 Excel 和 CSV 文件");
                 }
-                // 检查文件大小
-                long maxSize = 10 * 1024 * 1024; // 10MB
-                if (file.getSize() > maxSize) {
-                    return Result.error("上传的文件大小不能超过 10MB");
-                }
                 // 导入文件
                 followVarietyService.importByExcel(file, template, templateName);
             }else{
@@ -179,11 +174,6 @@ public class FollowVarietyController {
         List<FollowVarietyEntity> list = followVarietyService.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateName, templateName));
         if (ObjectUtil.isNotEmpty(list)){
             return Result.error("模板名称重复，请重新输入");
-        }
-        // 检查文件大小
-        long maxSize = 10 * 1024 * 1024; // 10MB
-        if (file.getSize() > maxSize) {
-            return Result.error("上传的文件大小不能超过 10MB");
         }
         try {
             // 检查文件类型
