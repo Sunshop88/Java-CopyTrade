@@ -167,7 +167,10 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
                 historyEntity.setCommission(BigDecimal.valueOf(order.Commission));
                 list.add(historyEntity);
             });
-            customBatchSaveOrUpdate(list);
+            if(ObjectUtil.isNotEmpty(list)) {
+                customBatchSaveOrUpdate(list);
+            }
+
         } catch (Exception e) {
             log.error("保存历史数据失败"+e);
         }
