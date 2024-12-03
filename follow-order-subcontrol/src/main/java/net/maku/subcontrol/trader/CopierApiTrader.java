@@ -26,7 +26,7 @@ public class CopierApiTrader extends AbstractApiTrader {
     }
 
     @Override
-    public void connect2Broker() {
+    public void connect2Broker()  throws Exception{
         try {
             super.connect2Broker();
         } catch (Exception e) {

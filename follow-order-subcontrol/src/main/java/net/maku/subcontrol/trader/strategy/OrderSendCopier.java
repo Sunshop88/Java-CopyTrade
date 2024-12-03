@@ -111,18 +111,18 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 double asksub = quoteClient.GetQuote(orderInfo.getSymbol()).Ask;
                 double bidsub = quoteClient.GetQuote(orderInfo.getSymbol()).Bid;
                 LocalDateTime startTime = LocalDateTime.now();
-                double startPrice = trader.getTrader().getType().equals(Op.Buy.getValue())?asksub:bidsub;
+                double startPrice = followTraderEntity.getType().equals(Op.Buy.getValue())?asksub:bidsub;
                 Order order = quoteClient.OrderClient.OrderSend(
                             orderInfo.getSymbol(), op(orderInfo, leaderCopier),
                             openOrderMapping.getSlaveLots().doubleValue(),
-                            trader.getTrader().getType().equals(Op.Buy.getValue())?asksub:bidsub, Integer.MAX_VALUE, BigDecimal.ZERO.doubleValue(),
+                        followTraderEntity.getType().equals(Op.Buy.getValue())?asksub:bidsub, Integer.MAX_VALUE, BigDecimal.ZERO.doubleValue(),
                             BigDecimal.ZERO.doubleValue(), comment(orderInfo).toUpperCase(),
                             Integer.parseInt(orderInfo.getAccount().trim()), null
                     );
                 LocalDateTime endTime = LocalDateTime.now();
-                log.info("下单详情 账号:"+trader.getTrader().getId()+"平台:"+trader.getTrader().getPlatform()+"节点:"+quoteClient.Host+":"+quoteClient.Port);
-                log.info("请求进入时间结束:"+trader.getTrader().getId());
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, trader.getTrader(), flag,startTime,endTime,startPrice);
+                log.info("下单详情 账号:"+followTraderEntity.getId()+"平台:"+followTraderEntity.getPlatform()+"节点:"+quoteClient.Host+":"+quoteClient.Port);
+                log.info("请求进入时间结束:"+followTraderEntity.getId());
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag,startTime,endTime,startPrice);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = mapper.writeValueAsString(event);
                 // 保存到批量发送队列

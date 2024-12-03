@@ -175,10 +175,10 @@ public class FollowSlaveController {
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             redisCache.delete(Constant.FOLLOW_SUB_TRADER+vo.getId().toString());
             //启动账户
-            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                return Result.error();
-            }
+//            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
+//            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
+//                return Result.error();
+//            }
             //重连
             reconnect(vo.getId().toString());
             ThreadPoolUtils.execute(() -> {
@@ -296,11 +296,7 @@ public class FollowSlaveController {
                 log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }
-            //重新记录订单关系
-            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, traderId));
-            list.forEach(o->{
-                redisCache.hSet(Constant.FOLLOW_SUB_TRADER+o.getSlaveId(),o.getMasterId().toString(),o);
-            });
+
         } catch (RuntimeException e) {
             throw new ServerException("请检查账号密码，稍后再试");
         }

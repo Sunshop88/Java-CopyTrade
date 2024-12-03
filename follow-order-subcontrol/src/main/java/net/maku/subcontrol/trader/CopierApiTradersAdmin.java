@@ -23,8 +23,10 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import online.mtapi.mt4.Exception.ConnectException;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -169,7 +171,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     }
 
 
-    private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
+    private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport){
         try {
             CopierApiTrader copierApiTrader = new CopierApiTrader(copier,serverNode, Integer.valueOf(serverport));
             CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore);
@@ -185,13 +187,17 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 traderUpdateEn.setStatusExtra("启动成功");
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
-            } else {
+            }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
+                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                traderUpdateEn.setStatusExtra("账户密码错误");
+                conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
+            }else {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("经纪商异常");
                 conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
-        } catch (Exception e) {
-            log.info("连接异常" + e);
+        } catch (InterruptedException | ExecutionException | IOException e) {
+            log.info("连接异常"+e);
         }
         return conCodeEnum;
     }
@@ -212,23 +218,26 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         }
 
         @Override
-        public CopierApiTradersAdmin.ConnectionResult call() throws InterruptedException {
-            FollowTraderEntity copier = this.copierApiTrader.getTrader();
+        public ConnectionResult call() {
+            FollowTraderEntity leader = this.copierApiTrader.getTrader();
             boolean aq = Boolean.FALSE;
             try {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
                 this.copierApiTrader.connect2Broker();
+            } catch (ConnectException e) {
+                log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
+                return new ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
             } catch (Exception e) {
-                log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", copier.getId(), copier.getAccount(), copier.getServerName(), e.getClass().getSimpleName() + e.getMessage());
-                return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
+                log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
+                return new ConnectionResult(this.copierApiTrader, ConCodeEnum.ERROR);
             } finally {
                 if (aq) {
                     semaphore.release();
                 }
             }
-            log.info("[MT4跟单者{}-{}-{}]连接服务器成功", copier.getId(), copier.getAccount(), copier.getServerName());
-            return new CopierApiTradersAdmin.ConnectionResult(this.copierApiTrader, ConCodeEnum.SUCCESS);
+            log.info("[MT4跟单者{}-{}-{}]连接服务器成功", leader.getId(), leader.getAccount(), leader.getServerName());
+            return new ConnectionResult(this.copierApiTrader, ConCodeEnum.SUCCESS);
         }
     }
 

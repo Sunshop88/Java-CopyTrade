@@ -68,7 +68,9 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 }
                 return true;
             } finally {
-                redissonLockUtil.unlock(repairSendVO.getOrderNo().toString());
+                if (redissonLockUtil.isLockedByCurrentThread(repairSendVO.getOrderNo().toString())) {
+                    redissonLockUtil.unlock(repairSendVO.getOrderNo().toString());
+                }
             }
         } else {
             throw new ServerException("操作过于频繁，请稍后再试");

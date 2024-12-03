@@ -764,10 +764,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             Order orderResult;
             if (followOrderDetailEntity.getType() == Op.Buy.getValue()) {
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), 0.0, 0);
+                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), 0.0, 0);
+                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
             log.info("订单 " + orderNo + ": 平仓 " + orderResult);
