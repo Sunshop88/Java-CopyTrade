@@ -42,4 +42,13 @@ public class FollowRedisTraderVO implements Serializable {
 	@Schema(description = "盈亏")
 	private BigDecimal profit;
 
+	@Schema(description = "已用预付款")
+	private  Double margin;
+
+	@Schema(description = "服务器")
+	private  String 	connectTrader;
+
+	@Schema(description = "信用")
+	private Double credit;
+
 }

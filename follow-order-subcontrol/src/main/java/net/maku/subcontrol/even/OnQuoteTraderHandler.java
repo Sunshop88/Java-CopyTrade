@@ -76,6 +76,10 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setTotal((int)Arrays.stream(orders).filter(order ->order.Type == Buy||order.Type == Sell).count());
                 followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
                 followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
+                //设置缓存
+                followRedisTraderVO.setMargin(qc.Margin);
+                followRedisTraderVO.setCredit(qc.Credit);
+                followRedisTraderVO.setConnectTrader(qc.Account().smtp_server);
                 redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
