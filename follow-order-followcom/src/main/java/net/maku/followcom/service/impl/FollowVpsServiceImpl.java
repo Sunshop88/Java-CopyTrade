@@ -328,7 +328,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         Integer slaveTotal = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
         ls1.set(1, new BigDecimal(slaveTotal.toString()));
         //跟单正常数量
-        Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         ls2.set(1, BigDecimal.valueOf(slaveSuccess));
         ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
         Map<Long, FollowTraderEntity> map = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()))
