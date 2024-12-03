@@ -94,7 +94,7 @@ public class SysFileUploadController {
             return vo;
         }
         String contentType = file.getContentType();
-        if (!"image/".equals(contentType)) {
+        if (!contentType.startsWith("image/")) {
             throw new ServerException("上传的文件必须为图片格式");
         }
         // 检查文件大小
