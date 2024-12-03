@@ -12,6 +12,8 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
 import net.maku.followcom.service.FollowPlatformService;
@@ -24,6 +26,7 @@ import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -31,9 +34,7 @@ import net.maku.subcontrol.enums.TraderRepairOrderEnum;
 import net.maku.subcontrol.pojo.OrderActiveInfoVOPool;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
-import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.trader.CopierApiTradersAdmin;
-import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
+import net.maku.subcontrol.trader.*;
 import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
@@ -103,24 +104,43 @@ public class TraderOrderActiveWebSocket {
             String accountId = slaveId;
             AbstractApiTrader abstractApiTrader ;
             FollowTraderEntity followTraderEntity;
+            QuoteClient quoteClient=null;
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
                 followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
                 abstractApiTrader=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
+                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                        || !abstractApiTrader.quoteClient.Connected()) {
+                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                        quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                        leaderApiTrader1.startTrade();
+                    }
+                }else {
+                    quoteClient=abstractApiTrader.quoteClient;
+                }
             }else {
                 followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
-            }
-            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
-                    || !abstractApiTrader.quoteClient.Connected()) {
-                QuoteClient quoteClient = followPlatformService.tologin(followTraderEntity);
-                if (ObjectUtil.isEmpty(quoteClient)) {
-                    throw new RuntimeException("登录异常"+accountId);
+                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                        || !abstractApiTrader.quoteClient.Connected()) {
+                    ConCodeEnum conCodeEnum =copierApiTradersAdmin.addTrader(followTraderEntity);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS ) {
+                        quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                        copierApiTrader.startTrade();
+                    }
+                }else {
+                    quoteClient=abstractApiTrader.quoteClient;
                 }
             }
+            if (ObjectUtil.isEmpty(quoteClient)){
+                throw new ServerException(accountId+"登录异常");
+            }
             //所有持仓
-            List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
             List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);

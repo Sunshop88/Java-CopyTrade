@@ -23,10 +23,11 @@ public class OrderResultEvent implements Serializable {
     private final LocalDateTime startTime;
     private final LocalDateTime endTime;
     private final double startPrice;
+    private final String ipAddress;
 
     public OrderResultEvent(Order order, EaOrderInfo orderInfo,
                             FollowSubscribeOrderEntity openOrderMapping,
-                            FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime, double startPrice) {
+                            FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress) {
         this.order = order;
         this.orderInfo = orderInfo;
         this.openOrderMapping = openOrderMapping;
@@ -35,6 +36,7 @@ public class OrderResultEvent implements Serializable {
         this.startTime = startTime;
         this.endTime = endTime;
         this.startPrice = startPrice;
+        this.ipAddress = ipAddress;
     }
 
     // Getters

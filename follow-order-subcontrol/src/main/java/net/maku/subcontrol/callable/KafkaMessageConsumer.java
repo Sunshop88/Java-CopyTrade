@@ -6,39 +6,26 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.CopyTradeFlag;
 import net.maku.followcom.enums.TraderLogEnum;
 import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
-import net.maku.followcom.service.impl.FollowTraderLogServiceImpl;
-import net.maku.followcom.service.impl.FollowVpsServiceImpl;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
-import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
 import net.maku.subcontrol.trader.OrderResultEvent;
-import online.mtapi.mt4.Exception.ConnectException;
-import online.mtapi.mt4.Exception.InvalidSymbolException;
-import online.mtapi.mt4.Exception.TimeoutException;
-import online.mtapi.mt4.Exception.TradeException;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.PlacedType;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
-import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
@@ -76,7 +63,8 @@ public class KafkaMessageConsumer {
                         orderResultEvent.getFlag(),
                         orderResultEvent.getStartTime(),
                         orderResultEvent.getEndTime(),
-                        orderResultEvent.getStartPrice()
+                        orderResultEvent.getStartPrice(),
+                        orderResultEvent.getIpAddress()
                 );
             }
         });
@@ -93,7 +81,7 @@ public class KafkaMessageConsumer {
 
 
     private void handleOrderResult(Order order, EaOrderInfo orderInfo,
-                                   FollowSubscribeOrderEntity openOrderMapping, FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime,double price) {
+                                   FollowSubscribeOrderEntity openOrderMapping, FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
         // 处理下单成功结果，记录日志和缓存
         log.info("[MT4跟单者:{}] 下单成功, 订单: {}", copier.getAccount(), order);
         openOrderMapping.setCopierOrder(order, orderInfo);
@@ -107,7 +95,7 @@ public class KafkaMessageConsumer {
         cacheCopierOrder(orderInfo, order);
 
         // 日志记录
-        logFollowOrder(copier, orderInfo, openOrderMapping, flag);
+        logFollowOrder(copier, orderInfo, openOrderMapping, flag,ip);
 
 
     }
@@ -165,9 +153,8 @@ public class KafkaMessageConsumer {
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
 
-    private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag) {
+    private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip) {
         FollowTraderLogEntity logEntity = new FollowTraderLogEntity();
-        log.info("获得followVPs" + copier);
         FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
         logEntity.setVpsClient(followVpsEntity.getClientId());
         logEntity.setVpsId(copier.getServerId());
@@ -181,7 +168,9 @@ public class KafkaMessageConsumer {
                 + ", 跟单账号=" + openOrderMapping.getSlaveAccount()
                 + ", 品种=" + openOrderMapping.getSlaveSymbol()
                 + ", 手数=" + openOrderMapping.getSlaveLots()
-                + ", 类型=" + Op.forValue(openOrderMapping.getSlaveType()).name();
+                + ", 类型=" + Op.forValue(openOrderMapping.getSlaveType()).name()
+                + ", 节点=" + ip
+                ;
         logEntity.setLogDetail(remark);
         followTraderLogService.save(logEntity);
     }

@@ -757,15 +757,22 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 //订阅
                 quoteClient.Subscribe(symbol);
             }
-            double bid = quoteClient.GetQuote(symbol).Bid;
-            double ask = quoteClient.GetQuote(symbol).Ask;
+            double bid =0;
+            double ask =0;
+            QuoteEventArgs quoteEventArgs = null;
+            while (quoteEventArgs==null && quoteClient.Connected()) {
+                Thread.sleep(50);
+                quoteEventArgs=quoteClient.GetQuote(symbol);
+                bid =quoteEventArgs.Bid;
+                ask =quoteEventArgs.Ask;
+            }
             LocalDateTime nowdate = LocalDateTime.now();
             log.info("平仓信息{},{},{},{},{}", symbol, orderNo, followOrderDetailEntity.getSize(), bid, ask);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
                 followOrderDetailEntity.setCloseId(followOrderCloseEntity.getId());
             }
             Order orderResult;
-            if (followOrderDetailEntity.getType() == Op.Buy.getValue()) {
+            if (followOrderDetailEntity.getType() == Buy.getValue()) {
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
@@ -787,6 +794,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
                 followOrderDetailEntity.setRemark("平仓出错" + e.getMessage());
             }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
         followOrderDetailService.updateById(followOrderDetailEntity);
         if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
@@ -928,11 +937,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
-            if (type.equals(Op.Buy.getValue())) {
-                order = oc.OrderSend(symbol, Op.Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+            if (type.equals(Buy.getValue())) {
+                order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
             } else {
-                order = oc.OrderSend(symbol, Op.Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+                order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());

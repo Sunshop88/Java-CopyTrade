@@ -10,10 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.CopyTradeFlag;
-import net.maku.followcom.enums.TraderLogEnum;
-import net.maku.followcom.enums.TraderLogTypeEnum;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
@@ -21,9 +18,12 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -46,6 +46,8 @@ import static net.maku.followcom.enums.CopyTradeFlag.POF;
 @AllArgsConstructor
 public class OrderCloseCopier extends AbstractOperation implements IOperationStrategy {
 
+
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
 
     @Override
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
@@ -92,11 +94,14 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             double lots = cachedCopierOrderInfo.getSlavePosition();
             QuoteClient quoteClient=trader.quoteClient;
-            FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(trader.getTrader().getId()));
             if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(quoteClient)
                     || !quoteClient.Connected()) {
-                quoteClient = followPlatformService.tologin(followTraderEntity);
-                if (ObjectUtil.isEmpty(quoteClient)) {
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(copier);
+                if (conCodeEnum == ConCodeEnum.SUCCESS ) {
+                    quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString()).quoteClient;
+                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
+                    copierApiTrader1.setTrader(copier);
+                }else {
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
                 }
             }

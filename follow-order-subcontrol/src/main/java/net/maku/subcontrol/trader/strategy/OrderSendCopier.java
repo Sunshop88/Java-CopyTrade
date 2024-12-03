@@ -13,9 +13,7 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
-import online.mtapi.mt4.Op;
-import online.mtapi.mt4.Order;
-import online.mtapi.mt4.QuoteClient;
+import online.mtapi.mt4.*;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -31,6 +29,8 @@ import java.util.stream.Collectors;
 @Component
 @AllArgsConstructor
 public class OrderSendCopier extends AbstractOperation implements IOperationStrategy {
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
+
 
     @Override
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
@@ -44,11 +44,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
         // 查看品种匹配 模板
         List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(copier.getTemplateId());
-        List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
+        List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
             FollowPlatformEntity copyPlat = followTraderService.getPlatForm(copier.getId());
-            List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> o.getStdSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+            List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
             List<String> symbolList = orderInfo.getSymbolList();
             collectCopy.forEach(o-> {
                 if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
@@ -64,12 +64,16 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         }
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
+                QuoteEventArgs quoteEventArgs = null;
                 //如果没有此品种匹配，校验是否可以获取报价
                 if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(orderInfo.getOriSymbol()))){
                     //订阅
                     trader.quoteClient.Subscribe(orderInfo.getOriSymbol());
+                    while (quoteEventArgs==null && trader.quoteClient.Connected()) {
+                        Thread.sleep(50);
+                        quoteEventArgs=trader.quoteClient.GetQuote(orderInfo.getOriSymbol());
+                    }
                 }
-                trader.quoteClient.GetQuote(orderInfo.getOriSymbol());
             } catch (Exception e) {
                 log.info("品种异常,不可下单{}+++++++账号{}" , orderInfo.getOriSymbol(),copier.getId());
             }
@@ -103,8 +107,12 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(trader.getTrader().getId()));
                 if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(trader.quoteClient)
                         || !trader.quoteClient.Connected()) {
-                    quoteClient = followPlatformService.tologin(followTraderEntity);
-                    if (ObjectUtil.isEmpty(quoteClient)) {
+                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                        quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                        copierApiTrader1.setTrader(followTraderEntity);
+                    }else {
                         throw new RuntimeException("登录异常"+trader.getTrader().getId());
                     }
                 }
@@ -117,12 +125,12 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                             openOrderMapping.getSlaveLots().doubleValue(),
                         followTraderEntity.getType().equals(Op.Buy.getValue())?asksub:bidsub, Integer.MAX_VALUE, BigDecimal.ZERO.doubleValue(),
                             BigDecimal.ZERO.doubleValue(), comment(orderInfo).toUpperCase(),
-                            Integer.parseInt(orderInfo.getAccount().trim()), null
+                            orderInfo.getTicket(), null
                     );
                 LocalDateTime endTime = LocalDateTime.now();
                 log.info("下单详情 账号:"+followTraderEntity.getId()+"平台:"+followTraderEntity.getPlatform()+"节点:"+quoteClient.Host+":"+quoteClient.Port);
                 log.info("请求进入时间结束:"+followTraderEntity.getId());
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag,startTime,endTime,startPrice);
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag,startTime,endTime,startPrice,quoteClient.Host+":"+quoteClient.Port);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = mapper.writeValueAsString(event);
                 // 保存到批量发送队列

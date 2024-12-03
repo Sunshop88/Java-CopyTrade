@@ -254,7 +254,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
-                                    quoteClient = followPlatformService.tologin(h);
+                                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(h);
+                                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                        quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString()).quoteClient;
+                                        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
+                                        leaderApiTrader1.startTrade();
+                                    } else {
+                                        log.error("登录异常");
+                                    }
                                 } catch (Exception e) {
                                     log.error("推送从redis数据,登录异常:" + e);
                                 }

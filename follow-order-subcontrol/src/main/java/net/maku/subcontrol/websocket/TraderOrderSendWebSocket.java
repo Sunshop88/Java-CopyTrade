@@ -12,6 +12,8 @@ import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.service.FollowOrderSendService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
@@ -33,6 +35,7 @@ import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.vo.FollowOrderSendSocketVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
+import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,8 +84,23 @@ public class TraderOrderSendWebSocket {
             }
             sessionSet.add(session);
             sessionPool.put(traderId+symbol, sessionSet);
+            FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(traderId));
+            QuoteClient quoteClient=null;
             LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-
+            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
+                    || !leaderApiTrader.quoteClient.Connected()) {
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
+                if (conCodeEnum == ConCodeEnum.SUCCESS ) {
+                    quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    leaderApiTrader1.startTrade();
+                }
+            }else {
+                quoteClient=leaderApiTrader.quoteClient;
+            }
+            if (ObjectUtil.isEmpty(quoteClient)){
+                throw new ServerException(traderId+"登录异常");
+            }
             log.info("订阅该品种{}+++{}",symbol,traderId);
             //查询平台信息
             FollowPlatformEntity followPlatform = followTraderService.getPlatForm(Long.valueOf(traderId));
@@ -98,7 +116,7 @@ public class TraderOrderSendWebSocket {
 
             // 查看品种匹配 模板
             List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(leaderApiTrader.getTrader().getTemplateId());
-            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
+            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
 
             for (FollowVarietyEntity o:listv){
                 if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){

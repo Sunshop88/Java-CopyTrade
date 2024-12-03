@@ -63,6 +63,8 @@ public class FollowApiServiceImpl implements FollowApiService {
                 followTraderService.removeById(followTraderVO.getId());
                 return false;
             }
+            LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+            leaderApiTrader1.startTrade();
             ThreadPoolUtils.execute(() -> {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTrader.startTrade();
