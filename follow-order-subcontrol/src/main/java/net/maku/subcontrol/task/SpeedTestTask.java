@@ -34,7 +34,7 @@ public class SpeedTestTask {
     @Autowired
     private RedisUtil redisUtil;
 
-    @Scheduled(cron = "0 0 0 ? * MON")
+    @Scheduled(cron = "0 0 0 ? * SAT")
     //    @Scheduled(cron = "*/60 * * * * ?")//测试
     public void weeklySpeedTest() throws IOException {
         log.info("开始执行每周测速任务...");

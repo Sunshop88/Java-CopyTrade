@@ -13,6 +13,7 @@ import net.maku.followcom.entity.ServerEntity;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import org.springframework.stereotype.Service;
@@ -175,6 +176,10 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean insertPlatform(FollowPlatformVO vo) {
+        //如果输入的券商已存在就提示券商已存在
+        if(ObjectUtil.isNotEmpty(followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getBrokerName,vo.getBrokerName())))) {
+            throw new ServerException("券商名称已存在");
+        }
         Long userId = SecurityUser.getUserId();
         CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
         //保存服务数据
@@ -188,6 +193,7 @@ public class MasControlServiceImpl implements MasControlService {
                         followPlatformVO.setServer(bro);
                         followPlatformVO.setPlatformType(vo.getPlatformType());
                         followPlatformVO.setCreator(userId.toString());
+                        followPlatformVO.setLogo(vo.getLogo());
                         followPlatformService.save(followPlatformVO);
                     }
                     // 进行测速
