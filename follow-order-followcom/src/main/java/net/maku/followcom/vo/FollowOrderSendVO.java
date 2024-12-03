@@ -59,7 +59,7 @@ public class FollowOrderSendVO implements Serializable {
 	private BigDecimal totalSzie;
 
 	@Schema(description = "实际下单手数")
-	private BigDecimal trueSzie;
+	private BigDecimal trueSize;
 
 	@Schema(description = "开始手数范围from")
 	@NotNull(message = "开始手数范围不能为空")

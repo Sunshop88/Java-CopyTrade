@@ -376,7 +376,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getCloseId())) {
             wrapper.eq(FollowOrderDetailEntity::getCloseId, query.getCloseId());
         }
-
+        wrapper.isNotNull(FollowOrderDetailEntity::getOrderNo);
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
