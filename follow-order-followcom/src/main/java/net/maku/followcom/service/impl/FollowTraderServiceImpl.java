@@ -368,7 +368,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.eq(FollowOrderDetailEntity::getAccount, query.getAccount());
         }
         if (ObjectUtil.isNotEmpty(query.getBrokeName())) {
-            wrapper.eq(FollowOrderDetailEntity::getBrokeName, query.getBrokeName());
+            wrapper.in(FollowOrderDetailEntity::getBrokeName, query.getBrokeName());
         }
         if (ObjectUtil.isNotEmpty(query.getPlatform())) {
             wrapper.in(FollowOrderDetailEntity::getPlatform, query.getPlatform());
