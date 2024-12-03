@@ -176,11 +176,21 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean insertPlatform(FollowPlatformVO vo) {
-        //如果输入的券商已存在就提示券商已存在
-        if(ObjectUtil.isNotEmpty(followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getBrokerName,vo.getBrokerName())))) {
-            throw new ServerException("券商名称已存在");
-        }
         Long userId = SecurityUser.getUserId();
+        List<FollowPlatformEntity> existingPlatforms = followPlatformService.list(
+                new LambdaQueryWrapper<FollowPlatformEntity>()
+                        .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
+        );
+        if (!existingPlatforms.isEmpty()) {
+            // 如果存在，则更新数据库中所有相同券商的信息
+            for (FollowPlatformEntity existingPlatform : existingPlatforms) {
+                existingPlatform.setPlatformType(vo.getPlatformType());
+                existingPlatform.setRemark(vo.getRemark());
+                existingPlatform.setLogo(vo.getLogo());
+                followPlatformService.updateById(existingPlatform);
+            }
+        }
+
         CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
         //保存服务数据
         vo.getPlatformList().forEach(bro -> {

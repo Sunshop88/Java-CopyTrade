@@ -94,8 +94,8 @@ public class SysFileUploadController {
             return vo;
         }
         String contentType = file.getContentType();
-        if (!"image/png".equals(contentType)) {
-            throw new ServerException("上传的文件必须为 PNG 格式");
+        if (!"image/".equals(contentType)) {
+            throw new ServerException("上传的文件必须为图片格式");
         }
         // 检查文件大小
         long maxSize = 10 * 1024 * 1024; // 10MB
