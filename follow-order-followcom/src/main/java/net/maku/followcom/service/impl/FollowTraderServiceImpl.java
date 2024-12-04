@@ -33,6 +33,7 @@ import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Exception.TradeException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -432,9 +433,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             CountDownLatch countDownLatch = new CountDownLatch(openedOrders.size());
             openedOrders.forEach(order -> {
                 ThreadPoolUtils.execute(() -> {
-                    vo.setOrderNo(order.Ticket);
-                    vo.setSymbol(order.Symbol);
-                    vo.setSize(order.Lots);
+                    FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+                    BeanUtils.copyProperties(vo, followOrderSendCloseVO);
+                    followOrderSendCloseVO.setOrderNo(order.Ticket);
+                    followOrderSendCloseVO.setSymbol(order.Symbol);
+                    followOrderSendCloseVO.setSize(order.Lots);
                     handleOrder(quoteClient, oc, vo);
                     countDownLatch.countDown();
                 });
