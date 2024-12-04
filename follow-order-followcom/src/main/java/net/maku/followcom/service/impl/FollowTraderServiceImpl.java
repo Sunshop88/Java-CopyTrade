@@ -438,7 +438,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     followOrderSendCloseVO.setOrderNo(order.Ticket);
                     followOrderSendCloseVO.setSymbol(order.Symbol);
                     followOrderSendCloseVO.setSize(order.Lots);
-                    handleOrder(quoteClient, oc, vo);
+                    handleOrder(quoteClient, oc, followOrderSendCloseVO);
                     countDownLatch.countDown();
                 });
             });
