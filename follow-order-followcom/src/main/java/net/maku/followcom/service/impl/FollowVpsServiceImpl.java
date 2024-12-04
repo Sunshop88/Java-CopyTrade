@@ -212,7 +212,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
 
     @Override
     public List<FollowVpsEntity> listByVpsName(List<String> vps) {
-        return list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getName, vps).orderByDesc(FollowVpsEntity::getCreateTime));
+        return list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getName, vps).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()).orderByDesc(FollowVpsEntity::getCreateTime));
     }
 
     @Override
