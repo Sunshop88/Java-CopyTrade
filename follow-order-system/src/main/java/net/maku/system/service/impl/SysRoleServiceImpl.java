@@ -80,7 +80,7 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
         //检查角色名称唯一
         checkNameUnique(entity.getName(),null);
         // 保存角色
-        entity.setDataScope(DataScopeEnum.SELF.getValue());
+        entity.setDataScope(DataScopeEnum.ALL.getValue());
         baseMapper.insert(entity);
 
         // 保存角色菜单关系
