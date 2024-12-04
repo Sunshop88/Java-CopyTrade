@@ -251,7 +251,10 @@ public class FollowTestSpeedController {
 
                     if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
                         //查询vps名称所对应的id
-                        Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName)).getId();
+                        Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>()
+                                .eq(FollowVpsEntity::getName, vpsName)
+                                .eq(FollowVpsEntity::getDeleted, 0)
+                                .last("LIMIT 1")).getId();
                         redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
                     }
                 });
