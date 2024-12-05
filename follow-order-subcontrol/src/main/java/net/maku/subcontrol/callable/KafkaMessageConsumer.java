@@ -155,7 +155,7 @@ public class KafkaMessageConsumer {
 
     private void cacheCopierOrder(EaOrderInfo orderInfo, Order order) {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
-        String mapKey = orderInfo.getMasterId() + "#" + orderInfo.getTicket();
+        String mapKey = orderInfo.getSlaveId() + "#" + order.Ticket;
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
 
