@@ -101,15 +101,13 @@ public abstract class AbstractFollowRule {
                 break;
             case 1:
                 //按比例跟单
+                log.info("{}按比例下单参数:下单比例{}-下单手数{}-合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),pr);
                 lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,pr);
                 break;
             case 2:
-                log.info("下单参数 {}-{}-{}-{}-{}", masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr);
-              //  0.30-0.5-499297.68-499921.94999999995-3.0
-
+                log.info("{}按净值下单参数:下单比例{}-下单手数{}-喊单净值{}-跟单净值{}-合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr);
                 //按净值比例
                 lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,pr);
-
                 break;
             case 3:
                 //按资金比例(余额
