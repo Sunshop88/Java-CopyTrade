@@ -118,6 +118,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 double asksub = quoteClient.GetQuote(orderInfo.getSymbol()).Ask;
                 double bidsub = quoteClient.GetQuote(orderInfo.getSymbol()).Bid;
+                log.info("下单详情 账号:"+followTraderEntity.getId()+"品种:"+orderInfo.getSymbol()+"手数:"+openOrderMapping.getSlaveLots());
                 LocalDateTime startTime = LocalDateTime.now();
                 double startPrice = followTraderEntity.getType().equals(Op.Buy.getValue())?asksub:bidsub;
                 Order order = quoteClient.OrderClient.OrderSend(

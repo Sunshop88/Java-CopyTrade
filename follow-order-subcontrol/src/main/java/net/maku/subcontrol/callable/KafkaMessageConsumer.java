@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,17 +56,22 @@ public class KafkaMessageConsumer {
             OrderResultEvent orderResultEvent = JSON.parseObject(message, OrderResultEvent.class);
             log.info("kafka消费"+orderResultEvent);
             if (ObjectUtil.isNotEmpty(orderResultEvent.getCopier().getIpAddr())&&orderResultEvent.getCopier().getIpAddr().equals(FollowConstant.LOCAL_HOST)){
-                handleOrderResult(
-                        orderResultEvent.getOrder(),
-                        orderResultEvent.getOrderInfo(),
-                        orderResultEvent.getOpenOrderMapping(),
-                        orderResultEvent.getCopier(),
-                        orderResultEvent.getFlag(),
-                        orderResultEvent.getStartTime(),
-                        orderResultEvent.getEndTime(),
-                        orderResultEvent.getStartPrice(),
-                        orderResultEvent.getIpAddress()
-                );
+                try {
+                    handleOrderResult(
+                            orderResultEvent.getOrder(),
+                            orderResultEvent.getOrderInfo(),
+                            orderResultEvent.getOpenOrderMapping(),
+                            orderResultEvent.getCopier(),
+                            orderResultEvent.getFlag(),
+                            orderResultEvent.getStartTime(),
+                            orderResultEvent.getEndTime(),
+                            orderResultEvent.getStartPrice(),
+                            orderResultEvent.getIpAddress()
+                    );
+                }catch (Exception e){
+                    log.info("消费异常");
+                }
+
             }
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -149,7 +155,7 @@ public class KafkaMessageConsumer {
 
     private void cacheCopierOrder(EaOrderInfo orderInfo, Order order) {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
-        String mapKey = orderInfo.getMasterId() + "#" + orderInfo.getTicket();
+        String mapKey = orderInfo.getSlaveId() + "#" + order.Ticket;
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
 
