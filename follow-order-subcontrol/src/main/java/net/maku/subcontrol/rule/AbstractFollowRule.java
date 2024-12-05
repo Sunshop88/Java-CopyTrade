@@ -93,7 +93,7 @@ public abstract class AbstractFollowRule {
 
         log.debug("leaderSymbolInfo {}", leaderSymbolInfo);
         log.debug("copierSymbolInfo {}", copierSymbolInfo);
-        double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol());
+        double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getSymbol());
         switch (masterSlave.getFollowMode()) {
             case 0:
                 //按固定手数
