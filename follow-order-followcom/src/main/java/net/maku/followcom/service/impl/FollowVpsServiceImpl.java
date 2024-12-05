@@ -309,9 +309,11 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         List<BigDecimal> ls1 = initList();
         List<BigDecimal> ls2 = initList();
         List<BigDecimal> ls3 = initList();
-        List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, traderId).eq(FollowTraderSubscribeEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue()));
-        List<Long> slaveIds = list.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
-        Map<Long, Long> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
+        List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue()));
+        List<Long> slaveIds = list.stream().filter(o->o.getMasterId().equals(traderId)).map(FollowTraderSubscribeEntity::getSlaveId).toList();
+       // Map<Long, Long> subscribeMap = list.stream().filter(o->o.getMasterId().equals(traderId)).collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
+       // List<Long> slaveAllIds = list.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+        Map<Long, Long> subscribeAllMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
         statList.add(ls1);
         statList.add(ls2);
         statList.add(ls3);
@@ -321,24 +323,31 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         //处理精度丢失
         ls1.set(0, new BigDecimal(masterTotal.toString()));
         //策略正常数量
-        Integer masterSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
+        Integer masterSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         //处理精度丢失
         ls2.set(0, new BigDecimal(masterSuccess.toString()));
         //跟单总数量
         Integer slaveTotal = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
         ls1.set(1, new BigDecimal(slaveTotal.toString()));
-        //跟单正常数量
-        Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())).count();
-        ls2.set(1, BigDecimal.valueOf(slaveSuccess));
-        ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
         Map<Long, FollowTraderEntity> map = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()))
                 .collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
+
+        //跟单正常数量
+        Integer slaveSuccess = (int) followTraderEntityList.stream().filter(o ->
+                {
+                    //喊单者跟单开启跟单的
+                    Long masterId = subscribeAllMap.get(o.getId());
+                    FollowTraderEntity master = map.get(masterId);
+              return ObjectUtil.isNotEmpty(master) && master.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()) && o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue());
+                }).count();
+        ls2.set(1, BigDecimal.valueOf(slaveSuccess));
+        ls3.set(1, BigDecimal.valueOf(slaveIds.size()));
 
         for (FollowTraderEntity followTraderEntity : followTraderEntityList) {
             //跟单正常连接的，跟单
             if(followTraderEntity.getType().equals(TraderTypeEnum.SLAVE_REAL.getType()) && followTraderEntity.getStatus()== TraderStatusEnum.NORMAL.getValue() && followTraderEntity.getFollowStatus()==CloseOrOpenEnum.OPEN.getValue()) {
                 //喊单者跟单开启跟单的
-                Long masterId = subscribeMap.get(followTraderEntity.getId());
+                Long masterId = subscribeAllMap.get(followTraderEntity.getId());
                 FollowTraderEntity master = map.get(masterId);
                 if(ObjectUtil.isNotEmpty(master) && master.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue() ) {
                 if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId()))) {

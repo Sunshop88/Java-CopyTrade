@@ -1,15 +1,23 @@
 package net.maku.subcontrol.rule;
 
 
+import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowRemainderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.FollowSysmbolSpecificationService;
+import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.subcontrol.pojo.EaSymbolInfo;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.trader.CopierApiTrader;
@@ -22,6 +30,9 @@ import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author X.T. LI
@@ -37,7 +48,9 @@ public abstract class AbstractFollowRule {
      */
     protected AbstractFollowRule nextRule = null;
     protected LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
-
+    protected  RedisCache redisCache= SpringContextUtils.getBean(RedisCache.class);
+    protected  FollowSysmbolSpecificationService followSysmbolSpecificationService= SpringContextUtils.getBean(FollowSysmbolSpecificationService.class);
+    protected FollowVarietyService followVarietyService= SpringContextUtils.getBean(FollowVarietyService.class);
     public void setNextRule(AbstractFollowRule nextRule) {
         this.nextRule = nextRule;
     }
@@ -80,6 +93,7 @@ public abstract class AbstractFollowRule {
 
         log.debug("leaderSymbolInfo {}", leaderSymbolInfo);
         log.debug("copierSymbolInfo {}", copierSymbolInfo);
+        double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol());
         switch (masterSlave.getFollowMode()) {
             case 0:
                 //按固定手数
@@ -87,11 +101,15 @@ public abstract class AbstractFollowRule {
                 break;
             case 1:
                 //按比例跟单
-                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null);
+                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,pr);
                 break;
             case 2:
+                log.info("下单参数 {}-{}-{}-{}-{}", masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr);
+              //  0.30-0.5-499297.68-499921.94999999995-3.0
+
                 //按净值比例
-                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity);
+                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,pr);
+
                 break;
             case 3:
                 //按资金比例(余额
@@ -108,6 +126,43 @@ public abstract class AbstractFollowRule {
         }
         return lots2digits.doubleValue();
     }
+
+    /***
+     * 获取合约比例
+     * */
+    public double getPr(AbstractApiTrader copierApiTrader,long traderId,String symbol){
+        double pr = 1;
+        // 查看品种匹配 模板
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
+        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(symbol)).findFirst()
+                .map(FollowVarietyEntity::getStdContract)
+                .orElse(0);
+        log.info("跟单账号标准合约大小{}", contract);
+        if (contract != 0) {
+            //查询合约手数比例
+            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = getSymbolSpecification(traderId);
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.get(symbol);
+            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
+                pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
+            }
+        }
+        return pr;
+    }
+
+    private Map<String, FollowSysmbolSpecificationEntity> getSymbolSpecification(long traderId) {
+        //获取symbol信息
+        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
+            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
+        } else {
+            //查询改账号的品种规格
+            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
+            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
+        }
+        return followSysmbolSpecificationEntityList.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
+    }
+
 
     /**
      * 判断

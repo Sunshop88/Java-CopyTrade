@@ -187,7 +187,8 @@ public class KafkaMessageConsumer {
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).parallelStream().forEach(o -> {
             FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
             BigDecimal hd;
-            if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
+             //增加一下判空
+            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity) && followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
                 //如果forex 并包含JPY 也是100
                 if (o.getSymbol().contains("JPY")) {
                     hd = new BigDecimal("100");

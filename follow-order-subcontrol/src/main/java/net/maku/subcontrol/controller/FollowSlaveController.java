@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -44,6 +45,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -308,4 +310,6 @@ public class FollowSlaveController {
     public Result<Boolean> updateCache(@RequestParam("template") Integer template) {
         return Result.ok(followVarietyService.updateCache(template));
     }
+
+
 }

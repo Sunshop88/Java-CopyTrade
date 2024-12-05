@@ -38,4 +38,9 @@ public class FixedRatio implements ICopyTradeStrategy {
         return eaOrderInfo.getLots() * eaLeaderCopier.getFollowParam().doubleValue();
     }
 
+
+    public double lots(FollowTraderSubscribeEntity eaLeaderCopier, EaOrderInfo eaOrderInfo,double equity, String currency,double pr) {
+        return eaOrderInfo.getLots() * eaLeaderCopier.getFollowParam().doubleValue()*pr;
+    }
+
 }
