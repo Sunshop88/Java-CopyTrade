@@ -8,6 +8,7 @@ import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
 import online.mtapi.mt4.QuoteClient;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,5 +35,5 @@ public interface FollowOrderHistoryService extends BaseService<FollowOrderHistor
 
     void customBatchSaveOrUpdate(List<FollowOrderHistoryEntity> list);
 
-    void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader);
+    void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader,LocalDateTime startTime);
 }

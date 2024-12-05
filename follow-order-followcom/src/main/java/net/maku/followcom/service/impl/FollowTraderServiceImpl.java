@@ -191,11 +191,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setTraderId(traderId);
                         followSysmbolSpecificationVO.setDigits(symbolInfo.Digits);
                         followSysmbolSpecificationVO.setContractSize(symbolInfo.ContractSize);
-                        followSysmbolSpecificationVO.setLotStep(Double.valueOf(conGroupSec.lot_step));
+                        followSysmbolSpecificationVO.setLotStep(Double.valueOf(conGroupSec.lot_step)*0.01);
                         followSysmbolSpecificationVO.setMarginCurrency(symbolInfo.MarginCurrency);
-                        followSysmbolSpecificationVO.setMaxLot(Double.valueOf(conGroupSec.lot_max));
+                        followSysmbolSpecificationVO.setMaxLot(Double.valueOf(conGroupSec.lot_max)*0.01);
                         followSysmbolSpecificationVO.setProfitMode(symbolInfo.ProfitMode.name());
-                        followSysmbolSpecificationVO.setMinLot(Double.valueOf(conGroupSec.lot_min));
+                        followSysmbolSpecificationVO.setMinLot(Double.valueOf(conGroupSec.lot_min)*0.01);
                         followSysmbolSpecificationVO.setSwapLong(symbolInfo.SwapLong);
                         followSysmbolSpecificationVO.setSwapShort(symbolInfo.SwapShort);
                         followSysmbolSpecificationVO.setSymbol(o);

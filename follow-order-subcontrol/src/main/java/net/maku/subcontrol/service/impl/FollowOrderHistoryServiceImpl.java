@@ -130,15 +130,16 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
     }
 
     @Override
-    public void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader) {
+    public void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader,LocalDateTime startTime) {
         try {
-            Calendar cal = Calendar.getInstance();
+         //   Calendar cal = Calendar.getInstance();
             //获取数据库最后一次历史订单时间，追溯5天
-            cal.add(Calendar.DATE, -5);
+        //    cal.add(Calendar.DATE, -5);
             //日历往前追溯3个月
             //    cal.add(Calendar.MONTH,-3);
             //获取mt4历史订单
-            Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)), LocalDateTime.now());
+        //    Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)), LocalDateTime.now());
+            Order[] orders = quoteClient.DownloadOrderHistory(startTime, LocalDateTime.now());
             //保存历史订单
             List<FollowOrderHistoryEntity> list=new ArrayList<>();
             Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell) || order.Type.equals(Op.Balance)).forEach(order -> {

@@ -36,6 +36,7 @@ import online.mtapi.mt4.*;
 import org.springframework.kafka.core.KafkaTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import cn.hutool.core.date.DateUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -212,7 +213,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             //发送消息
             traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
             //保存历史数据
-            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader);
+            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
         }
     }
 

@@ -1,5 +1,6 @@
 package net.maku.subcontrol.even;
 
+import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
@@ -57,7 +58,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
             });
             //保存历史数据
-            followOrderHistoryService.saveOrderHistory(copier4ApiTrader.quoteClient, copier4ApiTrader.getTrader());
+            followOrderHistoryService.saveOrderHistory(copier4ApiTrader.quoteClient, copier4ApiTrader.getTrader(),DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
         }
     }
 
