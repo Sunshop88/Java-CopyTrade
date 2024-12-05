@@ -208,10 +208,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
-                    } catch (InvalidSymbolException e) {
-                        throw new RuntimeException(e);
-                    } catch (ConnectException e) {
-                        throw new RuntimeException(e);
+                    } catch (InvalidSymbolException |ConnectException e) {
+                        log.error(traderId+"添加品种规格异常"+o+"异常信息"+e.getMessage());
                     }
                 });
                 //查询改账号的品种规格
