@@ -386,12 +386,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     private void handleOrder(QuoteClient quoteClient, OrderClient oc, FollowOrderSendCloseVO vo) {
         //指定平仓
-        FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, vo.getOrderNo()));
-        if (ObjectUtil.isNotEmpty(detailServiceOne)) {
-            updateCloseOrder(detailServiceOne, quoteClient, oc, null);
-            ThreadPoolUtils.execute(() -> {
-                //进行平仓滑点分析
-                updateCloseSlip(vo.getTraderId(), vo.getSymbol(), null, 2);
+        List<FollowOrderDetailEntity> detailServiceOnes = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, vo.getOrderNo()));
+
+        if (ObjectUtil.isNotEmpty(detailServiceOnes)) {
+            detailServiceOnes.forEach(detailServiceOne->{
+                updateCloseOrder(detailServiceOne, quoteClient, oc, null);
+                ThreadPoolUtils.execute(() -> {
+                    //进行平仓滑点分析
+                    updateCloseSlip(vo.getTraderId(), vo.getSymbol(), null, 2);
+                });
             });
         } else {
             try {
