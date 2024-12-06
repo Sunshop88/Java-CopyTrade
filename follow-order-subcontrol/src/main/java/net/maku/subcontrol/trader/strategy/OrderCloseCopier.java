@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 import static net.maku.followcom.enums.CopyTradeFlag.CPOS;
 import static net.maku.followcom.enums.CopyTradeFlag.POF;
+import static online.mtapi.mt4.Op.Buy;
 
 
 /**
@@ -61,6 +62,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         // 跟单者(和当前喊单者的平仓订单)，对应的订单号。
         CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
+            log.info("未发现缓存"+mapKey);
             FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
                     .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                     .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
@@ -92,24 +94,32 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             if (leaderCopier == null) {
                 throw new RuntimeException("跟随关系不存在");
             }
+            log.info("平仓信息"+cachedCopierOrderInfo);
             double lots = cachedCopierOrderInfo.getSlavePosition();
             QuoteClient quoteClient=trader.quoteClient;
             if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(quoteClient)
                     || !quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(copier.getId().toString());
                 ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(copier);
                 if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                     quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString()).quoteClient;
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
                     copierApiTrader1.setTrader(copier);
+                    copier=copierApiTrader1.getTrader();
                 }else {
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
                 }
             }
-            double bid = quoteClient.GetQuote(orderInfo.getSymbol()).Bid;
-            double ask = quoteClient.GetQuote(orderInfo.getSymbol()).Ask;
+            double bid = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Bid;
+            double ask = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Ask;
             double startPrice = trader.getTrader().getType().equals(Op.Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
-            order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), lots, 0, Integer.MAX_VALUE);
+            log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
+            if (copier.getType() == Buy.getValue()) {
+                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), lots, bid, Integer.MAX_VALUE);
+            } else {
+                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), lots, ask, Integer.MAX_VALUE);
+            }
             LocalDateTime endTime = LocalDateTime.now();
             if (flag == 1) {
                 log.info("补单平仓开始");
@@ -119,6 +129,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             BigDecimal leaderProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add(orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal copierProfit = new BigDecimal(order.Swap + order.Commission + order.Profit).setScale(2, RoundingMode.HALF_UP);
             Order finalOrder = order;
+            FollowTraderEntity finalCopier = copier;
             ThreadPoolUtils.getExecutor().execute(() -> {
                 log.info("OrderClose平仓{}", finalOrder.Ticket);
                 followSubscribeOrderService.update(Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate()
@@ -138,8 +149,8 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 //生成日志
                 FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
                 followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
-                log.info("平仓日志" + copier);
-                FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
+                log.info("平仓日志" + finalCopier);
+                FollowVpsEntity followVpsEntity = followVpsService.getById(finalCopier.getServerId());
                 followTraderLogEntity.setVpsId(followVpsEntity.getId());
                 followTraderLogEntity.setVpsClient(followVpsEntity.getClientId());
                 followTraderLogEntity.setVpsName(followVpsEntity.getName());
@@ -147,7 +158,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
                 //跟单信息
                 String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
-                        "跟单账号=" + copier.getAccount() + ",单号=" + finalOrder.Ticket + ",品种=" + finalOrder.Symbol + ",手数=" + finalOrder.Lots + ",类型=" + finalOrder.Type.name();
+                        "跟单账号=" + finalCopier.getAccount() + ",单号=" + finalOrder.Ticket + ",品种=" + finalOrder.Symbol + ",手数=" + finalOrder.Lots + ",类型=" + finalOrder.Type.name();
                 followTraderLogEntity.setLogDetail(remark);
                 followTraderLogService.save(followTraderLogEntity);
                 //详情

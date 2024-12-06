@@ -131,7 +131,10 @@ public class FollowTraderController {
         }
         followTraderService.update(vo);
         //重连
-        reconnect(vo.getId().toString());
+        Boolean reconnect = reconnect(vo.getId().toString());
+        if (!reconnect){
+            throw new ServerException("请检查账号密码，稍后再试");
+        }
         return Result.ok();
     }
 
@@ -218,6 +221,7 @@ public class FollowTraderController {
 
         if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
                 || !leaderApiTrader.quoteClient.Connected()) {
+            leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
             if (conCodeEnum == ConCodeEnum.SUCCESS) {
                 quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
@@ -318,6 +322,7 @@ public class FollowTraderController {
         if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
             abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
             if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
                 if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                     quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
@@ -330,6 +335,7 @@ public class FollowTraderController {
         }else {
             abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
             if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(followTraderVO.getId().toString());
                 ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderVO);
                 if (conCodeEnum == ConCodeEnum.SUCCESS) {
                     quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
@@ -430,7 +436,10 @@ public class FollowTraderController {
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
-        reconnect(traderId);
+        Boolean reconnect = reconnect(traderId);
+        if (!reconnect){
+            throw new ServerException("请检查账号密码，稍后再试");
+        }
         return Result.ok();
     }
     @GetMapping("/specificationList")
@@ -440,38 +449,40 @@ public class FollowTraderController {
         return Result.ok(page);
     }
 
-    private void reconnect(String traderId) {
-        try {
-            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
-                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-                LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
-                    followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
-                    followTraderService.updateById(followTraderEntity);
-                    log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-                    throw new ServerException("重连失败");
-                } else {
-                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
-                    leaderApiTrader.startTrade();
-                }
-            }else {
-                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
-                    followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
-                    followTraderService.updateById(followTraderEntity);
-                    log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-                    throw new ServerException("重连失败");
-                } else {
-                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
-                    copierApiTrader.startTrade();
-                }
+    private Boolean reconnect(String traderId) {
+        Boolean result=false;
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            leaderApiTradersAdmin.removeTrader(traderId);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                leaderApiTrader.startTrade();
+                result=true;
             }
-
-        } catch (RuntimeException e) {
-            throw new ServerException("请检查账号密码，稍后再试");
+        }else {
+            copierApiTradersAdmin.removeTrader(traderId);
+            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                copierApiTrader.startTrade();
+                result=true;
+            }
         }
+
+        return result;
     }
 
     @GetMapping("traderSymbol")

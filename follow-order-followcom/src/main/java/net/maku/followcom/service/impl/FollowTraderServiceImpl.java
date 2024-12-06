@@ -402,10 +402,26 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     //订阅
                     quoteClient.Subscribe(vo.getSymbol());
                 }
-                oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), 0.0, 0);
+                double bid =0;
+                double ask =0;
+                QuoteEventArgs quoteEventArgs = null;
+                while (quoteEventArgs==null && quoteClient.Connected()) {
+                    Thread.sleep(50);
+                    quoteEventArgs=quoteClient.GetQuote(vo.getSymbol());
+                    bid =quoteEventArgs.Bid;
+                    ask =quoteEventArgs.Ask;
+                }
+                Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
+                if (order.Type.getValue() == Buy.getValue()) {
+                    oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
+                } else {
+                    oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
+                }
             } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
                 log.info("平仓出错" + e.getMessage());
                 //    throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
     }

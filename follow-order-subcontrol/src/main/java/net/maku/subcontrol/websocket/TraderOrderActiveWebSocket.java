@@ -89,7 +89,6 @@ public class TraderOrderActiveWebSocket {
             sendPeriodicMessage(traderId, slaveId);
         } catch (Exception e) {
             log.info("连接异常" + e);
-            onClose();
             throw new RuntimeException(e);
         }
     }
@@ -112,6 +111,7 @@ public class TraderOrderActiveWebSocket {
                 abstractApiTrader=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
+                    leaderApiTradersAdmin.removeTrader(accountId);
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
                         quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
@@ -126,6 +126,7 @@ public class TraderOrderActiveWebSocket {
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
+                    copierApiTradersAdmin.removeTrader(accountId);
                     ConCodeEnum conCodeEnum =copierApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                         quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;

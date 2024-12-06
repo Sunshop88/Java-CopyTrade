@@ -11,9 +11,9 @@ spring:
 
       redis2:
         database: 0
-        host: 98.142.143.187
+        host: 39.99.136.49
         port: 6379
-        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+        password: d@OgcOQdvQ09
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置

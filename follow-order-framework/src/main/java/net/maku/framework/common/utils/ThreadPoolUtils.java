@@ -12,7 +12,7 @@ public class ThreadPoolUtils {
     private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(10,"POOLFIXED",true);
 
     // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(10);
+    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);
     private static final ScheduledThreadPoolExecutor scheduledExecutorServiceStart= ThreadUtil.createScheduledExecutor(10);
 
     // 用户下单及平仓线程处理

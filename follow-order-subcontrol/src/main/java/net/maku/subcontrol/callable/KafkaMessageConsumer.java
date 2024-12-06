@@ -98,7 +98,7 @@ public class KafkaMessageConsumer {
         persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price);
 
         // 缓存跟单数据
-        cacheCopierOrder(orderInfo, order);
+        cacheCopierOrder(orderInfo, order,openOrderMapping);
 
         // 日志记录
         logFollowOrder(copier, orderInfo, openOrderMapping, flag,ip);
@@ -153,9 +153,9 @@ public class KafkaMessageConsumer {
         updateSendOrder(trader.getId(),order.Ticket);
     }
 
-    private void cacheCopierOrder(EaOrderInfo orderInfo, Order order) {
+    private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
-        String mapKey = orderInfo.getSlaveId() + "#" + order.Ticket;
+        String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
 

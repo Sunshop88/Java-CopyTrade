@@ -107,6 +107,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(trader.getTrader().getId()));
                 if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(trader.quoteClient)
                         || !trader.quoteClient.Connected()) {
+                    copierApiTradersAdmin.removeTrader(trader.getTrader().getId().toString());
                     ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
                         quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
