@@ -76,9 +76,13 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 list = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
             } else {
                 List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, SecurityUser.getUserId()));
+                if(ObjectUtil.isEmpty(vpsUserEntityList)){
+                        return null;
+                }
                 List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
                 redisUtil.set(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
                 list = vpsUserVOS;
+
             }
         }
         LambdaQueryWrapper<FollowVpsEntity> wrapper = getWrapper(query);
