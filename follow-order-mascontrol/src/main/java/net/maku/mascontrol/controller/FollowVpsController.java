@@ -72,6 +72,7 @@ public class FollowVpsController {
     public Result<PageResult<FollowVpsVO>> page(@ParameterObject @Valid FollowVpsQuery query) {
 
         PageResult<FollowVpsVO> page = followVpsService.page(query);
+        if(ObjectUtil.isEmpty(page)){return Result.ok();}
         List<Integer> ipList = page.getList().stream().map(FollowVpsVO::getId).toList();
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(ipList), FollowTraderEntity::getServerId, ipList));
         Map<Integer, Map<Integer, List<FollowTraderEntity>>> map = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId, Collectors.groupingBy(FollowTraderEntity::getType)));
