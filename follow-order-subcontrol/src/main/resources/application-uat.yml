@@ -37,6 +37,9 @@ spring:
       "39.98.123.55": "order-group-b"
       "15.181.161.240": "order-group-c"
       "15.181.163.233": "order-group-d"
+      "8.211.194.71": "order-group-e"
+      "8.211.207.234": "order-group-f"
+      "39.101.181.190": "order-group-g"
 
   datasource:
     dynamic:
