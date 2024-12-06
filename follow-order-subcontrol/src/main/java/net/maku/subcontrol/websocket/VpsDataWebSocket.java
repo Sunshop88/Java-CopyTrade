@@ -35,7 +35,7 @@ public class VpsDataWebSocket {
     private FollowVpsService followVpsService= SpringContextUtils.getBean(FollowVpsService.class);
 
     private FollowTraderService followTraderService= SpringContextUtils.getBean(FollowTraderService.class);
-    private static ScheduledThreadPoolExecutor scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(10);
+    public static ScheduledThreadPoolExecutor scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(10);
 
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "vpsId") Integer vpsId, @PathParam(value = "traderId") Long traderId) {

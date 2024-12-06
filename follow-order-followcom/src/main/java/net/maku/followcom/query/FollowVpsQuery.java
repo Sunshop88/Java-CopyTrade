@@ -29,4 +29,6 @@ public class FollowVpsQuery extends Query {
      * 是否对外开放，0为否，1为是
      */
     private Integer isOpen;
+
+    private Long userId;
 }
