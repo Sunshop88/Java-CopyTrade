@@ -1,6 +1,7 @@
 package net.maku.system.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import lombok.AllArgsConstructor;
 import net.maku.api.module.system.SmsApi;
@@ -52,6 +53,9 @@ public class SysAuthServiceImpl implements SysAuthService {
 
         //用户是禁用状态，直接抛出异常
         SysUserVO SysUserVO = sysUserService.getByUsername(login.getUsername());
+        if(ObjectUtil.isEmpty(SysUserVO)){
+            throw new ServerException("用户名或密码错误");
+        }
         if (SysUserVO.getStatus() == 0) {
             throw new ServerException("您的账户已被禁用，请联系管理员。");
         }
