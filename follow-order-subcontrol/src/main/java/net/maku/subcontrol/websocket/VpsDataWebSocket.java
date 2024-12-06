@@ -31,11 +31,10 @@ public class VpsDataWebSocket {
     private static final Logger log = LoggerFactory.getLogger(VpsDataWebSocket.class);
     private Integer vpsId;
     private Long traderId;
-
     private FollowVpsService followVpsService= SpringContextUtils.getBean(FollowVpsService.class);
-
     private FollowTraderService followTraderService= SpringContextUtils.getBean(FollowTraderService.class);
-    public static ScheduledThreadPoolExecutor scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(10);
+    private   ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
+
 
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "vpsId") Integer vpsId, @PathParam(value = "traderId") Long traderId) {
@@ -46,14 +45,15 @@ public class VpsDataWebSocket {
             Set<Session> sessionSet = sessionPool.getOrDefault(traderId + traderId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(vpsId+traderId+"", sessionSet);
+            this.scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(1);
             //开启定时任务
-            scheduledThreadPoolExecutor.scheduleAtFixedRate(()->{
+            scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
                 try {
-                    sendData(session,vpsId,traderId);
+                    sendData(session, vpsId, traderId);
                 } catch (IOException e) {
                     log.info("WebSocket建立连接异常" + e);
                 }
-            },0,1, TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.info("连接异常" + e);
@@ -74,6 +74,7 @@ public class VpsDataWebSocket {
     @OnClose
     public void onClose() {
         try {
+            scheduledThreadPoolExecutor.shutdown();
             sessionPool.get(vpsId+traderId).remove(session);
         } catch (Exception e) {
             log.info("连接异常" + e);

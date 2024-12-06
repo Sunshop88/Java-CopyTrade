@@ -1,4 +1,4 @@
-package net.maku.subcontrol.websocket;
+package net.maku.mascontrol.websocket;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
@@ -22,17 +22,20 @@ import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.Result;
-import net.maku.framework.security.user.SecurityUser;
-import net.maku.subcontrol.vo.VpsDataVo;
+
+import net.maku.mascontrol.vo.VpsDataVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -50,11 +53,13 @@ public class VpsInfoWebSocket {
     private Integer page;
     private Long userId;
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
-    private static final Logger log = LoggerFactory.getLogger(VpsDataWebSocket.class);
+    private static final Logger log = LoggerFactory.getLogger(VpsInfoWebSocket.class);
     private final FollowVpsService followVpsService=SpringContextUtils.getBean(FollowVpsService.class);
     private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
     private final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeService.class);
+    public  ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     private final RedisCache redisCache=SpringContextUtils.getBean(RedisCache.class);
+   private   ScheduledFuture<?> scheduledFuture;
 
     @OnOpen
     public void onOpen(Session session,@PathParam(value = "userId") Long userId, @PathParam(value = "page") Integer page) {
@@ -62,17 +67,19 @@ public class VpsInfoWebSocket {
             this.session = session;
             this.page = page;
             this.userId=userId;
+            this.scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(1);
             Set<Session> sessionSet = sessionPool.getOrDefault(userId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(userId.toString(), sessionSet);
             //开启定时任务
-            VpsDataWebSocket.scheduledThreadPoolExecutor.scheduleAtFixedRate(()->{
+            this.scheduledFuture = scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
+                System.out.println("开始");
                 try {
-                    sendData(session,userId,page);
+                    sendData(session, userId, page);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                 }
-            },0,1, TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.info("连接异常" + e);
@@ -153,7 +160,9 @@ public class VpsInfoWebSocket {
     @OnClose
     public void onClose() {
         try {
+            scheduledThreadPoolExecutor.shutdown();
             sessionPool.get(userId).remove(session);
+
         } catch (Exception e) {
             log.info("连接异常" + e);
         }
