@@ -255,6 +255,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
+                                    leaderApiTradersAdmin.removeTrader(h.getId().toString());
                                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(h);
                                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
                                         quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString()).quoteClient;

@@ -89,6 +89,7 @@ public class TraderOrderSendWebSocket {
             LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
                     || !leaderApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(traderId);
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                 if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                     quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
@@ -170,7 +171,6 @@ public class TraderOrderSendWebSocket {
             }
         } catch (Exception e) {
             log.info("连接异常"+e);
-            onClose();
             e.printStackTrace();
             throw new RuntimeException();
         }

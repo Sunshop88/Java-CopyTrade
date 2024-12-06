@@ -287,6 +287,7 @@ public class FollowSlaveController {
     private void reconnect(String traderId) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            copierApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
             if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {

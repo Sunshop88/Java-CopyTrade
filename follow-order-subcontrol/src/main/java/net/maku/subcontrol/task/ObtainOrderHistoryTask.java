@@ -45,6 +45,7 @@ public class ObtainOrderHistoryTask {
             //mt4登录
             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
                     || !leaderApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(u.getId().toString());
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(u);
                 if (conCodeEnum == ConCodeEnum.SUCCESS) {
                     quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;

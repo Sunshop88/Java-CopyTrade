@@ -289,6 +289,7 @@ public class FollowApiServiceImpl implements FollowApiService {
 
     private void reconnect(String traderId) {
         try{
+            leaderApiTradersAdmin.removeTrader(traderId);
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
