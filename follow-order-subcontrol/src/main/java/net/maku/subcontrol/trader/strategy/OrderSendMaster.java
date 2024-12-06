@@ -11,26 +11,18 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderLogEnum;
 import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
-import net.maku.followcom.service.FollowTraderLogService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
-import net.maku.subcontrol.service.FollowOrderHistoryService;
-import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.trader.LeaderApiTrader;
-import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Op;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 
@@ -66,6 +58,30 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             //生成记录
             FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo,trader);
             followSubscribeOrderService.save(openOrderMapping);
+            //插入历史订单
+            FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
+            historyEntity.setTraderId(trader.getId());
+            historyEntity.setAccount(trader.getAccount());
+            historyEntity.setOrderNo(orderInfo.getTicket());
+            historyEntity.setType(orderInfo.getType());
+            historyEntity.setOpenTime(orderInfo.getOpenTime());
+            historyEntity.setCloseTime(orderInfo.getCloseTime());
+            historyEntity.setSize(BigDecimal.valueOf(orderInfo.getLots()));
+            historyEntity.setSymbol(orderInfo.getSymbol());
+            historyEntity.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
+            historyEntity.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
+            //止损
+            BigDecimal copierProfit = new BigDecimal(orderInfo.getSwap() + orderInfo.getComment() + orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
+            historyEntity.setProfit(copierProfit);
+            historyEntity.setComment(orderInfo.getComment());
+            historyEntity.setSwap(orderInfo.getSwap());
+            historyEntity.setMagic((int)orderInfo.getMagic());
+            historyEntity.setTp(BigDecimal.valueOf(orderInfo.getTp()));
+            historyEntity.setSl(BigDecimal.valueOf(orderInfo.getSl()));
+            historyEntity.setCreateTime(LocalDateTime.now());
+            historyEntity.setVersion(0);
+            historyEntity.setCommission(orderInfo.getCommission());
+            followOrderHistoryService.save(historyEntity);
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());

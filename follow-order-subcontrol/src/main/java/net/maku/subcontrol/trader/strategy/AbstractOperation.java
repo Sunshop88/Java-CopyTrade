@@ -91,18 +91,17 @@ public class AbstractOperation {
     }
 
     public void batchSendKafkaMessages() {
-        threeStrategyThreadPoolExecutor.submit(() -> {
-            try {
-                List<String> messagesToSend = new ArrayList<>(kafkaMessages);
-                kafkaMessages.clear();
+        try {
+            List<String> messagesToSend = new ArrayList<>(kafkaMessages);
+            kafkaMessages.clear();
 
-                for (String message : messagesToSend) {
-                    kafkaTemplate.send("order-send", message);
-                }
-            } catch (Exception e) {
-                log.error("批量发送 Kafka 消息异常", e);
+            for (String message : messagesToSend) {
+                log.info("kafka发送消息"+message);
+                kafkaTemplate.send("order-send", message);
             }
-        });
+        } catch (Exception e) {
+            log.error("批量发送 Kafka 消息异常", e);
+        }
     }
 
     // 初始化定时任务
