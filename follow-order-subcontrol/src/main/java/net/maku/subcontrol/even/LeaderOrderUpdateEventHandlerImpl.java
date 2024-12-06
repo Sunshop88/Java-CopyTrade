@@ -164,55 +164,58 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
-        if (flag == 1) {
-            //查看喊单账号是否开启跟单
-            if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
-                //查询订阅关系
-                Map<String, Object> valuesByPattern = redisUtil.getValuesByPattern(Constant.FOLLOW_MASTER_SLAVE + leader.getId() + "*");
-                valuesByPattern.forEach((key, value) -> {
-                    String slaveId = AssertUtils.getLastNumber(key);
-                    Map<String, Object> status = (Map<String, Object>) value;
-                    if (ObjectUtil.isNotEmpty(status)) {
-                        if (status.get("followStatus").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                            log.info("未开通跟单状态");
-                            return;
+        int finalFlag = flag;
+        ThreadPoolUtils.execute(()->{
+            if (finalFlag == 1) {
+                //查看喊单账号是否开启跟单
+                if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                    //查询订阅关系
+                    Map<String, Object> valuesByPattern = redisUtil.getValuesByPattern(Constant.FOLLOW_MASTER_SLAVE + leader.getId() + "*");
+                    valuesByPattern.forEach((key, value) -> {
+                        String slaveId = AssertUtils.getLastNumber(key);
+                        Map<String, Object> status = (Map<String, Object>) value;
+                        if (ObjectUtil.isNotEmpty(status)) {
+                            if (status.get("followStatus").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                log.info("未开通跟单状态");
+                                return;
+                            }
+                            if (orderUpdateEventArgs.Action == PositionClose && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                log.info("未开通跟单平仓状态");
+                                return;
+                            }
+                            if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                log.info("未开通跟单下单状态");
+                                return;
+                            }
                         }
-                        if (orderUpdateEventArgs.Action == PositionClose && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                            log.info("未开通跟单平仓状态");
-                            return;
+                        // 构造订单信息并发布
+                        EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
+                        eaOrderInfo.setSlaveId(slaveId);
+                        if (orderUpdateEventArgs.Action == PositionClose) {
+                            ThreadPoolUtils.getScheduledExecute().execute(() -> {
+                                //跟单平仓
+                                //发送MT4处理请求
+                                strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                            });
+                        } else {
+                            ThreadPoolUtils.getScheduledExecute().execute(() -> {
+                                //跟单开仓
+                                //发送MT4处理请求
+                                strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                            });
                         }
-                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                            log.info("未开通跟单下单状态");
-                            return;
-                        }
-                    }
-                    // 构造订单信息并发布
-                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
-                    eaOrderInfo.setSlaveId(slaveId);
-                    if (orderUpdateEventArgs.Action == PositionClose) {
-                        ThreadPoolUtils.getScheduledExecute().execute(() -> {
-                            //跟单平仓
-                            //发送MT4处理请求
-                            strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
-                        });
-                    } else {
-                        ThreadPoolUtils.getScheduledExecute().execute(() -> {
-                            //跟单开仓
-                            //发送MT4处理请求
-                            strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
-                        });
-                    }
-                });
-            } else {
-                //喊单账号未开启
-                log.info(leader.getId() + "喊单账号状态未开启");
-            }
+                    });
+                } else {
+                    //喊单账号未开启
+                    log.info(leader.getId() + "喊单账号状态未开启");
+                }
 
-            //发送消息
-            traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
-            //保存历史数据
-            followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
-        }
+                //发送消息
+                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
+                //保存历史数据
+                followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
+            }
+        });
     }
 
 

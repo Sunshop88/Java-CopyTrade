@@ -39,7 +39,7 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
     public OrderUpdateHandler() {
-        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledstartStart();
+        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
