@@ -61,7 +61,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     protected FollowPlatformService followPlatformService;
     protected FollowVpsService followVpsService;
     protected FollowTraderLogService followTraderLogService;
-    protected ScheduledThreadPoolExecutor threeStrategyThreadPoolExecutor;
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final Map<AcEnum, IOperationStrategy> strategyMap;
 
@@ -81,7 +80,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         this.followPlatformService = SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
         this.followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
         this.followTraderLogService = SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
-        this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         strategyMap = new HashMap<>();
         strategyMap.put(AcEnum.MO, SpringContextUtils.getBean(OrderSendMaster.class));
         strategyMap.put(AcEnum.MC, SpringContextUtils.getBean(OrderCloseMaster.class));
