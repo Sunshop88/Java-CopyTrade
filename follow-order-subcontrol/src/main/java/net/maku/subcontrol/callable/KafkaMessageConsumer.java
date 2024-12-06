@@ -24,14 +24,12 @@ import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.OrderResultEvent;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
-import online.mtapi.mt4.PlacedType;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,12 +45,10 @@ public class KafkaMessageConsumer {
     private final FollowVpsService followVpsService;
     private final FollowTraderLogService followTraderLogService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
-    private final static String address=FollowConstant.LOCAL_HOST;
-
 
     @KafkaListener(topics = "order-send", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
-        messages.forEach(message -> {
+        messages.parallelStream().forEach(message -> {
             OrderResultEvent orderResultEvent = JSON.parseObject(message, OrderResultEvent.class);
             log.info("kafka消费"+orderResultEvent);
             if (ObjectUtil.isNotEmpty(orderResultEvent.getCopier().getIpAddr())&&orderResultEvent.getCopier().getIpAddr().equals(FollowConstant.LOCAL_HOST)){

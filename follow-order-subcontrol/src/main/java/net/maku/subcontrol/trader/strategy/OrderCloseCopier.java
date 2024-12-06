@@ -15,6 +15,7 @@ import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -146,6 +147,30 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                         .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                         .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
                         .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+                //插入历史订单
+                FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
+                historyEntity.setTraderId(finalCopier.getId());
+                historyEntity.setAccount(finalCopier.getAccount());
+                historyEntity.setOrderNo(finalOrder.Ticket);
+                historyEntity.setType(finalOrder.Type.getValue());
+                historyEntity.setOpenTime(finalOrder.OpenTime);
+                historyEntity.setCloseTime(finalOrder.CloseTime);
+                historyEntity.setSize(BigDecimal.valueOf(finalOrder.Lots));
+                historyEntity.setSymbol(finalOrder.Symbol);
+                historyEntity.setOpenPrice(BigDecimal.valueOf(finalOrder.OpenPrice));
+                historyEntity.setClosePrice(BigDecimal.valueOf(finalOrder.ClosePrice));
+                //止损
+                historyEntity.setProfit(copierProfit);
+                historyEntity.setComment(finalOrder.Comment);
+                historyEntity.setSwap(BigDecimal.valueOf(finalOrder.Swap));
+                historyEntity.setMagic(finalOrder.MagicNumber);
+                historyEntity.setTp(BigDecimal.valueOf(finalOrder.TakeProfit));
+                historyEntity.setSymbol(finalOrder.Symbol);
+                historyEntity.setSl(BigDecimal.valueOf(finalOrder.StopLoss));
+                historyEntity.setCreateTime(LocalDateTime.now());
+                historyEntity.setVersion(0);
+                historyEntity.setCommission(BigDecimal.valueOf(finalOrder.Commission));
+                followOrderHistoryService.save(historyEntity);
                 //生成日志
                 FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
                 followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
