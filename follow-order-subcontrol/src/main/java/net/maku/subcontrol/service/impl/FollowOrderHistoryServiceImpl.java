@@ -53,7 +53,6 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
         return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
-
     private LambdaQueryWrapper<FollowOrderHistoryEntity> getWrapper(FollowOrderHistoryQuery query) {
         LambdaQueryWrapper<FollowOrderHistoryEntity> wrapper = Wrappers.lambdaQuery();
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
@@ -165,6 +164,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
                 historyEntity.setSl(BigDecimal.valueOf(order.StopLoss));
                 historyEntity.setCreateTime(LocalDateTime.now());
                 historyEntity.setVersion(0);
+                historyEntity.setPlacedType(0);
                 historyEntity.setCommission(BigDecimal.valueOf(order.Commission));
                 list.add(historyEntity);
             });

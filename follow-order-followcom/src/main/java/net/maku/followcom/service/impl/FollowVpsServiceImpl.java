@@ -69,18 +69,23 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         //过滤vpsPage
         //除了admin都需要判断
         List<VpsUserVO> list = new ArrayList<>();
+        Long userId =query.getUserId();
+        if(query.getUserId()==null){
+            userId = SecurityUser.getUserId();
+        }
+
         //除了admin都需要判断
-        if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
+        if (!ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
             //查看当前用户拥有的vps
-            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId()))) {
-                list = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId());
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + userId))) {
+                list = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + userId);
             } else {
-                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, SecurityUser.getUserId()));
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId));
                 if(ObjectUtil.isEmpty(vpsUserEntityList)){
                         return null;
                 }
                 List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
-                redisUtil.set(Constant.SYSTEM_VPS_USER + SecurityUser.getUserId(), JSONObject.toJSON(vpsUserVOS));
+                redisUtil.set(Constant.SYSTEM_VPS_USER + userId, JSONObject.toJSON(vpsUserVOS));
                 list = vpsUserVOS;
 
             }
