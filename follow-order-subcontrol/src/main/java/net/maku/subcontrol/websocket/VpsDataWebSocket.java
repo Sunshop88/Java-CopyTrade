@@ -61,7 +61,7 @@ public class VpsDataWebSocket {
     }
 
     public  void  sendData(Session session,Integer vpsId, Long traderId) throws IOException {
-        List<List<BigDecimal>> statByVpsId = followVpsService.getStatByVpsId(vpsId, traderId, followTraderService);
+         List<List<BigDecimal>> statByVpsId = followVpsService.getStatByVpsId(vpsId, traderId, followTraderService);
          session.getBasicRemote().sendText(JSON.toJSONString(statByVpsId.toString()));
 
 

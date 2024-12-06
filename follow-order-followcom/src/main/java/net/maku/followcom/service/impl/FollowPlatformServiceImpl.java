@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -55,6 +56,10 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     private LambdaQueryWrapper<FollowPlatformEntity> getWrapper(FollowPlatformQuery query){
         LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowPlatformEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+        if(ObjectUtil.isNotEmpty(query.getBrokerName())){
+         //   wrapper.apply("LOWER(broker_name)","like" , "\'%"+query.getBrokerName().toLowerCase()+"%\'");
+         wrapper.apply("LOWER(broker_name) like \'%"+query.getBrokerName().toLowerCase()+"%\'");
+        }
         wrapper.orderByDesc(FollowPlatformEntity::getBrokerName);
         wrapper.orderByDesc(FollowPlatformEntity::getCreateTime);
         return wrapper;
