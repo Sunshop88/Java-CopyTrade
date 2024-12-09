@@ -104,9 +104,9 @@ public class FollowVpsController {
                         Long masterId = subscribeMap.get(x.getId());
                         //获取master喊单者,开启了的才统计
                         FollowTraderEntity masterTraderEntity = finalMasterTrader.get(masterId);
-                        if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue()) {
+                        if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue() && masterTraderEntity.getStatus().equals(TraderStatusEnum.NORMAL.getValue())) {
                             //获取redis内的下单信息
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus() == TraderStatusEnum.NORMAL.getValue() && x.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue()) {
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + x.getId())) && x.getStatus() == TraderStatusEnum.NORMAL.getValue() && x.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue() ) {
                                 FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + x.getId());
                                 o.setTotal(o.getTotal() + followRedisTraderVO.getTotal());
                                 o.setProfit(o.getProfit().add(ObjectUtil.isNotEmpty(followRedisTraderVO.getProfit()) ? followRedisTraderVO.getProfit() : BigDecimal.ZERO));

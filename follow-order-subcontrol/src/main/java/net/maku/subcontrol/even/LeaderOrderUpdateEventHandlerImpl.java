@@ -131,8 +131,13 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }
                     EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());
                     //喊单开仓
-                    //发送MT4处理请求
-                    strategyMap.get(AcEnum.MO).operate(abstractApiTrader, eaOrderInfo, 0);
+                    //查找vps状态
+                    Integer serverId = leader.getServerId();
+                    FollowVpsEntity vps = followVpsService.getById(serverId);
+                    if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                        //发送MT4处理请求
+                        strategyMap.get(AcEnum.MO).operate(abstractApiTrader, eaOrderInfo, 0);
+                    }
                 });
                 flag = 1;
                 //推送到redis
@@ -147,14 +152,22 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
                         //发送MT4处理请求
-                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
+                        Integer serverId = leader.getServerId();
+                        FollowVpsEntity vps = followVpsService.getById(serverId);
+                        if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                            strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
+                        }
                     });
                 } else {
                     scheduledThreadPoolExecutor.schedule(() -> {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
-                        //发送MT4处理请求
-                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
+                        Integer serverId = leader.getServerId();
+                        FollowVpsEntity vps = followVpsService.getById(serverId);
+                        if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                            //发送MT4处理请求
+                            strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
+                        }
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
                 flag = 1;

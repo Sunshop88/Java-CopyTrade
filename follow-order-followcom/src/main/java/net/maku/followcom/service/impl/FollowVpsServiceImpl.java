@@ -215,6 +215,34 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 .eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType())
                 .eq(FollowVpsEntity::getIsActive, VpsSpendEnum.IN_PROGRESS.getType())
                 .groupBy(FollowVpsEntity::getName);
+        //除了admin都需要判断
+        Long userId = SecurityUser.getUserId();
+        List<VpsUserVO> ls = new ArrayList<>();
+        if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
+            //查看当前用户拥有的vps
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + userId))) {
+                ls = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + userId);
+            } else {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId));
+                if(ObjectUtil.isEmpty(vpsUserEntityList)){
+                    return null;
+                }
+                List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
+                redisUtil.set(Constant.SYSTEM_VPS_USER + userId, JSONObject.toJSON(vpsUserVOS));
+                ls = vpsUserVOS;
+            }
+        }
+
+        List<Integer> ids =new ArrayList<>();
+        for (int i = 0; i < ls.size(); i++) {
+            FollowVpsVO followVpsVO = JSON.parseObject(JSON.toJSONString(ls.get(i)), FollowVpsVO.class);
+            ids.add(followVpsVO.getId() );
+        }
+
+        if (!ObjectUtil.equals(Objects.requireNonNull(SecurityUser.getUserId()).toString(), "10000")) {
+            if (ObjectUtil.isEmpty(ids)) return null;
+            wrapper.in(FollowVpsEntity::getId,ids);
+        }
         List<FollowVpsEntity> list = baseMapper.selectList(wrapper);
         return FollowVpsConvert.INSTANCE.convertList(list);
     }
@@ -430,7 +458,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                         ls2.set(8, ls2.get(8).add(followRedisTraderVO.getProfit() == null ? BigDecimal.ZERO : followRedisTraderVO.getProfit()));
                     }
                     //当前策略
-                    if (slaveIds.contains(followTraderEntity.getId())) {
+                    if (slaveIds.contains(followTraderEntity.getId()) && master.getStatus()== TraderStatusEnum.NORMAL.getValue() ) {
                         //总持仓
                         ls3.set(2, ls3.get(2).add(new BigDecimal(followRedisTraderVO.getTotal().toString())));
                         //总持仓手数

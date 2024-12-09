@@ -89,7 +89,7 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowOrderHistoryVO vo) {
         FollowOrderHistoryEntity entity = FollowOrderHistoryConvert.INSTANCE.convert(vo);
-
+        entity.setPlacedType(ObjectUtil.isEmpty(entity.getPlacedType())?0:entity.getPlacedType());
         baseMapper.insert(entity);
 
 

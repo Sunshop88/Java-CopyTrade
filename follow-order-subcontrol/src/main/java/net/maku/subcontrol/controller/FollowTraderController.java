@@ -211,7 +211,8 @@ public class FollowTraderController {
         }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
-        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+     //   ||  followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())
+        if (  followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
 
@@ -314,7 +315,7 @@ public class FollowTraderController {
         }
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
-        if (followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+        if (followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
         AbstractApiTrader abstractApiTrader;

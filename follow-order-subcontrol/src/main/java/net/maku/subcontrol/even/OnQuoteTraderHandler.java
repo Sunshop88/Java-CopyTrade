@@ -53,7 +53,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 
 
     public void invoke(Object sender, QuoteEventArgs quote) {
-
         // 获取当前系统时间
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastInvokeTime  >= interval) {

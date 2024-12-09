@@ -90,6 +90,8 @@ public class OnQuoteHandler implements QuoteEventHandler {
                 followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
             }
         }
+        //推送websocket
+        log.info("推送websocket：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 

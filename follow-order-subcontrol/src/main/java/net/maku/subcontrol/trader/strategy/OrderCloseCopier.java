@@ -169,6 +169,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 historyEntity.setSl(BigDecimal.valueOf(finalOrder.StopLoss));
                 historyEntity.setCreateTime(LocalDateTime.now());
                 historyEntity.setVersion(0);
+                historyEntity.setPlacedType(0);
                 historyEntity.setCommission(BigDecimal.valueOf(finalOrder.Commission));
                 followOrderHistoryService.save(historyEntity);
                 //生成日志

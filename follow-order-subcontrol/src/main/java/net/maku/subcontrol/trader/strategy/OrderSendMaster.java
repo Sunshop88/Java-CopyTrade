@@ -81,6 +81,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             historyEntity.setSl(BigDecimal.valueOf(orderInfo.getSl()));
             historyEntity.setCreateTime(LocalDateTime.now());
             historyEntity.setVersion(0);
+            historyEntity.setPlacedType(0);
             historyEntity.setCommission(orderInfo.getCommission());
             followOrderHistoryService.save(historyEntity);
             //生成日志
