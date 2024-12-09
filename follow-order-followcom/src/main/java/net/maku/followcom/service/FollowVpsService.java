@@ -41,7 +41,7 @@ public interface FollowVpsService extends BaseService<FollowVpsEntity> {
 
     FollowVpsEntity select(String vpsName);
 
-    FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService);
+    FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService,Long userId);
 
     List<List<BigDecimal>> getStatByVpsId(Integer vpsId, Long traderId, FollowTraderService followTraderService);
 

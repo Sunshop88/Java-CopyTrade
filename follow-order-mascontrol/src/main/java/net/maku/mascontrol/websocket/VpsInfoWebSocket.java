@@ -23,6 +23,7 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.mascontrol.vo.VpsDataVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,10 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,8 +55,8 @@ public class VpsInfoWebSocket {
     private final FollowVpsService followVpsService=SpringContextUtils.getBean(FollowVpsService.class);
     private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
     private final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeService.class);
-    public  ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     private final RedisCache redisCache=SpringContextUtils.getBean(RedisCache.class);
+    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
    private   ScheduledFuture<?> scheduledFuture;
 
     @OnOpen
@@ -67,13 +65,11 @@ public class VpsInfoWebSocket {
             this.session = session;
             this.page = page;
             this.userId=userId;
-            this.scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(1);
             Set<Session> sessionSet = sessionPool.getOrDefault(userId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(userId.toString(), sessionSet);
             //开启定时任务
-            this.scheduledFuture = scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
-                System.out.println("开始");
+            this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
                     sendData(session, userId, page);
                 } catch (Exception e) {
@@ -147,7 +143,7 @@ public class VpsInfoWebSocket {
             });
 
         }
-        FollowVpsInfoVO followVpsInfo = followVpsService.getFollowVpsInfo(followTraderService);
+        FollowVpsInfoVO followVpsInfo = followVpsService.getFollowVpsInfo(followTraderService,userId);
         VpsDataVo dataVo = VpsDataVo.builder().pageData(pageData).vpsInfoData(followVpsInfo).build();
         session.getBasicRemote().sendText(JSON.toJSONString(dataVo));
 
@@ -156,12 +152,19 @@ public class VpsInfoWebSocket {
     public void onMessage(String message, Session session) {
     }
 
-
+    private void stopPeriodicTask() {
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
+    }
     @OnClose
     public void onClose() {
         try {
-            scheduledThreadPoolExecutor.shutdown();
-            sessionPool.get(userId).remove(session);
+            stopPeriodicTask();
+
+            if(sessionPool.get(userId)!=null){
+                sessionPool.get(userId).remove(session);
+            }
 
         } catch (Exception e) {
             log.info("连接异常" + e);

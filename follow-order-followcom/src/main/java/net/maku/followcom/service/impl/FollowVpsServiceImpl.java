@@ -248,9 +248,33 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     }
 
     @Override
-    public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService) {
+    public FollowVpsInfoVO getFollowVpsInfo(FollowTraderService followTraderService,Long userId) {
+        //过滤授权的数据
+        if(userId==null){
+            userId = SecurityUser.getUserId();
+        }
+        List<VpsUserVO> ls = new ArrayList<>();
+        if (!ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
+            //查看当前用户拥有的vps
+            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + userId))) {
+                ls = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + userId);
+            } else {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId));
+                if(ObjectUtil.isEmpty(vpsUserEntityList)){
+                    return null;
+                }
+                List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
+                redisUtil.set(Constant.SYSTEM_VPS_USER + userId, JSONObject.toJSON(vpsUserVOS));
+                ls = vpsUserVOS;
+            }
+        }
+        List<Integer> ids =new ArrayList<>();
+        for (int i = 0; i < ls.size(); i++) {
+            FollowVpsVO followVpsVO = JSON.parseObject(JSON.toJSONString(ls.get(i)), FollowVpsVO.class);
+            ids.add(followVpsVO.getId() );
+        }
         //过滤被删除的数据
-        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).list();
+        List<FollowVpsEntity> list = this.lambdaQuery().eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE).eq(FollowVpsEntity::getIsOpen,CloseOrOpenEnum.OPEN.getValue()).in(ObjectUtil.isNotEmpty(ids),FollowVpsEntity::getId,ids).list();
         Integer openNum = (int) list.stream().filter(o -> o.getIsOpen().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer runningNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.OPEN.getValue())).count();
         Integer closeNum = (int) list.stream().filter(o -> o.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())).count();
@@ -269,19 +293,28 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
         BigDecimal orderProfitTotal = BigDecimal.ZERO;
         //过滤出为跟单的
         List<FollowTraderEntity> slaveTraderEntityList = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())  ).collect(Collectors.toList());
+        //查询订阅关系
+        Map<Long, Long> subscribeMap = followTraderSubscribeService.list().stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
+        Map<Long, FollowTraderEntity> masterTraderMap = followTraderEntityList.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) && o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
         //followTraderEntityList 替换出slaveTraderEntityList
         for (FollowTraderEntity followTraderEntity : slaveTraderEntityList) {
-            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId())) && followTraderEntity.getStatus()==TraderStatusEnum.NORMAL.getValue()) {
-                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
-                //总持仓
-                orderCountTotal += followRedisTraderVO.getTotal();
-                //总持仓手数
-                orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
-                //总净值
-                orderEquityTotal = orderEquityTotal.add(followRedisTraderVO.getEuqit());
-                //总盈亏
-                orderProfitTotal = orderProfitTotal.add(followRedisTraderVO.getProfit());
+            //拿到masterid
+            Long masterId = subscribeMap.get(followTraderEntity.getId());
+            //获取master喊单者,开启了的才统计
+            FollowTraderEntity masterTraderEntity = masterTraderMap.get(masterId);
+            if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue()) {
+                if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId())) && followTraderEntity.getStatus() == TraderStatusEnum.NORMAL.getValue() && followTraderEntity.getFollowStatus() == CloseOrOpenEnum.OPEN.getValue()) {
+                    FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisUtil.get(Constant.TRADER_USER + followTraderEntity.getId());
+                    //总持仓
+                    orderCountTotal += followRedisTraderVO.getTotal();
+                    //总持仓手数
+                    orderLotsTotal = orderLotsTotal.add(BigDecimal.valueOf(followRedisTraderVO.getSellNum())).add(BigDecimal.valueOf(followRedisTraderVO.getBuyNum()));
+                    //总净值
+                    orderEquityTotal = orderEquityTotal.add(followRedisTraderVO.getEuqit());
+                    //总盈亏
+                    orderProfitTotal = orderProfitTotal.add(followRedisTraderVO.getProfit());
 
+                }
             }
         }
         Integer total = list.size();

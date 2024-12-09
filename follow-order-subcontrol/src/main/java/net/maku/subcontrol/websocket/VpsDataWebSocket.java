@@ -14,6 +14,7 @@ import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -33,8 +34,8 @@ public class VpsDataWebSocket {
     private Long traderId;
     private FollowVpsService followVpsService= SpringContextUtils.getBean(FollowVpsService.class);
     private FollowTraderService followTraderService= SpringContextUtils.getBean(FollowTraderService.class);
-    private   ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
-
+    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private   ScheduledFuture<?> scheduledFuture;
 
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "vpsId") Integer vpsId, @PathParam(value = "traderId") Long traderId) {
@@ -45,10 +46,10 @@ public class VpsDataWebSocket {
             Set<Session> sessionSet = sessionPool.getOrDefault(traderId + traderId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(vpsId+traderId+"", sessionSet);
-            this.scheduledThreadPoolExecutor=new ScheduledThreadPoolExecutor(1);
             //开启定时任务
-            scheduledThreadPoolExecutor.scheduleAtFixedRate(() -> {
+            this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
+                    log.info("开始连接");
                     sendData(session, vpsId, traderId);
                 } catch (IOException e) {
                     log.info("WebSocket建立连接异常" + e);
@@ -69,13 +70,21 @@ public class VpsDataWebSocket {
     @OnMessage
     public void onMessage(String message, Session session) {
     }
-
+    private void stopPeriodicTask() {
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
+    }
 
     @OnClose
     public void onClose() {
         try {
-            scheduledThreadPoolExecutor.shutdown();
-            sessionPool.get(vpsId+traderId).remove(session);
+            log.info("关闭连接");
+            stopPeriodicTask();
+            if(sessionPool.get(vpsId+traderId)!=null){
+                sessionPool.get(vpsId+traderId).remove(session);
+            }
+
         } catch (Exception e) {
             log.info("连接异常" + e);
         }

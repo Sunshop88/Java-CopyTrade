@@ -201,7 +201,7 @@ public class FollowVpsController {
     @Operation(summary = "vps统计")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
     public Result<FollowVpsInfoVO> info() {
-        return Result.ok(followVpsService.getFollowVpsInfo(followTraderService));
+        return Result.ok(followVpsService.getFollowVpsInfo(followTraderService,null));
     }
 
     @GetMapping("listVps")

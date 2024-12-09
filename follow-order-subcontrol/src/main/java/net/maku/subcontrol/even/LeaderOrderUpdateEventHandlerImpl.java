@@ -210,8 +210,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     log.info(leader.getId() + "喊单账号状态未开启");
                 }
 
-                //发送消息
-                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
+                //发送消息 注释推送
+             //   traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
                 //保存历史数据
                 followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
             }

@@ -45,10 +45,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -77,6 +74,8 @@ public class TraderOrderActiveWebSocket {
     private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
     private FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     private FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
+    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> scheduledFuture;
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "slaveId") String slaveId) {
         try {
@@ -86,7 +85,15 @@ public class TraderOrderActiveWebSocket {
             Set<Session> sessionSet = sessionPool.getOrDefault(traderId + slaveId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
             sessionPool.put(traderId + slaveId, sessionSet);
-            sendPeriodicMessage(traderId, slaveId);
+            //开启定时任务
+            this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
+                try {
+                    sendPeriodicMessage(traderId, slaveId);
+                } catch (Exception e) {
+                    log.info("WebSocket建立连接异常" + e);
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+
         } catch (Exception e) {
             log.info("连接异常" + e);
             throw new RuntimeException(e);
@@ -220,10 +227,15 @@ public class TraderOrderActiveWebSocket {
         }
     }
 
-
+    private void stopPeriodicTask() {
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
+    }
     @OnClose
     public void onClose() {
         try {
+            stopPeriodicTask();
             sessionPool.get(traderId + slaveId).remove(session);
         } catch (Exception e) {
             e.printStackTrace();

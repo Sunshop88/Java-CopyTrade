@@ -55,7 +55,8 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             list.forEach(o -> {
                 //发送消息
                 log.info("跟单websocket" + copier4ApiTrader.getTrader().getId());
-                traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
+                //注释，改1秒
+              //  traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
             });
             //保存历史数据
             followOrderHistoryService.saveOrderHistory(copier4ApiTrader.quoteClient, copier4ApiTrader.getTrader(),DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
