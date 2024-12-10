@@ -111,9 +111,6 @@ public class TraderOrderActiveWebSocket {
     public void sendPeriodicMessage(String traderId, String slaveId) {
 
         try {
-            RLock lock = redissonLockUtil.getLock("Lock:" + traderId + ":" + slaveId);
-            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
-            if (!flag) {return;}
             returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
             if (ObjectUtil.isEmpty(sessionSet)) {
@@ -165,7 +162,7 @@ public class TraderOrderActiveWebSocket {
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             //存入redis
-       
+             log.info("持仓数据：{}",JSONObject.toJSON(orderActiveInfoList));
             redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
@@ -237,8 +234,6 @@ public class TraderOrderActiveWebSocket {
             pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderActiveSocketVO));
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
-        }finally {
-            redissonLockUtil.unlock("Lock:" + traderId + ":" + slaveId);
         }
     }
 
