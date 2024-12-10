@@ -58,7 +58,7 @@ import static online.mtapi.mt4.Op.Sell;
 public class TraderOrderActiveWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderOrderActiveWebSocket.class);
-    private final RedissonLockUtil redissonLockUtil;
+
     private Session session;
 
     private String traderId;
@@ -80,9 +80,7 @@ public class TraderOrderActiveWebSocket {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
 
-    public TraderOrderActiveWebSocket(RedissonLockUtil redissonLockUtil) {
-        this.redissonLockUtil = redissonLockUtil;
-    }
+
 
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "slaveId") String slaveId) {
