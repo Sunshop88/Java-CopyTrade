@@ -72,7 +72,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                     followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
                 }
                 Order[] orders = qc.GetOpenedOrders();
-                followRedisTraderVO.setTotal((int)Arrays.stream(orders).filter(order ->order.Type == Buy||order.Type == Sell).count());
+                int count = (int) Arrays.stream(orders).filter(order -> order.Type == Buy || order.Type == Sell).count();
+                followRedisTraderVO.setTotal(count);
+                log.info("写入redis数据订单量{}",count);
                 followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
                 followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
                 //设置缓存
