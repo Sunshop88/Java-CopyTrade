@@ -115,7 +115,7 @@ public class RedisConfig {
                 .setConnectionPoolSize(6000)  // 连接池大小
                 .setConnectTimeout(10000)    // 连接超时时间
                 .setTimeout(10000)
-                .setRetryInterval(3)
+                .setRetryInterval(3)   //重试3次
                 .setIdleConnectionTimeout(10000);   // 空闲连接超时时间
 
         return Redisson.create(config);

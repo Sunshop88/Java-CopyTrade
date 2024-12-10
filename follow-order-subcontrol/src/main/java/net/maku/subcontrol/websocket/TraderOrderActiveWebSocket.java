@@ -58,6 +58,7 @@ import static online.mtapi.mt4.Op.Sell;
 public class TraderOrderActiveWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderOrderActiveWebSocket.class);
+    private final RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
 
     private Session session;
 
@@ -75,8 +76,8 @@ public class TraderOrderActiveWebSocket {
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
     private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-    private FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
-    private FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
+    private FollowPlatformService followPlatformService = SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+    private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
 
@@ -109,54 +110,57 @@ public class TraderOrderActiveWebSocket {
     public void sendPeriodicMessage(String traderId, String slaveId) {
 
         try {
+            RLock lock = redissonLockUtil.getLock("LOCK:" + traderId + ":" + slaveId);
+            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
+            if(!flag){return;}
             returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
             if (ObjectUtil.isEmpty(sessionSet)) {
                 return;
             }
             String accountId = slaveId;
-            AbstractApiTrader abstractApiTrader ;
+            AbstractApiTrader abstractApiTrader;
             FollowTraderEntity followTraderEntity;
-            QuoteClient quoteClient=null;
+            QuoteClient quoteClient = null;
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
-                followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
-                abstractApiTrader=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
+                followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
+                abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
                     leaderApiTradersAdmin.removeTrader(accountId);
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                        quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                        quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         leaderApiTrader1.startTrade();
                     }
-                }else {
-                    quoteClient=abstractApiTrader.quoteClient;
+                } else {
+                    quoteClient = abstractApiTrader.quoteClient;
                 }
-            }else {
-                followTraderEntity=followTraderService.getById(Long.valueOf(accountId));
+            } else {
+                followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
                     copierApiTradersAdmin.removeTrader(accountId);
-                    ConCodeEnum conCodeEnum =copierApiTradersAdmin.addTrader(followTraderEntity);
-                    if (conCodeEnum == ConCodeEnum.SUCCESS ) {
-                        quoteClient=copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
+                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                        quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader.startTrade();
                     }
-                }else {
-                    quoteClient=abstractApiTrader.quoteClient;
+                } else {
+                    quoteClient = abstractApiTrader.quoteClient;
                 }
             }
-            if (ObjectUtil.isEmpty(quoteClient)){
-                throw new ServerException(accountId+"登录异常");
+            if (ObjectUtil.isEmpty(quoteClient)) {
+                throw new ServerException(accountId + "登录异常");
             }
             //所有持仓
             List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
-            log.info("MT4持仓数据：{}",openedOrders);
+            log.info("MT4持仓数据：{}", openedOrders);
             List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
@@ -165,9 +169,9 @@ public class TraderOrderActiveWebSocket {
             redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
-            if (!slaveId.equals("0")){
-                log.info("follow sub"+slaveId+":"+traderId);
-                FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId),Long.valueOf(traderId));
+            if (!slaveId.equals("0")) {
+                log.info("follow sub" + slaveId + ":" + traderId);
+                FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
 
                 List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 0, -1);
                 List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 0, -1);
@@ -214,13 +218,13 @@ public class TraderOrderActiveWebSocket {
                 });
                 closeRepairToExtract.parallelStream().forEach(o -> {
                     //通过备注查询未平仓记录
-                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveId,slaveId).eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
-                    if (ObjectUtil.isNotEmpty(detailServiceOne)){
+                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveId, slaveId).eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
+                    if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                         OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                         BeanUtil.copyProperties(detailServiceOne, orderRepairInfoVO);
                         orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
                         orderRepairInfoVO.setMasterLots(detailServiceOne.getMasterLots().doubleValue());
-                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(detailServiceOne.getMasterProfit())?detailServiceOne.getMasterProfit().doubleValue():0);
+                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(detailServiceOne.getMasterProfit()) ? detailServiceOne.getMasterProfit().doubleValue() : 0);
                         orderRepairInfoVO.setMasterType(Op.forValue(detailServiceOne.getMasterType()).name());
                         orderRepairInfoVO.setSlaveLots(detailServiceOne.getSlaveLots().doubleValue());
                         orderRepairInfoVO.setSlaveType(Op.forValue(detailServiceOne.getSlaveType()).name());
@@ -233,6 +237,8 @@ public class TraderOrderActiveWebSocket {
             pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderActiveSocketVO));
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
+        }finally {
+            redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
         }
     }
 
@@ -241,6 +247,7 @@ public class TraderOrderActiveWebSocket {
             scheduledFuture.cancel(true);
         }
     }
+
     @OnClose
     public void onClose() {
         try {
