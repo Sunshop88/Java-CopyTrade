@@ -112,7 +112,7 @@ public class RedisConfig {
 
         // 连接池配置（可选）
         config.useSingleServer()
-                .setConnectionPoolSize(6000)  // 连接池大小
+                .setConnectionPoolSize(1000)  // 连接池大小
                 .setConnectTimeout(10000)    // 连接超时时间
                 .setTimeout(10000)
                 .setRetryInterval(3)   //重试3次
