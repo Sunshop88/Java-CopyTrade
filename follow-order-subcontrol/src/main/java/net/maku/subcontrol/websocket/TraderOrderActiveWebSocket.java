@@ -25,6 +25,7 @@ import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.JsonUtils;
@@ -40,6 +41,7 @@ import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -56,6 +58,7 @@ import static online.mtapi.mt4.Op.Sell;
 public class TraderOrderActiveWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderOrderActiveWebSocket.class);
+    private final RedissonLockUtil redissonLockUtil;
     private Session session;
 
     private String traderId;
@@ -76,6 +79,11 @@ public class TraderOrderActiveWebSocket {
     private FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
+
+    public TraderOrderActiveWebSocket(RedissonLockUtil redissonLockUtil) {
+        this.redissonLockUtil = redissonLockUtil;
+    }
+
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "slaveId") String slaveId) {
         try {
@@ -101,7 +109,11 @@ public class TraderOrderActiveWebSocket {
     }
 
     public void sendPeriodicMessage(String traderId, String slaveId) {
+
         try {
+            RLock lock = redissonLockUtil.getLock("Lock:" + traderId + ":" + slaveId);
+            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
+            if (!flag) {return;}
             returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
             if (ObjectUtil.isEmpty(sessionSet)) {
@@ -153,6 +165,7 @@ public class TraderOrderActiveWebSocket {
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             //存入redis
+       
             redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
@@ -224,6 +237,8 @@ public class TraderOrderActiveWebSocket {
             pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderActiveSocketVO));
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
+        }finally {
+            redissonLockUtil.unlock("Lock:" + traderId + ":" + slaveId);
         }
     }
 
