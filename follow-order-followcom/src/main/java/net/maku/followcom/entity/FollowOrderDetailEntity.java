@@ -262,4 +262,12 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "close_status")
 	private Integer closeStatus;
+    /**
+	 * 结算汇率
+	 * */
+	private Double rateMargin;
+	//喊单账号
+	private  String sourceUser;
+	//魔术号
+	private  Integer magical;
 }

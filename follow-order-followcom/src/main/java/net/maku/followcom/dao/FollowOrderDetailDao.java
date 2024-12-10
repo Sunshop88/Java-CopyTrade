@@ -30,6 +30,10 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "ROUND(AVG(close_price - request_close_price),7) AS meanClosePriceDifference, " +
             "ROUND(AVG(open_price_slip),2) AS meanOpenPriceSlip, " +
             "ROUND(AVG(close_price_slip),2) AS meanClosePriceSlip ," +
+            "ROUND(AVG(rate_margin),2) AS rateMargin ," +
+            "GROUP_CONCAT(DISTINCT magical) AS magical ," +
+            "GROUP_CONCAT(DISTINCT source_user) AS sourceUser ," +
+            "GROUP_CONCAT(DISTINCT ip_addr) AS ipAddr ," +
             "count(1) AS symbolNum " +
             "FROM follow_order_detail " +
             "<where>" +

@@ -147,4 +147,16 @@ public class FollowOrderDetailVO  implements Serializable {
 	 */
 	@Schema(description = "平仓状态")
 	private Integer closeStatus;
+
+	//喊单账号
+	private  String sourceUser;
+	//结算汇率
+	private  String rateMargin;
+	//魔术号
+	private  String magical;
+
+
+
+
+
 }

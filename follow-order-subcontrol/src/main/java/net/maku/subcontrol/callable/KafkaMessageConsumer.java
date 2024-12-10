@@ -144,6 +144,9 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
         followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
         followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
+        followOrderDetailEntity.setRateMargin(order.RateMargin);
+        followOrderDetailEntity.setMagical(orderInfo.getTicket());
+        followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
         followOrderDetailService.save(followOrderDetailEntity);
         //滑点分析
         updateSendOrder(trader.getId(),order.Ticket);

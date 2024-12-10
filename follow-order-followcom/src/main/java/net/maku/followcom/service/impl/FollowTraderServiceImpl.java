@@ -380,6 +380,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
+        //查询结算汇率
+       // List<FollowOrderDetailEntity> records = pageOrder.getRecords();
+
         return new PageResult<>(FollowOrderDetailConvert.INSTANCE.convertList(pageOrder.getRecords()), pageOrder.getTotal());
     }
 
@@ -975,6 +978,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
             followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
+            followOrderDetailEntity.setRateMargin(order.RateMargin);
+            followOrderDetailEntity.setMagical(order.Ticket);
+            followOrderDetailEntity.setSourceUser(account);
         } catch (TimeoutException e) {
             log.info("下单超时");
             followOrderDetailEntity.setRemark("下单超时" + e.getMessage());
