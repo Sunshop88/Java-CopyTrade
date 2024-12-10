@@ -42,11 +42,11 @@ public class RedisConfig {
         return new RedisProperties();
     }
 
-    @Bean
-    @ConfigurationProperties(prefix = "spring.data.redis.redis2")
-    public RedisProperties redisProperties2() {
-        return new RedisProperties();
-    }
+//    @Bean
+//    @ConfigurationProperties(prefix = "spring.data.redis.redis2")
+//    public RedisProperties redisProperties2() {
+//        return new RedisProperties();
+//    }
 
 
     @Bean
@@ -55,10 +55,10 @@ public class RedisConfig {
         return createLettuceConnectionFactory(redisProperties);
     }
 
-    @Bean
-    public RedisConnectionFactory redisConnectionFactory2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
-        return createLettuceConnectionFactory(redisProperties);
-    }
+//    @Bean
+//    public RedisConnectionFactory redisConnectionFactory2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
+//        return createLettuceConnectionFactory(redisProperties);
+//    }
 
     private LettuceConnectionFactory createLettuceConnectionFactory(RedisProperties redisProperties) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
@@ -78,13 +78,13 @@ public class RedisConfig {
         return template;
     }
 
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate2(@Qualifier("redisConnectionFactory2") RedisConnectionFactory factory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(factory);
-        configureSerialization(template,factory);
-        return template;
-    }
+//    @Bean
+//    public RedisTemplate<String, Object> redisTemplate2(@Qualifier("redisConnectionFactory2") RedisConnectionFactory factory) {
+//        RedisTemplate<String, Object> template = new RedisTemplate<>();
+//        template.setConnectionFactory(factory);
+//        configureSerialization(template,factory);
+//        return template;
+//    }
 
     @Bean
     @Primary
@@ -92,10 +92,10 @@ public class RedisConfig {
         return createRedissonClient(redisProperties);
     }
 
-    @Bean
-    public RedissonClient redissonClient2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
-        return createRedissonClient(redisProperties);
-    }
+//    @Bean
+//    public RedissonClient redissonClient2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
+//        return createRedissonClient(redisProperties);
+//    }
 
     private RedissonClient createRedissonClient(RedisProperties redisProperties) {
         Config config = new Config();

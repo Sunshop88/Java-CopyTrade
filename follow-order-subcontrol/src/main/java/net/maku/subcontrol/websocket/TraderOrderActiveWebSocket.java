@@ -275,14 +275,11 @@ public class TraderOrderActiveWebSocket {
     private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
         List<OrderActiveInfoVO> collect = new ArrayList<>();
         for (Order o : openedOrders) {
-            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoVOPool.borrowObject(); // 从对象池中借用对象
+            OrderActiveInfoVO reusableOrderActiveInfoVO = new OrderActiveInfoVO(); // 从对象池中借用对象
             resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
             collect.add(reusableOrderActiveInfoVO);
         }
-        // 将所有借用的对象添加到待归还列表中
-        synchronized (pendingReturnObjects) {
-            pendingReturnObjects.addAll(collect);
-        }
+
         //倒序返回
         return collect.stream()
                 .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())

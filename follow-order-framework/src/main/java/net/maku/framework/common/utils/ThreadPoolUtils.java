@@ -9,21 +9,18 @@ import java.util.concurrent.*;
 public class ThreadPoolUtils {
 
     // 定义一个固定大小的线程池
-    private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(20,"POOLFIXED",true);
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
     // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);
+    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(500);
     // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledstart= ThreadUtil.createScheduledExecutor(30);
+    private static final ForkJoinPool scheduledstart= new ForkJoinPool(50);
+    // 定义一个固定大小的延时任务的线程池
+    private static final ExecutorService  scheduledExecutorServiceOrder=  Executors.newCachedThreadPool();;
     // 用户下单及平仓线程处理
     @Getter
-    private static final ThreadPoolExecutor scheduledExecutorSend=new ThreadPoolExecutor(
-            20, // 核心线程数
-            500, // 最大线程数
-            60L, TimeUnit.SECONDS, // 空闲线程存活时间
-            new LinkedBlockingQueue<>(10000), // 队列大小
-            new ThreadPoolExecutor.CallerRunsPolicy() // 队列满时执行的策略
-    );
+    private static final ExecutorService scheduledExecutorSend=Executors.newCachedThreadPool();
+
     public static ExecutorService getExecutor() {
         return executorService;
     }
@@ -36,7 +33,7 @@ public class ThreadPoolUtils {
         executorService.execute(runnable);
     }
 
-    public static ScheduledThreadPoolExecutor getScheduledstartStart() {
+    public static ForkJoinPool getScheduledstartStart() {
         return scheduledstart;
     }
 
@@ -54,6 +51,13 @@ public class ThreadPoolUtils {
      */
     public static ScheduledThreadPoolExecutor getScheduledExecute() {
         return scheduledExecutorService;
+    }
+
+    /**
+     * 提交延时任务到线程池执行
+     */
+    public static ExecutorService getScheduledExecuteOrder() {
+        return scheduledExecutorServiceOrder;
     }
 
     /**

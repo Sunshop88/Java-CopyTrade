@@ -178,7 +178,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
         int finalFlag = flag;
-        ThreadPoolUtils.execute(()->{
+        ThreadPoolUtils.getScheduledExecute().execute(()->{
             if (finalFlag == 1) {
                 //查看喊单账号是否开启跟单
                 if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
@@ -205,17 +205,19 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
                         eaOrderInfo.setSlaveId(slaveId);
                         if (orderUpdateEventArgs.Action == PositionClose) {
-                            ThreadPoolUtils.getScheduledExecute().execute(() -> {
+//                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
                                 //跟单平仓
                                 //发送MT4处理请求
+                                log.info("发送平仓请求"+slaveId);
                                 strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
-                            });
+//                            });
                         } else {
-                            ThreadPoolUtils.getScheduledExecute().execute(() -> {
+//                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
                                 //跟单开仓
                                 //发送MT4处理请求
+                                log.info("未开通跟单下单状态"+slaveId);
                                 strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
-                            });
+//                            });
                         }
                     });
                 } else {
@@ -224,7 +226,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 }
 
                 //发送消息 注释推送
-             //   traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
+                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
                 //保存历史数据
                 followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
             }
@@ -350,7 +352,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }
                     //转出json格式
                     String json = convertJson(accounts);
-                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+//                    redisUtil.setSlaveRedis(Integer.toString(k), json);
                 }
             });
         });
