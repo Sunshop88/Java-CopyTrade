@@ -100,7 +100,7 @@ public class TraderOrderActiveWebSocket {
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                 }
-            }, 0, 1, TimeUnit.SECONDS);
+            }, 0, 2, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.info("连接异常" + e);
