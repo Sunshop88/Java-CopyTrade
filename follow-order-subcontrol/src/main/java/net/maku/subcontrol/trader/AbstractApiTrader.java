@@ -31,6 +31,7 @@ import online.mtapi.mt4.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
@@ -43,8 +44,7 @@ import java.util.concurrent.Semaphore;
 
 @Slf4j
 public abstract class AbstractApiTrader extends ApiTrader {
-
-    public QuoteClient quoteClient;
+    public volatile QuoteClient quoteClient;
     @Getter
     @Setter
     protected FollowTraderEntity trader;

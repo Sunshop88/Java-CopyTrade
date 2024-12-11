@@ -134,7 +134,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     //查找vps状态
                     Integer serverId = leader.getServerId();
                     FollowVpsEntity vps = followVpsService.getById(serverId);
-                    log.info("vps状态{}------->{}",ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()),leader);
                     if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
                        // log.info("vps状态------->");
                         //发送MT4处理请求
@@ -157,7 +156,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         //发送MT4处理请求
                         Integer serverId = leader.getServerId();
                         FollowVpsEntity vps = followVpsService.getById(serverId);
-                        log.info("vps状态{}------->{}",ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()),leader);
                         if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
                             strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                         }
@@ -168,7 +166,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         //喊单平仓
                         Integer serverId = leader.getServerId();
                         FollowVpsEntity vps = followVpsService.getById(serverId);
-                        log.info("vps状态{}------->{}",ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()),leader);
                         if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
                             //发送MT4处理请求
                             strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
@@ -241,7 +238,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 //发送消息 注释推送
                 traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
                 //保存历史数据
-                followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
+             //   followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
             }
         });
     }

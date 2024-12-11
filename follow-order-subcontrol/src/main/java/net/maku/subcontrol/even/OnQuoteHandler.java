@@ -91,7 +91,7 @@ public class OnQuoteHandler implements QuoteEventHandler {
             }
         }
         //推送websocket
-        log.info("推送websocket：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
+   //     log.info("推送websocket：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 

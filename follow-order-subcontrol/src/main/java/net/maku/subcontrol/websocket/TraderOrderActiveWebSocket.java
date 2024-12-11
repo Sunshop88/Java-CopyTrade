@@ -159,20 +159,23 @@ public class TraderOrderActiveWebSocket {
             if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException(accountId + "登录异常");
             }
-            quoteClient = leaderApiTradersAdmin.quoteClientMap.get(accountId);
+         /*   quoteClient = leaderApiTradersAdmin.quoteClientMap.get(accountId);
             if(quoteClient==null) {
                 FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, followTraderEntity.getPlatform()));
                 String serverNode = followPlatformServiceOne.getServerNode();
                 String[] split = serverNode.split(":");
                 quoteClient = new QuoteClient(Integer.parseInt(followTraderEntity.getAccount()), followTraderEntity.getPassword(), split[0], Integer.valueOf(split[1]));
-                quoteClient.Connect();
                 leaderApiTradersAdmin.quoteClientMap.put(accountId,quoteClient);
-            }
+            }*/
+/*            quoteClient.Connect();
             //所有持仓
-            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());*/
 
-            log.info("{}-MT4,订单数量{},持仓数据：{}",accountId,openedOrders.size(),openedOrders);
-            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());
+           /* log.info("{}-MT4,订单数量{},持仓数据：{}",accountId,openedOrders.size(),openedOrders);
+            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());*/
+
+            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
+            List<OrderActiveInfoVO> orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             //存入redis
