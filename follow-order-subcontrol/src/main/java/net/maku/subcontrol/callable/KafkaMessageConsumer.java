@@ -91,7 +91,7 @@ public class KafkaMessageConsumer {
         openOrderMapping.setExtra("[开仓]即时价格成交");
 
         // 数据持久化操作
-        persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price);
+        persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price,ip);
 
         // 缓存跟单数据
         cacheCopierOrder(orderInfo, order,openOrderMapping);
@@ -113,7 +113,7 @@ public class KafkaMessageConsumer {
 //        persistOrderMapping(openOrderMapping);
 //    }
 
-    private void persistOrderMapping(FollowSubscribeOrderEntity openOrderMapping, Order order, EaOrderInfo orderInfo, FollowTraderEntity trader, LocalDateTime startTime, LocalDateTime endTime,double price) {
+    private void persistOrderMapping(FollowSubscribeOrderEntity openOrderMapping, Order order, EaOrderInfo orderInfo, FollowTraderEntity trader, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
         openOrderMappingService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate()
                 .eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId())
                 .eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket())
@@ -147,6 +147,7 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setRateMargin(order.RateMargin);
         followOrderDetailEntity.setMagical(orderInfo.getTicket());
         followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
+        followOrderDetailEntity.setServerHost(ip);
         followOrderDetailService.save(followOrderDetailEntity);
         //滑点分析
         updateSendOrder(trader.getId(),order.Ticket);

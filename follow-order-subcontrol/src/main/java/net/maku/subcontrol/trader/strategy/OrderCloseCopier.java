@@ -31,6 +31,8 @@ import org.springframework.util.ObjectUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -171,7 +173,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 historyEntity.setVersion(0);
                 historyEntity.setPlacedType(0);
                 historyEntity.setCommission(BigDecimal.valueOf(finalOrder.Commission));
-                followOrderHistoryService.save(historyEntity);
+                followOrderHistoryService.customBatchSaveOrUpdate(Arrays.asList(historyEntity));
                 //生成日志
                 FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
                 followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());

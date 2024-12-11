@@ -155,7 +155,7 @@ public class FollowOrderDetailVO  implements Serializable {
 	//魔术号
 	private  String magical;
 
-
+	private  String serverHost;
 
 
 

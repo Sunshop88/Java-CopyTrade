@@ -22,10 +22,12 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import online.mtapi.mt4.Exception.ConnectException;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -36,6 +38,8 @@ import java.util.concurrent.*;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
+
+    public static Map<String, QuoteClient> quoteClientMap = new ConcurrentHashMap<>();
     /**
      * 信号量来控制，连接任务最多支持的并发数
      */

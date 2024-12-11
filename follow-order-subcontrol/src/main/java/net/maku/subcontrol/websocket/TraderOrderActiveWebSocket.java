@@ -83,6 +83,7 @@ public class TraderOrderActiveWebSocket {
 
 
 
+
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "slaveId") String slaveId) {
         try {
@@ -158,9 +159,19 @@ public class TraderOrderActiveWebSocket {
             if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException(accountId + "登录异常");
             }
+            quoteClient = leaderApiTradersAdmin.quoteClientMap.get(accountId);
+            if(quoteClient==null) {
+                FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, followTraderEntity.getPlatform()));
+                String serverNode = followPlatformServiceOne.getServerNode();
+                String[] split = serverNode.split(":");
+                quoteClient = new QuoteClient(Integer.parseInt(followTraderEntity.getAccount()), followTraderEntity.getPassword(), split[0], Integer.valueOf(split[1]));
+                quoteClient.Connect();
+                leaderApiTradersAdmin.quoteClientMap.put(accountId,quoteClient);
+            }
             //所有持仓
             List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
-            log.info("MT4持仓数据：{}", openedOrders);
+
+            log.info("{}-MT4,订单数量{},持仓数据：{}",accountId,openedOrders.size(),openedOrders);
             List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);

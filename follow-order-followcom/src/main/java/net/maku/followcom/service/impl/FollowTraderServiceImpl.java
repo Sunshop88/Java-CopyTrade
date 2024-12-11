@@ -981,6 +981,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setRateMargin(order.RateMargin);
             followOrderDetailEntity.setMagical(order.Ticket);
             followOrderDetailEntity.setSourceUser(account);
+            followOrderDetailEntity.setServerHost(quoteClient.Host);
         } catch (TimeoutException e) {
             log.info("下单超时");
             followOrderDetailEntity.setRemark("下单超时" + e.getMessage());

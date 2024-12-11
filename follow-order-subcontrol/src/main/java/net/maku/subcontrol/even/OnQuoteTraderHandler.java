@@ -8,6 +8,7 @@ import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -15,12 +16,14 @@ import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import online.mtapi.mt4.QuoteEventHandler;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -32,6 +35,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     protected FollowTraderService followTraderService;
     protected Boolean running = Boolean.TRUE;
     protected RedisCache redisCache;
+    private RedissonLockUtil redissonLockUtil;
 
     private final FollowRedisTraderVO followRedisTraderVO=new FollowRedisTraderVO();
     // 设定时间间隔，单位为毫秒
@@ -49,17 +53,23 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         this.abstractApiTrader=abstractApiTrader;
         followTraderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);
         redisCache=SpringContextUtils.getBean(RedisCache.class);
+        this.redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
     }
 
 
     public void invoke(Object sender, QuoteEventArgs quote) {
         // 获取当前系统时间
+
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastInvokeTime  >= interval) {
-            // 更新该symbol的上次执行时间为当前时间
-            lastInvokeTime= currentTime;
-            QuoteClient qc = (QuoteClient) sender;
             try {
+            RLock lock = redissonLockUtil.getLock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
+            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
+            if (flag) {
+                // 更新该symbol的上次执行时间为当前时间
+                lastInvokeTime= currentTime;
+                QuoteClient qc = (QuoteClient) sender;
+
                 //缓存经常变动的三个值信息
                 followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
                 followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
@@ -82,9 +92,14 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setCredit(qc.Credit);
                 followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
                 redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
+                }else {
+                    invoke(sender,quote);
+                }
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();
+            }finally {
+                  redissonLockUtil.unlock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
             }
         }
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间

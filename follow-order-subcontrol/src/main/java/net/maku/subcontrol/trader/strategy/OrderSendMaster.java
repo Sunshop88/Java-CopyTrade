@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -83,7 +84,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             historyEntity.setVersion(0);
             historyEntity.setPlacedType(0);
             historyEntity.setCommission(orderInfo.getCommission());
-            followOrderHistoryService.save(historyEntity);
+            followOrderHistoryService.customBatchSaveOrUpdate(Arrays.asList(historyEntity));
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());

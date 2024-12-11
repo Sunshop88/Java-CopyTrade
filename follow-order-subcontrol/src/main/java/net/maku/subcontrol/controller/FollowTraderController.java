@@ -35,6 +35,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -345,6 +346,20 @@ public class FollowTraderController {
                 }
             } else {
                 quoteClient = abstractApiTrader.quoteClient;
+            }
+        }
+        //获取vps数据
+        quoteClient = leaderApiTradersAdmin.quoteClientMap.get(vo.getTraderId().toString());
+        if(quoteClient==null) {
+            try {
+                FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, followTraderVO.getPlatform()));
+                String serverNode = followPlatformServiceOne.getServerNode();
+                String[] split = serverNode.split(":");
+                quoteClient = new QuoteClient(Integer.parseInt(followTraderVO.getAccount()), followTraderVO.getPassword(), split[0], Integer.valueOf(split[1]));
+                quoteClient.Connect();
+                leaderApiTradersAdmin.quoteClientMap.put(vo.getTraderId().toString(),quoteClient);
+            } catch (Exception e) {
+                throw new ServerException("连接异常");
             }
         }
         if (ObjectUtil.isEmpty(quoteClient)){

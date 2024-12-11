@@ -19,10 +19,13 @@ import net.maku.followcom.service.FollowOrderDetailService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowOrderDetailExcelVO;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订单详情
