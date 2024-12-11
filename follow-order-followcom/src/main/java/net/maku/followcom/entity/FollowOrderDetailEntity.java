@@ -270,4 +270,6 @@ public class FollowOrderDetailEntity {
 	private  String sourceUser;
 	//魔术号
 	private  Integer magical;
+
+	private  String serverHost;
 }
