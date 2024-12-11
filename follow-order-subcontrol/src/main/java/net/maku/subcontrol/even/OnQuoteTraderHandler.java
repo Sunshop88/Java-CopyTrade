@@ -79,9 +79,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastInvokeTime  >= interval) {
             try {
-            RLock lock = redissonLockUtil.getLock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
-            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
-            if (flag) {
+//            RLock lock = redissonLockUtil.getLock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
+//            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
+//            if (flag) {
                 // 更新该symbol的上次执行时间为当前时间
                 lastInvokeTime= currentTime;
               //  QuoteClient qc = (QuoteClient) sender;
@@ -123,9 +123,9 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setCredit(qc.Credit);
                 followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
                 redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
-                }else {
-                    invoke(sender,quote);
-                }
+//                }else {
+//                    invoke(sender,quote);
+//                }
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();

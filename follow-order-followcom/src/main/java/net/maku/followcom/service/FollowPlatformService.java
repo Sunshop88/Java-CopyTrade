@@ -42,4 +42,7 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> listHavingServer(String name);
 
     List<FollowPlatformVO> listByServer();
+    FollowPlatformEntity getPlatFormById(String id);
+
+    FollowPlatformEntity updatePlatCache(String id);
 }

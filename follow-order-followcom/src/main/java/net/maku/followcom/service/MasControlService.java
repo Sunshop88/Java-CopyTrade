@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.followcom.vo.FollowVpsVO;
 
@@ -17,5 +18,5 @@ public interface MasControlService {
 
     boolean deletePlatform(List<Long> idList);
 
-    boolean updatePlatform(FollowPlatformVO vo);
+    boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req);
 }

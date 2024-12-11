@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -19,6 +21,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Shaozz
@@ -52,10 +57,20 @@ public class InitRunner implements ApplicationRunner {
     private FollowService followService;
     @Autowired
     private FollowTraderService followTraderService;
-
+    @Autowired
+    private FollowVarietyService followVarietyService;
+    @Autowired
+    private FollowPlatformService followPlatformService;
+    @Autowired
+    private FollowTraderSubscribeService followTraderSubscribeService;
+    @Autowired
+    private FollowSysmbolSpecificationService followSysmbolSpecificationService;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
+        log.info("加载缓存=======开始");
+        getCache();
+        log.info("加载缓存=======结束");
         // 连接MT4交易账户
         mt4TraderStartup();
         log.info("=============启动时加载示例内容完毕=============");
@@ -87,4 +102,36 @@ public class InitRunner implements ApplicationRunner {
         copierApiTradersAdmin.startUp();
     }
 
+
+    private void getCache() {
+        //品种匹配缓存
+        followVarietyService.getListByTemplate().parallelStream().forEach(o->{
+            followVarietyService.getListByTemplated(o.getTemplateId());
+        });
+
+        List<FollowTraderEntity> list = followTraderService.list();
+        list.parallelStream().forEach(o->{
+            //券商缓存
+            followPlatformService.getPlatFormById(o.getPlatformId().toString());
+            //账户信息缓存
+            followTraderService.getFollowById(o.getId());
+            //品种规格缓存
+            followSysmbolSpecificationService.getByTraderId(o.getId());
+        });
+
+        //订单关系缓存
+        List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list();
+        followTraderSubscribeEntityList.parallelStream().forEach(o->{
+            followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+        });
+
+        //喊单所有跟单缓存
+        Set<Long> collect = followTraderSubscribeEntityList.stream()
+                .map(FollowTraderSubscribeEntity::getMasterId) // 获取每个实体的 masterId
+                .filter(Objects::nonNull)          // 过滤掉可能为 null 的值
+                .collect(Collectors.toSet());
+        collect.stream().toList().parallelStream().forEach(o->{
+            followTraderSubscribeService.getSubscribeOrder(o);
+        });
+    }
 }

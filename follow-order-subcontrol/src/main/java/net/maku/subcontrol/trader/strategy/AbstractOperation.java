@@ -45,6 +45,7 @@ public class AbstractOperation {
     protected FollowVpsService followVpsService;
     protected FollowTraderLogService followTraderLogService;
     protected List<String> kafkaMessages ;
+    protected List<String> kafkaCloseMessages ;
     private KafkaTemplate<Object, Object> kafkaTemplate;
     protected FollowOrderDetailService followOrderDetailService;
     protected FollowSysmbolSpecificationService followSysmbolSpecificationService;
@@ -60,6 +61,7 @@ public class AbstractOperation {
         this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
         this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
         this.followTraderLogService=SpringContextUtils.getBean(FollowTraderLogServiceImpl.class);
+        this.kafkaCloseMessages= new CopyOnWriteArrayList<>();
         this.kafkaMessages= new CopyOnWriteArrayList<>();
         this.kafkaTemplate = SpringContextUtils.getBean(KafkaTemplate.class);
         this.followOrderDetailService=SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
@@ -98,6 +100,13 @@ public class AbstractOperation {
             for (String message : messagesToSend) {
                 log.info("kafka发送消息"+message);
                 kafkaTemplate.send("order-send", message);
+            }
+            List<String> messagesToClose = new ArrayList<>(kafkaCloseMessages);
+            kafkaCloseMessages.clear();
+
+            for (String message : messagesToClose) {
+                log.info("kafka发送Close消息"+message);
+                kafkaTemplate.send("order-close", message);
             }
         } catch (Exception e) {
             log.error("批量发送 Kafka 消息异常", e);

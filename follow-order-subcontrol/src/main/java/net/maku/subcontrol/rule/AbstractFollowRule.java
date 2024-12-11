@@ -2,7 +2,6 @@ package net.maku.subcontrol.rule;
 
 
 import cn.hutool.core.util.ObjectUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,17 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
-import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowRemainderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisCache;
-import net.maku.framework.common.constant.Constant;
-import net.maku.subcontrol.pojo.EaSymbolInfo;
 import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.Exception.ConnectException;
@@ -32,7 +27,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author X.T. LI
@@ -83,16 +77,8 @@ public abstract class AbstractFollowRule {
         if (ObjectUtils.isEmpty(masterSlave)) {
             return 0.0;
         }
-        //喊单者、跟单者的合约大小
-        EaSymbolInfo copierSymbolInfo = copierApiTrader.symbolInfo(eaOrderInfo.getSymbol(), true);
-        EaSymbolInfo leaderSymbolInfo = null;
         //MT4平台
         LeaderApiTrader LeaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId().toString());
-        leaderSymbolInfo = LeaderApiTrader.symbolInfo(eaOrderInfo.getOriSymbol(), true);
-
-
-        log.debug("leaderSymbolInfo {}", leaderSymbolInfo);
-        log.debug("copierSymbolInfo {}", copierSymbolInfo);
         double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getSymbol());
         switch (masterSlave.getFollowMode()) {
             case 0:
@@ -138,7 +124,7 @@ public abstract class AbstractFollowRule {
         log.info("跟单账号标准合约大小{}", contract);
         if (contract != 0) {
             //查询合约手数比例
-            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = getSymbolSpecification(traderId);
+            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(traderId);
             FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.get(symbol);
             if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
                 log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
@@ -147,20 +133,6 @@ public abstract class AbstractFollowRule {
         }
         return pr;
     }
-
-    private Map<String, FollowSysmbolSpecificationEntity> getSymbolSpecification(long traderId) {
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
-        } else {
-            //查询改账号的品种规格
-            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
-        }
-        return followSysmbolSpecificationEntityList.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
-    }
-
 
     /**
      * 判断

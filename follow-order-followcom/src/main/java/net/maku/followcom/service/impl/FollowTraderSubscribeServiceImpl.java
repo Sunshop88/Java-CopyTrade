@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.framework.common.cache.RedisUtil;
@@ -24,6 +25,9 @@ import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowTraderSubscribeExcelVO;
 import net.maku.framework.security.user.SecurityUser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.util.ObjectUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,9 +48,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTraderSubscribeDao, FollowTraderSubscribeEntity> implements FollowTraderSubscribeService {
     private final TransService transService;
-    @Autowired
-    private RedisUtil redisUtil;
-
+    private final RedisUtil redisUtil;
+    private final CacheManager cacheManager;
     @Override
     public PageResult<FollowTraderSubscribeVO> page(FollowTraderSubscribeQuery query) {
         IPage<FollowTraderSubscribeEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -123,6 +126,11 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
     }
 
     @Override
+    @Cacheable(
+            value = "followSubscriptionCache",
+            key = "#slaveId + '_' + #masterId",
+            unless = "#result == null"
+    )
     public FollowTraderSubscribeEntity subscription(Long slaveId, Long masterId) {
         //查看缓存
         Object hGet = this.redisUtil.hGet(Constant.FOLLOW_SUB_TRADER+slaveId.toString(), masterId.toString());
@@ -165,6 +173,37 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
             //设置跟单关系缓存值 保存状态
             redisUtil.set(Constant.FOLLOW_MASTER_SLAVE+traderSubscribeEntity.getMasterId()+":"+traderSubscribeEntity.getSlaveId(), JSONObject.toJSON(map));
             return map;
+        }
+    }
+
+    @Override
+    @Cacheable(
+            value = "followSubOrderCache",
+            key = "#id ?: 'defaultKey'",
+            unless = "#result == null"
+    )
+    public List<FollowTraderSubscribeEntity> getSubscribeOrder(Long id) {
+       return this.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId,id));
+    }
+
+    @Override
+    public void updateSubCache(Long id) {
+        List<FollowTraderSubscribeEntity> list = this.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, id));
+        list.forEach(o->{
+            //跟单关系缓存修改
+            String cacheKey = generateCacheKey(o.getSlaveId(), o.getMasterId());
+            Cache cache = cacheManager.getCache("followSubscriptionCache");
+            if (cache != null) {
+                cache.put(cacheKey,o); // 移除指定缓存条目
+            }
+        });
+    }
+
+    private String generateCacheKey(Long slaveId, Long masterId) {
+        if (slaveId != null && masterId != null) {
+            return slaveId + "_" + masterId;
+        } else {
+            return "defaultKey";
         }
     }
 

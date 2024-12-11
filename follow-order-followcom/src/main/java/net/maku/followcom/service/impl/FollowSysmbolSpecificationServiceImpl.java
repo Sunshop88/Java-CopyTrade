@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
 import net.maku.followcom.dao.FollowSysmbolSpecificationDao;
 import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.vo.FollowSysmbolSpecificationExcelVO;
@@ -16,10 +17,13 @@ import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 品种规格
@@ -90,6 +94,16 @@ public class FollowSysmbolSpecificationServiceImpl extends BaseServiceImpl<Follo
         List<FollowSysmbolSpecificationExcelVO> excelList = FollowSysmbolSpecificationConvert.INSTANCE.convertExcelList(list());
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowSysmbolSpecificationExcelVO.class, "品种规格", null, excelList);
+    }
+
+    @Override
+    @Cacheable(
+            value = "followSymbolCache",
+            key = "#traderId ?: 'defaultKey'",
+            unless = "#result == null"
+    )
+    public Map<String, FollowSysmbolSpecificationEntity> getByTraderId(long traderId) {
+        return this.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId)).stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
     }
 
 }

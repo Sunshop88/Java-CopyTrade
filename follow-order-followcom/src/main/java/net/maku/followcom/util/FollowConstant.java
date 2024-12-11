@@ -55,8 +55,11 @@ public class FollowConstant {
 
     public static String VPS_MEASURE = "/subcontrol/follow/start";
 
-    public static String VPS_UPDATE_CACHE= "/subcontrol/follow/updateCache";
-
+    /**
+     * 更新缓存
+     */
+    public static String VPS_UPDATE_CACHE_VARIETY_CACHE= "/subcontrol/follow/updateVarietyCache";
+    public static String VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE= "/subcontrol/follow/updatePlatCache";
 
     /**
      * 跟单日志

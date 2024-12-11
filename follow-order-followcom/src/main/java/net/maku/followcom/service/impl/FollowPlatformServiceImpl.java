@@ -27,6 +27,8 @@ import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.vo.FollowPlatformExcelVO;
 import net.maku.followcom.vo.FollowPlatformVO;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,8 +93,6 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 .set(FollowPlatformEntity::getUpdater,SecurityUser.getUserId())
                 .set(FollowPlatformEntity::getPlatformType, vo.getPlatformType())
                 .eq(FollowPlatformEntity::getBrokerName, followPlatformEntity.getBrokerName())));
-
-
     }
 
     @Override
@@ -182,6 +182,26 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 .groupBy(FollowPlatformEntity::getServer);
         List<FollowPlatformEntity> list = baseMapper.selectList(wrapper);
         return FollowPlatformConvert.INSTANCE.convertList(list);
+    }
+
+    @Override
+    @Cacheable(
+            value = "followPlatCache", // 缓存名称
+            key = "#id ?: 'defaultKey'",
+            unless = "#result == null" // 空结果不缓存
+    )
+    public FollowPlatformEntity getPlatFormById(String id) {
+        return this.getById(id);
+    }
+
+    @Override
+    @CachePut(
+            value = "followPlatCache", // 缓存名称
+            key = "#id ?: 'defaultKey'",
+            unless = "#result == null" // 空结果不缓存
+    )
+    public FollowPlatformEntity updatePlatCache(String id) {
+        return this.getById(id);
     }
 
 

@@ -9,17 +9,16 @@ import java.util.concurrent.*;
 public class ThreadPoolUtils {
 
     // 定义一个固定大小的线程池
-    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     // 定义一个固定大小的延时任务的线程池
     private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(500);
+
     // 定义一个固定大小的延时任务的线程池
-    private static final ForkJoinPool scheduledstart= new ForkJoinPool(50);
-    // 定义一个固定大小的延时任务的线程池
-    private static final ExecutorService  scheduledExecutorServiceOrder=  Executors.newCachedThreadPool();;
+    private static final ExecutorService  scheduledExecutorServiceOrder=  Executors.newVirtualThreadPerTaskExecutor();;
     // 用户下单及平仓线程处理
     @Getter
-    private static final ExecutorService scheduledExecutorSend=Executors.newCachedThreadPool();
+    private static final ExecutorService scheduledExecutorSend=Executors.newVirtualThreadPerTaskExecutor();
 
     public static ExecutorService getExecutor() {
         return executorService;
@@ -33,9 +32,7 @@ public class ThreadPoolUtils {
         executorService.execute(runnable);
     }
 
-    public static ForkJoinPool getScheduledstartStart() {
-        return scheduledstart;
-    }
+
 
     /**
      * 提交延时任务到线程池执行
