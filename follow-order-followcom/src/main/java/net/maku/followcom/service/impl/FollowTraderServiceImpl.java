@@ -36,6 +36,10 @@ import online.mtapi.mt4.Exception.TradeException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +75,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowPlatformService followPlatformService;
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final CacheManager cacheManager;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -227,8 +232,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowTraderVO vo) {
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
-
         updateById(entity);
+        Cache cache = cacheManager.getCache("followFollowCache");
+        if (cache != null) {
+            cache.put(vo.getId(),entity); // 修改指定缓存条目
+        }
     }
 
     @Override
@@ -259,7 +267,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         //查询券商和服务商
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
-        FollowPlatformEntity followPlatform = this.getPlatForm(vo.getTraderId());
+
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(this.get(vo.getTraderId()).getPlatformId().toString());
         //创建下单记录
         String orderNo = RandomStringUtil.generateNumeric(13);
         vo.setCreator(SecurityUser.getUserId());
@@ -274,7 +283,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         double pr = 1;
         if (contract != 0) {
             //查询合约手数比例
-            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = getSymbolSpecification(vo.getTraderId());
+            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(vo.getTraderId());
             FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.get(vo.getSymbol());
             if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
                 log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
@@ -477,7 +486,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         //查询券商和服务商
         FollowTraderEntity followTraderEntity = this.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId, vo.getTraderId()));
-        FollowPlatformEntity followPlatform = this.getPlatForm(vo.getTraderId());
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         //创建平仓记录
         FollowOrderCloseEntity followOrderCloseEntity = new FollowOrderCloseEntity();
         followOrderCloseEntity.setTraderId(vo.getTraderId());
@@ -707,17 +716,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return true;
     }
 
-    @Override
-    public FollowPlatformEntity getPlatForm(Long masterId) {
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_PLATFORM + masterId))) {
-            return (FollowPlatformEntity) redisCache.get(Constant.TRADER_PLATFORM + masterId);
-        } else {
-            FollowPlatformEntity followPlatform = followPlatformService.getById(this.get(masterId).getPlatformId());
-            redisCache.set(Constant.TRADER_PLATFORM + masterId, followPlatform);
-            return followPlatform;
-        }
-    }
-
     private void updateCloseSlip(long traderId, String symbol, FollowOrderCloseEntity followOrderCloseEntity, Integer flag) {
         if (flag != 2) {
             //查看平仓所有数据
@@ -748,7 +746,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
         //获取symbol信息
-        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = getSymbolSpecification(traderId);
+        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //开始平仓
         list.parallelStream().forEach(o -> {
             FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
@@ -885,7 +883,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     private void updateSendOrder(long traderId, String orderNo, Integer flag) {
         //获取symbol信息
-        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = getSymbolSpecification(traderId);
+        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         if (ObjectUtil.isNotEmpty(sendServiceOne)) {
             //查看下单所有数据
@@ -1200,7 +1198,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             oc = new OrderClient(quoteClient);
         }
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
-            commonThreadPool.execute(() -> {
+            ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (int i = 0; i < orderCount; i++) {
                     int orderId = i + 1;
@@ -1231,7 +1229,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             });
         } else {
             // 有间隔时间的下单，依次执行并等待
-            commonThreadPool.execute(() -> {
+            ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (int i = 0; i < orderCount; i++) {
                     if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_SEND + traderId)) || redisCache.get(Constant.TRADER_SEND + traderId).equals(1)) {
@@ -1298,18 +1296,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
     }
 
-    private Map<String, FollowSysmbolSpecificationEntity> getSymbolSpecification(long traderId) {
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
-        } else {
-            //查询改账号的品种规格
-            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
-        }
-        return followSysmbolSpecificationEntityList.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
-    }
 
     private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
         List<OrderActiveInfoVO> collect = new ArrayList<>();
@@ -1350,5 +1336,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public List<Long> getShare(Integer oldId, Integer newId) {
         return baseMapper.getShare(oldId,newId);
+    }
+
+    @Override
+    @Cacheable(
+            value = "followFollowCache",
+            key = "#masterId ?: 'defaultKey'",
+            unless = "#result == null"
+    )
+    public FollowTraderEntity getFollowById(Long masterId) {
+        return this.getById(masterId);
     }
 }

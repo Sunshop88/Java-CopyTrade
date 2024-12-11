@@ -183,28 +183,27 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }
         int finalFlag = flag;
-        ThreadPoolUtils.getScheduledExecute().execute(()->{
+        ThreadPoolUtils.getExecutor().execute(()->{
+            log.info("喊单监听完成");
             if (finalFlag == 1) {
                 //查看喊单账号是否开启跟单
                 if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
                     //查询订阅关系
-                    Map<String, Object> valuesByPattern = redisUtil.getValuesByPattern(Constant.FOLLOW_MASTER_SLAVE + leader.getId() + "*");
-                    valuesByPattern.forEach((key, value) -> {
-                        String slaveId = AssertUtils.getLastNumber(key);
-                        Map<String, Object> status = (Map<String, Object>) value;
-                        if (ObjectUtil.isNotEmpty(status)) {
-                            if (status.get("followStatus").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单状态");
-                                return;
-                            }
-                            if (orderUpdateEventArgs.Action == PositionClose && status.get("followClose").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单平仓状态");
-                                return;
-                            }
-                            if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && status.get("followOpen").equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单下单状态");
-                                return;
-                            }
+                    List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList=followTraderSubscribeService.getSubscribeOrder(leader.getId());
+                    followTraderSubscribeEntityList.forEach(o-> {
+                        ThreadPoolUtils.getExecutor().execute(()->{
+                        String slaveId = o.getSlaveId().toString();
+                        if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                            log.info("未开通跟单状态");
+                            return;
+                        }
+                        if (orderUpdateEventArgs.Action == PositionClose && o.getFollowClose().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                            log.info("未开通跟单平仓状态");
+                            return;
+                        }
+                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(equals(CloseOrOpenEnum.CLOSE.getValue()))) {
+                            log.info("未开通跟单下单状态");
+                            return;
                         }
                         // 构造订单信息并发布
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
@@ -224,14 +223,15 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 //                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
                                 //跟单开仓
                                 //发送MT4处理请求
-                                log.info("未开通跟单下单状态"+slaveId);
+                                log.info("发送下单请求"+slaveId);
                             Integer serverId = leader.getServerId();
                             FollowVpsEntity vps = followVpsService.getById(serverId);
                             if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
                                 strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                             }
 //                            });
-                        }
+                            }
+                    });
                     });
                 } else {
                     //喊单账号未开启

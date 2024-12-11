@@ -21,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 
@@ -37,22 +36,25 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
     @Override
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
-        log.info("请求进入时间1:"+trader.getTrader().getId());
+        log.info(":请求进入时间1"+trader.getTrader().getId());
         FollowTraderEntity copier = trader.getTrader();
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
         FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
         //存入下单方式
         orderInfo.setPlaceType(leaderCopier.getPlacedType());
+        log.info("请求进入时间1.0:"+trader.getTrader().getId());
         //查看喊单账号信息
-        FollowPlatformEntity followPlatform = followTraderService.getPlatForm(orderInfo.getMasterId());
+        FollowTraderEntity followTraderEntity = followTraderService.getFollowById(orderInfo.getMasterId());
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         // 查看品种匹配 模板
+        log.info("请求进入时间1.1:"+trader.getTrader().getId());
         List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(copier.getTemplateId());
         log.info("请求进入时间2:"+trader.getTrader().getId());
 
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
         if (ObjectUtil.isNotEmpty(collect)){
             //获得跟单账号对应品种
-            FollowPlatformEntity copyPlat = followTraderService.getPlatForm(copier.getId());
+            FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
             List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
             List<String> symbolList = orderInfo.getSymbolList();
             collectCopy.forEach(o-> {
@@ -83,6 +85,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
         //  依次对备选品种进行开仓尝试
         for (String symbol : orderInfo.getSymbolList()) {
+            log.info("请求进入时间3.1:"+trader.getTrader().getId());
             orderInfo.setSymbol(symbol);
             AbstractFollowRule.PermitInfo permitInfo = this.followRule.permit(leaderCopier, orderInfo, trader);
             openOrderMapping.setSlaveSymbol(orderInfo.getSymbol());
@@ -90,6 +93,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setSlaveLots(BigDecimal.valueOf(permitInfo.getLots()));
             openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
+            log.info("请求进入时间3.2:"+trader.getTrader().getId());
             if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag)) {
                 break;
             }
@@ -102,7 +106,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         log.info("请求进入时间4:"+trader.getTrader().getId());
         CompletableFuture.runAsync(() -> {
             try {
-                FollowTraderEntity followTraderEntity =followTraderService.getById(Long.valueOf(trader.getTrader().getId()));
+                FollowTraderEntity followTraderEntity =followTraderService.getFollowById(Long.valueOf(trader.getTrader().getId()));
                 QuoteClient quoteClient = trader.quoteClient;
                 log.info("请求进入时间开始: " + trader.getTrader().getId());
                 if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(trader.quoteClient) || !trader.quoteClient.Connected()) {

@@ -32,6 +32,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
@@ -183,12 +184,12 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    @CacheEvict(
+    @CachePut(
             value = "followVarietyCache", // 缓存名称
             key = "#template"
     )
-    public Boolean updateCache(Integer template) {
-        return true;
+    public FollowVarietyEntity updateCache(Integer template) {
+        return this.getById(template);
     }
 
     @Override
@@ -198,6 +199,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             unless = "#result == null || #result.isEmpty()" // 空结果不缓存
     )
     public List<FollowVarietyEntity> getListByTemplated(Integer templateId) {
+        log.info("未进入缓存");
         return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, templateId));
     }
 

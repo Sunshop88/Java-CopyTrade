@@ -13,12 +13,11 @@ import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.service.FollowOrderSendService;
+import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
-import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
@@ -70,6 +69,7 @@ public class TraderOrderSendWebSocket {
     private  RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
     private FollowOrderSendService followOrderSendService=SpringContextUtils.getBean(FollowOrderSendServiceImpl.class);
     private LeaderApiTradersAdmin leaderApiTradersAdmin= SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
+    private FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "symbol") String symbol) {
         try {
@@ -104,7 +104,7 @@ public class TraderOrderSendWebSocket {
             }
             log.info("订阅该品种{}+++{}",symbol,traderId);
             //查询平台信息
-            FollowPlatformEntity followPlatform = followTraderService.getPlatForm(Long.valueOf(traderId));
+            FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
             List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){

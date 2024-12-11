@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.api.module.system.UserApi;
 import net.maku.followcom.convert.FollowPlatformConvert;
@@ -116,7 +117,7 @@ public class FollowPlatformController {
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:platform')")
-    public Result<String> update(@RequestBody @Valid FollowPlatformVO vo) {
+    public Result<String> update(@RequestBody @Valid FollowPlatformVO vo, HttpServletRequest req) {
 //        followPlatformService.update(vo);
 //        Long userId = SecurityUser.getUserId();
 //        //保存服务数据
@@ -154,7 +155,7 @@ public class FollowPlatformController {
 //            });
 //        });
 //        return Result.ok();
-        return masControlService.updatePlatform(vo) ? Result.ok() : Result.error();
+        return masControlService.updatePlatform(vo,req) ? Result.ok() : Result.error();
     }
 
     @DeleteMapping

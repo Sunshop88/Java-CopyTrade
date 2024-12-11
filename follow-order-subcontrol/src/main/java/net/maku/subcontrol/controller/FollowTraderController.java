@@ -32,6 +32,8 @@ import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -64,7 +66,7 @@ public class FollowTraderController {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsService followVpsService;
-
+    private final CacheManager cacheManager;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -144,10 +146,12 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> delete(@RequestBody List<Long> idList) {
-        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).in(FollowTraderEntity::getId, idList));
-        if (ObjectUtil.isNotEmpty(list)) {
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, idList));
+        List<FollowTraderEntity> masterList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList();
+        List<FollowTraderEntity> slaveList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList();
+        if (ObjectUtil.isNotEmpty(masterList)) {
             //查看喊单账号是否存在用户
-            List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, list.stream().map(FollowTraderEntity::getId).toList()));
+            List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, masterList.stream().map(FollowTraderEntity::getId).toList()));
             if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
                 throw new ServerException("请先删除跟单用户");
             }
@@ -160,12 +164,46 @@ public class FollowTraderController {
             copierApiTradersAdmin.removeTrader(o.getId().toString());
             redisCache.deleteByPattern(o.getId().toString());
             redisCache.deleteByPattern(o.getAccount());
+            //账号缓存移除
+            Cache cache = cacheManager.getCache("followFollowCache");
+            if (cache != null) {
+                cache.evict(o); // 移除指定缓存条目
+            }
         });
+
+        slaveList.forEach(o->{
+            List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
+            //跟单关系缓存删除
+            followTraderSubscribeEntities.forEach(o1->{
+                String cacheKey = generateCacheKey(o1.getSlaveId(), o1.getMasterId());
+                Cache cache = cacheManager.getCache("followSubscriptionCache");
+                if (cache != null) {
+                    cache.evict(cacheKey); // 移除指定缓存条目
+                }
+            });
+        });
+
+        masterList.forEach(o->{
+            //喊单关系缓存移除
+            Cache cache = cacheManager.getCache("followSubOrderCache");
+            if (cache != null) {
+                cache.evict(o.getId()); // 移除指定缓存条目
+            }
+        });
+
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
         return Result.ok();
     }
 
+
+    private String generateCacheKey(Long slaveId, Long masterId) {
+        if (slaveId != null && masterId != null) {
+            return slaveId + "_" + masterId;
+        } else {
+            return "defaultKey";
+        }
+    }
 
     @GetMapping("export")
     @Operation(summary = "导出")
@@ -533,8 +571,9 @@ public class FollowTraderController {
     }
 
     private String getSymbol(Long traderId, String symbol) {
+
         //查询平台信息
-        FollowPlatformEntity followPlatform = followTraderService.getPlatForm(traderId);
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {

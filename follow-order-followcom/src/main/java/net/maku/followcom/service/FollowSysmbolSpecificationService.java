@@ -6,6 +6,7 @@ import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
 import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
 import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 品种规格
@@ -28,4 +29,6 @@ public interface FollowSysmbolSpecificationService extends BaseService<FollowSys
 
 
     void export();
+
+    Map<String, FollowSysmbolSpecificationEntity> getByTraderId(long traderId);
 }

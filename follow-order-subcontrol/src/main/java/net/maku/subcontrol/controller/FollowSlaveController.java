@@ -9,9 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.FollowModeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
@@ -40,6 +38,8 @@ import online.mtapi.mt4.PlacedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -70,7 +70,8 @@ public class FollowSlaveController {
     private final FollowTestDetailService followTestDetailService;
     private final FollowSlaveService followSlaveService;
     private final FollowVarietyService followVarietyService;
-
+    private final FollowPlatformService followPlatformService;
+    private final CacheManager cacheManager;
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -176,6 +177,8 @@ public class FollowSlaveController {
             //删除缓存
             copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             redisCache.delete(Constant.FOLLOW_SUB_TRADER+vo.getId().toString());
+            //修改内存缓存
+            followTraderSubscribeService.updateSubCache(vo.getId());
             //启动账户
 //            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
 //            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
@@ -232,7 +235,14 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> transferVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
-        list.forEach(o -> leaderApiTradersAdmin.removeTrader(o.getId().toString()));
+        list.forEach(o ->{
+            leaderApiTradersAdmin.removeTrader(o.getId().toString());
+            //删除缓存
+            Cache cache = cacheManager.getCache("followFollowCache");
+            if (cache != null) {
+                cache.evict(o); // 移除指定缓存条目
+            }
+        });
         return Result.ok(true);
     }
 
@@ -305,12 +315,18 @@ public class FollowSlaveController {
         }
     }
 
-    @GetMapping("updateCache")
-    @Operation(summary = "更新缓存")
+    @GetMapping("updateVarietyCache")
+    @Operation(summary = "更新品种匹配缓存")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> updateCache(@RequestParam("template") Integer template) {
+    public Result<FollowVarietyEntity> updateVarietyCache(@RequestParam("template") Integer template) {
         return Result.ok(followVarietyService.updateCache(template));
     }
 
+    @GetMapping("updatePlatCache")
+    @Operation(summary = "更新券商缓存")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<FollowPlatformEntity> updatePlatCache(@RequestParam("id") String id) {
+        return Result.ok(followPlatformService.updatePlatCache(id));
+    }
 
 }

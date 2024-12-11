@@ -1,32 +1,39 @@
 package net.maku.followcom.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.PlatformEntity;
-import net.maku.followcom.entity.ServerEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.followcom.vo.FollowVpsVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+
+import static net.maku.followcom.util.RestUtil.getHeader;
 
 @Slf4j
 @Service
@@ -83,7 +90,7 @@ public class MasControlServiceImpl implements MasControlService {
 
 //    @Transactional(rollbackFor = Exception.class)
     @Override
-    public boolean updatePlatform(FollowPlatformVO vo) {
+    public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
         Long userId = SecurityUser.getUserId();
 
         // 获取当前数据库中已有的服务器列表
@@ -170,6 +177,19 @@ public class MasControlServiceImpl implements MasControlService {
                     .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
                     .in(FollowPlatformEntity::getServer, serversToRemove));
         }
+        String authorization=req.getHeader("Authorization");
+        ThreadPoolUtils.getExecutor().execute(()->{
+            //更新缓存
+            for (FollowVpsEntity o : followVpsService.list()) {
+                String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE);
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("id", vo.getId());
+                HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                header.add("Authorization", authorization);
+                JSONObject body = RestUtil.request(url, HttpMethod.GET, header, jsonObject, null, JSONObject.class).getBody();
+                log.info("修改缓存" + body.toString());
+            }
+        });
         return true;
     }
 

@@ -45,7 +45,7 @@
         <skipTests>true</skipTests>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <mybatisplus.version>3.5.7</mybatisplus.version>
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <redisson.version>3.21.3</redisson.version>

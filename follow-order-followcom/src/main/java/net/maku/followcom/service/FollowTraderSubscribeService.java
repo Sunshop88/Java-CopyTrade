@@ -38,4 +38,8 @@ public interface FollowTraderSubscribeService extends BaseService<FollowTraderSu
     void addSubscription(FollowAddSalveVo vo);
 
     Map<String,Object> getStatus(String account, String account1);
+
+    List<FollowTraderSubscribeEntity> getSubscribeOrder(Long id);
+
+    void updateSubCache(Long id);
 }

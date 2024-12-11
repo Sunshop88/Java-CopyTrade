@@ -143,7 +143,7 @@ public class FollowVarietyController {
             String authorization=req.getHeader("Authorization");
             ThreadPoolUtils.execute(()->{
                 for (FollowVpsEntity o : followVpsService.list()){
-                    String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE);
+                    String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_VARIETY_CACHE);
                     JSONObject jsonObject=new JSONObject();
                     jsonObject.put("template",template);
                     HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);

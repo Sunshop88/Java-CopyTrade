@@ -242,7 +242,9 @@ public class TraderOrderActiveWebSocket {
                         list.add(orderRepairInfoVO);
                     }
                 });
-                list.sort((m1, m2) -> m2.getMasterOpenTime().compareTo(m1.getMasterOpenTime()));
+                if (list.size()>=2){
+                    list.sort((m1, m2) -> m2.getMasterOpenTime().compareTo(m1.getMasterOpenTime()));
+                }
                 followOrderActiveSocketVO.setOrderRepairInfoVOList(list);
             }
             pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderActiveSocketVO));
