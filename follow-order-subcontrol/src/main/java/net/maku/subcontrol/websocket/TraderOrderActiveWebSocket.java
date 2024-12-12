@@ -111,9 +111,6 @@ public class TraderOrderActiveWebSocket {
     public void sendPeriodicMessage(String traderId, String slaveId) {
 
         try {
-            RLock lock = redissonLockUtil.getLock("LOCK:" + traderId + ":" + slaveId);
-            boolean flag = lock.tryLock(5, TimeUnit.SECONDS);
-            if(!flag){return;}
             returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
             if (ObjectUtil.isEmpty(sessionSet)) {
