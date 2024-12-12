@@ -55,7 +55,7 @@ public class KafkaMessageConsumer {
     private final FollowPlatformService followPlatformService;
     private final FollowOrderHistoryService followOrderHistoryService;
     private final CacheManager cacheManager;
-    @KafkaListener(topics = "order-send", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "order-send", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
             ThreadPoolUtils.getExecutor().execute(()->{
@@ -308,8 +308,6 @@ public class KafkaMessageConsumer {
         Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //查看下单所有数据
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderNo));
-        //删除缓存
-        redisUtil.del(Constant.TRADER_ORDER + traderId);
         //进行滑点分析
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).parallelStream().forEach(o -> {
             FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());

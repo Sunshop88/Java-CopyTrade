@@ -919,8 +919,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
 
             followOrderSendService.updateById(sendServiceOne);
-            //删除缓存
-            redisCache.delete(Constant.TRADER_ORDER + traderId);
             //进行滑点分析
             list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).parallelStream().forEach(o -> {
                 FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
@@ -1292,12 +1290,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         sendServiceOne.setFinishTime(LocalDateTime.now());
                         sendServiceOne.setStatus(CloseOrOpenEnum.OPEN.getValue());
                         followOrderSendService.updateById(sendServiceOne);
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
-                            redisCache.delete(Constant.TRADER_SEND + traderId);
+
+                        try {
+                            Thread.sleep(200);
+                            //删除缓存
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
+                                redisCache.delete(Constant.TRADER_SEND + traderId);
+                            }
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
+                                redisCache.delete(Constant.TRADER_ORDER + traderId);
+                            }
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
                         }
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
-                            redisCache.delete(Constant.TRADER_ORDER + traderId);
-                        }
+
                     } catch (Exception e) {
                         log.error("间隔下单任务出错", e);
                     }
