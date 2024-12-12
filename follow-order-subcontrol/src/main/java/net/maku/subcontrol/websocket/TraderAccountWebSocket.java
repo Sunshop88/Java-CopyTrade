@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  * 账号信息
  */
 @Component
-@ServerEndpoint("/socket/trader/master/{page}/{limit}") //此注解相当于设置访问URL
+@ServerEndpoint("/socket/trader/master/{page}/{limit}/{number}") //此注解相当于设置访问URL
 public class TraderAccountWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderAccountWebSocket.class);
@@ -56,7 +56,7 @@ public class TraderAccountWebSocket {
     private Session session;
 
     private String limit;
-
+    private String number;
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
 
     private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
@@ -66,14 +66,16 @@ public class TraderAccountWebSocket {
     private Future<?> scheduledTask;
 
     @OnOpen
-    public void onOpen(Session session, @PathParam(value = "page") String page, @PathParam(value = "limit") String limit) {
+    public void onOpen(Session session, @PathParam(value = "page") String page, @PathParam(value = "limit") String limit, @PathParam(value = "number") String number) {
         try {
             this.session = session;
             this.page = page;
             this.limit = limit;
-            Set<Session> sessionSet = sessionPool.getOrDefault(page + limit, ConcurrentHashMap.newKeySet());
+            this.number = number;
+
+            Set<Session> sessionSet = sessionPool.getOrDefault(page + limit+number, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
-            sessionPool.put(page + limit, sessionSet);
+            sessionPool.put(page + limit+number, sessionSet);
             FollowTraderQuery followTraderQuer=new FollowTraderQuery();
             followTraderQuer.setPage(Integer.valueOf(page));
             followTraderQuer.setType(TraderTypeEnum.MASTER_REAL.getType());
@@ -93,7 +95,7 @@ public class TraderAccountWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit), 0, 1, TimeUnit.SECONDS);
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,number), 0, 1, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
@@ -103,18 +105,18 @@ public class TraderAccountWebSocket {
     }
 
 
-    private void sendPeriodicMessage(String page ,String limit) {
+    private void sendPeriodicMessage(String page ,String limit,String number) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
         listFollow.forEach(o->followRedisTraderVOS.add((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId())));
-        pushMessage(page,limit,JsonUtils.toJsonString(followRedisTraderVOS));
+        pushMessage(page,limit,number,JsonUtils.toJsonString(followRedisTraderVOS));
     }
 
 
     @OnClose
     public void onClose() {
         try {
-            sessionPool.get(page + limit).remove(session);
+            sessionPool.get(page + limit+number).remove(session);
             stopPeriodicTask(); // 关闭时停止定时任务
         } catch (Exception e) {
             e.printStackTrace();
@@ -124,9 +126,9 @@ public class TraderAccountWebSocket {
     /**
      * 服务器端推送消息
      */
-    public void pushMessage(String page, String limit, String message) {
+    public void pushMessage(String page, String limit,String number, String message) {
         try {
-            Set<Session> sessionSet = sessionPool.get(page + limit);
+            Set<Session> sessionSet = sessionPool.get(page + limit+number);
             if (ObjectUtil.isEmpty(sessionSet)) {
                 return;
             }
@@ -146,8 +148,8 @@ public class TraderAccountWebSocket {
     public void onMessage(String message) {
     }
 
-    public Boolean isConnection(String page, String limit) {
-        return sessionPool.containsKey(page + limit);
+    public Boolean isConnection(String page, String limit,String number) {
+        return sessionPool.containsKey(page + limit+number);
     }
 
 }

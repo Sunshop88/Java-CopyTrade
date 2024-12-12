@@ -24,6 +24,8 @@ import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
@@ -48,7 +50,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
 
 
     private final CopierApiTradersAdmin copierApiTradersAdmin;
-
+    private final CacheManager cacheManager;
     @Override
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
@@ -59,21 +61,32 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         // 通过map获取平仓订单号
         log.info("[MT4跟单者:{}-{}-{}]开始尝试平仓，[喊单者:{}-{}-{}],喊单者订单信息[{}]", orderId, copier.getAccount(), copier.getServerName(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         // 跟单者(和当前喊单者的平仓订单)，对应的订单号。
-        CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
-        log.info("获取信息时间"+copier.getId());
-        if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
-            log.info("未发现缓存"+mapKey);
-            FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
-                    .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
-                    .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
-                    .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
-            if (!ObjectUtils.isEmpty(openOrderMapping)) {
-                cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
-            } else {
-                cachedCopierOrderInfo = new CachedCopierOrderInfo();
+        //取出缓存
+        CachedCopierOrderInfo cachedCopierOrderInfo = null;
+        Cache cache = cacheManager.getCache("followOrdersendCache");
+        if (cache != null) {
+            Cache.ValueWrapper wrapper = cache.get(mapKey+"#"+orderInfo.getTicket());
+            if (wrapper != null) {
+                // 转换为指定类型
+                cachedCopierOrderInfo= (CachedCopierOrderInfo) wrapper.get();
+            }else {
+                cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+                log.info("获取信息时间"+copier.getId());
+                if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
+                    log.info("未发现缓存"+mapKey);
+                    FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
+                            .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
+                            .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
+                            .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+                    if (!ObjectUtils.isEmpty(openOrderMapping)) {
+                        cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
+                    } else {
+                        cachedCopierOrderInfo = new CachedCopierOrderInfo();
+                    }
+                }
             }
         }
-        if (ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
+        if (ObjectUtils.isEmpty(cachedCopierOrderInfo)||ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
             log.error("[MT4跟单者:{}-{}-{}]没有找到对应平仓订单号,因为该对应的订单开仓失败，[喊单者:{}-{}-{}],喊单者订单信息[{}]", orderId, copier.getAccount(), copier.getServerName(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         } else {
             closeOrder(trader, cachedCopierOrderInfo, orderInfo, flag, mapKey);
@@ -112,7 +125,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             double bid = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Bid;
             double ask = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Ask;
-            double startPrice = trader.getTrader().getType().equals(Op.Buy.getValue()) ? bid : ask;
+            double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
             if (copier.getType() == Buy.getValue()) {
@@ -150,6 +163,10 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
                     .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
             redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+            Cache cache = cacheManager.getCache("followOrdersendCache");
+            if (cache != null) {
+                cache.evictIfPresent(mapKey + "#" + orderInfo.getTicket());
+            }
             log.error("跟单者完全平仓订单最终尝试失败，[原因：{}],[跟单者{}-{}-{}]完全平仓{}订单失败，[喊单者{}-{}-{}],喊单者订单信息[{}]", e.getMessage(), orderId, copier.getAccount(), copier.getServerName(), cachedCopierOrderInfo.getSlaveTicket(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         }
         return order;

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -17,6 +19,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -113,9 +116,12 @@ public class RedisConfig {
         // 连接池配置（可选）
         config.useSingleServer()
                 .setConnectionPoolSize(500)  // 连接池大小
+                .setConnectionMinimumIdleSize(100) // 最小空闲连接数
                 .setConnectTimeout(10000)    // 连接超时时间
-                .setTimeout(5000)
-                .setIdleConnectionTimeout(5000);   // 空闲连接超时时间
+                .setTimeout(5000)           // 命令超时时间
+                .setIdleConnectionTimeout(5000)   // 空闲连接超时时间
+                .setRetryAttempts(3)        // 重试次数
+                .setRetryInterval(1000);    // 重试间隔
 
         return Redisson.create(config);
     }

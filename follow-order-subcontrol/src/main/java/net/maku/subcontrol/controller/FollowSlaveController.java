@@ -130,6 +130,11 @@ public class FollowSlaveController {
                 map.put("followRep", vo.getFollowRep());
                 //设置跟单关系缓存值 保存状态
                 redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
+                //移除喊单的跟单缓存
+                Cache cache = cacheManager.getCache("followSubOrderCache");
+                if (cache != null) {
+                    cache.evict(vo.getTraderId()); // 移除指定缓存条目
+                }
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);

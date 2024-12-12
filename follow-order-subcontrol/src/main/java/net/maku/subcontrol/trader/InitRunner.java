@@ -2,6 +2,7 @@ package net.maku.subcontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
@@ -14,9 +15,14 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
+import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -65,6 +71,10 @@ public class InitRunner implements ApplicationRunner {
     private FollowTraderSubscribeService followTraderSubscribeService;
     @Autowired
     private FollowSysmbolSpecificationService followSysmbolSpecificationService;
+    @Autowired
+    private FollowSubscribeOrderService followSubscribeOrderService;
+    @Autowired
+    private CacheManager cacheManager;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
@@ -133,5 +143,19 @@ public class InitRunner implements ApplicationRunner {
         collect.stream().toList().parallelStream().forEach(o->{
             followTraderSubscribeService.getSubscribeOrder(o);
         });
+
+        //获取未平仓订单缓存
+        List<FollowSubscribeOrderEntity> followSubscribeOrderEntityList = followSubscribeOrderService.list(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterOrSlave,TraderTypeEnum.SLAVE_REAL.getType()).isNotNull(FollowSubscribeOrderEntity::getSlaveTicket).isNull(FollowSubscribeOrderEntity::getSlaveCloseTime));
+        followSubscribeOrderEntityList.parallelStream().forEach(o->{
+            String mapKey=o.getSlaveId()+"#"+o.getSlaveAccount();
+            CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisCache.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(o.getMasterTicket()));
+            if (ObjectUtil.isNotEmpty(cachedCopierOrderInfo)){
+                Cache cache = cacheManager.getCache("followOrdersendCache");
+                if (cache != null) {
+                    cache.put(mapKey+"#"+o.getMasterTicket(),cachedCopierOrderInfo); // 移除指定缓存条目
+                }
+            }
+        });
+
     }
 }

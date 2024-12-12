@@ -29,6 +29,8 @@ import net.maku.subcontrol.trader.OrderResultCloseEvent;
 import net.maku.subcontrol.trader.OrderResultEvent;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
@@ -52,7 +54,7 @@ public class KafkaMessageConsumer {
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowPlatformService followPlatformService;
     private final FollowOrderHistoryService followOrderHistoryService;
-
+    private final CacheManager cacheManager;
     @KafkaListener(topics = "order-send", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
@@ -154,6 +156,10 @@ public class KafkaMessageConsumer {
                 //删除redis中的缓存
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+                Cache cache = cacheManager.getCache("followOrdersendCache");
+                if (cache != null) {
+                    cache.evictIfPresent(mapKey + "#" + orderInfo.getTicket());
+                }
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -267,6 +273,11 @@ public class KafkaMessageConsumer {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
         String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
+        //存入缓存
+        Cache cache = cacheManager.getCache("followOrdersendCache");
+        if (cache != null) {
+            cache.put(mapKey+"#"+orderInfo.getTicket(),cachedOrderInfo); // 修改指定缓存条目
+        }
     }
 
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip) {
