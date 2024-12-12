@@ -91,6 +91,11 @@ public class MasControlServiceImpl implements MasControlService {
 //    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
+        //根据vo的brokerName获取所有的券商名称，并且去重
+        List<FollowPlatformVO> brokerNames = followPlatformService.listHavingServer(vo.getBrokerName());
+        if (ObjectUtil.isEmpty(brokerNames)){
+            throw new ServerException("券商名称重复，请重新输入");
+        }
         Long userId = SecurityUser.getUserId();
 
         // 获取当前数据库中已有的服务器列表
@@ -114,7 +119,10 @@ public class MasControlServiceImpl implements MasControlService {
                         FollowPlatformVO followPlatformVO = new FollowPlatformVO();
                         followPlatformVO.setBrokerName(vo.getBrokerName());
                         followPlatformVO.setServer(bro);
+                        followPlatformVO.setPlatformType(vo.getPlatformType());
                         followPlatformVO.setCreator(userId.toString());
+                        followPlatformVO.setLogo(vo.getLogo());
+                        followPlatformVO.setRemark(vo.getRemark());
                         followPlatformService.save(followPlatformVO);
                     }
                     // 进行测速
@@ -224,6 +232,7 @@ public class MasControlServiceImpl implements MasControlService {
                         followPlatformVO.setPlatformType(vo.getPlatformType());
                         followPlatformVO.setCreator(userId.toString());
                         followPlatformVO.setLogo(vo.getLogo());
+                        followPlatformVO.setRemark(vo.getRemark());
                         followPlatformService.save(followPlatformVO);
                     }
                     // 进行测速

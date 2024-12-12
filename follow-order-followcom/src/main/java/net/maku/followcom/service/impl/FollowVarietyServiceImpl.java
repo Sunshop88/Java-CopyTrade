@@ -228,9 +228,15 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
                 // 根据 template 查询数据库中的数据
                 List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+                log.info("template: {}", template);
+                log.info("stdSymbol: {}", stdSymbol);
+                log.info("existingRecords size: {}", existingRecords.size());
                 for (FollowVarietyEntity recordToUpdate : existingRecords) {
+                    log.info("Updating record: {}", recordToUpdate);
                     recordToUpdate.setStdContract(stdContract);
-                    baseMapper.updateById(recordToUpdate);
+//                    baseMapper.updateById(recordToUpdate);
+                    int updateResult = baseMapper.updateById(recordToUpdate);
+                    log.info("Update result: {}", updateResult);
                 }
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
                 for (int i = 2; i < record.size(); i++) {
@@ -288,6 +294,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 baseMapper.update(updateWrapper);
             }
         } catch (Exception e) {
+            log.error("导入失败", e);
         }
     }
 

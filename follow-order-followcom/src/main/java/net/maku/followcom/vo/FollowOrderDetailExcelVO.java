@@ -30,6 +30,12 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 	@ExcelProperty("类型")
 	private String typeName;
 
+	@ExcelProperty("喊单账号")
+	private  String sourceUser;
+
+	@ExcelProperty("魔术号")
+	private  String magical;
+
 	@ExcelProperty("订单号")
 	private Integer orderNo;
 
@@ -111,6 +117,12 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 
 	@ExcelProperty("盈亏")
 	private BigDecimal profit;
+
+	@ExcelProperty("结算汇率")
+	private  String rateMargin;
+
+	@ExcelProperty("节点地址")
+	private  String serverHost;
 
 	@ExcelProperty("券商")
 	private String brokeName;
