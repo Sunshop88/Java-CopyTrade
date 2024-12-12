@@ -4,16 +4,16 @@ spring:
       primary: redis1 # 默认 Redis 数据源为 redis1
       redis1:
         database: 1
-        host: localhost
+        host: 192.168.31.110
         port: 6379
 
       redis2:
         database: 2
-        host: localhost
+        host: 192.168.31.110
         port: 6379
 
   kafka:
-    bootstrap-servers: 127.0.0.1:9092
+    bootstrap-servers: 192.168.31.110:9092
     consumer:
       group-id: order-group  # 消费者组 ID
       auto-offset-reset: earliest  # 消费起始位置
@@ -39,17 +39,17 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://192.168.31.110:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://192.168.31.110:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
   mqtt:
-    host: tcp://localhost:1883
+    host: tcp://192.168.31.110:1883
     username: maku
     password: maku
     clientId: maku_boot_service_dev
