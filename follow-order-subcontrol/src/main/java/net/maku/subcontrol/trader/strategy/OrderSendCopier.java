@@ -121,6 +121,10 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     }
                 }
 
+                if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
+                    //订阅
+                    quoteClient.Subscribe(orderInfo.getSymbol());
+                }
                 double asksub = quoteClient.GetQuote(orderInfo.getSymbol()).Ask;
                 double bidsub = quoteClient.GetQuote(orderInfo.getSymbol()).Bid;
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());

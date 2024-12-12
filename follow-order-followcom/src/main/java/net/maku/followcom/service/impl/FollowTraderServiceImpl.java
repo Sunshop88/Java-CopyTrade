@@ -94,22 +94,22 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
         Map<Long, List<FollowTraderSubscribeEntity>> finalTraderSubscribes = traderSubscribes;
-        followTraderVOS.parallelStream().forEach(o -> {
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
-                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
-                o.setBalance(followRedisTraderVO.getBalance());
-                o.setEuqit(followRedisTraderVO.getEuqit());
-                o.setFreeMargin(followRedisTraderVO.getFreeMargin());
-                o.setMarginProportion(followRedisTraderVO.getMarginProportion());
-                o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal()) ? followRedisTraderVO.getTotal() : 0);
-                o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum()) ? followRedisTraderVO.getBuyNum() : 0);
-                o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum()) ? followRedisTraderVO.getSellNum() : 0);
-              //  Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
-               // o.setFollowStatus(followStatus);
-                o.setProfit(followRedisTraderVO.getProfit());
-
-            }
-        });
+//        followTraderVOS.parallelStream().forEach(o -> {
+//            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
+//                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+//                o.setBalance(followRedisTraderVO.getBalance());
+//                o.setEuqit(followRedisTraderVO.getEuqit());
+//                o.setFreeMargin(followRedisTraderVO.getFreeMargin());
+//                o.setMarginProportion(followRedisTraderVO.getMarginProportion());
+//                o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal()) ? followRedisTraderVO.getTotal() : 0);
+//                o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum()) ? followRedisTraderVO.getBuyNum() : 0);
+//                o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum()) ? followRedisTraderVO.getSellNum() : 0);
+//              //  Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
+//               // o.setFollowStatus(followStatus);
+//                o.setProfit(followRedisTraderVO.getProfit());
+//
+//            }
+//        });
         return new PageResult<>(followTraderVOS, page.getTotal());
     }
 

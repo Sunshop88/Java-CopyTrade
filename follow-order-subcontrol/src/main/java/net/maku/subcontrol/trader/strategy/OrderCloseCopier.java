@@ -123,6 +123,10 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
                 }
             }
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()))){
+                //订阅
+                quoteClient.Subscribe(cachedCopierOrderInfo.getSlaveSymbol());
+            }
             double bid = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Bid;
             double ask = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Ask;
             double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;

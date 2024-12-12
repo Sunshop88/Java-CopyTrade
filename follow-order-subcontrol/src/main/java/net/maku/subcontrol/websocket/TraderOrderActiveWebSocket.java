@@ -173,14 +173,16 @@ public class TraderOrderActiveWebSocket {
 
            /* log.info("{}-MT4,订单数量{},持仓数据：{}",accountId,openedOrders.size(),openedOrders);
             List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());*/
-
-            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
-            List<OrderActiveInfoVO> orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
-            followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
+            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
+            List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+            if (ObjectUtil.isNotEmpty(o1)){
+                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
+            }
             //存入redis
 
-            redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
+//            redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
 
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")) {

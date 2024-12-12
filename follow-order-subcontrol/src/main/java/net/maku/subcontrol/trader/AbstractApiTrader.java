@@ -44,7 +44,7 @@ import java.util.concurrent.Semaphore;
 
 @Slf4j
 public abstract class AbstractApiTrader extends ApiTrader {
-    public volatile QuoteClient quoteClient;
+    public  QuoteClient quoteClient;
     @Getter
     @Setter
     protected FollowTraderEntity trader;

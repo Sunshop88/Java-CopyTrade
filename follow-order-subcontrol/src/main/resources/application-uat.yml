@@ -4,9 +4,9 @@ spring:
       primary: redis1 # 默认 Redis 数据源为 redis1
       redis1:
         database: 1
-        host: r-8vbggxb1tymvrcj8xcpd.redis.zhangbei.rds.aliyuncs.com
+        host: r-8vb1xdwunlmzzq4p2spd.redis.zhangbei.rds.aliyuncs.com
         port: 6379
-        password: 7yxmbPdLTaWeXZY7Ve
+        password: diVMn9bMpACrXh79QyYY
         #timeout: 6000ms  # 连接超时时长（毫秒）
       redis2:
         database: 2
