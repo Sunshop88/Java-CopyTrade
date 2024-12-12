@@ -21,6 +21,7 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
     private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
+
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
@@ -30,6 +31,11 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 5);
+        configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 15000);
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, 1000);
+        configProps.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, 10000);
         return new DefaultKafkaProducerFactory<>(configProps);
     }
 
@@ -43,10 +49,10 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-        factory.setBatchListener(true); // Enable batch processing
-        factory.setConcurrency(3); // Adjust concurrency level as needed
+        factory.setBatchListener(true);
+        factory.setConcurrency(3);
         factory.getContainerProperties().setGroupId("order-group");
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL); // 设置手动确认模式
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
     }
 
@@ -54,13 +60,16 @@ public class KafkaConfig {
     public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "order-group");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1000); // Batch size
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1000);
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 3000);
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 10000);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000);
+        props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, 1000);
+        props.put(ConsumerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, 10000);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 }
-
