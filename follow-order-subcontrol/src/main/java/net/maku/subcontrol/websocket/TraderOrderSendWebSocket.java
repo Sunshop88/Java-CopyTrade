@@ -157,10 +157,7 @@ public class TraderOrderSendWebSocket {
                 followOrderSendSocketVO.setBuyPrice(eventArgs.Ask);
                 followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
                 if (ObjectUtil.isNotEmpty(list)){
-                    List<FollowOrderSendEntity> collect = list.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).sorted((o1,o2)->{
-                       return o1.getStatus().compareTo(o2.getStatus());
-                    }).collect(Collectors.toList());
-                    log.info("排序{}",collect.get(0));
+                    List<FollowOrderSendEntity> collect = list.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).collect(Collectors.toList());
                     if (ObjectUtil.isNotEmpty(collect)){
                         //是否存在正在执行 进度
                         FollowOrderSendEntity followOrderSendEntity = collect.get(0);

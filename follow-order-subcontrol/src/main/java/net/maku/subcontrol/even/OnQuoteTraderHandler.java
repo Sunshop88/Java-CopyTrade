@@ -84,13 +84,14 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 //            if (flag) {
                 // 更新该symbol的上次执行时间为当前时间
                 lastInvokeTime= currentTime;
-              //  QuoteClient qc = (QuoteClient) sender;
+               QuoteClient quoteClient = (QuoteClient) sender;
                 //测试
                FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, abstractApiTrader.getTrader().getPlatform()));
                 String serverNode = followPlatformServiceOne.getServerNode();
                 String[] split = serverNode.split(":");
                 QuoteClient  qc = new QuoteClient(Integer.parseInt(abstractApiTrader.getTrader().getAccount()), abstractApiTrader.getTrader().getPassword(), split[0], Integer.valueOf(split[1]));
                 qc.Connect();
+                log.info("quoteClient代理对象{}",quoteClient);
              //   cacheManager.removeCache(qc.GetOpenedOrders());
                 //缓存经常变动的三个值信息
                 followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
@@ -112,8 +113,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
                 //存入redis
                 redisCache.set(Constant.TRADER_ACTIVE + abstractApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoList));
-
-
                 followRedisTraderVO.setTotal(count);
                 log.info("{}写入redis数据订单量{}",abstractApiTrader.getTrader().getAccount(),count);
                 followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
@@ -123,6 +122,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setCredit(qc.Credit);
                 followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
                 redisCache.set(Constant.TRADER_USER+abstractApiTrader.getTrader().getId(),followRedisTraderVO);
+                qc.Disconnect();
 //                }else {
 //                    invoke(sender,quote);
 //                }
@@ -130,6 +130,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();
             }finally {
+
                   redissonLockUtil.unlock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
             }
         }
