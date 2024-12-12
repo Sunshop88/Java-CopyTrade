@@ -29,7 +29,7 @@ public class OnQuoteHandler implements QuoteEventHandler {
     private TraderOrderSendWebSocket traderOrderSendWebSocket;
     private FollowOrderSendService followOrderSendService;
     private RedisCache redisCache;
-    private final FollowOrderSendSocketVO followOrderSendSocketVO = new FollowOrderSendSocketVO();
+
 
     // 设定时间间隔，单位为毫秒
     private final long interval = 3000; // 3秒间隔
@@ -75,13 +75,14 @@ public class OnQuoteHandler implements QuoteEventHandler {
             list = (List<FollowOrderSendEntity>) redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId());
         }
         //查看当前账号订单完成进度
+        FollowOrderSendSocketVO  followOrderSendSocketVO = new FollowOrderSendSocketVO();
         followOrderSendSocketVO.setSellPrice(quote.Bid);
         followOrderSendSocketVO.setBuyPrice(quote.Ask);
         followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
 
         if (ObjectUtil.isNotEmpty(list)) {
             FollowOrderSendEntity followOrderSendEntity = list.stream()
-                    .filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()))
+                    .filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getSymbol().equals(quote.Symbol))
                     .findFirst().orElse(null);
             if (followOrderSendEntity != null) {
                 followOrderSendSocketVO.setStatus(followOrderSendEntity.getStatus());
@@ -89,9 +90,9 @@ public class OnQuoteHandler implements QuoteEventHandler {
                 followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
                 followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
             }
+
         }
-        //推送websocket
-   //     log.info("推送websocket：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
+
         traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
