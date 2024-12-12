@@ -136,6 +136,10 @@ public class TraderOrderSendWebSocket {
                     //订阅
                     leaderApiTrader.quoteClient.Subscribe(this.symbol);
                 }
+                while (eventArgs==null && quoteClient.Connected()) {
+                    Thread.sleep(50);
+                    eventArgs=quoteClient.GetQuote(this.symbol);
+                }
                 eventArgs = leaderApiTrader.quoteClient.GetQuote(this.symbol);
             }catch (InvalidSymbolException | online.mtapi.mt4.Exception.TimeoutException | ConnectException e) {
                 throw new ServerException("获取报价失败,品种不正确,请先配置品种");

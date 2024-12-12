@@ -24,6 +24,7 @@ import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import online.mtapi.mt4.QuoteEventArgs;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
@@ -127,8 +128,15 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 //订阅
                 quoteClient.Subscribe(cachedCopierOrderInfo.getSlaveSymbol());
             }
-            double bid = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Bid;
-            double ask = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol()).Ask;
+            double bid =0;
+            double ask =0;
+            QuoteEventArgs quoteEventArgs = null;
+            while (quoteEventArgs==null && quoteClient.Connected()) {
+                Thread.sleep(50);
+                quoteEventArgs=quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol());
+                bid =quoteEventArgs.Bid;
+                ask =quoteEventArgs.Ask;
+            }
             double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
