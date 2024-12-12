@@ -86,10 +86,10 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 lastInvokeTime= currentTime;
                QuoteClient quoteClient = (QuoteClient) sender;
                 //测试
-               FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, abstractApiTrader.getTrader().getPlatform()));
-                String serverNode = followPlatformServiceOne.getServerNode();
-                String[] split = serverNode.split(":");
-                QuoteClient  qc = new QuoteClient(Integer.parseInt(abstractApiTrader.getTrader().getAccount()), abstractApiTrader.getTrader().getPassword(), split[0], Integer.valueOf(split[1]));
+//               FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, abstractApiTrader.getTrader().getPlatform()));
+//                String serverNode = followPlatformServiceOne.getServerNode();
+//                String[] split = serverNode.split(":");
+                QuoteClient  qc = new QuoteClient(Integer.parseInt(abstractApiTrader.getTrader().getAccount()), abstractApiTrader.getTrader().getPassword(), quoteClient.Host, quoteClient.Port);
                 qc.Connect();
                 log.info("quoteClient代理对象{}",quoteClient);
              //   cacheManager.removeCache(qc.GetOpenedOrders());
