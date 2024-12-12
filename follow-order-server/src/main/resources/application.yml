@@ -33,7 +33,7 @@ spring:
       spec: maximumSize=500,expireAfterWrite=10d # 配置缓存大小和过期时间
   # 环境 dev|test|prod
   profiles:
-    active: @profile.name@
+    active: test
   application:
     name: follow-order
   jackson:

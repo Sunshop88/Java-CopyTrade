@@ -272,7 +272,7 @@ public class FollowVpsController {
                 eq(FollowTraderEntity::getServerId, oldId)
                 .notIn(ObjectUtil.isNotEmpty(excludeIds),FollowTraderEntity::getId, excludeIds);
        //删除旧的账号
-        followTraderService.remove( new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getId,oldId)) ;
+        followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId,oldId)) ;
         followTraderService.update(updateWrapper);
 
         //发送请求到新VPS，启动账号
