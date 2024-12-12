@@ -415,13 +415,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }
                 double bid =0;
                 double ask =0;
+                int loopTimes=1;
                 QuoteEventArgs quoteEventArgs = null;
-                while (quoteEventArgs==null && quoteClient.Connected()) {
-                    Thread.sleep(50);
-                    quoteEventArgs=quoteClient.GetQuote(vo.getSymbol());
-                    bid =quoteEventArgs.Bid;
-                    ask =quoteEventArgs.Ask;
+                while (quoteEventArgs == null && quoteClient.Connected()) {
+                    quoteEventArgs = quoteClient.GetQuote(vo.getSymbol());
+                    if (++loopTimes > 20) {
+                        break;
+                    } else {
+                        Thread.sleep(50);
+                    }
                 }
+                bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
                 Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
                 if (order.Type.getValue() == Buy.getValue()) {
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
@@ -779,13 +784,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             double bid =0;
             double ask =0;
+            int loopTimes=1;
             QuoteEventArgs quoteEventArgs = null;
-            while (quoteEventArgs==null && quoteClient.Connected()) {
-                Thread.sleep(50);
-                quoteEventArgs=quoteClient.GetQuote(symbol);
-                bid =quoteEventArgs.Bid;
-                ask =quoteEventArgs.Ask;
+            while (quoteEventArgs == null && quoteClient.Connected()) {
+                quoteEventArgs = quoteClient.GetQuote(symbol);
+                if (++loopTimes > 20) {
+                    break;
+                } else {
+                    Thread.sleep(50);
+                }
             }
+            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
             LocalDateTime nowdate = LocalDateTime.now();
             log.info("平仓信息{},{},{},{},{}", symbol, orderNo, followOrderDetailEntity.getSize(), bid, ask);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {

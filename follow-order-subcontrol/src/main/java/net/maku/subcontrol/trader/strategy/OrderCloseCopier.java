@@ -130,13 +130,18 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             double bid =0;
             double ask =0;
+            int loopTimes=1;
             QuoteEventArgs quoteEventArgs = null;
-            while (quoteEventArgs==null && quoteClient.Connected()) {
-                Thread.sleep(50);
-                quoteEventArgs=quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol());
-                bid =quoteEventArgs.Bid;
-                ask =quoteEventArgs.Ask;
+            while (quoteEventArgs == null && quoteClient.Connected()) {
+                quoteEventArgs = quoteClient.GetQuote(cachedCopierOrderInfo.getSlaveSymbol());
+                if (++loopTimes > 20) {
+                    break;
+                } else {
+                    Thread.sleep(50);
+                }
             }
+            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
             double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);

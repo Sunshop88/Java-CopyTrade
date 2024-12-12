@@ -219,7 +219,7 @@ public class TraderOrderActiveWebSocket {
                 }
                 closeRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 1, repair));
 
-                List<OrderRepairInfoVO> list = new ArrayList<>();
+                List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
                 sendRepairToExtract.parallelStream().forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();

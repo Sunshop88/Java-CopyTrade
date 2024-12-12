@@ -127,13 +127,18 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 double bidsub =0;
                 double asksub =0;
+                int loopTimes=1;
                 QuoteEventArgs quoteEventArgs = null;
-                while (quoteEventArgs==null && quoteClient.Connected()) {
-                    Thread.sleep(50);
-                    quoteEventArgs=quoteClient.GetQuote(orderInfo.getSymbol());
-                    bidsub =quoteEventArgs.Bid;
-                    asksub =quoteEventArgs.Ask;
+                while (quoteEventArgs == null && quoteClient.Connected()) {
+                    quoteEventArgs = quoteClient.GetQuote(orderInfo.getSymbol());
+                    if (++loopTimes > 20) {
+                        break;
+                    } else {
+                        Thread.sleep(50);
+                    }
                 }
+                bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
                 // 执行订单发送
