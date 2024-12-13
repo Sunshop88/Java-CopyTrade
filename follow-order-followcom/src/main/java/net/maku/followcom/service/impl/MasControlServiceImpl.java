@@ -91,11 +91,19 @@ public class MasControlServiceImpl implements MasControlService {
 //    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
-        //根据vo的brokerName获取所有的券商名称，并且去重
-        List<FollowPlatformVO> brokerNames = followPlatformService.listHavingServer(vo.getBrokerName());
-        if (ObjectUtil.isNotEmpty(brokerNames)){
-            throw new ServerException("券商名称重复，请重新输入");
+        FollowPlatformEntity currentPlatform = followPlatformService.getById(vo.getId());
+        String currentBrokerName = currentPlatform.getBrokerName();
+        String newBrokerName = vo.getBrokerName();
+
+        // 如果新的券商名称与当前记录的券商名称不同，则检查新的券商名称是否重复
+        if (!currentBrokerName.equals(newBrokerName)) {
+            List<FollowPlatformEntity> existingPlatforms = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getBrokerName, newBrokerName));
+            if (!existingPlatforms.isEmpty()) {
+                throw new ServerException("券商名称重复，请重新输入");
+            }
         }
+        //根据vo的brokerName获取所有的券商名称，并且去重
         Long userId = SecurityUser.getUserId();
 
         // 获取当前数据库中已有的服务器列表
