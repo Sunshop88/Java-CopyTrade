@@ -113,6 +113,7 @@ public class FollowSlaveController {
             }
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                leaderApiTradersAdmin.pushRedisData(followTraderVO,copierApiTrader.quoteClient);
                 followTraderService.saveQuo(copierApiTrader.quoteClient, convert);
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
@@ -135,6 +136,7 @@ public class FollowSlaveController {
                 if (cache != null) {
                     cache.evict(vo.getTraderId()); // 移除指定缓存条目
                 }
+
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);

@@ -109,6 +109,7 @@ public class FollowTraderController {
             leaderApiTrader1.startTrade();
             ThreadPoolUtils.execute(() -> {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                leaderApiTradersAdmin.pushRedisData(followTraderVO,leaderApiTrader.quoteClient);
                 leaderApiTrader.startTrade();
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
