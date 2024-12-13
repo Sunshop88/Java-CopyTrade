@@ -1,5 +1,6 @@
 package net.maku.subcontrol.trader.strategy;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -96,6 +98,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             followTraderLogEntity.setType(TraderLogTypeEnum.SEND.getType());
             String remark = FollowConstant.FOLLOW_SEND + "策略账号=" + orderInfo.getAccount() + ",单号=" + orderInfo.getTicket() + ",品种=" + orderInfo.getSymbol() + ",手数=" + orderInfo.getLots() + ",类型=" + Op.forValue(orderInfo.getType()).name();
             followTraderLogEntity.setLogDetail(remark);
+            followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
             followTraderLogService.save(followTraderLogEntity);
         }, 100, TimeUnit.MILLISECONDS);
     }

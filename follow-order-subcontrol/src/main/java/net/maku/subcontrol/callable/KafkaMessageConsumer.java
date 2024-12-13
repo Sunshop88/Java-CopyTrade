@@ -146,6 +146,7 @@ public class KafkaMessageConsumer {
                 String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
                         "跟单账号=" + followTraderEntity.getAccount() + ",单号=" + order.Ticket + ",品种=" + order.Symbol + ",手数=" + order.Lots + ",类型=" + order.Type.name();
                 followTraderLogEntity.setLogDetail(remark);
+                followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
                 followTraderLogService.save(followTraderLogEntity);
                 //详情
                 FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
@@ -299,6 +300,7 @@ public class KafkaMessageConsumer {
                 + ", 节点=" + ip
                 ;
         logEntity.setLogDetail(remark);
+        logEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
         followTraderLogService.save(logEntity);
     }
 

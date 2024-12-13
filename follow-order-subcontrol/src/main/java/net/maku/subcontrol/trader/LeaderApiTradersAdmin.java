@@ -88,7 +88,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
@@ -219,10 +219,12 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
             }else {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("经纪商异常");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
         } catch (InterruptedException | ExecutionException | IOException e) {
@@ -273,10 +275,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
                 this.leaderApiTrader.connect2Broker();
-            } catch (ConnectException e) {
-                log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
-                return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.PASSWORD_FAILURE);
-            } catch (Exception e) {
+            }catch (Exception e) {
                 log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.ERROR);
             } finally {
