@@ -93,7 +93,7 @@ public class MasControlServiceImpl implements MasControlService {
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
         //根据vo的brokerName获取所有的券商名称，并且去重
         List<FollowPlatformVO> brokerNames = followPlatformService.listHavingServer(vo.getBrokerName());
-        if (ObjectUtil.isEmpty(brokerNames)){
+        if (ObjectUtil.isNotEmpty(brokerNames)){
             throw new ServerException("券商名称重复，请重新输入");
         }
         Long userId = SecurityUser.getUserId();
