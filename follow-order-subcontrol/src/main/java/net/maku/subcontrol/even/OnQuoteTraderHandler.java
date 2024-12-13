@@ -129,9 +129,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();
-            }finally {
-
-                  redissonLockUtil.unlock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
             }
         }
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间

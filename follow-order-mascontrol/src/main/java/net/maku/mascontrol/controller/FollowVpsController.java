@@ -99,7 +99,7 @@ public class FollowVpsController {
                 }
                 if (ObjectUtil.isNotEmpty(stream)) {
                     Map<Long, FollowTraderEntity> finalMasterTrader = masterTrader;
-                    stream.parallel().forEach(x -> {
+                    stream.forEach(x -> {
                         //拿到masterid
                         Long masterId = subscribeMap.get(x.getId());
                         //获取master喊单者,开启了的才统计
