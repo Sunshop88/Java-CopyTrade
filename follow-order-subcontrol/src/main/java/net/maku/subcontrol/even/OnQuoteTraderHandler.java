@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.Setter;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.service.FollowPlatformService;
@@ -47,6 +48,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
     protected FollowTraderService followTraderService;
+    @Setter
     protected Boolean running = Boolean.TRUE;
     protected RedisCache redisCache;
     private RedissonLockUtil redissonLockUtil;
@@ -72,10 +74,11 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         this.followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     }
 
-
     public void invoke(Object sender, QuoteEventArgs quote) {
+        if (!running) {
+            return;
+        }
         // 获取当前系统时间
-
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastInvokeTime  >= interval) {
             try {
@@ -129,9 +132,6 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();
-            }finally {
-
-                  redissonLockUtil.unlock("LOCK" + Constant.TRADER_USER + abstractApiTrader.getTrader().getId());
             }
         }
         // 判断当前时间与上次执行时间的间隔是否达到设定的间隔时间

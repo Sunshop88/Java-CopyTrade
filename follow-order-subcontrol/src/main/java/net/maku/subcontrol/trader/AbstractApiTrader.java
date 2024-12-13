@@ -305,6 +305,13 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 log.error("设置orderUpdateHandler running 为false", e);
             }
         }
+        if (onQuoteTraderHandler != null) {
+            try {
+                onQuoteTraderHandler.setRunning(Boolean.FALSE);
+            } catch (Exception e) {
+                log.error("onQuoteTraderHandler running 为false", e);
+            }
+        }
         // 跟单者对象关闭定时任务
         if (!ObjectUtils.isEmpty(updateTradeInfoFuture)) {
             try {
@@ -320,6 +327,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             quoteClient.OnDisconnect.removeAllListeners();
             quoteClient.OnQuoteHistory.removeAllListeners();
             quoteClient.OnDisconnect.removeAllListeners();
+            quoteClient.OnQuote.removeAllListeners();
             quoteClient.Disconnect();
             log.info("关闭mtapi");
         } catch (Exception e) {

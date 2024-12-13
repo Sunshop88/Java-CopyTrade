@@ -1,5 +1,6 @@
 package net.maku.subcontrol.trader;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -21,9 +22,11 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -34,10 +37,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -88,7 +90,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
@@ -219,10 +221,12 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
             }else {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("经纪商异常");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
         } catch (InterruptedException | ExecutionException | IOException e) {
@@ -273,10 +277,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
                 this.leaderApiTrader.connect2Broker();
-            } catch (ConnectException e) {
-                log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
-                return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.PASSWORD_FAILURE);
-            } catch (Exception e) {
+            }catch (Exception e) {
                 log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.ERROR);
             } finally {
@@ -297,5 +298,74 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         private ConCodeEnum code;
     }
 
+    public  void  pushRedisData( FollowTraderVO followTraderVO,QuoteClient qc){
+        try {
+            //缓存经常变动的三个值信息
+            FollowRedisTraderVO followRedisTraderVO=new FollowRedisTraderVO();
+            followRedisTraderVO.setTraderId(followTraderVO.getId());
+            followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
+            followRedisTraderVO.setProfit(BigDecimal.valueOf(qc.Profit));
+            followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
+            followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
+            if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
+                followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
+            }else {
+                followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
+            }
+            Order[] orders = qc.GetOpenedOrders();
+            List<Order> openedOrders = Arrays.stream(orders).filter(order -> order.Type == Buy || order.Type == Sell).toList();
+            int count =  openedOrders.size();
+            //    log.info("{}-MT4,订单数量{},持仓数据：{}",abstractApiTrader.getTrader().getAccount(),count);
+            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, followTraderVO.getAccount());
+            FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
+            followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
+            //存入redis
+            redisUtil.set(Constant.TRADER_ACTIVE + followTraderVO.getId(), JSONObject.toJSON(orderActiveInfoList));
+            followRedisTraderVO.setTotal(count);
 
+            followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
+            followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
+            //设置缓存
+            followRedisTraderVO.setMargin(qc.Margin);
+            followRedisTraderVO.setCredit(qc.Credit);
+            followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
+            redisUtil.set(Constant.TRADER_USER+followTraderVO.getId(),followRedisTraderVO);
+        } catch (Exception e) {
+            log.info("初始化添加{}账号推送redis数据失败:{}",followTraderVO.getAccount(),e);
+           e.printStackTrace();
+
+        }
+//                qc.Disconnect();
+    }
+    private List<OrderActiveInfoVO> converOrderActive(List<Order> openedOrders, String account) {
+        List<OrderActiveInfoVO> collect = new ArrayList<>();
+        for (Order o : openedOrders) {
+            OrderActiveInfoVO reusableOrderActiveInfoVO = new OrderActiveInfoVO(); // 从对象池中借用对象
+            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
+            collect.add(reusableOrderActiveInfoVO);
+        }
+
+        //倒序返回
+        return collect.stream()
+                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
+                .collect(Collectors.toList());
+    }
+    private void resetOrderActiveInfoVO(OrderActiveInfoVO vo, Order order, String account) {
+        vo.setAccount(account);
+        vo.setLots(order.Lots);
+        vo.setComment(order.Comment);
+        vo.setOrderNo(order.Ticket);
+        vo.setCommission(order.Commission);
+        vo.setSwap(order.Swap);
+        vo.setProfit(order.Profit);
+        vo.setSymbol(order.Symbol);
+        vo.setOpenPrice(order.OpenPrice);
+        vo.setMagicNumber(order.MagicNumber);
+        vo.setType(order.Type.name());
+        //增加五小时
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
+        // vo.setOpenTime(order.OpenTime);
+        vo.setStopLoss(order.StopLoss);
+        vo.setTakeProfit(order.TakeProfit);
+    }
 }

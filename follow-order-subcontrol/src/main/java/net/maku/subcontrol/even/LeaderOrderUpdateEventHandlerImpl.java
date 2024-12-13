@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
@@ -86,6 +87,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         strategyMap.put(AcEnum.NEW, SpringContextUtils.getBean(OrderSendCopier.class));
         strategyMap.put(AcEnum.CLOSED, SpringContextUtils.getBean(OrderCloseCopier.class));
     }
+
 
     /**
      * 1-开仓

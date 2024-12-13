@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,10 +23,7 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
-import net.maku.followcom.vo.FollowRedisTraderVO;
-import net.maku.followcom.vo.FollowVpsInfoVO;
-import net.maku.followcom.vo.FollowVpsVO;
-import net.maku.followcom.vo.VpsUserVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -99,7 +97,7 @@ public class FollowVpsController {
                 }
                 if (ObjectUtil.isNotEmpty(stream)) {
                     Map<Long, FollowTraderEntity> finalMasterTrader = masterTrader;
-                    stream.parallel().forEach(x -> {
+                    stream.forEach(x -> {
                         //拿到masterid
                         Long masterId = subscribeMap.get(x.getId());
                         //获取master喊单者,开启了的才统计
@@ -271,10 +269,37 @@ public class FollowVpsController {
                 set(FollowTraderEntity::getIpAddr, followVpsEntity.getIpAddress()).
                 eq(FollowTraderEntity::getServerId, oldId)
                 .notIn(ObjectUtil.isNotEmpty(excludeIds),FollowTraderEntity::getId, excludeIds);
-       //删除旧的账号
-        followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId,oldId)) ;
         followTraderService.update(updateWrapper);
+        //删除旧的账号
+        if(ObjectUtil.isNotEmpty(excludeIds)){
+            //查找
+            LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, oldId);
+            List<FollowTraderEntity> list = followTraderService.list(wrapper);
+            //判断是否有策略账号，如果有策略账号需要更改订阅关系
+            list.forEach(o->{
+                if(o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                    FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, o.getAccount()).eq(FollowTraderEntity::getServerId, newId).one();
+                    List<FollowTraderSubscribeEntity> fsList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, o.getId()));
+                    //更新redis
+                    fsList.forEach(vo->{
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("followStatus", vo.getFollowStatus());
+                        map.put("followOpen", vo.getFollowOpen());
+                        map.put("followClose", vo.getFollowClose());
+                        map.put("followRep", vo.getFollowRep());
+                        //设置跟单关系缓存值 保存状态
+                        redisCache.set(Constant.FOLLOW_MASTER_SLAVE + one.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
+                    });
+                    //保存状态到redis
+                    followTraderSubscribeService.update(
+                            new LambdaUpdateWrapper<FollowTraderSubscribeEntity>().set(FollowTraderSubscribeEntity::getMasterId,one.getId()).eq(FollowTraderSubscribeEntity::getMasterId,o.getId())
+                    );
 
+                }
+            });
+            followTraderService.remove(wrapper) ;
+        }
+   
         //发送请求到新VPS，启动账号
         followVpsService.startNewVps(newId, req);
         return Result.ok();

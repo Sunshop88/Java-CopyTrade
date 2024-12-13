@@ -85,7 +85,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !slave.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
                         slave.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
@@ -270,9 +270,6 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
                 this.copierApiTrader.connect2Broker();
-            } catch (ConnectException e) {
-                log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
-                return new ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
             } catch (Exception e) {
                 log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 return new ConnectionResult(this.copierApiTrader, ConCodeEnum.ERROR);
