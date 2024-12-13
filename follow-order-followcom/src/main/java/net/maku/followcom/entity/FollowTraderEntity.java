@@ -183,4 +183,10 @@ public class FollowTraderEntity {
 	@TableField(value = "follow_status")
 	private Integer followStatus;
 
+	/**
+	 * 是否首次同步（1是0否）
+	 */
+	@TableField(value = "is_first_sync")
+	private Integer isFirstSync;
+
 }

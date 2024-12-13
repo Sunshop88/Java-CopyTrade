@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.util.SpringContextUtils;
@@ -16,6 +17,7 @@ import online.mtapi.mt4.QuoteClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,8 +38,8 @@ public class ObtainOrderHistoryTask {
     public void getOrderHistory(){
         //1.获取所有账号
         List<FollowTraderEntity> list = followTraderService.list();
-        long start = System.currentTimeMillis();
         //获取mt4客户端quoteClient
+        List<FollowTraderEntity> newList = new ArrayList<>();
         list.forEach(u->{
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
                     .get(u.getId().toString());
@@ -58,13 +60,24 @@ public class ObtainOrderHistoryTask {
 
             //如果不等于空，获取历史数据
             if(ObjectUtil.isNotEmpty(quoteClient)){
-                //保存历史订单
-                followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
-            }
+                if (u.getFollowStatus()!=null && u.getFollowStatus()==CloseOrOpenEnum.OPEN.getValue()){
+                    //保存历史订单
+                    followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
+                    //修改状态
+                    u.setIsFirstSync(CloseOrOpenEnum.CLOSE.getValue());
+                    newList.add(u);
+                }else {
+                    //保存历史订单
+                    followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
+                }
 
+            }
+          if(ObjectUtil.isNotEmpty(newList)){
+              followTraderService.updateBatchById(newList);
+          }
 
         });
-        long end = System.currentTimeMillis();
-        System.out.println("定时执行完毕----------------》"+(end-start));
+
+
     }
 }

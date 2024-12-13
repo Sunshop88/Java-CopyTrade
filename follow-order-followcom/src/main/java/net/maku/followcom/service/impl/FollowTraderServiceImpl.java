@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -76,6 +77,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final CacheManager cacheManager;
+
+
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -1363,4 +1366,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public FollowTraderEntity getFollowById(Long masterId) {
         return this.getById(masterId);
     }
+
+
+
 }
