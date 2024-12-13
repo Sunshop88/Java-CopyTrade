@@ -110,13 +110,14 @@ public class VpsInfoWebSocket {
                     followNum = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.size() : 0;
                     traderNum = ObjectUtil.isNotEmpty(masterTraderEntities) ? masterTraderEntities.size() : 0;
                     Stream<FollowTraderEntity> stream = ObjectUtil.isNotEmpty(followTraderEntities) ? followTraderEntities.stream() : Stream.empty();
+                    System.out.println(o.getName()+followTraderEntities.size());
                     Map<Long, FollowTraderEntity> masterTrader =new HashMap<>();
                     if(ObjectUtil.isNotEmpty(masterTraderEntities)){
                         masterTrader = masterTraderEntities.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
                     }
                     if (ObjectUtil.isNotEmpty(stream)) {
                         Map<Long, FollowTraderEntity> finalMasterTrader = masterTrader;
-                        stream.parallel().forEach(x -> {
+                        stream.forEach(x -> {
                             //拿到masterid
                             Long masterId = subscribeMap.get(x.getId());
                             //获取master喊单者,开启了的才统计
@@ -140,6 +141,7 @@ public class VpsInfoWebSocket {
                 o.setLots(o.getLots().setScale(2, BigDecimal.ROUND_HALF_UP));
                 o.setFollowNum(followNum);
                 o.setTraderNum(traderNum);
+                System.out.println(o.getName()+o.getTotal());
             });
 
         }
