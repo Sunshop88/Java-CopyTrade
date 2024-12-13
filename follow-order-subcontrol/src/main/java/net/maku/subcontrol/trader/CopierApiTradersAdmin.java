@@ -20,15 +20,24 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import online.mtapi.mt4.Exception.ConnectException;
+import online.mtapi.mt4.Exception.TimeoutException;
+import online.mtapi.mt4.Order;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.*;
+
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
 
 
 /**
@@ -114,11 +123,47 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     } else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
+                        if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
+                            setTraderOrder(copierApiTrader);
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             });
+        }
+    }
+
+    private void setTraderOrder(CopierApiTrader copierApiTrader) {
+        try {
+            QuoteClient qc = copierApiTrader.quoteClient;
+            //启动完成后写入用户信息
+            FollowRedisTraderVO followRedisTraderVO = new FollowRedisTraderVO();
+            followRedisTraderVO.setTraderId(copierApiTrader.getTrader().getId());
+            followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
+            followRedisTraderVO.setProfit(BigDecimal.valueOf(qc.Profit));
+            followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
+            followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
+            if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
+                followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
+            }else {
+                followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
+            }
+            Order[] orders = qc.GetOpenedOrders();
+            List<Order> openedOrders = Arrays.stream(orders).filter(order -> order.Type == Buy || order.Type == Sell).toList();
+            int count =  openedOrders.size();
+            followRedisTraderVO.setTotal(count);
+            followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
+            followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
+            //设置缓存
+            followRedisTraderVO.setMargin(qc.Margin);
+            followRedisTraderVO.setCredit(qc.Credit);
+            followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
+            redisUtil.set(Constant.TRADER_USER+copierApiTrader.getTrader().getId(),followRedisTraderVO);
+        } catch (ConnectException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
         }
     }
 

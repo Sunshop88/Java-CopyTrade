@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.cld.message.pubsub.kafka.IKafkaProducer;
@@ -19,16 +20,27 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FollowRedisTraderVO;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Exception.ConnectException;
+import online.mtapi.mt4.Exception.TimeoutException;
+import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
 
 /**
  * @author Samson Bruce
@@ -83,7 +95,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     } else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
-                    }
+                        if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+leaderApiTrader.getTrader().getId()))){
+                            setTraderOrder(leaderApiTrader);
+                        }                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -95,6 +109,39 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         countDownLatch.await();
         log.info("所有的mt4喊单者结束连接服务器");
         this.launchOn = true;
+    }
+
+    private void setTraderOrder(LeaderApiTrader leaderApiTrader) {
+        try {
+            QuoteClient qc = leaderApiTrader.quoteClient;
+            //启动完成后写入用户信息
+            FollowRedisTraderVO followRedisTraderVO = new FollowRedisTraderVO();
+            followRedisTraderVO.setTraderId(leaderApiTrader.getTrader().getId());
+            followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
+            followRedisTraderVO.setProfit(BigDecimal.valueOf(qc.Profit));
+            followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
+            followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
+            if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
+                followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
+            }else {
+                followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
+            }
+            Order[] orders = qc.GetOpenedOrders();
+            List<Order> openedOrders = Arrays.stream(orders).filter(order -> order.Type == Buy || order.Type == Sell).toList();
+            int count =  openedOrders.size();
+            followRedisTraderVO.setTotal(count);
+            followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
+            followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
+            //设置缓存
+            followRedisTraderVO.setMargin(qc.Margin);
+            followRedisTraderVO.setCredit(qc.Credit);
+            followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
+            redisUtil.set(Constant.TRADER_USER+leaderApiTrader.getTrader().getId(),followRedisTraderVO);
+        } catch (ConnectException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
