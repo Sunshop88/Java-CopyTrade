@@ -27,7 +27,7 @@ public class FollowVarietyEntity implements Serializable {
 	/**
 	 * 标准合约
 	 */
-	@TableField(value = "std_contract")
+	@TableField(value = "std_contract",updateStrategy  = FieldStrategy.IGNORED)
 	private Integer stdContract;
 
 	/**

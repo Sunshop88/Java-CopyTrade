@@ -203,7 +203,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, templateId));
     }
 
-
+//为什么修改stdContract时，要是有数值就能全部更新，但是stdContract为空就不能全部更新，就算为空也要全部更新，那应该怎么做
     public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try {
             InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
@@ -222,22 +222,24 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                         log.warn("Invalid stdContract value: " + stdContractStr);
                     }
                 }
-//                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
-//                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-//                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
-//                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
-//                // 根据 template 查询数据库中的数据
-//                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
-//                log.info("template: {}", template);
-//                log.info("stdSymbol: {}", stdSymbol);
-//                log.info("existingRecords size: {}", existingRecords.size());
-//                for (FollowVarietyEntity recordToUpdate : existingRecords) {
-//                    log.info("Updating record: {}", recordToUpdate);
-//                    recordToUpdate.setStdContract(stdContract);
-////                    baseMapper.updateById(recordToUpdate);
-//                    int updateResult = baseMapper.updateById(recordToUpdate);
-//                    log.info("Update result: {}", updateResult);
-//                }
+                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
+                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+                // 根据 template 查询数据库中的数据
+                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+                log.info("template: {}", template);
+                log.info("stdSymbol: {}", stdSymbol);
+                log.info("existingRecords size: {}", existingRecords.size());
+                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+                    log.info("Updating record: {}", recordToUpdate);
+                    recordToUpdate.setStdContract(stdContract);
+//                    baseMapper.updateById(recordToUpdate);
+                    int updateResult = baseMapper.updateById(recordToUpdate);
+
+                    log.info("Update result: {}", updateResult);
+
+                }
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
                 for (int i = 2; i < record.size(); i++) {
                     String brokerName = brokerNames.get(i);
@@ -285,16 +287,16 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     baseMapper.insert(entity);
                 }
-                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
-                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
-                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
-                // 根据 template 查询数据库中的数据
-                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
-                for (FollowVarietyEntity recordToUpdate : existingRecords) {
-                    recordToUpdate.setStdContract(stdContract);
-                    baseMapper.updateById(recordToUpdate);
-                }
+//                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+//                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+//                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
+//                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+//                // 根据 template 查询数据库中的数据
+//                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+//                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+//                    recordToUpdate.setStdContract(stdContract);
+//                    baseMapper.updateById(recordToUpdate);
+//                }
             }
             if (!ObjectUtil.isEmpty(templateName)) {
                 //根据template更新templateName
