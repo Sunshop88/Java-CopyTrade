@@ -120,6 +120,12 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         String currency = abstractApiTrader.quoteClient.Account().currency;
         //发送websocket消息标识
         int flag = 0;
+        //避免重复监听
+        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_ON_EVEN+orderUpdateEventArgs.Action+"#"+order.Ticket))){
+            log.info("监听重复"+orderUpdateEventArgs.Action+"#"+order.Ticket);
+            return;
+        }
+        redisUtil.set(Constant.FOLLOW_ON_EVEN+orderUpdateEventArgs.Action+"#"+order.Ticket,0,10);
         switch (orderUpdateEventArgs.Action) {
             case PositionOpen:
             case PendingFill:
@@ -183,7 +189,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         }
         int finalFlag = flag;
         ThreadPoolUtils.getExecutor().execute(()->{
-            log.info("喊单监听完成");
             if (finalFlag == 1) {
                 //查看喊单账号是否开启跟单
                 if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
@@ -200,13 +205,19 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             log.info("未开通跟单平仓状态");
                             return;
                         }
-                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(equals(CloseOrOpenEnum.CLOSE.getValue()))) {
+                        if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                             log.info("未开通跟单下单状态");
                             return;
                         }
                         // 构造订单信息并发布
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
                         eaOrderInfo.setSlaveId(slaveId);
+                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                        if (ObjectUtil.isEmpty(copierApiTrader)){
+                            log.info("开平重连"+slaveId);
+                            copierApiTradersAdmin.removeTrader(slaveId);
+                            copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                        }
                         if (orderUpdateEventArgs.Action == PositionClose) {
 //                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
                                 //跟单平仓

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class RepairSendVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	@Schema(description = "类型0-下单 1-平仓")
+	@Schema(description = "类型0-下单 1-平仓 2-一键补全")
 	private Integer type;
 
 	@Schema(description = "喊单者的ID")

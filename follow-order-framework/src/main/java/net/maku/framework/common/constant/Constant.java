@@ -118,4 +118,9 @@ public interface Constant {
      * 跟单平仓情况缓存
      */
     String FOLLOW_REPAIR_CLOSE="follow:repair:close:";
+
+    /**
+     * 监听幂等校验
+     */
+    String FOLLOW_ON_EVEN="follow:on:even:";
 }
