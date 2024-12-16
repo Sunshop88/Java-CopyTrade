@@ -83,7 +83,7 @@ public class KafkaMessageConsumer {
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
     }
 
-    @KafkaListener(topics = "order-close", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "order-close", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterClose(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
             ThreadPoolUtils.getExecutor().execute(()->{

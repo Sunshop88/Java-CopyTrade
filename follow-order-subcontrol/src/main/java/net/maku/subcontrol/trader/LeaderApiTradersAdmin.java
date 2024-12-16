@@ -97,9 +97,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     } else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
-                        if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+leaderApiTrader.getTrader().getId()))){
-                            setTraderOrder(leaderApiTrader);
-                        }                    }
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -111,39 +109,6 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         countDownLatch.await();
         log.info("所有的mt4喊单者结束连接服务器");
         this.launchOn = true;
-    }
-
-    private void setTraderOrder(LeaderApiTrader leaderApiTrader) {
-        try {
-            QuoteClient qc = leaderApiTrader.quoteClient;
-            //启动完成后写入用户信息
-            FollowRedisTraderVO followRedisTraderVO = new FollowRedisTraderVO();
-            followRedisTraderVO.setTraderId(leaderApiTrader.getTrader().getId());
-            followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
-            followRedisTraderVO.setProfit(BigDecimal.valueOf(qc.Profit));
-            followRedisTraderVO.setEuqit(BigDecimal.valueOf(qc.AccountEquity()));
-            followRedisTraderVO.setFreeMargin(BigDecimal.valueOf(qc.FreeMargin));
-            if (BigDecimal.valueOf(qc.AccountMargin()).compareTo(BigDecimal.ZERO) != 0) {
-                followRedisTraderVO.setMarginProportion(BigDecimal.valueOf(qc.AccountEquity()).divide(BigDecimal.valueOf(qc.AccountMargin()),4, RoundingMode.HALF_UP));
-            }else {
-                followRedisTraderVO.setMarginProportion(BigDecimal.ZERO);
-            }
-            Order[] orders = qc.GetOpenedOrders();
-            List<Order> openedOrders = Arrays.stream(orders).filter(order -> order.Type == Buy || order.Type == Sell).toList();
-            int count =  openedOrders.size();
-            followRedisTraderVO.setTotal(count);
-            followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
-            followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
-            //设置缓存
-            followRedisTraderVO.setMargin(qc.Margin);
-            followRedisTraderVO.setCredit(qc.Credit);
-            followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
-            redisUtil.set(Constant.TRADER_USER+leaderApiTrader.getTrader().getId(),followRedisTraderVO);
-        } catch (ConnectException e) {
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -170,7 +135,6 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             });
         }
     }
-
 
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
@@ -279,6 +243,10 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 this.leaderApiTrader.connect2Broker();
             }catch (Exception e) {
                 log.error("[MT4喊单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
+                if (e.getMessage().contains("Invalid account")){
+                    //账号错误
+                    return new LeaderApiTradersAdmin.ConnectionResult(this.leaderApiTrader, ConCodeEnum.PASSWORD_FAILURE);
+                }
                 return new ConnectionResult(this.leaderApiTrader, ConCodeEnum.ERROR);
             } finally {
                 if (aq) {

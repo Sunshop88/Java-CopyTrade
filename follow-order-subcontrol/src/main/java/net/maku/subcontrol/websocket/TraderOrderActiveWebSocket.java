@@ -20,6 +20,7 @@ import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
@@ -80,6 +81,7 @@ public class TraderOrderActiveWebSocket {
     private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
+    private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
 
 
 
@@ -156,20 +158,6 @@ public class TraderOrderActiveWebSocket {
             if (ObjectUtil.isEmpty(quoteClient)) {
                 throw new ServerException(accountId + "登录异常");
             }
-         /*   quoteClient = leaderApiTradersAdmin.quoteClientMap.get(accountId);
-            if(quoteClient==null) {
-                FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, followTraderEntity.getPlatform()));
-                String serverNode = followPlatformServiceOne.getServerNode();
-                String[] split = serverNode.split(":");
-                quoteClient = new QuoteClient(Integer.parseInt(followTraderEntity.getAccount()), followTraderEntity.getPassword(), split[0], Integer.valueOf(split[1]));
-                leaderApiTradersAdmin.quoteClientMap.put(accountId,quoteClient);
-            }*/
-/*            quoteClient.Connect();
-            //所有持仓
-            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());*/
-
-           /* log.info("{}-MT4,订单数量{},持仓数据：{}",accountId,openedOrders.size(),openedOrders);
-            List<OrderActiveInfoVO> orderActiveInfoList = converOrderActive(openedOrders, abstractApiTrader.getTrader().getAccount());*/
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
             Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
             List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
@@ -177,44 +165,38 @@ public class TraderOrderActiveWebSocket {
                 orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
             }
-            //存入redis
-
-//            redisCache.set(Constant.TRADER_ACTIVE + accountId, JSONObject.toJSON(orderActiveInfoList));
-
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")) {
                 log.info("follow sub" + slaveId + ":" + traderId);
                 FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
 
-                List<Object> sendRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 0, -1);
-                List<Object> closeRepair = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 0, -1);
-                // 数据处理逻辑（如前面的代码示例）
-                List<Object> sendRepairToRemove = new ArrayList<>();
+                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+
                 List<Object> sendRepairToExtract = new ArrayList<>();
 
-                for (Object repairObj : sendRepair) {
-                    EaOrderInfo repairComment = (EaOrderInfo) repairObj;
-                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> repairComment.getSlaveComment().equalsIgnoreCase(order.getComment()));
-                    if (existsInActive) {
-                        sendRepairToRemove.add(repairObj);
-                    } else {
-                        sendRepairToExtract.add(repairObj);
+                for (Object repairObj : sendRepair.keySet()) {
+                    EaOrderInfo repairComment = (EaOrderInfo) sendRepair.get(repairObj);
+                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+                    if (!existsInActive) {
+                        sendRepairToExtract.add(repairComment);
                     }
                 }
-                sendRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + followTraderSubscribe.getId(), 1, repair));
-
                 List<Object> closeRepairToRemove = new ArrayList<>();
                 List<Object> closeRepairToExtract = new ArrayList<>();
-                for (Object repairObj : closeRepair) {
-                    EaOrderInfo repairComment = (EaOrderInfo) repairObj;
-                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> repairComment.getSlaveComment().equalsIgnoreCase(order.getComment()));
+                for (Object repairObj : closeRepair.keySet()) {
+                    EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
+                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                     if (!existsInActive) {
-                        closeRepairToRemove.add(repairObj);
+                        closeRepairToRemove.add(repairComment);
                     } else {
-                        closeRepairToExtract.add(repairObj);
+                        closeRepairToExtract.add(repairComment);
                     }
                 }
-                closeRepairToRemove.forEach(repair -> redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + followTraderSubscribe.getId(), 1, repair));
+                closeRepairToRemove.forEach(repair ->{
+                    EaOrderInfo repair1 = (EaOrderInfo) repair;
+                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
+                });
 
                 List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
                 sendRepairToExtract.parallelStream().forEach(o -> {
@@ -230,17 +212,24 @@ public class TraderOrderActiveWebSocket {
                     list.add(orderRepairInfoVO);
                 });
                 closeRepairToExtract.parallelStream().forEach(o -> {
+                    EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     //通过备注查询未平仓记录
-                    FollowSubscribeOrderEntity detailServiceOne = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getSlaveId, slaveId).eq(FollowSubscribeOrderEntity::getSlaveComment, ((EaOrderInfo) o).getSlaveComment()));
+                    FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
                     if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                         OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                        BeanUtil.copyProperties(detailServiceOne, orderRepairInfoVO);
+                        orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
+                        orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
                         orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
-                        orderRepairInfoVO.setMasterLots(detailServiceOne.getMasterLots().doubleValue());
-                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(detailServiceOne.getMasterProfit()) ? detailServiceOne.getMasterProfit().doubleValue() : 0);
-                        orderRepairInfoVO.setMasterType(Op.forValue(detailServiceOne.getMasterType()).name());
-                        orderRepairInfoVO.setSlaveLots(detailServiceOne.getSlaveLots().doubleValue());
-                        orderRepairInfoVO.setSlaveType(Op.forValue(detailServiceOne.getSlaveType()).name());
+                        orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
+                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
+                        orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
+                        orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
+                        orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
+                        orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
+                        orderRepairInfoVO.setSlaveOpenTime(detailServiceOne.getOpenTime());
+                        orderRepairInfoVO.setSlaveSymbol(detailServiceOne.getSymbol());
+                        orderRepairInfoVO.setSlaveTicket(detailServiceOne.getOrderNo());
+                        orderRepairInfoVO.setSlaverProfit(detailServiceOne.getProfit().doubleValue());
                         list.add(orderRepairInfoVO);
                     }
                 });

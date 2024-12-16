@@ -215,6 +215,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             Integer serverId = leader.getServerId();
                             FollowVpsEntity vps = followVpsService.getById(serverId);
                             if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                log.info("开始平仓请求"+slaveId);
                                 strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                             }
 //                            });
@@ -226,6 +227,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             Integer serverId = leader.getServerId();
                             FollowVpsEntity vps = followVpsService.getById(serverId);
                             if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                log.info("开始下单请求"+slaveId);
                                 strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                             }
 //                            });

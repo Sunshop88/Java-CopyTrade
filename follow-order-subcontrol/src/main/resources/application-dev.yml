@@ -23,8 +23,6 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    groupIdMap:
-      "127.0.0.1": "order-group-a"
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置

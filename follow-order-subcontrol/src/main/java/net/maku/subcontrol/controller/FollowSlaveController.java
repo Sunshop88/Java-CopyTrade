@@ -10,10 +10,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.FollowModeEnum;
-import net.maku.followcom.enums.TraderStatusEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
+import net.maku.followcom.enums.*;
+import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
@@ -34,6 +32,7 @@ import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
 import net.maku.subcontrol.vo.RepairSendVO;
+import online.mtapi.mt4.Order;
 import online.mtapi.mt4.PlacedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +45,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,10 @@ public class FollowSlaveController {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity)) {
                 throw new ServerException("请输入正确喊单账号");
+            }
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+            if (ObjectUtil.isEmpty(leaderApiTrader)){
+                throw new ServerException("喊单账号状态异常，请确认");
             }
             //如果为固定手数和手数比例，必填参数
             if (vo.getFollowStatus().equals(FollowModeEnum.FIX.getCode()) || vo.getFollowStatus().equals(FollowModeEnum.RATIO.getCode())) {
@@ -136,7 +141,18 @@ public class FollowSlaveController {
                 if (cache != null) {
                     cache.evict(vo.getTraderId()); // 移除指定缓存条目
                 }
-
+                //查看是否该VPS存在过此账号
+                if (ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_SEND+FollowConstant.LOCAL_HOST+vo.getAccount()+"#"+followTraderEntity.getAccount()))&&
+                        ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_CLOSE+FollowConstant.LOCAL_HOST+vo.getAccount()+"#"+followTraderEntity.getAccount()))){
+                    //建立漏单关系 查询喊单所有持仓
+                    Order[] orders = leaderApiTrader.quoteClient.GetOpenedOrders();
+                    if (orders.length>0){
+                        Arrays.stream(orders).toList().forEach(order->{
+                            EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),followTraderEntity);
+                            redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+vo.getAccount()+"#"+followTraderEntity.getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
+                        });
+                    }
+                }
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);
@@ -186,11 +202,6 @@ public class FollowSlaveController {
             redisCache.delete(Constant.FOLLOW_SUB_TRADER+vo.getId().toString());
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
-            //启动账户
-//            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
-//            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-//                return Result.error();
-//            }
             //重连
             reconnect(vo.getId().toString());
             ThreadPoolUtils.execute(() -> {
@@ -198,6 +209,9 @@ public class FollowSlaveController {
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
                 copierApiTrader.startTrade();
+                FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+                //修改缓存
+                leaderApiTradersAdmin.pushRedisData(followTraderVO,copierApiTrader.quoteClient);
             });
         } catch (Exception e) {
             throw new ServerException("修改失败" + e);
@@ -336,4 +350,24 @@ public class FollowSlaveController {
         return Result.ok(followPlatformService.updatePlatCache(id));
     }
 
+    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate,FollowTraderEntity leader) {
+
+        // 并且要给EaOrderInfo添加额外的信息：喊单者id+喊单者账号+喊单者服务器
+        // #84 喊单者发送订单前需要处理前后缀
+        EaOrderInfo orderInfo = new EaOrderInfo(order, leader.getId() ,leader.getAccount(), leader.getServerName(), equity, currency, Boolean.FALSE);
+        assembleOrderInfo(type, orderInfo, detectedDate);
+        return orderInfo;
+    }
+
+    void assembleOrderInfo(OrderChangeTypeEnum type, EaOrderInfo orderInfo, LocalDateTime detectedDate) {
+        if (type == OrderChangeTypeEnum.NEW) {
+            orderInfo.setOriginal(AcEnum.MO);
+            orderInfo.setDetectedOpenTime(detectedDate);
+        } else if (type == OrderChangeTypeEnum.CLOSED) {
+            orderInfo.setDetectedCloseTime(detectedDate);
+            orderInfo.setOriginal(AcEnum.MC);
+        } else if (type == OrderChangeTypeEnum.MODIFIED) {
+            orderInfo.setOriginal(AcEnum.MM);
+        }
+    }
 }

@@ -56,13 +56,15 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             followSubscribeOrderService.updateById(o);
         });
         //查看跟单关系
-        List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId())
-                .eq(FollowTraderSubscribeEntity::getFollowStatus, CloseOrOpenEnum.OPEN.getValue())
-                .eq(FollowTraderSubscribeEntity::getFollowClose,CloseOrOpenEnum.OPEN.getValue()));
+        List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId()));
         //保存所需要平仓的用户到redis，用备注记录 set类型存储
-        String comment = comment(orderInfo);
-        orderInfo.setSlaveComment(comment);
-        subscribeEntityList.forEach(o->redisUtil.lSet(Constant.FOLLOW_REPAIR_CLOSE+o.getId(),orderInfo));
+        subscribeEntityList.forEach(o->{
+            //创建平仓redis记录
+            redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
+            //删除跟单redis记录
+            redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
+        });
+
         threeStrategyThreadPoolExecutor.schedule(()->{
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();

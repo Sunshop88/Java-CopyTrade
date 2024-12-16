@@ -48,15 +48,11 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
     public void operate(AbstractApiTrader abstractApiTrader, EaOrderInfo orderInfo, int flag) {
         FollowTraderEntity trader = abstractApiTrader.getTrader();
         //查看跟单关系
-        List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId())
-                .eq(FollowTraderSubscribeEntity::getFollowStatus, CloseOrOpenEnum.OPEN.getValue())
-                .eq(FollowTraderSubscribeEntity::getFollowOpen, CloseOrOpenEnum.OPEN.getValue()));
-        //保存所需要下单的用户到redis，用备注记录 set类型存储
-        String comment = comment(orderInfo);
-        orderInfo.setSlaveComment(comment);
+        List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId()));
+        //保存所需要下单的用户到redis，用魔术号记录 set类型存储
         //保存下单信息
         subscribeEntityList.forEach(o -> {
-            redisUtil.lSet(Constant.FOLLOW_REPAIR_SEND + o.getId(), orderInfo);
+            redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
         });
         threeStrategyThreadPoolExecutor.schedule(() -> {
             //生成记录

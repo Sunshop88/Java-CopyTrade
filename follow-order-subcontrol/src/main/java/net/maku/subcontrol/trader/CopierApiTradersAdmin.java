@@ -272,6 +272,10 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 this.copierApiTrader.connect2Broker();
             } catch (Exception e) {
                 log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
+                if (e.getMessage().contains("Invalid account")){
+                    //账号错误
+                    return new ConnectionResult(this.copierApiTrader, ConCodeEnum.PASSWORD_FAILURE);
+                }
                 return new ConnectionResult(this.copierApiTrader, ConCodeEnum.ERROR);
             } finally {
                 if (aq) {

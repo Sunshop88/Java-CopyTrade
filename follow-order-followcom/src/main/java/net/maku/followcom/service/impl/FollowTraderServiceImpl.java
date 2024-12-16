@@ -238,7 +238,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         updateById(entity);
         Cache cache = cacheManager.getCache("followFollowCache");
         if (cache != null) {
-            cache.put(vo.getId(),entity); // 修改指定缓存条目
+            cache.evict(vo.getId()); // 修改指定缓存条目
         }
     }
 
@@ -436,11 +436,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 } else {
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
                 }
-            } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
-                log.info("平仓出错" + e.getMessage());
-                //    throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
             }
         }
     }
@@ -595,7 +592,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             // 有间隔时间的下单，依次执行并等待
             Integer finalOrderCount1 = orderCount;
-            commonThreadPool.execute(() -> {
+            ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 int count = 0;
                 for (int i = 0; i < finalOrderCount1; i++) {
@@ -822,13 +819,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
             followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
-        } catch (InvalidSymbolException | TimeoutException | ConnectException | TradeException e) {
-            log.info("平仓出错" + e.getMessage());
+        } catch (Exception e) {
+            log.error(orderNo+"平仓出错" + e.getMessage());
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
                 followOrderDetailEntity.setRemark("平仓出错" + e.getMessage());
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
         followOrderDetailService.updateById(followOrderDetailEntity);
         if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {

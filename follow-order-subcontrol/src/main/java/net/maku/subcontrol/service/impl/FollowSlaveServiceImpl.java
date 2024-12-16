@@ -10,6 +10,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.TraderRepairEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
@@ -61,24 +62,17 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, repairSendVO.getMasterId()).eq(FollowTraderSubscribeEntity::getSlaveId, repairSendVO.getSlaveId()));
                 if (repairSendVO.getType().equals(TraderRepairEnum.SEND.getType())){
                     //获取redis内的下单信息
-                    List<Object> objects = redisUtil.lGet(Constant.FOLLOW_REPAIR_SEND + traderSubscribeEntity.getId(),0,-1);
-                    Optional<Object> first = objects.stream().filter(o -> {
-                        EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
-                        return eaOrderInfo.getTicket().equals(repairSendVO.getOrderNo());
-                    }).toList().stream().findFirst();
-                    if (first.isPresent()){
-                        orderSendCopier.operate(copierApiTrader,(EaOrderInfo) first.get(),1);
-                        redisUtil.lRemove(Constant.FOLLOW_REPAIR_SEND + traderSubscribeEntity.getId(),1,first.get());
+                    if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString()))){
+                        EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
+                        orderSendCopier.operate(copierApiTrader,objects,1);
                     }else {
                         throw new ServerException("暂无订单需处理");
                     }
                 }else {
-                    //获取redis内的平仓信息
-                    List<Object> objects = redisUtil.lGet(Constant.FOLLOW_REPAIR_CLOSE + traderSubscribeEntity.getId(),0,-1);
-                    Optional<Object> first = objects.stream().filter(o -> ((EaOrderInfo)o).getTicket().equals(repairSendVO.getOrderNo())).toList().stream().findFirst();
-                    if (first.isPresent()){
-                        orderCloseCopier.operate(copierApiTrader,(EaOrderInfo) first.get(),1);
-                        redisUtil.lRemove(Constant.FOLLOW_REPAIR_CLOSE + traderSubscribeEntity.getId(),1,first.get());
+                    if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString()))) {
+                        EaOrderInfo objects = (EaOrderInfo) redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
+                        orderCloseCopier.operate(copierApiTrader,objects,1);
+                        redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                     }else {
                         throw new ServerException("暂无订单需处理");
                     }
