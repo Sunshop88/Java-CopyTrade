@@ -103,21 +103,22 @@ public abstract class AbstractApiTrader extends ApiTrader {
         if (this.quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
         }
-        if (this.onQuoteTraderHandler==null){
-            boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
-            if (isLeader){
+        boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
+        if (this.orderUpdateHandler==null) {
+            if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
-                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-            }else {
+            } else {
                 //订单变化监听
                 this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
-                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
+            this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+        }
+
+        if (this.onQuoteTraderHandler==null){
             //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
             this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
-
         }
 
     }

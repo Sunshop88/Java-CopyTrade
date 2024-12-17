@@ -8,17 +8,11 @@ import java.util.concurrent.*;
 
 public class ThreadPoolUtils {
 
-    // 定义一个固定大小的线程池
+    // 虚拟线程
     private static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     // 定义一个固定大小的延时任务的线程池
     private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(500);
-
-    // 定义一个固定大小的延时任务的线程池
-    private static final ExecutorService  scheduledExecutorServiceOrder=  Executors.newVirtualThreadPerTaskExecutor();;
-    // 用户下单及平仓线程处理
-    @Getter
-    private static final ExecutorService scheduledExecutorSend=Executors.newVirtualThreadPerTaskExecutor();
 
     public static ExecutorService getExecutor() {
         return executorService;
@@ -50,12 +44,6 @@ public class ThreadPoolUtils {
         return scheduledExecutorService;
     }
 
-    /**
-     * 提交延时任务到线程池执行
-     */
-    public static ExecutorService getScheduledExecuteOrder() {
-        return scheduledExecutorServiceOrder;
-    }
 
     /**
      * 优雅地关闭线程池

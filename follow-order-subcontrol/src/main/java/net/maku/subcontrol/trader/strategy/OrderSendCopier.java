@@ -177,7 +177,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 log.error("OrderSend 异常", e);
                 throw new RuntimeException("订单发送异常", e);
             }
-        }, ThreadPoolUtils.getScheduledExecutorSend());
+        }, ThreadPoolUtils.getExecutor());
         return true;
     }
 }

@@ -496,7 +496,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
 
     @Override
     public FollowVpsEntity getVps(String ip) {
-        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, ip));
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIpAddress, ip));
     }
 
     /**

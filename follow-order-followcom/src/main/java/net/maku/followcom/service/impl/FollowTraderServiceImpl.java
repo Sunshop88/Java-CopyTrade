@@ -558,7 +558,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         // 无间隔时间下单时并发执行
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
             Integer finalOrderCount = orderCount;
-            commonThreadPool.execute(() -> {
+            ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (int i = 0; i < finalOrderCount; i++) {
                     //平仓数据处理
