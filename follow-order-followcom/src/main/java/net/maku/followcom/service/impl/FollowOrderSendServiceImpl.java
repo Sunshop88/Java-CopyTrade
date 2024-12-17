@@ -66,7 +66,7 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
             wrapper.ge(FollowOrderSendEntity::getCreateTime, query.getStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderSendEntity::getCreateTime, query.getEndTime());    // 小于或等于结束时间
         }
-        wrapper.orderByDesc(FollowOrderSendEntity::getCreateTime);
+        wrapper.orderByDesc(FollowOrderSendEntity::getId);
         return wrapper;
     }
 

@@ -108,6 +108,9 @@ public abstract class AbstractFollowRule {
         } else {
             lots2digits = BigDecimal.valueOf(lots).setScale(2, RoundingMode.DOWN);
         }
+        if (lots2digits.compareTo(new BigDecimal("0.01"))<0){
+            lots2digits=new BigDecimal("0.01");
+        }
         return lots2digits.doubleValue();
     }
 

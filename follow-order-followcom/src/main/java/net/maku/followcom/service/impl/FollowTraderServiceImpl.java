@@ -131,8 +131,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getType())) {
             wrapper.eq(FollowTraderEntity::getType, query.getType());
         }
-        //根据更新时间进行降序
-        wrapper.orderByDesc(FollowTraderEntity::getCreateTime);
+        //根据id进行降序
+        wrapper.orderByDesc(FollowTraderEntity::getId);
         return wrapper;
     }
 
@@ -389,7 +389,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getCloseId())) {
             wrapper.eq(FollowOrderDetailEntity::getCloseId, query.getCloseId());
         }
-        wrapper.orderByDesc(FollowOrderDetailEntity::getCreateTime);
+        wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
         //查询结算汇率
@@ -639,7 +639,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     @Override
     public FollowOrderSendEntity orderDoing(Long traderId) {
-        List<FollowOrderSendEntity> list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId, traderId).eq(FollowOrderSendEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).orderByDesc(FollowOrderSendEntity::getCreateTime));
+        List<FollowOrderSendEntity> list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId, traderId).eq(FollowOrderSendEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).orderByDesc(FollowOrderSendEntity::getId));
         if (ObjectUtil.isEmpty(list)) {
             return null;
         }

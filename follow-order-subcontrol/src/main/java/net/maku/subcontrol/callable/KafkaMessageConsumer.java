@@ -177,7 +177,7 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
         followOrderDetailEntity.setProfit(BigDecimal.valueOf(order.Profit));
         followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
-
+        followOrderDetailEntity.setCloseId(0);
         //获取symbol信息
         Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(followOrderDetailEntity.getTraderId());
         FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(followOrderDetailEntity.getSymbol());

@@ -20,6 +20,7 @@ import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.strategy.OrderCloseCopier;
 import net.maku.subcontrol.trader.strategy.OrderSendCopier;
 import net.maku.subcontrol.vo.RepairSendVO;
+import online.mtapi.mt4.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -35,30 +36,55 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     private final RedissonLockUtil redissonLockUtil;
     private final OrderSendCopier orderSendCopier;
     private final OrderCloseCopier orderCloseCopier;
+    private final FollowVpsService followVpsService;
 
     @Override
     public Boolean repairSend(RepairSendVO repairSendVO) {
+        FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+        if(ObjectUtil.isEmpty(vps) || vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+            throw new ServerException("VPS已关闭");
+        }
         FollowTraderSubscribeEntity subscription = followTraderSubscribeService.subscription(repairSendVO.getSlaveId(), repairSendVO.getMasterId());
         if (repairSendVO.getType().equals(TraderRepairEnum.ALL.getType())) {
             FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, repairSendVO.getMasterId()).eq(FollowTraderSubscribeEntity::getSlaveId, repairSendVO.getSlaveId()));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(repairSendVO.getSlaveId().toString());
+            Order[] orders = copierApiTrader.quoteClient.GetOpenedOrders();
+
             if (ObjectUtil.isEmpty(copierApiTrader)){
                 throw new ServerException("账号异常请重连");
             }
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())){
                 //下单
-                Map<Object, Object> map = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount());
-                map.keySet().stream().toList().forEach(o->{
-                    EaOrderInfo eaOrderInfo = (EaOrderInfo)  map.get(o);
+                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount());
+                List<Object> sendRepairToExtract = new ArrayList<>();
+                for (Object repairObj : sendRepair.keySet()) {
+                    EaOrderInfo repairComment = (EaOrderInfo) sendRepair.get(repairObj);
+                    boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
+                    if (!existsInActive) {
+                        sendRepairToExtract.add(repairComment);
+                    }
+                }
+                sendRepairToExtract.stream().toList().forEach(o->{
+                    EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     orderSendCopier.operate(copierApiTrader,eaOrderInfo,1);
                 });
             }
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowClose().equals(CloseOrOpenEnum.OPEN.getValue())) {
-                //平仓
-                Map<Object, Object> mapclose = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount());
-                mapclose.keySet().stream().toList().forEach(o->{
-                    EaOrderInfo eaOrderInfo = (EaOrderInfo)  mapclose.get(o);
+                List<Object> closeRepairToExtract = new ArrayList<>();
+                Map<Object,Object> closeRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE+ FollowConstant.LOCAL_HOST+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount());
+
+                for (Object repairObj : closeRepair.keySet()) {
+
+                    EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
+                    boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
+                    if (existsInActive) {
+                        closeRepairToExtract.add(repairComment);
+                    }
+                }
+                closeRepairToExtract.stream().toList().forEach(o->{
+                    EaOrderInfo eaOrderInfo = (EaOrderInfo)  o;
                     orderCloseCopier.operate(copierApiTrader,eaOrderInfo,1);
+                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), eaOrderInfo.getTicket().toString());
                 });
             }
             return true;

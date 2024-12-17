@@ -121,11 +121,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         //发送websocket消息标识
         int flag = 0;
         //避免重复监听
-        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_ON_EVEN+orderUpdateEventArgs.Action+"#"+order.Ticket))){
-            log.info("监听重复"+orderUpdateEventArgs.Action+"#"+order.Ticket);
+        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_ON_EVEN+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket))){
+            log.info("监听重复"+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket);
             return;
         }
-        redisUtil.set(Constant.FOLLOW_ON_EVEN+orderUpdateEventArgs.Action+"#"+order.Ticket,0,10);
+        redisUtil.set(Constant.FOLLOW_ON_EVEN+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket,0,10);
         switch (orderUpdateEventArgs.Action) {
             case PositionOpen:
             case PendingFill:
@@ -141,13 +141,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     //喊单开仓
                     //查找vps状态
                     Integer serverId = leader.getServerId();
-                    FollowVpsEntity vps = followVpsService.getById(serverId);
-                    if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                       // log.info("vps状态------->");
-                        //发送MT4处理请求
-                        strategyMap.get(AcEnum.MO).operate(abstractApiTrader, eaOrderInfo, 0);
-
-                    }
+                    //发送MT4处理请求
+                    strategyMap.get(AcEnum.MO).operate(abstractApiTrader, eaOrderInfo, 0);
                 });
                 flag = 1;
                 //推送到redis
@@ -162,22 +157,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
                         //发送MT4处理请求
-                        Integer serverId = leader.getServerId();
-                        FollowVpsEntity vps = followVpsService.getById(serverId);
-                        if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                            strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
-                        }
+                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                     });
                 } else {
                     scheduledThreadPoolExecutor.schedule(() -> {
                         EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                         //喊单平仓
-                        Integer serverId = leader.getServerId();
-                        FollowVpsEntity vps = followVpsService.getById(serverId);
-                        if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                            //发送MT4处理请求
-                            strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
-                        }
+                        //发送MT4处理请求
+                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                     }, delaySendCloseSignal, TimeUnit.MILLISECONDS);
                 }
                 flag = 1;
