@@ -25,7 +25,6 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
-import net.maku.subcontrol.even.OnQuoteHandler;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.followcom.service.impl.FollowVarietyServiceImpl;
 import net.maku.subcontrol.trader.LeaderApiTrader;
@@ -140,7 +139,7 @@ public class TraderOrderSendWebSocket {
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                 }
-            }, 0, 2, TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.info("连接异常"+e);
@@ -169,7 +168,6 @@ public class TraderOrderSendWebSocket {
         }catch (InvalidSymbolException | online.mtapi.mt4.Exception.TimeoutException | ConnectException e) {
             throw new ServerException("获取报价失败,品种不正确,请先配置品种");
         }
-        leaderApiTrader.addOnQuoteHandler(new OnQuoteHandler(leaderApiTrader));
 
         if (eventArgs != null) {
             //立即查询
@@ -200,9 +198,7 @@ public class TraderOrderSendWebSocket {
             sessionPool.get(traderId+symbol).remove(session);
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
-            leaderApiTrader.removeOnQuoteHandler();
             // 需要移除监听器时调用
-            leaderApiTrader.quoteClient.OnQuote.removeListener(leaderApiTrader.getQuoteHandler());
         } catch (Exception e) {
             e.printStackTrace();
         }

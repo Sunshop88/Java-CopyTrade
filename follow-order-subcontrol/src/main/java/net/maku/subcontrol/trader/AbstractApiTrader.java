@@ -24,7 +24,6 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.subcontrol.even.OnQuoteHandler;
 import net.maku.subcontrol.even.OnQuoteTraderHandler;
 import net.maku.subcontrol.even.OrderUpdateHandler;
 import net.maku.subcontrol.even.CopierOrderUpdateEventHandlerImpl;
@@ -74,7 +73,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public OrderClient orderClient;
     public static List<String> availableException4 = new LinkedList<>();
     OnQuoteTraderHandler onQuoteTraderHandler;
-    OnQuoteHandler onQuoteHandler;
     OrderUpdateHandler orderUpdateHandler;
     protected final RedisCache redisCache =SpringContextUtils.getBean(RedisCache.class);;
     static {
@@ -276,21 +274,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 }
             }
         }
-    }
-
-    public void addOnQuoteHandler(OnQuoteHandler hander) {
-        if (ObjectUtil.isEmpty(onQuoteHandler)){
-            onQuoteHandler=hander;
-            this.quoteClient.OnQuote.addListener(hander);
-        }
-    }
-
-    public OnQuoteHandler getQuoteHandler() {
-       return onQuoteHandler;
-    }
-
-    public void removeOnQuoteHandler() {
-        onQuoteHandler=null;
     }
 
     /**

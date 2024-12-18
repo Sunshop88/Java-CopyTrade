@@ -339,7 +339,7 @@ public class FollowSlaveController {
     @GetMapping("updateVarietyCache")
     @Operation(summary = "更新品种匹配缓存")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<FollowVarietyEntity> updateVarietyCache(@RequestParam("template") Integer template) {
+    public Result<Boolean> updateVarietyCache(@RequestParam("template") Integer template) {
         return Result.ok(followVarietyService.updateCache(template));
     }
 

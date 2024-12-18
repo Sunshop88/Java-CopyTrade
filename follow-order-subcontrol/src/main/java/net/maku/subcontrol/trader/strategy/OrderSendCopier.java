@@ -37,37 +37,39 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
     @Override
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
         log.info(":请求进入时间1"+trader.getTrader().getId());
-        FollowTraderEntity copier = trader.getTrader();
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
-        FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
+        FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(trader.getTrader().getId(), orderInfo.getMasterId());
         //存入下单方式
         orderInfo.setPlaceType(leaderCopier.getPlacedType());
         log.info("请求进入时间1.0:"+trader.getTrader().getId());
         //查看喊单账号信息
         FollowTraderEntity followTraderEntity = followTraderService.getFollowById(orderInfo.getMasterId());
+        FollowTraderEntity copier = followTraderService.getFollowById(trader.getTrader().getId());
+
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         // 查看品种匹配 模板
-        log.info("请求进入时间1.1:"+trader.getTrader().getId());
-        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(copier.getTemplateId());
-        log.info("请求进入时间2:"+trader.getTrader().getId());
-
+        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
         List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
-        if (ObjectUtil.isNotEmpty(collect)){
-            //获得跟单账号对应品种
-            FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
-            List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(collect.get(0).getStdSymbol()) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
-            List<String> symbolList = orderInfo.getSymbolList();
-            collectCopy.forEach(o-> {
-                if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                    symbolList.add(o.getBrokerSymbol());
-                }
-            });
-            if (ObjectUtil.isNotEmpty(collectCopy)){
-                orderInfo.setSymbolList(symbolList);
-            }
+        log.info("collect"+collect);
+        String stdSymbol =orderInfo.getOriSymbol();
+        if (ObjectUtil.isNotEmpty(collect)) {
+           stdSymbol = collect.get(0).getStdSymbol();
         }else {
-            //未发现品种匹配
             log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
+        }
+        //获得跟单账号对应品种
+        FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
+        String finalStdSymbol = stdSymbol;
+        List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+        log.info("跟单品种匹配"+collectCopy);
+        List<String> symbolList = orderInfo.getSymbolList();
+        collectCopy.forEach(o-> {
+            if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                symbolList.add(o.getBrokerSymbol());
+            }
+        });
+        if (ObjectUtil.isNotEmpty(collectCopy)){
+            orderInfo.setSymbolList(symbolList);
         }
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
