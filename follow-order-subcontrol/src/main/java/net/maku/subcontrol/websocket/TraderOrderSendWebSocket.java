@@ -58,7 +58,6 @@ public class TraderOrderSendWebSocket {
 
     private String symbol;
 
-    private OnQuoteHandler onQuoteHandler;
     private FollowVarietyServiceImpl followVarietyService= SpringContextUtils.getBean( FollowVarietyServiceImpl.class);
     private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
     private RedisCache redisCache= SpringContextUtils.getBean( RedisCache.class);

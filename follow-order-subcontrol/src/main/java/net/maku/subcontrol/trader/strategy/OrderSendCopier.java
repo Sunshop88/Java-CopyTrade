@@ -153,7 +153,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         Integer.MAX_VALUE,
                         BigDecimal.ZERO.doubleValue(),
                         BigDecimal.ZERO.doubleValue(),
-                        comment(orderInfo).toUpperCase(),
+                        comment(orderInfo,followTraderEntity.getServerId()).toUpperCase(),
                         orderInfo.getTicket(),
                         null
                 );

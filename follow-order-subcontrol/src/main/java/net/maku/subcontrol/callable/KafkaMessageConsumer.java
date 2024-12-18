@@ -55,6 +55,8 @@ public class KafkaMessageConsumer {
     private final FollowPlatformService followPlatformService;
     private final FollowOrderHistoryService followOrderHistoryService;
     private final CacheManager cacheManager;
+    private final FollowTraderService followTraderService;
+
     @KafkaListener(topics = "order-send", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
@@ -89,7 +91,7 @@ public class KafkaMessageConsumer {
             ThreadPoolUtils.getExecutor().execute(()->{
                 OrderResultCloseEvent orderResultEvent = JSON.parseObject(message, OrderResultCloseEvent.class);
                 Order order = orderResultEvent.getOrder();
-                FollowTraderEntity followTraderEntity = orderResultEvent.getCopier();
+                FollowTraderEntity followTraderEntity = followTraderService.getFollowById(orderResultEvent.getCopier().getId());
                 EaOrderInfo orderInfo = orderResultEvent.getOrderInfo();
                 Integer flag=orderResultEvent.getFlag();
                 log.info("kafka消费Close"+orderResultEvent);
@@ -201,6 +203,7 @@ public class KafkaMessageConsumer {
 
     private void handleOrderResult(Order order, EaOrderInfo orderInfo,
                                    FollowSubscribeOrderEntity openOrderMapping, FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
+        copier=followTraderService.getFollowById(copier.getId());
         // 处理下单成功结果，记录日志和缓存
         log.info("[MT4跟单者:{}] 下单成功, 订单: {}", copier.getAccount(), order);
         openOrderMapping.setCopierOrder(order, orderInfo);
@@ -215,7 +218,6 @@ public class KafkaMessageConsumer {
 
         // 日志记录
         logFollowOrder(copier, orderInfo, openOrderMapping, flag,ip);
-
 
     }
 

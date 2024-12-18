@@ -62,7 +62,7 @@ public class SysFileUploadController {
         vo.setPlatform(storageService.properties.getConfig().getType().name());
 
         //如果上传为service.ini文件，异步处理
-        if (file.getOriginalFilename().equalsIgnoreCase(".ini")){
+        if (file.getOriginalFilename().contains(".ini")){
             // 定义正则表达式，匹配 "YYYYMMDD/任意文件名.后缀" 的部分
             String regex = "\\d{8}/[^/]+\\.ini";
             Pattern pattern = Pattern.compile(regex);

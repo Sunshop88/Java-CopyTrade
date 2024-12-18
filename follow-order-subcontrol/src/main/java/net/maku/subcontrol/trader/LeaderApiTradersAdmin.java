@@ -138,6 +138,11 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
 
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
+        //VPS判断
+        if (!leader.getIpAddr().equals(FollowConstant.LOCAL_HOST)){
+            log.info("启动校验异常"+leader.getId());
+            return ConCodeEnum.EXCEPTION;
+        }
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
         String serverNode;
         //优先查看平台默认节点

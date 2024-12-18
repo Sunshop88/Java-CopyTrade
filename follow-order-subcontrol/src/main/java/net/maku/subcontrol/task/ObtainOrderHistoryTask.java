@@ -2,15 +2,20 @@ package net.maku.subcontrol.task;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
+import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import online.mtapi.mt4.QuoteClient;
@@ -32,32 +37,51 @@ public class ObtainOrderHistoryTask {
     private final FollowOrderHistoryService followOrderHistoryService;
     private final FollowTraderService followTraderService;
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
 
 
     @Scheduled(cron = "0 0 23 ? * *")
     public void getOrderHistory(){
         //1.获取所有账号
-        List<FollowTraderEntity> list = followTraderService.list();
+        List<FollowTraderEntity> list = followTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
+                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
+                .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
+                .orderByAsc(FollowTraderEntity::getCreateTime));
         //获取mt4客户端quoteClient
         List<FollowTraderEntity> newList = new ArrayList<>();
         list.forEach(u->{
-            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
-                    .get(u.getId().toString());
             QuoteClient quoteClient = null;
-            //mt4登录
-            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
-                    || !leaderApiTrader.quoteClient.Connected()) {
-                leaderApiTradersAdmin.removeTrader(u.getId().toString());
-                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(u);
-                if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                    quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;
-                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString());
-                    leaderApiTrader1.startTrade();
+            if (u.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+                        .get(u.getId().toString());
+                if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
+                        || !leaderApiTrader.quoteClient.Connected()) {
+                    leaderApiTradersAdmin.removeTrader(u.getId().toString());
+                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(u);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                        quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;
+                        leaderApiTrader= leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString());
+                        leaderApiTrader.startTrade();
+                    }
+                } else {
+                    quoteClient = leaderApiTrader.quoteClient;
                 }
-            } else {
-                quoteClient = leaderApiTrader.quoteClient;
+            }else {
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap()
+                        .get(u.getId().toString());
+                if (ObjectUtil.isEmpty(copierApiTrader) || ObjectUtil.isEmpty(copierApiTrader.quoteClient)
+                        || !copierApiTrader.quoteClient.Connected()) {
+                    copierApiTradersAdmin.removeTrader(u.getId().toString());
+                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(u);
+                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                        quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;
+                        copierApiTrader= copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString());
+                        copierApiTrader.startTrade();
+                    }
+                } else {
+                    quoteClient = copierApiTrader.quoteClient;
+                }
             }
-
             //如果不等于空，获取历史数据
             if(ObjectUtil.isNotEmpty(quoteClient)){
                 if (u.getFollowStatus()!=null && u.getFollowStatus()==CloseOrOpenEnum.OPEN.getValue()){
@@ -75,9 +99,6 @@ public class ObtainOrderHistoryTask {
           if(ObjectUtil.isNotEmpty(newList)){
               followTraderService.updateBatchById(newList);
           }
-
         });
-
-
     }
 }

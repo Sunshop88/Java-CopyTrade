@@ -69,11 +69,10 @@ public class AbstractOperation {
         startBatchSender();
     }
 
-    protected String comment(EaOrderInfo orderInfo) {
+    protected String comment(EaOrderInfo orderInfo,Integer serverId) {
         //#喊单者账号(36进制)#喊单者订单号(订单号)#AUTO
-        return "#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
+        return "#"+serverId+"#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
     }
-
 
     protected Op op(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier) {
         Op op = Op.forValue(orderInfo.getType());
