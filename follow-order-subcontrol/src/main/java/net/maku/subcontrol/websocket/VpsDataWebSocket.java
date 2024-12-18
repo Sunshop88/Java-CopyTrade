@@ -49,7 +49,7 @@ public class VpsDataWebSocket {
             //开启定时任务
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    log.info("开始连接");
+//                    log.info("开始连接");
                     sendData(session, vpsId, traderId);
                 } catch (IOException e) {
                     log.info("WebSocket建立连接异常" + e);

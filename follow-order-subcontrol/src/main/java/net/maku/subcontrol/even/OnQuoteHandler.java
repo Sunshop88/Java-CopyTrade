@@ -67,33 +67,33 @@ public class OnQuoteHandler implements QuoteEventHandler {
         //账户信息
         log.info("OnQuote监听：" +abstractApiTrader.getTrader().getId()+ quote.Symbol+quote.Bid+"dd"+quote.Ask);
 
-        List<FollowOrderSendEntity> list;
-        if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId()))){
-            list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,abstractApiTrader.getTrader().getId()));
-            redisCache.set(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId(),list);
-        }else {
-            list = (List<FollowOrderSendEntity>) redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId());
-        }
-        //查看当前账号订单完成进度
-        FollowOrderSendSocketVO  followOrderSendSocketVO = new FollowOrderSendSocketVO();
-        followOrderSendSocketVO.setSellPrice(quote.Bid);
-        followOrderSendSocketVO.setBuyPrice(quote.Ask);
-        followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
-
-        if (ObjectUtil.isNotEmpty(list)) {
-            FollowOrderSendEntity followOrderSendEntity = list.stream()
-                    .filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getSymbol().equals(quote.Symbol))
-                    .findFirst().orElse(null);
-            if (followOrderSendEntity != null) {
-                followOrderSendSocketVO.setStatus(followOrderSendEntity.getStatus());
-                followOrderSendSocketVO.setScheduleNum(followOrderSendEntity.getTotalNum());
-                followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
-                followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
-            }
-
-        }
-
-        traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
+//        List<FollowOrderSendEntity> list;
+//        if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId()))){
+//            list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,abstractApiTrader.getTrader().getId()));
+//            redisCache.set(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId(),list);
+//        }else {
+//            list = (List<FollowOrderSendEntity>) redisCache.get(Constant.TRADER_ORDER + abstractApiTrader.getTrader().getId());
+//        }
+//        //查看当前账号订单完成进度
+//        FollowOrderSendSocketVO  followOrderSendSocketVO = new FollowOrderSendSocketVO();
+//        followOrderSendSocketVO.setSellPrice(quote.Bid);
+//        followOrderSendSocketVO.setBuyPrice(quote.Ask);
+//        followOrderSendSocketVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
+//
+//        if (ObjectUtil.isNotEmpty(list)) {
+//            FollowOrderSendEntity followOrderSendEntity = list.stream()
+//                    .filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) && o.getSymbol().equals(quote.Symbol))
+//                    .findFirst().orElse(null);
+//            if (followOrderSendEntity != null) {
+//                followOrderSendSocketVO.setStatus(followOrderSendEntity.getStatus());
+//                followOrderSendSocketVO.setScheduleNum(followOrderSendEntity.getTotalNum());
+//                followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
+//                followOrderSendSocketVO.setScheduleFailNum(followOrderSendEntity.getFailNum());
+//            }
+//
+//        }
+//
+//        traderOrderSendWebSocket.pushMessage(abstractApiTrader.getTrader().getId().toString(),quote.Symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
     }
 
 
