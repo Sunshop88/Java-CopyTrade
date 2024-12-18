@@ -117,7 +117,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 //存入redis
                 redisCache.set(Constant.TRADER_ACTIVE + abstractApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoList));
                 followRedisTraderVO.setTotal(count);
-//                log.info("{}写入redis数据订单量{}",abstractApiTrader.getTrader().getAccount(),count);
+                log.info("{}写入redis数据订单量{}",abstractApiTrader.getTrader().getAccount(),count);
                 followRedisTraderVO.setBuyNum(Arrays.stream(orders).filter(order ->order.Type == Buy).mapToDouble(order->order.Lots).sum());
                 followRedisTraderVO.setSellNum(Arrays.stream(orders).filter(order ->order.Type == Sell).mapToDouble(order->order.Lots).sum());
                 //设置缓存

@@ -72,7 +72,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
-
     public LeaderOrderUpdateEventHandlerImpl(AbstractApiTrader abstractApiTrader) {
         super();
         this.abstractApiTrader = abstractApiTrader;
@@ -88,6 +87,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         strategyMap.put(AcEnum.MC, SpringContextUtils.getBean(OrderCloseMaster.class));
         strategyMap.put(AcEnum.NEW, SpringContextUtils.getBean(OrderSendCopier.class));
         strategyMap.put(AcEnum.CLOSED, SpringContextUtils.getBean(OrderCloseCopier.class));
+
     }
 
 
@@ -123,20 +123,33 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         //发送websocket消息标识
         int flag = 0;
         //避免重复监听
-        if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.FOLLOW_ON_EVEN+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket))){
-            log.info("监听重复"+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket);
+        String val=Constant.FOLLOW_ON_EVEN + FollowConstant.LOCAL_HOST + "#" + orderUpdateEventArgs.Action + "#" + order.Ticket;
+        // 使用 Redis 原子操作 SET NX EX
+        boolean isLocked = redisUtil.setnx(val, 1, 2); // 原子操作
+        if (!isLocked) {
+            log.info(order.Ticket + "锁定监听重复");
             return;
         }
-        redisUtil.set(Constant.FOLLOW_ON_EVEN+FollowConstant.LOCAL_HOST+"#"+orderUpdateEventArgs.Action+"#"+order.Ticket,0,10);
+
+        try {
+            if (ObjectUtil.isNotEmpty(redisUtil.get(val))) {
+                log.info(order.Ticket + "监听重复");
+                return;
+            } else {
+                redisUtil.set(val, 1, 10); // 设置监听标记
+            }
+        } finally {
+            redisUtil.del(val); // 确保锁释放
+        }
         switch (orderUpdateEventArgs.Action) {
             case PositionOpen:
             case PendingFill:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 ThreadPoolUtils.getExecutor().execute(()->{
-                    double equity = 0.0;
-                    try {
-                        equity = abstractApiTrader.quoteClient.AccountEquity();
-                    } catch (Exception e) {
+                        double equity = 0.0;
+                        try {
+                            equity = abstractApiTrader.quoteClient.AccountEquity();
+                        } catch (Exception e) {
                         e.printStackTrace();
                     }
                     EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());

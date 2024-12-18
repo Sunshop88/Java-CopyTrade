@@ -596,7 +596,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 int count = 0;
                 for (int i = 0; i < finalOrderCount1; i++) {
-                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId())) || redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()).equals(1)) {
+                    Object cacheValue = redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId());
+                    if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                         try {
                             int finalI = i;
                             CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
@@ -622,7 +623,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 allOrdersCompleted.thenRun(() -> {
                     try {
                         log.info("所有间隔平仓任务已完成");
-                        followOrderCloseEntity.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                        followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
                         followOrderCloseEntity.setFinishTime(LocalDateTime.now());
                         followOrderCloseService.updateById(followOrderCloseEntity);
                         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
@@ -1238,7 +1239,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (int i = 0; i < orderCount; i++) {
-                    if (ObjectUtil.isEmpty(redisCache.get(Constant.TRADER_SEND + traderId)) || redisCache.get(Constant.TRADER_SEND + traderId).equals(1)) {
+                    Object cacheValue = redisCache.get(Constant.TRADER_SEND + traderId);
+                    if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                         int finalI = i;
                         CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
                             int orderId = finalI + 1;

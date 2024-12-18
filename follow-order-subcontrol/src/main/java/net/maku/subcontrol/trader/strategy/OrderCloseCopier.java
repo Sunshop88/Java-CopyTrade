@@ -17,6 +17,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
@@ -179,6 +180,27 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                     .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
                     .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+            FollowOrderDetailEntity followOrderDetailEntity=followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo,cachedCopierOrderInfo.getSlaveTicket().intValue()));
+            if (ObjectUtil.isNotEmpty(followOrderDetailEntity)){
+                followOrderDetailEntity.setRemark(e.getMessage());
+                followOrderDetailService.updateById(followOrderDetailEntity);
+            }
+            //生成日志
+            FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
+            followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
+            FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
+            followTraderLogEntity.setVpsId(followVpsEntity.getId());
+            followTraderLogEntity.setVpsClient(followVpsEntity.getClientId());
+            followTraderLogEntity.setVpsName(followVpsEntity.getName());
+            followTraderLogEntity.setCreateTime(LocalDateTime.now());
+            followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
+            //跟单信息
+            String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "【失败】策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
+                    "跟单账号=" + copier.getAccount() + ",单号=" + order.Ticket + ",品种=" + order.Symbol + ",手数=" + order.Lots + ",类型=" + order.Type.name();
+            followTraderLogEntity.setLogDetail(remark);
+            followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
+            followTraderLogService.save(followTraderLogEntity);
+
             redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
             Cache cache = cacheManager.getCache("followOrdersendCache");
             if (cache != null) {

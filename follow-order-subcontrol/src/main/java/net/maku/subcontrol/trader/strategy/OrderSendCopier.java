@@ -1,5 +1,6 @@
 package net.maku.subcontrol.trader.strategy;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,8 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
@@ -96,7 +99,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
             log.info("请求进入时间3.2:"+trader.getTrader().getId());
-            if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag)) {
+            if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName())) {
                 break;
             }
             followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -104,11 +107,13 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
     }
 
     public boolean sendOrder(AbstractApiTrader trader, EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier,
-                             FollowSubscribeOrderEntity openOrderMapping, Integer flag) {
+                             FollowSubscribeOrderEntity openOrderMapping, Integer flag,String brokeName) {
         log.info("请求进入时间4:"+trader.getTrader().getId());
         CompletableFuture.runAsync(() -> {
+            FollowTraderEntity followTraderEntity =followTraderService.getFollowById(Long.valueOf(trader.getTrader().getId()));
+            Op op = op(orderInfo, leaderCopier);
+            String ip="";
             try {
-                FollowTraderEntity followTraderEntity =followTraderService.getFollowById(Long.valueOf(trader.getTrader().getId()));
                 QuoteClient quoteClient = trader.quoteClient;
                 log.info("请求进入时间开始: " + trader.getTrader().getId());
                 if (ObjectUtil.isEmpty(trader) || ObjectUtil.isEmpty(trader.quoteClient) || !trader.quoteClient.Connected()) {
@@ -127,6 +132,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     //订阅
                     quoteClient.Subscribe(orderInfo.getSymbol());
                 }
+                ip=quoteClient.Host+":"+quoteClient.Port;
                 double bidsub =0;
                 double asksub =0;
                 int loopTimes=1;
@@ -149,7 +155,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 LocalDateTime startTime=LocalDateTime.now();
                 Order order = quoteClient.OrderClient.OrderSend(
                         orderInfo.getSymbol(),
-                        op(orderInfo, leaderCopier),
+                        op,
                         openOrderMapping.getSlaveLots().doubleValue(),
                         startPrice,
                         Integer.MAX_VALUE,
@@ -165,7 +171,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 log.info("请求进入时间结束: " + followTraderEntity.getId());
 
                 // 创建订单结果事件
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, quoteClient.Host + ":" + quoteClient.Port);
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = null;
                 try {
@@ -176,10 +182,52 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 // 保存到批量发送队列
                 kafkaMessages.add(jsonEvent);
             } catch (Exception e) {
+                openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 log.error("OrderSend 异常", e);
-                throw new RuntimeException("订单发送异常", e);
+                FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
+                followOrderDetailEntity.setTraderId(followTraderEntity.getId());
+                followOrderDetailEntity.setAccount(followTraderEntity.getAccount());
+                followOrderDetailEntity.setSymbol(orderInfo.getSymbol());
+                followOrderDetailEntity.setCreator(SecurityUser.getUserId());
+                followOrderDetailEntity.setCreateTime(LocalDateTime.now());
+                followOrderDetailEntity.setSendNo("11111");
+                followOrderDetailEntity.setType(op.getValue());
+                followOrderDetailEntity.setPlacedType(orderInfo.getPlaceType());
+                followOrderDetailEntity.setPlatform(followTraderEntity.getPlatform());
+                followOrderDetailEntity.setBrokeName(brokeName);
+                followOrderDetailEntity.setIpAddr(followTraderEntity.getIpAddr());
+                followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
+                followOrderDetailEntity.setSize(openOrderMapping.getSlaveLots());
+                followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
+                followOrderDetailEntity.setServerHost(FollowConstant.LOCAL_HOST);
+                followOrderDetailService.save(followOrderDetailEntity);
+                logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage());
             }
         }, ThreadPoolUtils.getExecutor());
         return true;
+    }
+
+    private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip,String ex) {
+        FollowTraderLogEntity logEntity = new FollowTraderLogEntity();
+        FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());
+        logEntity.setVpsClient(followVpsEntity.getClientId());
+        logEntity.setVpsId(copier.getServerId());
+        logEntity.setVpsName(copier.getServerName());
+        logEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
+        logEntity.setCreateTime(LocalDateTime.now());
+        logEntity.setType(flag == 0 ? TraderLogTypeEnum.SEND.getType() : TraderLogTypeEnum.REPAIR.getType());
+        String remark = (flag == 0 ? FollowConstant.FOLLOW_SEND : FollowConstant.FOLLOW_REPAIR_SEND)
+                + ", 【失败】策略账号=" + orderInfo.getAccount()
+                + ", 单号=" + orderInfo.getTicket()
+                + ", 跟单账号=" + openOrderMapping.getSlaveAccount()
+                + ", 品种=" + openOrderMapping.getSlaveSymbol()
+                + ", 手数=" + openOrderMapping.getSlaveLots()
+                + ", 类型=" + Op.forValue(openOrderMapping.getSlaveType()).name()
+                + ", 节点=" + ip
+                + ", 失败原因=" + ex
+                ;
+        logEntity.setLogDetail(remark);
+        logEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
+        followTraderLogService.save(logEntity);
     }
 }
