@@ -102,7 +102,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName())) {
                 break;
             }
-            followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
         }
     }
 
@@ -183,6 +182,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 kafkaMessages.add(jsonEvent);
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
+                followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
                 log.error("OrderSend 异常", e);
                 FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
                 followOrderDetailEntity.setTraderId(followTraderEntity.getId());
@@ -200,6 +200,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 followOrderDetailEntity.setSize(openOrderMapping.getSlaveLots());
                 followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
                 followOrderDetailEntity.setServerHost(FollowConstant.LOCAL_HOST);
+                followOrderDetailEntity.setRemark(e.getMessage());
                 followOrderDetailService.save(followOrderDetailEntity);
                 logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage());
             }

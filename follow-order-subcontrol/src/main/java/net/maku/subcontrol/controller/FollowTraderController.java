@@ -98,7 +98,7 @@ public class FollowTraderController {
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
-            FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(vo);
+            FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
