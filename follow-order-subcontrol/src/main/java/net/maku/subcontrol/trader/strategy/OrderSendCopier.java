@@ -12,12 +12,16 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.config.JacksonConfig;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.*;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -35,6 +39,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class OrderSendCopier extends AbstractOperation implements IOperationStrategy {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
+    private final CacheManager cacheManager;
 
 
     @Override
@@ -63,7 +68,9 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         //获得跟单账号对应品种
         FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         String finalStdSymbol = stdSymbol;
-        List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+        // 查看品种匹配 模板
+        List<FollowVarietyEntity> followVarietyEntityListCopier= followVarietyService.getListByTemplated(copier.getTemplateId());
+        List<FollowVarietyEntity> collectCopy = followVarietyEntityListCopier.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
         log.info("跟单品种匹配"+collectCopy);
         List<String> symbolList = orderInfo.getSymbolList();
         collectCopy.forEach(o-> {
@@ -90,7 +97,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
         //  依次对备选品种进行开仓尝试
         for (String symbol : orderInfo.getSymbolList()) {
-            log.info("请求进入时间3.1:"+trader.getTrader().getId());
             orderInfo.setSymbol(symbol);
             AbstractFollowRule.PermitInfo permitInfo = this.followRule.permit(leaderCopier, orderInfo, trader);
             openOrderMapping.setSlaveSymbol(orderInfo.getSymbol());
@@ -168,7 +174,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 LocalDateTime endTime = LocalDateTime.now();
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
                 log.info("请求进入时间结束: " + followTraderEntity.getId());
-
+                openOrderMapping.setCopierOrder(order, orderInfo);
+                openOrderMapping.setFlag(CopyTradeFlag.OS);
+                openOrderMapping.setExtra("[开仓]即时价格成交");
+                followSubscribeOrderService.saveOrUpdate(openOrderMapping);
+                cacheCopierOrder(orderInfo, order,openOrderMapping);
                 // 创建订单结果事件
                 OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
@@ -208,6 +218,17 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         return true;
     }
 
+
+    private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
+        CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
+        String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
+        redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
+        //存入缓存
+        Cache cache = cacheManager.getCache("followOrdersendCache");
+        if (cache != null) {
+            cache.put(mapKey+"#"+orderInfo.getTicket(),cachedOrderInfo); // 修改指定缓存条目
+        }
+    }
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip,String ex) {
         FollowTraderLogEntity logEntity = new FollowTraderLogEntity();
         FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());

@@ -206,15 +206,9 @@ public class KafkaMessageConsumer {
         copier=followTraderService.getFollowById(copier.getId());
         // 处理下单成功结果，记录日志和缓存
         log.info("[MT4跟单者:{}] 下单成功, 订单: {}", copier.getAccount(), order);
-        openOrderMapping.setCopierOrder(order, orderInfo);
-        openOrderMapping.setFlag(CopyTradeFlag.OS);
-        openOrderMapping.setExtra("[开仓]即时价格成交");
 
         // 数据持久化操作
         persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price,ip);
-
-        // 缓存跟单数据
-        cacheCopierOrder(orderInfo, order,openOrderMapping);
 
         // 日志记录
         logFollowOrder(copier, orderInfo, openOrderMapping, flag,ip);
@@ -233,10 +227,6 @@ public class KafkaMessageConsumer {
 //    }
 
     private void persistOrderMapping(FollowSubscribeOrderEntity openOrderMapping, Order order, EaOrderInfo orderInfo, FollowTraderEntity trader, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
-        openOrderMappingService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate()
-                .eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId())
-                .eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket())
-                .eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
         FollowPlatformEntity platForm = followPlatformService.getPlatFormById(trader.getPlatformId().toString());
         log.info("记录详情"+trader.getId()+"订单"+order.Ticket);
         FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
@@ -272,16 +262,6 @@ public class KafkaMessageConsumer {
         updateSendOrder(trader.getId(),order.Ticket);
     }
 
-    private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
-        CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
-        String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
-        redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
-        //存入缓存
-        Cache cache = cacheManager.getCache("followOrdersendCache");
-        if (cache != null) {
-            cache.put(mapKey+"#"+orderInfo.getTicket(),cachedOrderInfo); // 修改指定缓存条目
-        }
-    }
 
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip) {
         FollowTraderLogEntity logEntity = new FollowTraderLogEntity();

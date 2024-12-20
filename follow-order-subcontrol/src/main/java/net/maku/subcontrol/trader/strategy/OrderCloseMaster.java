@@ -39,7 +39,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
     public void operate(AbstractApiTrader abstractApiTrader,EaOrderInfo orderInfo,int flag) {
         FollowTraderEntity trader = abstractApiTrader.getTrader();
         //修改喊单订单记录
-        FollowSubscribeOrderEntity subscribeOrderEntity = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()).eq(FollowSubscribeOrderEntity::getMasterOrSlave, TraderTypeEnum.MASTER_REAL.getType()));
+        FollowSubscribeOrderEntity subscribeOrderEntity = followSubscribeOrderService.getOne(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterId,trader.getId()).eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()).eq(FollowSubscribeOrderEntity::getMasterOrSlave, TraderTypeEnum.MASTER_REAL.getType()));
         if (ObjectUtil.isNotEmpty(subscribeOrderEntity)){
             subscribeOrderEntity.setMasterCloseTime(orderInfo.getCloseTime());
             subscribeOrderEntity.setMasterProfit(orderInfo.getProfit());
@@ -48,7 +48,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             followSubscribeOrderService.updateById(subscribeOrderEntity);
         }
         //修改喊单的跟单订单记录
-        List<FollowSubscribeOrderEntity> subscribeOrderEntityList = followSubscribeOrderService.list(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()).eq(FollowSubscribeOrderEntity::getMasterOrSlave, TraderTypeEnum.SLAVE_REAL.getType()));
+        List<FollowSubscribeOrderEntity> subscribeOrderEntityList = followSubscribeOrderService.list(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()).eq(FollowSubscribeOrderEntity::getMasterId,trader.getId()).eq(FollowSubscribeOrderEntity::getMasterOrSlave, TraderTypeEnum.SLAVE_REAL.getType()));
         subscribeOrderEntityList.forEach(o->{
             o.setMasterCloseTime(orderInfo.getCloseTime());
             o.setMasterProfit(orderInfo.getProfit());

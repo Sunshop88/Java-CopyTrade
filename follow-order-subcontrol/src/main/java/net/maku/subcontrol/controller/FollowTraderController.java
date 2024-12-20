@@ -100,7 +100,7 @@ public class FollowTraderController {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error("账号无法连接");
