@@ -65,27 +65,31 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         // 跟单者(和当前喊单者的平仓订单)，对应的订单号。
         //取出缓存
         CachedCopierOrderInfo cachedCopierOrderInfo = null;
-        Cache cache = cacheManager.getCache("followOrdersendCache");
-        if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(mapKey+"#"+orderInfo.getTicket());
-            if (wrapper != null) {
-                // 转换为指定类型
-                cachedCopierOrderInfo= (CachedCopierOrderInfo) wrapper.get();
-            }else {
+        long startTime = System.currentTimeMillis(); // 记录开始时间
+        cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+        while (ObjectUtil.isEmpty(cachedCopierOrderInfo)){
+            try {
+                Thread.sleep(10);
                 cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
-                log.info("获取信息时间"+copier.getId());
-                if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
-                    log.info("未发现缓存"+mapKey);
-                    FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
-                            .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
-                            .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
-                            .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
-                    if (!ObjectUtils.isEmpty(openOrderMapping)) {
-                        cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
-                    } else {
-                        cachedCopierOrderInfo = new CachedCopierOrderInfo();
-                    }
+                // 检查是否超过3秒
+                if (System.currentTimeMillis() - startTime > 3000) {
+                    return; // 超时直接返回
                 }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            log.info("获取信息时间"+copier.getId());
+        }
+        if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
+            log.info("未发现缓存" + mapKey);
+            FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
+                    .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
+                    .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
+                    .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
+            if (!ObjectUtils.isEmpty(openOrderMapping)) {
+                cachedCopierOrderInfo = new CachedCopierOrderInfo(openOrderMapping);
+            } else {
+                cachedCopierOrderInfo = new CachedCopierOrderInfo();
             }
         }
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)||ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
