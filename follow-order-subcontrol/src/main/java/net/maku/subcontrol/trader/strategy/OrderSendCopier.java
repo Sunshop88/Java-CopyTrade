@@ -105,9 +105,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
             log.info("请求进入时间3.2:"+trader.getTrader().getId());
-            if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName())) {
-                break;
-            }
+            sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName());
         }
     }
 
