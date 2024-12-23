@@ -385,7 +385,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             return false;
         }
         //重连
-        reconnect(vo.getId().toString());
+       // reconnectSlave(vo.getId().toString());
         //处理副表数据
         followService.edit(vo);
         return true;
