@@ -39,7 +39,7 @@ import static net.maku.followcom.util.RestUtil.getHeader;
 @Service
 @AllArgsConstructor
 public class MasControlServiceImpl implements MasControlService {
-    //    private final ClientService clientService;
+        private final ClientService clientService;
     private final FollowVpsService followVpsService;
     //    private final PlatformService platformService;
 //    private final ServerService serverService;
@@ -52,30 +52,39 @@ public class MasControlServiceImpl implements MasControlService {
     public boolean insert(FollowVpsVO vo) {
         Boolean result = followVpsService.save(vo);
         if (!result) {
+            log.error("插入 FollowVps 失败");
             return false;
         }
-//        clientService.insert(vo);
+        clientService.insert(vo);
+        log.info("成功插入 FollowVps 和 Client");
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean update(FollowVpsVO vo) {
-//        Boolean result = clientService.update(vo);
-//        if (!result) {
-//            return false;
-//        }
+        Boolean result = clientService.update(vo);
+        if (!result) {
+            log.error("更新 Client 失败");
+            return false;
+        }
         followVpsService.update(vo);
+        log.info("成功更新 Client 和 FollowVps");
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(List<Integer> idList) {
-//        clientService.delete(idList);
-        followVpsService.delete(idList);
-
-        return true;
+        try {
+            clientService.delete(idList);
+            followVpsService.delete(idList);
+            log.info("成功删除 ID 列表: {}", idList);
+            return true;
+        } catch (Exception e) {
+            log.error("删除 ID 列表时发生错误: {}", idList, e);
+            throw new RuntimeException("删除操作失败", e);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
