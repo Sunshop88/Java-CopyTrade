@@ -214,23 +214,25 @@ public class TraderOrderActiveWebSocket {
                 closeRepairToExtract.parallelStream().forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     //通过备注查询未平仓记录
-                    FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
-                    if (ObjectUtil.isNotEmpty(detailServiceOne)) {
-                        OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                        orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
-                        orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
-                        orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
-                        orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
-                        orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
-                        orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
-                        orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
-                        orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
-                        orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
-                        orderRepairInfoVO.setSlaveOpenTime(detailServiceOne.getOpenTime());
-                        orderRepairInfoVO.setSlaveSymbol(detailServiceOne.getSymbol());
-                        orderRepairInfoVO.setSlaveTicket(detailServiceOne.getOrderNo());
-                        orderRepairInfoVO.setSlaverProfit(detailServiceOne.getProfit().doubleValue());
-                        list.add(orderRepairInfoVO);
+                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
+                    if (ObjectUtil.isNotEmpty(detailServiceList)) {
+                        detailServiceList.forEach(detail->{
+                            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                            orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
+                            orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
+                            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
+                            orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
+                            orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
+                            orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
+                            orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
+                            orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
+                            orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
+                            orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
+                            orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
+                            orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
+                            orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
+                            list.add(orderRepairInfoVO);
+                        });
                     }
                 });
                 if (list.size()>=2){

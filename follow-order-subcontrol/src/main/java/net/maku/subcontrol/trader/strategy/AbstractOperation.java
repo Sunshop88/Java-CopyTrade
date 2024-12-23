@@ -116,6 +116,6 @@ public class AbstractOperation {
     public void startBatchSender() {
         ThreadPoolUtils.getScheduledExecute().scheduleAtFixedRate(() -> {
             batchSendKafkaMessages();
-        }, 0, 5, TimeUnit.SECONDS); // 每 5 秒调用一次
+        }, 0, 1, TimeUnit.SECONDS); // 每 1 秒调用一次
     }
 }

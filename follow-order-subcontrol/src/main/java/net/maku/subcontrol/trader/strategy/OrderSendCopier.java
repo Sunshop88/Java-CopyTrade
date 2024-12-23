@@ -1,6 +1,6 @@
 package net.maku.subcontrol.trader.strategy;
 
-import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,12 +12,16 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.config.JacksonConfig;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.*;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -35,6 +39,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class OrderSendCopier extends AbstractOperation implements IOperationStrategy {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
+    private final CacheManager cacheManager;
 
 
     @Override
@@ -56,14 +61,16 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         log.info("collect"+collect);
         String stdSymbol =orderInfo.getOriSymbol();
         if (ObjectUtil.isNotEmpty(collect)) {
-           stdSymbol = collect.get(0).getStdSymbol();
+            stdSymbol = collect.get(0).getStdSymbol();
         }else {
             log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
         }
         //获得跟单账号对应品种
         FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         String finalStdSymbol = stdSymbol;
-        List<FollowVarietyEntity> collectCopy = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+        // 查看品种匹配 模板
+        List<FollowVarietyEntity> followVarietyEntityListCopier= followVarietyService.getListByTemplated(copier.getTemplateId());
+        List<FollowVarietyEntity> collectCopy = followVarietyEntityListCopier.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
         log.info("跟单品种匹配"+collectCopy);
         List<String> symbolList = orderInfo.getSymbolList();
         collectCopy.forEach(o-> {
@@ -87,22 +94,20 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
         }
         log.info("请求进入时间3:"+trader.getTrader().getId());
-        FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
         //  依次对备选品种进行开仓尝试
-        for (String symbol : orderInfo.getSymbolList()) {
-            log.info("请求进入时间3.1:"+trader.getTrader().getId());
-            orderInfo.setSymbol(symbol);
-            AbstractFollowRule.PermitInfo permitInfo = this.followRule.permit(leaderCopier, orderInfo, trader);
-            openOrderMapping.setSlaveSymbol(orderInfo.getSymbol());
-            openOrderMapping.setLeaderCopier(leaderCopier);
-            openOrderMapping.setSlaveLots(BigDecimal.valueOf(permitInfo.getLots()));
-            openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
-            openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
-            log.info("请求进入时间3.2:"+trader.getTrader().getId());
-            if (sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName())) {
-                break;
-            }
-        }
+        log.info("跟单品种所有"+orderInfo.getSymbolList());//获取第一个匹配
+//        for (String symbol : orderInfo.getSymbolList()) {
+        orderInfo.setSymbol(orderInfo.getSymbolList().get(0));
+        FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, copier);
+        AbstractFollowRule.PermitInfo permitInfo = this.followRule.permit(leaderCopier, orderInfo, trader);
+        openOrderMapping.setSlaveSymbol(orderInfo.getSymbol());
+        openOrderMapping.setLeaderCopier(leaderCopier);
+        openOrderMapping.setSlaveLots(BigDecimal.valueOf(permitInfo.getLots()));
+        openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
+        openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
+        log.info("请求进入时间3.2:"+trader.getTrader().getId());
+        sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName());
+//        }
     }
 
     public boolean sendOrder(AbstractApiTrader trader, EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier,
@@ -168,7 +173,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 LocalDateTime endTime = LocalDateTime.now();
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
                 log.info("请求进入时间结束: " + followTraderEntity.getId());
-
+                openOrderMapping.setCopierOrder(order, orderInfo);
+                openOrderMapping.setFlag(CopyTradeFlag.OS);
+                openOrderMapping.setExtra("[开仓]即时价格成交");
+                followSubscribeOrderService.saveOrUpdate(openOrderMapping);
+                cacheCopierOrder(orderInfo, order,openOrderMapping);
                 // 创建订单结果事件
                 OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
@@ -208,6 +217,12 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         return true;
     }
 
+
+    private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
+        CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
+        String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
+        redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
+    }
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip,String ex) {
         FollowTraderLogEntity logEntity = new FollowTraderLogEntity();
         FollowVpsEntity followVpsEntity = followVpsService.getById(copier.getServerId());

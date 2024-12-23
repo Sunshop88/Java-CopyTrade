@@ -79,7 +79,7 @@ public class FollowSlaveController {
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
-            if (ObjectUtil.isEmpty(followTraderEntity)) {
+            if (ObjectUtil.isEmpty(followTraderEntity)||!followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
                 throw new ServerException("请输入正确喊单账号");
             }
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
@@ -109,9 +109,9 @@ public class FollowSlaveController {
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
 
-            FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVo);
+            FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
-            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(convert);
+            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error("账号无法连接");

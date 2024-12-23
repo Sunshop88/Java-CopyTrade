@@ -188,6 +188,10 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity copier) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+        if (!copier.getIpAddr().equals(FollowConstant.LOCAL_HOST)){
+            log.info("启动校验异常"+copier.getId());
+            return ConCodeEnum.EXCEPTION;
+        }
         String serverNode;
         //优先查看平台默认节点
         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED+copier.getServerId(),copier.getPlatform()))){
@@ -246,7 +250,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         }
         return conCodeEnum;
     }
-    
+
 
     /**
      * 执行跟单者的连接操作做连接操作

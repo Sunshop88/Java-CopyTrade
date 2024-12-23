@@ -155,28 +155,12 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
-                //持仓时间小于2秒，则延迟一秒发送平仓信号，避免客户测试的时候平仓信号先于开仓信号到达
-                int delaySendCloseSignal = delaySendCloseSignal(order.OpenTime, order.CloseTime);
-                if (delaySendCloseSignal == 0) {
-                    ThreadPoolUtils.getExecutor().execute(()->{
-                        EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
-                        //喊单平仓
-                        //发送MT4处理请求
-                        strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
-                    });
-                } else {
-                    try {
-                        Thread.sleep(2000);
-                        ThreadPoolUtils.getExecutor().execute(()->{
-                            EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
-                            //喊单平仓
-                            //发送MT4处理请求
-                            strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
-                        });
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
+                ThreadPoolUtils.getExecutor().execute(()->{
+                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
+                    //喊单平仓
+                    //发送MT4处理请求
+                    strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
+                });
                 flag = 1;
                 //推送到redis
 //                pushCache(leader.getServerId());
@@ -216,7 +200,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
                             }
                             if (orderUpdateEventArgs.Action == PositionClose) {
-//                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
+//                            ThreadPoolUtils.getExecutor().execute(() -> {
                                 //跟单平仓
                                 //发送MT4处理请求
                                 log.info("发送平仓请求"+slaveId);
@@ -228,7 +212,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 }
 //                            });
                             } else {
-//                            ThreadPoolUtils.getScheduledExecuteOrder().execute(() -> {
+//                            ThreadPoolUtils.getExecutor().execute(() -> {
                                 //跟单开仓
                                 //发送MT4处理请求
                                 log.info("发送下单请求"+slaveId);

@@ -100,7 +100,7 @@ public class FollowTraderController {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(convert);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error("账号无法连接");
@@ -347,7 +347,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo) {
         if(vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()){
-             checkParams(vo);
+            checkParams(vo);
         }
         FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
