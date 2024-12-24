@@ -71,13 +71,11 @@ public class TraderOrderActiveWebSocket {
 
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
-    private FollowSubscribeOrderService followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
     private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
     private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-    private FollowPlatformService followPlatformService = SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
@@ -125,7 +123,7 @@ public class TraderOrderActiveWebSocket {
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
-                followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
+                followTraderEntity = followTraderService.getFollowById(Long.valueOf(accountId));
                 abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
@@ -167,11 +165,11 @@ public class TraderOrderActiveWebSocket {
             }
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")) {
-                log.info("follow sub" + slaveId + ":" + traderId);
                 FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
-
-                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
-                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+                FollowTraderEntity master = followTraderService.getFollowById(Long.valueOf(traderId));
+                FollowTraderEntity slave = followTraderService.getFollowById(Long.valueOf(slaveId));
+                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
 
                 List<Object> sendRepairToExtract = new ArrayList<>();
 
@@ -195,7 +193,7 @@ public class TraderOrderActiveWebSocket {
                 }
                 closeRepairToRemove.forEach(repair ->{
                     EaOrderInfo repair1 = (EaOrderInfo) repair;
-                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
+                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
                 });
 
                 List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());

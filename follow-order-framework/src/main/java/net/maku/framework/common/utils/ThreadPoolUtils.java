@@ -11,9 +11,6 @@ public class ThreadPoolUtils {
     // 虚拟线程
     private static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
-    // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(500);
-
     public static ExecutorService getExecutor() {
         return executorService;
     }
@@ -24,24 +21,6 @@ public class ThreadPoolUtils {
      */
     public static void execute(Runnable runnable) {
         executorService.execute(runnable);
-    }
-
-
-
-    /**
-     * 提交延时任务到线程池执行
-     *
-     * @param runnable 要执行的任务
-     */
-    public static void scheduledExecute(Runnable runnable,long time,TimeUnit timeUnit) {
-        scheduledExecutorService.schedule(runnable,time,timeUnit);
-    }
-
-    /**
-     * 提交延时任务到线程池执行
-     */
-    public static ScheduledThreadPoolExecutor getScheduledExecute() {
-        return scheduledExecutorService;
     }
 
 

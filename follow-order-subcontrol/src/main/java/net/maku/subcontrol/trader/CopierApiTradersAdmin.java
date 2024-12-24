@@ -24,6 +24,8 @@ import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.task.UpdateAllTraderInfoTask;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
@@ -81,7 +83,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         //倒计时门栓，大小为mt4账户个数，添加完成一个mt4账户倒计时门栓就减1，直到所有都添加完成。
         CountDownLatch countDownLatch = new CountDownLatch(slaves.size());
         for (FollowTraderEntity slave : slaves) {
-            scheduledExecutorService.submit(() -> {
+            ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
@@ -104,6 +106,19 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         countDownLatch.await();
         log.info("所有的mt4跟单者结束连接服务器");
         this.launchOn = true;
+        //定时更新
+        CompletableFuture.runAsync(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    new UpdateAllTraderInfoTask(TraderTypeEnum.SLAVE_REAL.getType()).run();
+                    TimeUnit.SECONDS.sleep(120); // 固定延迟
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    log.error("定时任务异常: ", e);
+                }
+            }
+        }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
     }
 
     /**
@@ -112,7 +127,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public void startUp(List<FollowTraderEntity> list){
         for (FollowTraderEntity copier : list) {
-            scheduledExecutorService.submit(() -> {
+            ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(copier);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString());
@@ -224,7 +239,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         try {
             CopierApiTrader copierApiTrader = new CopierApiTrader(copier,serverNode, Integer.valueOf(serverport));
             CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore);
-            FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) scheduledExecutorService.submit(connectionTask);
+            FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
             CopierApiTradersAdmin.ConnectionResult result = submit.get();
             FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
             traderUpdateEn.setId(copier.getId());

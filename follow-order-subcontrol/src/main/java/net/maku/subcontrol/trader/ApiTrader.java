@@ -21,7 +21,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.regex.Pattern;
 
 
@@ -45,7 +44,6 @@ public class ApiTrader {
     protected final FollowTraderService traderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);;
     protected final FollowBrokeServerService followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);;
 
-    protected final ScheduledExecutorService scheduledExecutorService=ThreadPoolUtils.getScheduledExecute();;
     protected final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);;
     protected final FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);;
 

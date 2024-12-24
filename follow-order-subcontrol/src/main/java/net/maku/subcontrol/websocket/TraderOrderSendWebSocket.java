@@ -109,24 +109,16 @@ public class TraderOrderSendWebSocket {
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
-            List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))){
-                followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>)redisCache.get(Constant.SYMBOL_SPECIFICATION +traderId);
-            }else {
-                //查询改账号的品种规格
-                followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-                redisCache.set(Constant.SYMBOL_SPECIFICATION+traderId,followSysmbolSpecificationEntityList);
-            }
-
+            Map<String, FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.valueOf(traderId));
             // 查看品种匹配 模板
             List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(leaderApiTrader.getTrader().getTemplateId());
             List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
-
+            log.info("匹配品种"+listv);
             for (FollowVarietyEntity o:listv){
                 if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
                     //查看品种规格
-                    Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationEntityList.stream().filter(fl -> ObjectUtil.equals(o.getBrokerSymbol(), fl.getSymbol())).findFirst();
-                    if (specificationEntity.isPresent()){
+                    if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
+                        log.info("匹配symbol"+o.getBrokerSymbol());
                         this.symbol=o.getBrokerSymbol();
                         break;
                     }
@@ -138,12 +130,12 @@ public class TraderOrderSendWebSocket {
                     sendPeriodicMessage(leaderApiTrader,quoteClient);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
+                    throw new RuntimeException();
                 }
             }, 0, 2, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.info("连接异常"+e);
-            e.printStackTrace();
             throw new RuntimeException();
         }
     }

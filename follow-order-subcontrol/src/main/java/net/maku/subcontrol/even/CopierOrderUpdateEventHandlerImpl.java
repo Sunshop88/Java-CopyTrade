@@ -20,9 +20,6 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     AbstractApiTrader copier4ApiTrader;
     protected FollowOrderHistoryService followOrderHistoryService;
 
-    // 上次执行时间
-    private long lastInvokeTime = 0;
-
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
 
@@ -34,32 +31,18 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
     @Override
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
-        int flag = 0;
         try {
             //发送websocket消息标识
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
                 case PendingFill:
                 case PositionClose:
-                    flag = 1;
                     break;
                 default:
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);
             }
         } catch (IllegalStateException e) {
             e.printStackTrace();
-        }
-        if (flag == 1) {
-            //查看喊单信息
-            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier4ApiTrader.getTrader().getId()));
-            list.forEach(o -> {
-                //发送消息
-                log.info("跟单websocket" + copier4ApiTrader.getTrader().getId());
-                //注释，改1秒
-              //  traderOrderActiveWebSocket.sendPeriodicMessage(o.getMasterId().toString(), copier4ApiTrader.getTrader().getId().toString());
-            });
-            //保存历史数据
-       //     followOrderHistoryService.saveOrderHistory(copier4ApiTrader.quoteClient, copier4ApiTrader.getTrader(),DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
         }
     }
 

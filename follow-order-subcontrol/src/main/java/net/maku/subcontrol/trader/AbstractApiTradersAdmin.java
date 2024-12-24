@@ -27,14 +27,12 @@ public abstract class AbstractApiTradersAdmin {
     protected FollowBrokeServerService followBrokeServerService;
     protected FollowTraderService followTraderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
-    protected ThreadPoolExecutor scheduledExecutorService;
     protected FollowPlatformService followPlatformService;
     protected RedisUtil redisUtil;
 
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
-        scheduledExecutorService= ThreadPoolUtils.getScheduledExecute();
         this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
         this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     }

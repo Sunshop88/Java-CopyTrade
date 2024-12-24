@@ -39,7 +39,6 @@ public class CopierApiTrader extends AbstractApiTrader {
 //    }
 
     public Boolean startTrade() {
-        super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(CopierApiTrader.this), 6, 90, TimeUnit.SECONDS);
         return true;
     }
 

@@ -159,10 +159,6 @@ public class KafkaMessageConsumer {
                 //删除redis中的缓存
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
-                Cache cache = cacheManager.getCache("followOrdersendCache");
-                if (cache != null) {
-                    cache.evictIfPresent(mapKey + "#" + orderInfo.getTicket());
-                }
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
