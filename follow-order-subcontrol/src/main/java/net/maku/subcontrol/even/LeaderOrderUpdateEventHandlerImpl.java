@@ -153,7 +153,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
                 flag = 1;
                 //推送到redis
-//                pushCache(leader.getServerId());
+                 pushCache(leader.getServerId());
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
@@ -165,7 +165,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
                 flag = 1;
                 //推送到redis
-//                pushCache(leader.getServerId());
+              pushCache(leader.getServerId());
                 break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
