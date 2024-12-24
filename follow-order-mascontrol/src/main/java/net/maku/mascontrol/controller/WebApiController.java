@@ -11,10 +11,7 @@ import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowInsertVO;
-import net.maku.followcom.vo.SourceDelVo;
-import net.maku.followcom.vo.SourceInsertVO;
-import net.maku.followcom.vo.SourceUpdateVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,9 +74,9 @@ public class WebApiController {
 
     @PostMapping("/follow/update")
     @Operation(summary = "跟单更新")
-    public Result<String> updateFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
+    public Result<String> updateFollow(@RequestBody @Valid FollowUpdateVO vo, HttpServletRequest req) {
         //根据vpsId查询ip
-        String host = getServerIp(vo.getServerId());
+        String host = getServerIp(vo.getClientId());
         return sendRequest(req, host, FollowConstant.FOLLOW_UPDATE, vo);
 
     }
@@ -90,8 +87,48 @@ public class WebApiController {
         //根据vpsId查询ip
         String host = getServerIp(vo.getServerId());
         return sendRequest(req, host, FollowConstant.FOLLOW_DEL, vo);
-
     }
+
+    @PostMapping("/orderhistory")
+    @Operation(summary = "查询平仓订单")
+    public Result<String> orderhistory(@RequestBody @Valid OrderHistoryVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERHISTORY, vo);
+    }
+
+    @PostMapping("/ordersend")
+    @Operation(summary = "开仓")
+    public Result<String> ordersend(@RequestBody @Valid OrderSendVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERSEND, vo);
+    }
+
+    @PostMapping("/orderclose")
+    @Operation(summary = "平仓")
+    public Result<String> orderclose(@RequestBody @Valid OrderCloseVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERCLOSE, vo);
+    }
+
+    @PostMapping("/ordercloseall")
+    @Operation(summary = "平仓-全平")
+    public Result<String> orderCloseAll(@RequestBody @Valid OrderCloseAllVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERCLOSEALL, vo);
+    }
+
+    @PostMapping("/changepassword")
+    @Operation(summary = "修改密码")
+    public Result<String> changePassword(@RequestBody @Valid ChangePasswordVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.CHANGEPASSWORD, vo);
+    }
+
     /**
      * 根据vpsId查询vpsip
      * **/

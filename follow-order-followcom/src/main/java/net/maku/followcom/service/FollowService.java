@@ -17,9 +17,12 @@ public interface FollowService extends BaseService<FollowEntity> {
 
 
     void edit(FollowUpdateVO followUpdateVO);
+    void edit(FollowEntity followEntity);
 
 
     void del(Long id);
 
     FollowEntity getEntityById(Long id);
+
+
 }

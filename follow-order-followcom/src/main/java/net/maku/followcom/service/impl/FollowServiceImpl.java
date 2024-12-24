@@ -70,6 +70,11 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
         FollowEntity follow = FollowConvert.INSTANCE.convert(followUpdateVO);
         updateById(follow);
     }
+    @Override
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+    public void edit( FollowEntity follow) {
+        updateById(follow);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)

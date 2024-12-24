@@ -1,10 +1,15 @@
 package net.maku.subcontrol.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateUnit;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
@@ -15,29 +20,33 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowApiService;
-import net.maku.subcontrol.trader.CopierApiTrader;
-import net.maku.subcontrol.trader.CopierApiTradersAdmin;
-import net.maku.subcontrol.trader.LeaderApiTrader;
-import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
-import online.mtapi.mt4.Order;
-import online.mtapi.mt4.PlacedType;
+import net.maku.subcontrol.trader.*;
+import online.mtapi.mt4.*;
+import online.mtapi.mt4.Exception.ConnectException;
+import online.mtapi.mt4.Exception.InvalidSymbolException;
+import online.mtapi.mt4.Exception.TimeoutException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
+
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
 
 @Service
 @AllArgsConstructor
@@ -54,6 +63,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowService followService;
     private final FollowVarietyService followVarietyService;
     private final CacheManager cacheManager;
+    private final FollowOrderDetailService followOrderDetailService;
+    private final FollowVpsService followVps;
+    private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
+    private final FollowOrderCloseService followOrderCloseService;
 
     /**
      * 喊单账号保存
@@ -405,6 +418,428 @@ public class FollowApiServiceImpl implements FollowApiService {
         return true;
     }
 
+    @Override
+    public OrderClosePageVO orderCloseList(OrderHistoryVO vo) {
+        Page<FollowOrderDetailEntity> page = new Page<>(vo.getPageNumber(), vo.getPageSize());
+        LambdaQueryWrapper<FollowOrderDetailEntity> query = new LambdaQueryWrapper<>();
+        query.isNotNull(FollowOrderDetailEntity::getCloseId);
+        query.eq(ObjectUtil.isNotEmpty(vo.getAccount()),FollowOrderDetailEntity::getAccount, vo.getAccount());
+        query.in(ObjectUtil.isNotEmpty(vo.getPlaceType()),FollowOrderDetailEntity::getPlacedType, vo.getPlaceType());
+        query.in(ObjectUtil.isNotEmpty(vo.getType()),FollowOrderDetailEntity::getType, vo.getType());
+        query.ge(ObjectUtil.isNotEmpty(vo.getCloseFrom()),FollowOrderDetailEntity::getCloseTime,vo.getCloseFrom());
+        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getCloseTime,vo.getCloseTo());
+        query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()),FollowOrderDetailEntity::getOpenTime,vo.getOpenFrom());
+        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getOpenTime,vo.getOpenTo());
+        if(ObjectUtil.isNotEmpty(vo.getClientId())){
+            FollowVpsEntity vps = followVps.getById(vo.getClientId());
+            query.eq(ObjectUtil.isNotEmpty(vps),FollowOrderDetailEntity::getIpAddr,vps.getIpAddress());
+        }
+        if(ObjectUtil.isNotEmpty(vo.getAccount())){
+            List<Long> traderIds =new ArrayList<>();
+            List<Integer> types = vo.getAccount().stream().map(AccountModelVO::getType).collect(Collectors.toList());
+            if(ObjectUtil.isNotEmpty(types)){
+                List<FollowTraderEntity> ls = followTraderService.lambdaQuery().in(FollowTraderEntity::getType, types).list();
+                List<Long> ids = ls.stream().map(FollowTraderEntity::getId).collect(Collectors.toList());
+                traderIds.addAll(ids);
+            }
+            List<Long> aids = vo.getAccount().stream().map(AccountModelVO::getId).collect(Collectors.toList());
+            if(ObjectUtil.isNotEmpty(aids)){
+                traderIds.addAll(aids);
+            }
+            query.in(ObjectUtil.isNotEmpty(traderIds),FollowOrderDetailEntity::getTraderId,traderIds);
+
+        }
+        Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, query);
+        OrderClosePageVO orderList = OrderClosePageVO.builder().totalCount(pageOrder.getTotal()).orders(FollowOrderDetailConvert.INSTANCE.convertOrderList(page.getRecords())).build();
+        return orderList;
+    }
+
+    @Override
+    public Boolean orderSend(OrderSendVO vo) {
+
+        return null;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean orderClose(OrderCloseVO vo) {
+        List<AccountModelVO> account = vo.getAccount();
+        account.forEach(a->{
+            List<Integer> ticket = vo.getTicket();
+            ticket.forEach(o->{
+                //0=喊单，1=跟单
+                Integer type = a.getType();
+                Long user=null;
+                Integer serverId=null;
+                if(type==0){
+                    SourceEntity     source = sourceService.getEntityById(a.getId());
+                    user=source.getUser();
+                    serverId=source.getClientId();
+                }else{
+                    //查询从表
+                    FollowEntity   followEntity = followService.getEntityById(a.getId());
+                    user=followEntity.getUser();
+                    serverId=followEntity.getClientId();
+                }
+                FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+                FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+                followOrderSendCloseVO.setFlag(0);
+                followOrderSendCloseVO.setTraderId(followTraderVO.getId());
+                if(ObjectUtil.isEmpty(o)){
+                    throw  new ServerException("订单号不能为空");
+                }
+                followOrderSendCloseVO.setOrderNo(o);
+                
+                localOrderClose(followOrderSendCloseVO,followTraderVO);
+            });
+
+        });
+        return true;
+    }
+
+    @Override
+    public Boolean orderCloseAll(OrderCloseAllVO vo) {
+        List<AccountModelVO> account = vo.getAccount();
+        account.forEach(a->{
+            //0=喊单，1=跟单
+            Integer type = a.getType();
+            Long user=null;
+            Integer serverId=null;
+            if(type==0){
+                SourceEntity     source = sourceService.getEntityById(a.getId());
+                user=source.getUser();
+                serverId=source.getClientId();
+            }else{
+                //查询从表
+                FollowEntity   followEntity = followService.getEntityById(a.getId());
+                user=followEntity.getUser();
+                serverId=followEntity.getClientId();
+            }
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+            followOrderSendCloseVO.setFlag(1);
+            followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());
+            followOrderSendCloseVO.setTraderId(followTraderVO.getId());
+            localOrderClose(followOrderSendCloseVO,followTraderVO);
+        });
+        return  true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean changePassword(ChangePasswordVO vo) {
+        List<AccountModelVO> account = vo.getAccount();
+        account.forEach(a->{
+            //0=喊单，1=跟单
+            Integer type = a.getType();
+            Long user=null;
+            Integer serverId=null;
+            SourceEntity source =null;
+            FollowEntity followEntity=null;
+            if(type==0){
+                 source = sourceService.getEntityById(a.getId());
+                user=source.getUser();
+                serverId=source.getClientId();
+            }else{
+                //查询从表
+                followEntity = followService.getEntityById(a.getId());
+                user=followEntity.getUser();
+                serverId=followEntity.getClientId();
+            }
+
+            QuoteClient quoteClient = null;
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            quoteClient=getQuoteClient(a.getId(),followTraderVO,quoteClient);
+            try {
+                quoteClient.ChangePassword(vo.getPassword(), vo.getInvestor());
+            } catch (IOException e) {
+                throw new ServerException("mt4修改密码异常");
+            } catch (online.mtapi.mt4.Exception.ServerException e) {
+                throw new ServerException("mt4修改密码异常");
+            }
+            //如果修改登录密码触发
+            if (!vo.getInvestor()){
+                followTraderVO.setPassword(vo.getPassword());
+                followTraderService.updateById(followTraderVO);
+                if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                    reconnect(followTraderVO.getId().toString());
+                }else{
+                    reconnectSlave(followTraderVO.getId().toString());
+                }
+                if(type==0){
+                    source = sourceService.getEntityById(a.getId());
+                    source.setPassword(vo.getPassword());
+                    sourceService.edit(source);
+                }else{
+                    //修改从数据库
+                    followEntity.setPassword(vo.getPassword());
+                    followService.edit(followEntity);
+                }
+
+            }
+
+        });
+
+        return true;
+    }
+
+    private Boolean localOrderClose(FollowOrderSendCloseVO vo, FollowTraderEntity followTraderVO){
+        checkParams(vo);
+        if (ObjectUtil.isEmpty(followTraderVO)) {
+            throw new ServerException("账号不存在");
+        }
+        //检查vps是否正常
+        FollowVpsEntity followVpsEntity = followVps.getById(followTraderVO.getServerId());
+        if (followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+            throw new ServerException("VPS服务异常，请检查");
+        }
+        AbstractApiTrader abstractApiTrader;
+        QuoteClient quoteClient = null;
+        quoteClient = getQuoteClient(vo.getTraderId(), followTraderVO, quoteClient);
+        //获取vps数据
+        if (ObjectUtil.isEmpty(quoteClient)){
+            throw new ServerException(vo.getTraderId()+"登录异常");
+        }
+        //判断是否全平,全平走这里逻辑，处理完成退出
+        if (vo.getIsCloseAll() == TraderRepairEnum.CLOSE.getType()) {
+            //查找mt4订单
+            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            CountDownLatch countDownLatch = new CountDownLatch(openedOrders.size());
+            for (int i = 0; i < openedOrders.size(); i++) {
+                Order order = openedOrders.get(i);
+                QuoteClient finalQuoteClient = quoteClient;
+                ThreadPoolUtils.execute(() -> {
+                    FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+                    BeanUtils.copyProperties(vo, followOrderSendCloseVO);
+                    followOrderSendCloseVO.setOrderNo(order.Ticket);
+                    followOrderSendCloseVO.setSymbol(order.Symbol);
+                    followOrderSendCloseVO.setSize(order.Lots);
+                    handleOrder(finalQuoteClient,followOrderSendCloseVO);
+                    countDownLatch.countDown();
+                });
+            }
+          
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                log.error("全平处理异常:" + e.getMessage());
+                throw new ServerException("全平处理异常:" + e);
+            }
+            return true;
+        }
+
+        boolean result = handleOrder(quoteClient,vo);
+        if (!result) {
+            throw  new ServerException(followTraderVO.getAccount() + "正在平仓,请稍后再试");
+        }
+        return true;
+    }
+
+    private QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
+        AbstractApiTrader abstractApiTrader;
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(traderId.toString());
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS ) {
+                    quoteClient =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
+                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    leaderApiTrader1.startTrade();
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+        }else {
+            abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(followTraderVO.getId().toString());
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
+                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    copierApiTrader1.setTrader(followTraderVO);
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+        }
+        return quoteClient;
+    }
+
+
+    private Boolean handleOrder(QuoteClient quoteClient, FollowOrderSendCloseVO vo) {
+        //判断是否正在平仓
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
+            return false;
+        }
+        //登录
+        OrderClient oc;
+        if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
+            oc = quoteClient.OrderClient;
+        } else {
+            oc = new OrderClient(quoteClient);
+        }
+        //指定平仓
+        List<FollowOrderDetailEntity> detailServiceOnes = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, vo.getOrderNo()));
+
+        if (ObjectUtil.isNotEmpty(detailServiceOnes)) {
+            detailServiceOnes.forEach(detailServiceOne->{
+                updateCloseOrder(detailServiceOne, quoteClient, oc, null);
+                ThreadPoolUtils.execute(() -> {
+                    //进行平仓滑点分析
+                    updateCloseSlip(vo.getTraderId(), detailServiceOne.getSymbol(), null, 2);
+                });
+            });
+        } else {
+            try {
+                Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
+                if (ObjectUtil.isEmpty(quoteClient.GetQuote(order.Symbol))) {
+                    //订阅
+                    quoteClient.Subscribe(vo.getSymbol());
+                }
+                double bid =0;
+                double ask =0;
+                int loopTimes=1;
+                QuoteEventArgs quoteEventArgs = null;
+                while (quoteEventArgs == null && quoteClient.Connected()) {
+                    quoteEventArgs = quoteClient.GetQuote(vo.getSymbol());
+                    if (++loopTimes > 20) {
+                        break;
+                    } else {
+                        Thread.sleep(50);
+                    }
+                }
+                bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+
+                if (order.Type.getValue() == Buy.getValue()) {
+                    oc.OrderClose(order.Symbol, vo.getOrderNo(), order.Lots, bid, 0);
+                } else {
+                    oc.OrderClose(order.Symbol, vo.getOrderNo(), order.Lots, ask, 0);
+                }
+            } catch (Exception e) {
+                log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
+            }
+        }
+        return true;
+    }
+
+
+    private void updateCloseSlip(long traderId, String symbol, FollowOrderCloseEntity followOrderCloseEntity, Integer flag) {
+        if (flag != 2) {
+            //查看平仓所有数据
+            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getCloseId, followOrderCloseEntity.getId()));
+            followOrderCloseEntity.setFailNum((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
+            followOrderCloseEntity.setSuccessNum(list.size() - followOrderCloseEntity.getFailNum());
+            if (flag == 1) {
+                //间隔平仓判断
+                if (followOrderCloseEntity.getTotalNum() == list.size()) {
+                    followOrderCloseEntity.setFinishTime(LocalDateTime.now());
+                    followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                }
+            } else {
+                //同步平仓直接结束
+                followOrderCloseEntity.setFinishTime(LocalDateTime.now());
+                followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            }
+            followOrderCloseService.updateById(followOrderCloseEntity);
+        }
+
+        LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
+                .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .isNull(FollowOrderDetailEntity::getClosePriceSlip);
+        //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
+        if (ObjectUtil.isNotEmpty(symbol)) {
+            followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);
+        }
+        List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
+        //获取symbol信息
+        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
+        //开始平仓
+        list.parallelStream().forEach(o -> {
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+            BigDecimal hd;
+            if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
+                //如果forex 并包含JPY 也是100
+                if (o.getSymbol().contains("JPY")) {
+                    hd = new BigDecimal("100");
+                } else {
+                    hd = new BigDecimal("10000");
+                }
+            } else {
+                //如果非forex 都是 100
+                hd = new BigDecimal("100");
+            }
+            long seconds = DateUtil.between(DateUtil.date(o.getResponseCloseTime()), DateUtil.date(o.getRequestCloseTime()), DateUnit.MS);
+            o.setCloseTimeDifference((int) seconds);
+            o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
+            followOrderDetailService.updateById(o);
+        });
+    }
+
+    private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, QuoteClient quoteClient, OrderClient oc, FollowOrderCloseEntity followOrderCloseEntity) {
+        String symbol = followOrderDetailEntity.getSymbol();
+        Integer orderNo = followOrderDetailEntity.getOrderNo();
+        try {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
+                //订阅
+                quoteClient.Subscribe(symbol);
+            }
+            double bid =0;
+            double ask =0;
+            int loopTimes=1;
+            QuoteEventArgs quoteEventArgs = null;
+            while (quoteEventArgs == null && quoteClient.Connected()) {
+                quoteEventArgs = quoteClient.GetQuote(symbol);
+                if (++loopTimes > 20) {
+                    break;
+                } else {
+                    Thread.sleep(50);
+                }
+            }
+            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+            LocalDateTime nowdate = LocalDateTime.now();
+            log.info("平仓信息{},{},{},{},{}", symbol, orderNo, followOrderDetailEntity.getSize(), bid, ask);
+            if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
+                followOrderDetailEntity.setCloseId(followOrderCloseEntity.getId());
+            }
+            Order orderResult;
+            if (followOrderDetailEntity.getType() == Buy.getValue()) {
+                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
+                followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
+            } else {
+                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
+                followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
+            }
+            log.info("订单 " + orderNo + ": 平仓 " + orderResult);
+            //保存平仓信息
+            followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
+            followOrderDetailEntity.setRequestCloseTime(nowdate);
+            followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
+            followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
+            followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
+            followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
+            followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
+            followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+        } catch (Exception e) {
+            log.error(orderNo+"平仓出错" + e.getMessage());
+            if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
+                followOrderDetailEntity.setRemark("平仓出错" + e.getMessage());
+            }
+        }
+        followOrderDetailService.updateById(followOrderDetailEntity);
+        if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
+            followOrderCloseService.updateById(followOrderCloseEntity);
+        }
+    }
+    private void  checkParams(FollowOrderSendCloseVO vo){
+        if (ObjectUtil.isEmpty(vo.getTraderId()) ) {
+            throw new ServerException("账号id不能为空");
+        }
+    }
     private void reconnect(String traderId) {
         try{
             leaderApiTradersAdmin.removeTrader(traderId);

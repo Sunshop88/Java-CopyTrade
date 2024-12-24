@@ -305,6 +305,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 accountCache.setBuy(0);
                                 accountCache.setSell(0);
                                 accountCache.setProfit(0.00);
+                                accountCache.setCredit(quoteClient.Credit);
+
                                 orderMap.forEach((a, b) -> {
                                     switch (a) {
                                         case Buy:

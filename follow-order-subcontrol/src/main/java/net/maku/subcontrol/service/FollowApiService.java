@@ -1,6 +1,7 @@
 package net.maku.subcontrol.service;
 
 
+import jakarta.validation.Valid;
 import net.maku.followcom.vo.*;
 
 import java.util.List;
@@ -29,4 +30,15 @@ public interface FollowApiService {
     Boolean updateFollow(FollowUpdateVO vo);
 
     Boolean delFollow(SourceDelVo vo);
+
+    //查询平仓订单
+    OrderClosePageVO orderCloseList(OrderHistoryVO vo);
+
+    Boolean orderSend(OrderSendVO vo);
+
+    Boolean orderClose(OrderCloseVO vo);
+
+    Boolean orderCloseAll( OrderCloseAllVO vo);
+
+    Boolean changePassword( ChangePasswordVO vo);
 }

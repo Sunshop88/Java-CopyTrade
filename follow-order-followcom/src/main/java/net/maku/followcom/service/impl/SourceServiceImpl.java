@@ -74,6 +74,13 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
 
     @Override
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
+    public void edit(  SourceEntity sourceEntity) {
+        //根据平台和账号进行编辑
+        updateById(sourceEntity);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void del(Long id) {
         removeById(id);
     }

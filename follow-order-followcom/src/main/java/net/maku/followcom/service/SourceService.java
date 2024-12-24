@@ -17,8 +17,11 @@ public interface SourceService extends BaseService<SourceEntity> {
     void add(SourceInsertVO vo);
 
     void edit(SourceUpdateVO vo);
+    void edit(SourceEntity source);
 
     void del(Long id);
 
     SourceEntity getEntityById(@NotNull(message = "Id不能为空") Long id);
+
+
 }
