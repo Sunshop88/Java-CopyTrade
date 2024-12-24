@@ -44,6 +44,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -64,6 +65,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     protected FollowPlatformService followPlatformService;
     protected FollowVpsService followVpsService;
     protected FollowTraderLogService followTraderLogService;
+    protected FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeService.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private final Map<AcEnum, IOperationStrategy> strategyMap;
     private RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
@@ -239,7 +241,37 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         });
     }
 
-
+    private QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
+        AbstractApiTrader abstractApiTrader;
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(traderId.toString());
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS ) {
+                    quoteClient =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
+                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    leaderApiTrader1.startTrade();
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+        }else {
+            abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(followTraderVO.getId().toString());
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
+                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    copierApiTrader1.setTrader(followTraderVO);
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+        }
+        return quoteClient;
+    }
     /**
      * 推送redis缓存
      */
@@ -247,6 +279,9 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         ThreadPoolUtils.execute(() -> {
             //查询当前vpsId所有账号
             List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+            //获取
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
+            Map<Long, FollowTraderSubscribeEntity> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, Function.identity()));
             //根据vpsId账号分组
             Map<Integer, List<FollowTraderEntity>> map = followTraderList.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId));
             //查询所有平台
@@ -264,6 +299,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     for (FollowTraderEntity h : v) {
                         ThreadPoolUtils.execute(() -> {
                             AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
+                            accountCache.setType("4");
                             List<OrderCacheVO> orderCaches = new ArrayList<>();
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
@@ -273,39 +309,45 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
                             accountCache.setPlatformType(platformType);
                             //订单信息
-                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId());
                             QuoteClient quoteClient = null;
-                            if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
-                                try {
-                                    leaderApiTradersAdmin.removeTrader(h.getId().toString());
-                                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(h);
-                                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                                        quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString()).quoteClient;
-                                        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
-                                        leaderApiTrader1.startTrade();
-                                    } else {
-                                        log.error("登录异常");
-                                    }
-                                } catch (Exception e) {
-                                    log.error("推送从redis数据,登录异常:" + e);
-                                }
-                            } else {
-                                quoteClient = leaderApiTrader.quoteClient;
-
-                            }
+                            getQuoteClient(h.getId(),h,quoteClient);
                             //所有持仓
                             if (ObjectUtil.isNotEmpty(quoteClient)) {
                                 Order[] orders = quoteClient.GetOpenedOrders();
                                 //账号信息
                                 ConGroup account = quoteClient.Account();
-                                accountCache.setCredit(account.credit);
+                                accountCache.setCredit(quoteClient.Credit);
                                 Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
                                 accountCache.setLots(0.00);
                                 accountCache.setCount(0);
                                 accountCache.setBuy(0);
                                 accountCache.setSell(0);
                                 accountCache.setProfit(0.00);
-                                accountCache.setCredit(quoteClient.Credit);
+                               // accountCache.setCredit(quoteClient.Credit);
+                                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                    FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                    String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                  //  0-固定手数 1-手数比例 2-净值比例
+                                    String mode =null;
+                                    switch (followTraderSubscribeEntity.getFollowMode()) {
+                                        case(0):
+                                            mode="固定";
+                                            break;
+                                        case(1):
+                                                mode="手";
+                                                break;
+                                        case(2):
+                                            mode="净";
+                                            break;
+                                    }
+                                    accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
+                                }
+
+                                if(quoteClient.Connected()){
+                                    accountCache.setManagerStatus("Connected");
+                                }else{
+                                    accountCache.setManagerStatus("Disconnected");
+                                }
 
                                 orderMap.forEach((a, b) -> {
                                     switch (a) {
@@ -340,6 +382,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                             orderCacheVO.setCommission(x.Commission);
                                             orderCacheVO.setComment(x.Comment);
                                             orderCacheVO.setProfit(x.Profit);
+                                            if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                                FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                                orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
+                                            }
+                                            orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
                                             //  orderCacheVO.setPlaceType(h.getUpdater());
                                             orderCaches.add(orderCacheVO);
                                             accountCache.setLots(accountCache.getLots() + x.Lots);
