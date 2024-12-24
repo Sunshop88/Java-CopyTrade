@@ -14,6 +14,8 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.followcom.vo.FollowVpsVO;
+import net.maku.followcom.vo.PlatformVO;
+import net.maku.followcom.vo.ServerVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
@@ -39,10 +41,10 @@ import static net.maku.followcom.util.RestUtil.getHeader;
 @Service
 @AllArgsConstructor
 public class MasControlServiceImpl implements MasControlService {
-        private final ClientService clientService;
+    private final ClientService clientService;
     private final FollowVpsService followVpsService;
-    //    private final PlatformService platformService;
-//    private final ServerService serverService;
+    private final PlatformService platformService;
+    private final ServerService serverService;
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
 
@@ -90,14 +92,20 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean deletePlatform(List<Long> idList) {
-//        serverService.delete(idList);
-//        platformService.delete(idList);
-
-        followPlatformService.delete(idList);
-        return true;
+        try {
+            // 假设 serverService 和 platformService 已经恢复使用
+            serverService.delete(idList);
+            platformService.delete(idList);
+            followPlatformService.delete(idList);
+            log.info("成功删除平台 ID 列表: {}", idList);
+            return true;
+        } catch (Exception e) {
+            log.error("删除平台时发生错误: {}", idList, e);
+            throw new ServerException("删除平台操作失败", e);
+        }
     }
 
-//    @Transactional(rollbackFor = Exception.class)
+    //    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
         FollowPlatformEntity currentPlatform = followPlatformService.getById(vo.getId());
@@ -144,6 +152,25 @@ public class MasControlServiceImpl implements MasControlService {
                     }
                     // 进行测速
                     List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
+
+                    //外部接口
+                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
+                    if (ObjectUtil.isEmpty(platformEntityList)) {
+                        PlatformEntity platformEntity = new PlatformEntity();
+                        platformEntity.setName(bro);
+                        platformEntity.setType(vo.getPlatformType());
+                        platformService.save(platformEntity);
+
+                        Integer platformId = platformEntity.getId();
+                        list.forEach(o -> {
+                            ServerEntity serverEntity = new ServerEntity();
+                            serverEntity.setHost(o.getServerNode());
+                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
+                            serverEntity.setPlatformId(platformId);
+                            serverService.insert(serverEntity);
+                        });
+                    }
+
                     list.parallelStream().forEach(o -> {
                         String ipAddress = o.getServerNode(); // 目标IP地址
                         int port = Integer.valueOf(o.getServerPort()); // 目标端口号
@@ -177,33 +204,37 @@ public class MasControlServiceImpl implements MasControlService {
 //                vo.getPlatformList().forEach(bro -> {
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
-                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
-                    if (!list.isEmpty()) {
-                        FollowBrokeServerEntity followBrokeServer = list.get(0);
-                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
-                    }
+                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
+                if (!list.isEmpty()) {
+                    FollowBrokeServerEntity followBrokeServer = list.get(0);
+                    followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, followBrokeServer.getServerName()).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                }
 //                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
-                    });
+            });
         });
 //                platformEntity.set("name", bro);
 //                platformEntity.set("type", vo.getPlatformType());
 //                platformService.update(platformEntity);
 
-            try {
-                // 等待所有线程完成
-                latch.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        try {
+            // 等待所有线程完成
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         followPlatformService.update(vo);
         // 删除已移除的服务器
         if (!serversToRemove.isEmpty()) {
             followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
                     .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
                     .in(FollowPlatformEntity::getServer, serversToRemove));
+
+            //外部接口
+            platformService.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
         }
-        String authorization=req.getHeader("Authorization");
-        ThreadPoolUtils.getExecutor().execute(()->{
+        String authorization = req.getHeader("Authorization");
+        ThreadPoolUtils.getExecutor().execute(() -> {
             //更新缓存
             for (FollowVpsEntity o : followVpsService.list()) {
                 String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE);
@@ -254,6 +285,26 @@ public class MasControlServiceImpl implements MasControlService {
                     }
                     // 进行测速
                     List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
+
+                    //外部接口
+                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
+                    if (ObjectUtil.isEmpty(platformEntityList)) {
+                        PlatformEntity platformEntity = new PlatformEntity();
+                        platformEntity.setName(bro);
+                        platformEntity.setType(vo.getPlatformType());
+                        platformService.save(platformEntity);
+
+                        Integer platformId = platformEntity.getId();
+                        list.forEach(o -> {
+                            ServerEntity serverEntity = new ServerEntity();
+                            serverEntity.setHost(o.getServerNode());
+                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
+                            log.info("保存服务" + o.getServerNode() + ":" + o.getServerPort());
+                            serverEntity.setPlatformId(platformId);
+                            serverService.insert(serverEntity);
+                        });
+                    }
+
                     list.parallelStream().forEach(o -> {
                         String ipAddress = o.getServerNode(); // 目标IP地址
                         int port = Integer.valueOf(o.getServerPort()); // 目标端口号
@@ -282,23 +333,19 @@ public class MasControlServiceImpl implements MasControlService {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-//            });
-//                });
 //                vo.getPlatformList().forEach(bro -> {
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
+
                 List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
                 if (!list.isEmpty()) {
                     FollowBrokeServerEntity followBrokeServer = list.get(0);
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                    //外部接口
+                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, bro).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                 }
-//                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
         });
-//                platformEntity.set("name", bro);
-//                platformEntity.set("type", vo.getPlatformType());
-//                platformService.update(platformEntity);
-
         try {
             // 等待所有线程完成
             latch.await();
