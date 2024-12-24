@@ -231,6 +231,13 @@ public class MasControlServiceImpl implements MasControlService {
                     .in(FollowPlatformEntity::getServer, serversToRemove));
 
             //外部接口
+            //根据serversToRemove查询platform的id
+            List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
+            platformEntityList.forEach(o -> {
+                Integer platformId = o.getId();
+                //删除server
+                serverService.remove(new LambdaQueryWrapper<ServerEntity>().eq(ServerEntity::getPlatformId, platformId));
+            });
             platformService.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
         }
         String authorization = req.getHeader("Authorization");
