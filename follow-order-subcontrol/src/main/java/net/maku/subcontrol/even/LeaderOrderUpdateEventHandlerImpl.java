@@ -59,6 +59,7 @@ import static online.mtapi.mt4.UpdateAction.*;
 public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
+
     protected FollowOrderHistoryService followOrderHistoryService;
     protected FollowVarietyService followVarietyService;
     protected FollowTraderService followTraderService;
@@ -407,7 +408,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     }
                     //转出json格式
                     String json = convertJson(accounts);
-//                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+                    redisUtil.setSlaveRedis(Integer.toString(k), json);
                 }
             });
         });
