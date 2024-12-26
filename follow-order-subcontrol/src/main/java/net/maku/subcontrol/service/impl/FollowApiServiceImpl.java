@@ -394,9 +394,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowTraderEntity entity = followTraderService.getOne(query);
 
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
-        Integer mode = FollowModeEnum.getVal(vo.getMode());
+   /*     Integer mode = FollowModeEnum.getVal(vo.getMode());
         log.info("{}跟随模式{}",vo.getMode(),mode);
-        followUpdateSalveVo.setFollowMode(mode);
+        followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
         followUpdateSalveVo.setPassword(pwd);

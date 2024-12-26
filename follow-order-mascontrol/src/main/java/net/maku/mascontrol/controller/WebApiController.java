@@ -75,16 +75,16 @@ public class WebApiController {
 
     @PostMapping("/follow/update")
     @Operation(summary = "跟单更新")
-    public Result<String> updateFollow(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
+    public Result<String> updateFollow(@RequestBody @Valid FollowUpdateVO vo, HttpServletRequest req) {
         //根据vpsId查询ip
-        String host = getServerIp(vo.getServerId());
+        String host = getServerIp(vo.getClientId());
         return sendRequest(req, host, FollowConstant.FOLLOW_UPDATE, vo);
 
     }
 
     @PostMapping("/follow/delete")
     @Operation(summary = "跟单删除")
-    public Result<String> delFollow(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
+    public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
         //根据vpsId查询ip
         String host = getServerIp(vo.getServerId());
         return sendRequest(req, host, FollowConstant.FOLLOW_DEL, vo);
