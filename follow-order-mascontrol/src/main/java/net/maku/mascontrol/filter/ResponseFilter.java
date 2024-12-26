@@ -25,9 +25,21 @@ public class ResponseFilter implements Filter {
             HttpServletResponse httpResponse = (HttpServletResponse) servletResponse;
             // 定义一个可修改的响应包装类
             ResponseWrapper responseWrapper = new ResponseWrapper(httpResponse);
+            //校验密码：417B110F1E71BD2CFE96366E67849B0B
+            String sign = httpRequest.getHeader("x-sign");
+            //把返回值输出到客户端
+            ServletOutputStream out = servletResponse.getOutputStream();
+            if(!sign.equals("417B110F1E71BD2CFE96366E67849B0B")){
+                JSONObject json = new JSONObject();
+                // 0表示成功，其他值表示失败
+                json.put("success", false);
+                json.put("message", "签名无效,暂无权限访问");
+                json.put("data", null);
+                out.write(json.toJSONString().getBytes());
+               return;
+            }
             // 继续进行过滤链
             filterChain.doFilter(servletRequest, responseWrapper);
-
             // 获取响应内容并进行修改
             String oldData = new String(responseWrapper.getContent());
             JSONObject oldJson = JSONObject.parseObject(oldData);
@@ -37,8 +49,7 @@ public class ResponseFilter implements Filter {
             newJson.put("message", oldJson.get("msg"));
             newJson.put("data", oldJson.get("data"));
             // 将修改后的内容写入响应
-            //把返回值输出到客户端
-            ServletOutputStream out = servletResponse.getOutputStream();
+            out.write(newJson.toJSONString().getBytes());
             out.write(newJson.toJSONString().getBytes());
             out.flush();
         } else {
