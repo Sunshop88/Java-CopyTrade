@@ -37,22 +37,24 @@ public class ResponseFilter implements Filter {
                 json.put("message", "签名无效,暂无权限访问");
                 json.put("data", null);
                 out.write(json.toJSONString().getBytes());
-               return;
+                filterChain.doFilter(servletRequest, servletResponse);
+
+            }else{
+                // 继续进行过滤链
+                filterChain.doFilter(servletRequest, responseWrapper);
+                // 获取响应内容并进行修改
+                String oldData = new String(responseWrapper.getContent());
+                JSONObject oldJson = JSONObject.parseObject(oldData);
+                JSONObject newJson = new JSONObject();
+                // 0表示成功，其他值表示失败
+                newJson.put("success", oldJson.getInteger("code") == 0 ? true : false);
+                newJson.put("message", oldJson.get("msg"));
+                newJson.put("data", oldJson.getString("data"));
+                // 将修改后的内容写入响应
+                out.write(newJson.toJSONString().getBytes());
+                out.flush();
             }
-            // 继续进行过滤链
-            filterChain.doFilter(servletRequest, responseWrapper);
-            // 获取响应内容并进行修改
-            String oldData = new String(responseWrapper.getContent());
-            JSONObject oldJson = JSONObject.parseObject(oldData);
-            JSONObject newJson = new JSONObject();
-            // 0表示成功，其他值表示失败
-            newJson.put("success", oldJson.getInteger("code") == 0 ? true : false);
-            newJson.put("message", oldJson.get("msg"));
-            newJson.put("data", oldJson.get("data"));
-            // 将修改后的内容写入响应
-            out.write(newJson.toJSONString().getBytes());
-            out.write(newJson.toJSONString().getBytes());
-            out.flush();
+
         } else {
             filterChain.doFilter(servletRequest, servletResponse);
         }

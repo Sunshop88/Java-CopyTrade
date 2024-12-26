@@ -1,5 +1,6 @@
 package net.maku.mascontrol.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -74,9 +75,9 @@ public class WebApiController {
 
     @PostMapping("/follow/update")
     @Operation(summary = "跟单更新")
-    public Result<String> updateFollow(@RequestBody @Valid FollowUpdateVO vo, HttpServletRequest req) {
+    public Result<String> updateFollow(@RequestBody @Valid SourceDelVo vo, HttpServletRequest req) {
         //根据vpsId查询ip
-        String host = getServerIp(vo.getClientId());
+        String host = getServerIp(vo.getServerId());
         return sendRequest(req, host, FollowConstant.FOLLOW_UPDATE, vo);
 
     }
@@ -107,10 +108,11 @@ public class WebApiController {
 
     @PostMapping("/orderclose")
     @Operation(summary = "平仓")
-    public Result<String> orderclose(@RequestBody @Valid OrderCloseVO vo, HttpServletRequest req) {
+    public Result<OrderClosePageVO> orderclose(@RequestBody @Valid OrderCloseVO vo, HttpServletRequest req) {
         //根据vpsId查询ip
         String host = getServerIp(vo.getClientId());
-        return sendRequest(req, host, FollowConstant.ORDERCLOSE, vo);
+        Result<String> stringResult = sendRequest(req, host, FollowConstant.ORDERCLOSE, vo);
+        return Result.ok(JSONObject.parseObject(stringResult.getData(), OrderClosePageVO.class));
     }
 
     @PostMapping("/ordercloseall")
@@ -134,7 +136,8 @@ public class WebApiController {
      * **/
     private String getServerIp(Integer serverId){
         FollowVpsEntity vps = followVpsService.getById(serverId);
-        return vps.getIpAddress();
+      //  return vps.getIpAddress();
+        return "127.0.0.1";
     }
     /**
      * 远程调用方法封装
@@ -144,6 +147,7 @@ public class WebApiController {
         String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
         ObjectMapper objectMapper = new ObjectMapper();
         // 将对象序列化为 JSON
         String jsonBody = null;
@@ -154,15 +158,16 @@ public class WebApiController {
 
         }
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-        ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-        JSONObject body = response.getBody();
+        ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.POST, entity, byte[].class);
+        byte[] data = response.getBody();
+       JSONObject body = JSON.parseObject(new String(data));
         log.info("远程调用响应:{}", body);
         if (body != null && !body.getString("code").equals("0")) {
             String msg = body.getString("msg");
             log.error("远程调用异常: {}", body.get("msg"));
-            Result.error("远程调用异常: " + body.get("msg"));
+            return    Result.error("远程调用异常: " + body.get("msg"));
         }
-        return Result.ok();
+        return Result.ok(body.getString("data"));
     }
 
 }

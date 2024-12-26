@@ -1,8 +1,10 @@
 package net.maku.subcontrol.filter;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import net.maku.framework.common.utils.Result;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -23,12 +25,8 @@ public class RequestFilter implements Filter {
             //把返回值输出到客户端
             ServletOutputStream out = servletResponse.getOutputStream();
             if (ObjectUtil.isEmpty(sign) || !sign.equals("417B110F1E71BD2CFE96366E67849B0B")) {
-                JSONObject json = new JSONObject();
-                // 0表示成功，其他值表示失败
-                json.put("success", false);
-                json.put("message", "签名无效,暂无权限访问");
-                json.put("data", null);
-                out.write(json.toJSONString().getBytes());
+                String jsonString = JSON.toJSONString(Result.error("签名无效,暂无权限访问"));
+                out.write(jsonString.getBytes());
                 return;
             }
         }

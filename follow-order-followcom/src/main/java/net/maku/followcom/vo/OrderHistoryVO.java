@@ -43,11 +43,11 @@ public class OrderHistoryVO  implements Serializable {
     private Date openTo;
     //页码 ,
     @JsonProperty(value = "PageNumber")
-    @NotEmpty(message ="页码不能为空" )
+    @NotNull(message ="页码不能为空" )
     private Integer pageNumber;
     //页面大小
     @JsonProperty(value = "PageSize")
-    @NotEmpty(message ="页面大小不能为空" )
+    @NotNull(message ="页面大小不能为空" )
     private Integer pageSize;
     //是否从服务器下载 没有
     @JsonProperty(value = "IsFromServer")
