@@ -108,7 +108,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 openOrderMapping.setSlaveLots(BigDecimal.valueOf(permitInfo.getLots()));
                 openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
                 openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
-                log.info("请求进入时间3.2:"+trader.getTrader().getId());
                 if (sendOrder(trader,eaOrderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName())){
                     break;
                 }
@@ -123,7 +122,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             openOrderMapping.setMasterOrSlave(TraderTypeEnum.SLAVE_REAL.getType());
             openOrderMapping.setExtra("[开仓]" + permitInfo.getExtra());
             log.info("请求进入时间3.2:"+trader.getTrader().getId());
-            sendOrderAsy(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName());
+            if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+                sendOrderAsy(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName());
+            }else {
+                sendOrder(trader,orderInfo, leaderCopier, openOrderMapping,flag,copyPlat.getBrokerName());
+            }
         }
 
     }

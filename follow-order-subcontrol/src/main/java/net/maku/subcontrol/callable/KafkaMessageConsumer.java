@@ -289,25 +289,27 @@ public class KafkaMessageConsumer {
         //查看下单所有数据
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderNo));
         //进行滑点分析
-        list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).parallelStream().forEach(o -> {
-            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
-            BigDecimal hd;
-             //增加一下判空
-            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity) && followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                //如果forex 并包含JPY 也是100
-                if (o.getSymbol().contains("JPY")) {
-                    hd = new BigDecimal("100");
+        list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
+            ThreadPoolUtils.getExecutor().execute(()->{
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+                BigDecimal hd;
+                //增加一下判空
+                if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity) && followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
+                    //如果forex 并包含JPY 也是100
+                    if (o.getSymbol().contains("JPY")) {
+                        hd = new BigDecimal("100");
+                    } else {
+                        hd = new BigDecimal("10000");
+                    }
                 } else {
-                    hd = new BigDecimal("10000");
+                    //如果非forex 都是 100
+                    hd = new BigDecimal("100");
                 }
-            } else {
-                //如果非forex 都是 100
-                hd = new BigDecimal("100");
-            }
-            long seconds = DateUtil.between(DateUtil.date(o.getResponseOpenTime()), DateUtil.date(o.getRequestOpenTime()), DateUnit.MS);
-            o.setOpenTimeDifference((int) seconds);
-            o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
-            followOrderDetailService.updateById(o);
+                long seconds = DateUtil.between(DateUtil.date(o.getResponseOpenTime()), DateUtil.date(o.getRequestOpenTime()), DateUnit.MS);
+                o.setOpenTimeDifference((int) seconds);
+                o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
+                followOrderDetailService.updateById(o);
+            });
         });
     }
 }

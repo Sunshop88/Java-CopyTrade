@@ -78,7 +78,6 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            log.info("获取信息时间"+copier.getId());
         }
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
             log.info("未发现缓存" + mapKey);

@@ -135,30 +135,32 @@ public class MasControlServiceImpl implements MasControlService {
                     }
                     // 进行测速
                     List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
-                    list.parallelStream().forEach(o -> {
-                        String ipAddress = o.getServerNode(); // 目标IP地址
-                        int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                        try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                            long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                            // 等待连接完成
-                            long timeout = 5000; // 设置超时时间
+                    list.forEach(o -> {
+                        ThreadPoolUtils.getExecutor().execute(()->{
+                            String ipAddress = o.getServerNode(); // 目标IP地址
+                            int port = Integer.valueOf(o.getServerPort()); // 目标端口号
                             try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
-                            } catch (TimeoutException e) {
-                                log.error("连接超时，服务器：" + ipAddress + ":" + port);
-                                return; // 连接超时，返回
+                                AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                                long startTime = System.currentTimeMillis(); // 记录起始时间
+                                Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                                // 等待连接完成
+                                long timeout = 5000; // 设置超时时间
+                                try {
+                                    future.get(timeout, TimeUnit.MILLISECONDS);
+                                } catch (TimeoutException e) {
+                                    log.error("连接超时，服务器：" + ipAddress + ":" + port);
+                                    return; // 连接超时，返回
+                                }
+                                long endTime = System.currentTimeMillis(); // 记录结束时间
+                                o.setSpeed((int) (endTime - startTime));
+                                System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
+                                followBrokeServerService.updateById(o);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                latch.countDown();
                             }
-                            long endTime = System.currentTimeMillis(); // 记录结束时间
-                            o.setSpeed((int) (endTime - startTime));
-                            System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
-                            followBrokeServerService.updateById(o);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        } finally {
-                            latch.countDown();
-                        }
+                        });
                     });
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -229,63 +231,61 @@ public class MasControlServiceImpl implements MasControlService {
 
         CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
         //保存服务数据
-        vo.getPlatformList().forEach(bro -> {
-            ThreadPoolUtils.execute(() -> {
-                try {
-                    List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro));
-                    if (ObjectUtil.isEmpty(followPlatformEntityList)) {
-                        FollowPlatformVO followPlatformVO = new FollowPlatformVO();
-                        followPlatformVO.setBrokerName(vo.getBrokerName());
-                        followPlatformVO.setServer(bro);
-                        followPlatformVO.setPlatformType(vo.getPlatformType());
-                        followPlatformVO.setCreator(userId.toString());
-                        followPlatformVO.setLogo(vo.getLogo());
-                        followPlatformVO.setRemark(vo.getRemark());
-                        followPlatformService.save(followPlatformVO);
-                    }
-                    // 进行测速
-                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
-                    list.parallelStream().forEach(o -> {
-                        String ipAddress = o.getServerNode(); // 目标IP地址
-                        int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                        try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                            long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                            // 等待连接完成
-                            long timeout = 5000; // 设置超时时间
-                            try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
-                            } catch (TimeoutException e) {
-                                log.error("连接超时，服务器：" + ipAddress + ":" + port);
-                                return; // 连接超时，返回
-                            }
-                            long endTime = System.currentTimeMillis(); // 记录结束时间
-                            o.setSpeed((int) (endTime - startTime));
-                            System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
-                            followBrokeServerService.updateById(o);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
+        vo.getPlatformList().parallelStream().forEach(bro -> {
+            try {
+                List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro));
+                if (ObjectUtil.isEmpty(followPlatformEntityList)) {
+                    FollowPlatformVO followPlatformVO = new FollowPlatformVO();
+                    followPlatformVO.setBrokerName(vo.getBrokerName());
+                    followPlatformVO.setServer(bro);
+                    followPlatformVO.setPlatformType(vo.getPlatformType());
+                    followPlatformVO.setCreator(userId.toString());
+                    followPlatformVO.setLogo(vo.getLogo());
+                    followPlatformVO.setRemark(vo.getRemark());
+                    followPlatformService.save(followPlatformVO);
                 }
+                // 进行测速
+                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
+                list.parallelStream().forEach(o -> {
+                    String ipAddress = o.getServerNode(); // 目标IP地址
+                    int port = Integer.valueOf(o.getServerPort()); // 目标端口号
+                    try {
+                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                        long startTime = System.currentTimeMillis(); // 记录起始时间
+                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                        // 等待连接完成
+                        long timeout = 5000; // 设置超时时间
+                        try {
+                            future.get(timeout, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+                            log.error("连接超时，服务器：" + ipAddress + ":" + port);
+                            return; // 连接超时，返回
+                        }
+                        long endTime = System.currentTimeMillis(); // 记录结束时间
+                        o.setSpeed((int) (endTime - startTime));
+                        System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
+                        followBrokeServerService.updateById(o);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 //            });
 //                });
 //                vo.getPlatformList().forEach(bro -> {
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
-                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
-                if (!list.isEmpty()) {
-                    FollowBrokeServerEntity followBrokeServer = list.get(0);
-                    followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
-                }
+            List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
+            if (!list.isEmpty()) {
+                FollowBrokeServerEntity followBrokeServer = list.get(0);
+                followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+            }
 //                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
-        });
 //                platformEntity.set("name", bro);
 //                platformEntity.set("type", vo.getPlatformType());
 //                platformService.update(platformEntity);

@@ -102,4 +102,10 @@ public class FollowVpsEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 是否同步处理，0否，1是
+	 */
+	@TableField(value = "is_syn")
+	private Integer isSyn;
+
 }

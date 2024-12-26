@@ -7,6 +7,7 @@ import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
@@ -69,30 +70,32 @@ public class BrokeServerSpeedTask {
         log.info("开始执行VPS连接状态检查");
         // 查询所有VPS列表
         List<FollowVpsEntity> list = followVpsService.list();
-        list.parallelStream().forEach(vpsEntity -> {
-            try {
-                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
-                boolean reachable = inet.isReachable(5000);
-                if (!reachable) {
-                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    vpsEntity.setConnectionStatus(0);
-                    followVpsService.updateStatus(vpsEntity);
-                    return;
-                }
-                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
-                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
-                    vpsEntity.setConnectionStatus(1);
-                    followVpsService.updateStatus(vpsEntity);
+        list.forEach(vpsEntity -> {
+            ThreadPoolUtils.getExecutor().execute(()->{
+                try {
+                    InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+                    boolean reachable = inet.isReachable(5000);
+                    if (!reachable) {
+                        log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                        vpsEntity.setConnectionStatus(0);
+                        followVpsService.updateStatus(vpsEntity);
+                        return;
+                    }
+                    try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
+                        log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
+                        vpsEntity.setConnectionStatus(1);
+                        followVpsService.updateStatus(vpsEntity);
+                    } catch (IOException e) {
+                        log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                        vpsEntity.setConnectionStatus(0);
+                        followVpsService.updateStatus(vpsEntity);
+                    }
                 } catch (IOException e) {
-                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                    log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
                     vpsEntity.setConnectionStatus(0);
                     followVpsService.updateStatus(vpsEntity);
                 }
-            } catch (IOException e) {
-                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
-                vpsEntity.setConnectionStatus(0);
-                followVpsService.updateStatus(vpsEntity);
-            }
+            });
         });
     }
 }

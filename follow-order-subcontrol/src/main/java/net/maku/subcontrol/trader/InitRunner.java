@@ -117,24 +117,30 @@ public class InitRunner implements ApplicationRunner {
 
     private void getCache() {
         //品种匹配缓存
-        followVarietyService.getListByTemplate().parallelStream().forEach(o->{
-            followVarietyService.getListByTemplated(o.getTemplateId());
+        followVarietyService.getListByTemplate().forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followVarietyService.getListByTemplated(o.getTemplateId());
+            });
         });
 
         List<FollowTraderEntity> list = followTraderService.list();
-        list.parallelStream().forEach(o->{
-            //券商缓存
-            followPlatformService.getPlatFormById(o.getPlatformId().toString());
-            //账户信息缓存
-            followTraderService.getFollowById(o.getId());
-            //品种规格缓存
-            followSysmbolSpecificationService.getByTraderId(o.getId());
+        list.forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                //券商缓存
+                followPlatformService.getPlatFormById(o.getPlatformId().toString());
+                //账户信息缓存
+                followTraderService.getFollowById(o.getId());
+                //品种规格缓存
+                followSysmbolSpecificationService.getByTraderId(o.getId());
+            });
         });
 
         //订单关系缓存
         List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list();
-        followTraderSubscribeEntityList.parallelStream().forEach(o->{
-            followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+        followTraderSubscribeEntityList.forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+            });
         });
 
         //喊单所有跟单缓存
@@ -142,8 +148,10 @@ public class InitRunner implements ApplicationRunner {
                 .map(FollowTraderSubscribeEntity::getMasterId) // 获取每个实体的 masterId
                 .filter(Objects::nonNull)          // 过滤掉可能为 null 的值
                 .collect(Collectors.toSet());
-        collect.stream().toList().parallelStream().forEach(o->{
-            followTraderSubscribeService.getSubscribeOrder(o);
+        collect.stream().toList().forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followTraderSubscribeService.getSubscribeOrder(o);
+            });
         });
     }
 }

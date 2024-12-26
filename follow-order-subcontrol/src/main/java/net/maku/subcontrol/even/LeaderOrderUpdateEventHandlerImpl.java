@@ -176,7 +176,53 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     //查询订阅关系
                     List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList=followTraderSubscribeService.getSubscribeOrder(leader.getId());
                     followTraderSubscribeEntityList.forEach(o-> {
-                        ThreadPoolUtils.getExecutor().execute(()->{
+                        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                            ThreadPoolUtils.getExecutor().execute(() -> {
+                                String slaveId = o.getSlaveId().toString();
+                                if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                    log.info("未开通跟单状态");
+                                    return;
+                                }
+                                if (orderUpdateEventArgs.Action == PositionClose && o.getFollowClose().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                    log.info("未开通跟单平仓状态");
+                                    return;
+                                }
+                                if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                    log.info("未开通跟单下单状态");
+                                    return;
+                                }
+                                // 构造订单信息并发布
+                                EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
+                                eaOrderInfo.setSlaveId(slaveId);
+                                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                if (ObjectUtil.isEmpty(copierApiTrader)) {
+                                    log.info("开平重连" + slaveId);
+                                    copierApiTradersAdmin.removeTrader(slaveId);
+                                    copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                }
+                                if (orderUpdateEventArgs.Action == PositionClose) {
+                                    //跟单平仓
+                                    //发送MT4处理请求
+                                    log.info("发送平仓请求" + slaveId);
+                                    Integer serverId = leader.getServerId();
+                                    FollowVpsEntity vps = followVpsService.getById(serverId);
+                                    if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                        log.info("开始平仓请求" + slaveId);
+                                        strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                                    }
+                                } else {
+                                    //跟单开仓
+                                    //发送MT4处理请求
+                                    log.info("发送下单请求" + slaveId);
+                                    Integer serverId = leader.getServerId();
+                                    FollowVpsEntity vps = followVpsService.getById(serverId);
+                                    if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                        log.info("开始下单请求" + slaveId);
+                                        strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
+                                    }
+                                }
+                            });
+                        }else {
                             String slaveId = o.getSlaveId().toString();
                             if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单状态");
@@ -194,38 +240,35 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
                             eaOrderInfo.setSlaveId(slaveId);
                             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
-                            if (ObjectUtil.isEmpty(copierApiTrader)){
-                                log.info("开平重连"+slaveId);
+                            if (ObjectUtil.isEmpty(copierApiTrader)) {
+                                log.info("开平重连" + slaveId);
                                 copierApiTradersAdmin.removeTrader(slaveId);
                                 copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
                             }
                             if (orderUpdateEventArgs.Action == PositionClose) {
-//                            ThreadPoolUtils.getExecutor().execute(() -> {
                                 //跟单平仓
                                 //发送MT4处理请求
-                                log.info("发送平仓请求"+slaveId);
+                                log.info("发送平仓请求" + slaveId);
                                 Integer serverId = leader.getServerId();
                                 FollowVpsEntity vps = followVpsService.getById(serverId);
-                                if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                                    log.info("开始平仓请求"+slaveId);
+                                if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                    log.info("开始平仓请求" + slaveId);
                                     strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
-//                            });
                             } else {
-//                            ThreadPoolUtils.getExecutor().execute(() -> {
                                 //跟单开仓
                                 //发送MT4处理请求
-                                log.info("发送下单请求"+slaveId);
+                                log.info("发送下单请求" + slaveId);
                                 Integer serverId = leader.getServerId();
                                 FollowVpsEntity vps = followVpsService.getById(serverId);
-                                if(ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                                    log.info("开始下单请求"+slaveId);
+                                if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                                    log.info("开始下单请求" + slaveId);
                                     strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
-//                            });
                             }
-                        });
+                        }
                     });
+
                 } else {
                     //喊单账号未开启
                     log.info(leader.getId() + "喊单账号状态未开启");

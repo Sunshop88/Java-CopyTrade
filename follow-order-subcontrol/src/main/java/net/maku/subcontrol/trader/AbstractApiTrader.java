@@ -107,18 +107,14 @@ public abstract class AbstractApiTrader extends ApiTrader {
             if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
-                ThreadPoolUtils.getExecutor().execute(()->{
-                    this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-                });
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
         }
 
         if (this.onQuoteTraderHandler==null){
             //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
-            ThreadPoolUtils.getExecutor().execute(()->{
-                this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
-            });
+            this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
         }
 
     }

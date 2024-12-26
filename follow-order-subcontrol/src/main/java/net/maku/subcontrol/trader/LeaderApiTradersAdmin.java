@@ -113,18 +113,18 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         log.info("所有的mt4喊单者结束连接服务器");
         this.launchOn = true;
         //定时更新
-        CompletableFuture.runAsync(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    new UpdateAllTraderInfoTask(TraderTypeEnum.MASTER_REAL.getType());
-                    TimeUnit.SECONDS.sleep(120); // 固定延迟
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch (Exception e) {
-                    log.error("定时任务异常: ", e);
-                }
-            }
-        }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
+//        CompletableFuture.runAsync(() -> {
+//            while (!Thread.currentThread().isInterrupted()) {
+//                try {
+//                    new UpdateAllTraderInfoTask(TraderTypeEnum.MASTER_REAL.getType());
+//                    TimeUnit.SECONDS.sleep(120); // 固定延迟
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                } catch (Exception e) {
+//                    log.error("定时任务异常: ", e);
+//                }
+//            }
+//        }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
     }
 
     /**

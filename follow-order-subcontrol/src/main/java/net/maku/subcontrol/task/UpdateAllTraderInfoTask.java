@@ -188,15 +188,17 @@ public class UpdateAllTraderInfoTask implements Runnable {
      */
     public boolean reconnect(FollowTraderEntity trader, QuoteClient quoteClient,AbstractApiTrader abstractApiTrader) {
         try {
-            log.info("MT4账号{}：尝试重连...", trader.getId());
-            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
-            abstractApiTrader.connect2Broker();
-            log.info("[MT4账号：{}] 重连成功", trader.getId());
-            traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate()
-                    .set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue())
-                    .set(FollowTraderEntity::getStatusExtra, "账号在线")
-                    .eq(FollowTraderEntity::getId, trader.getId()));
-            return true;
+            if (ObjectUtil.isNotEmpty(abstractApiTrader)){
+                log.info("MT4账号{}：尝试重连...", trader.getId());
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
+                abstractApiTrader.connect2Broker();
+                log.info("[MT4账号：{}] 重连成功", trader.getId());
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate()
+                        .set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue())
+                        .set(FollowTraderEntity::getStatusExtra, "账号在线")
+                        .eq(FollowTraderEntity::getId, trader.getId()));
+                return true;
+            }
         } catch (Exception e) {
             log.warn("[MT4账号：{}] 重连失败：{}", trader.getId(), e.getMessage());
         }

@@ -46,7 +46,6 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
         }
         FollowTraderSubscribeEntity subscription = followTraderSubscribeService.subscription(repairSendVO.getSlaveId(), repairSendVO.getMasterId());
         if (repairSendVO.getType().equals(TraderRepairEnum.ALL.getType())) {
-            FollowTraderSubscribeEntity traderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, repairSendVO.getMasterId()).eq(FollowTraderSubscribeEntity::getSlaveId, repairSendVO.getSlaveId()));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(repairSendVO.getSlaveId().toString());
             Order[] orders = copierApiTrader.quoteClient.GetOpenedOrders();
 
@@ -88,7 +87,6 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 closeRepairToExtract.stream().toList().forEach(o->{
                     EaOrderInfo eaOrderInfo = (EaOrderInfo)  o;
                     orderCloseCopier.operate(copierApiTrader,eaOrderInfo,1);
-                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform() + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), eaOrderInfo.getTicket().toString());
                 });
             }
             return true;
