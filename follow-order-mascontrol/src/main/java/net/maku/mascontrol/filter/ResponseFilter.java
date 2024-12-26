@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.maku.followcom.vo.OrderClosePageVO;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -37,19 +38,27 @@ public class ResponseFilter implements Filter {
                 json.put("message", "签名无效,暂无权限访问");
                 json.put("data", null);
                 out.write(json.toJSONString().getBytes());
-                filterChain.doFilter(servletRequest, servletResponse);
+                 return;
 
             }else{
                 // 继续进行过滤链
                 filterChain.doFilter(servletRequest, responseWrapper);
-                // 获取响应内容并进行修改
+               // 获取响应内容并进行修改
                 String oldData = new String(responseWrapper.getContent());
                 JSONObject oldJson = JSONObject.parseObject(oldData);
                 JSONObject newJson = new JSONObject();
                 // 0表示成功，其他值表示失败
                 newJson.put("success", oldJson.getInteger("code") == 0 ? true : false);
                 newJson.put("message", oldJson.get("msg"));
-                newJson.put("data", oldJson.getString("data"));
+
+                OrderClosePageVO data = null;
+                try {
+                    data = JSONObject.parseObject(oldJson.getString("data"), OrderClosePageVO.class);
+                    newJson.put("data", data);
+                } catch (Exception e) {
+                    newJson.put("data", oldJson.getString("data"));
+                }
+
                 // 将修改后的内容写入响应
                 out.write(newJson.toJSONString().getBytes());
                 out.flush();
