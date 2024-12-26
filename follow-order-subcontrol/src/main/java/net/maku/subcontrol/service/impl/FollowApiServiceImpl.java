@@ -392,7 +392,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         LambdaQueryWrapper<FollowTraderEntity> query = new LambdaQueryWrapper<>();
         query.eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId());
         FollowTraderEntity entity = followTraderService.getOne(query);
+
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
+        log.info(followUpdateSalveVo.getFollowMode()+"------------>"+vo.getMode());
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
         followUpdateSalveVo.setPassword(pwd);
