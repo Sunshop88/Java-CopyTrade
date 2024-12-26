@@ -557,7 +557,7 @@ public class FollowApiServiceImpl implements FollowApiService {
 
             QuoteClient quoteClient = null;
             FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
-            quoteClient=getQuoteClient(a.getId(),followTraderVO,quoteClient);
+            quoteClient=getQuoteClient(followTraderVO.getId(),followTraderVO,quoteClient);
             try {
                 quoteClient.ChangePassword(vo.getPassword(), vo.getInvestor());
             } catch (IOException e) {
