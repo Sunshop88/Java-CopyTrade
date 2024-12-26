@@ -154,7 +154,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
                 flag = 1;
                 //推送到redis
-                 pushCache(leader.getServerId());
+              //   pushCache(leader.getServerId());
                 break;
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
@@ -166,7 +166,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 });
                 flag = 1;
                 //推送到redis
-              pushCache(leader.getServerId());
+          //    pushCache(leader.getServerId());
                 break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
@@ -242,7 +242,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         });
     }
 
-    private QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
+  /*  private QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
         AbstractApiTrader abstractApiTrader;
         if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
             abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());
@@ -272,11 +272,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             }
         }
         return quoteClient;
-    }
+    }*/
     /**
      * 推送redis缓存
      */
-    private void pushCache(Integer vpsId) {
+   /* private void pushCache(Integer vpsId) {
         ThreadPoolUtils.execute(() -> {
             //查询当前vpsId所有账号
             List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
@@ -412,12 +412,12 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 }
             });
         });
-    }
+    }*/
 
     /**
      * 转成成json
      */
-    private String convertJson(List<AccountCacheVO> accounts) {
+/*    private String convertJson(List<AccountCacheVO> accounts) {
         //设置从redis数据
         FollowTraderCacheVO cacheVO = new FollowTraderCacheVO();
         cacheVO.setAccounts(accounts);
@@ -435,5 +435,5 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             throw new RuntimeException(e);
         }
         return json;
-    }
+    }*/
 }
