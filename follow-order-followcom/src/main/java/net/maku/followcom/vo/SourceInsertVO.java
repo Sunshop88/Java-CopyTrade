@@ -40,34 +40,34 @@ public class SourceInsertVO implements Serializable {
     @JsonProperty("Status")
     @NotNull(message = "状态不能为空")
     private Boolean status;
-
+    //亏损高于(点)
     @JsonProperty(value = "CloseLossPointHigh")
     private Integer closeLossPointHigh;
-
+    // 获利高于(点
     @JsonProperty(value = "CloseProfitPointHigh")
     private Integer closeProfitPointHigh;
-
+    //获利高于
     @JsonProperty(value = "CloseProfitHigh")
     private Double closeProfitHigh;
-
+   //亏损高于
     @JsonProperty(value = "CloseLossHigh")
     private Double closeLossHigh;
-
+     //获利高于$：全部
     @JsonProperty(value = "CloseAllProfitHigh")
     private Double closeAllProfitHigh;
-
+   //亏损高于$：全部
     @JsonProperty(value = "CloseAllLossHigh")
     private Double closeAllLossHigh;
-
+    //净值低于
     @JsonProperty(value = "CloseAllEquityLow")
     private Double closeAllEquityLow;
-
+    //净值高于
     @JsonProperty(value = "CloseAllEquityHigh")
     private Double closeAllEquityHigh;
-
+   //预付款比例低于% ,
     @JsonProperty(value = "CloseAllMarginLevelLow")
     private Double closeAllMarginLevelLow;
-
+  //预付款比例高于% ,
     @JsonProperty(value = "CloseAllMarginLevelHigh")
     private Double closeAllMarginLevelHigh;
     
