@@ -390,7 +390,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowEntity followEntity = followService.getEntityById(vo.getId());
         //查询主表
         LambdaQueryWrapper<FollowTraderEntity> query = new LambdaQueryWrapper<>();
-        query.eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId());
+        query.eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getServerId,vo.getClientId()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId());
         FollowTraderEntity entity = followTraderService.getOne(query);
 
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
