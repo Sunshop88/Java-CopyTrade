@@ -332,11 +332,12 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean updateSource(SourceUpdateVO vo) {
         SourceEntity source = sourceService.getEntityById(vo.getId());
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
-        LambdaQueryWrapper<FollowTraderEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId());
-        followTraderService.update(followTrader, lambdaQueryWrapper);
+
+        FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
+        followTrader.setId(one.getId());
+        followTraderService.updateById(followTrader);
         //重连
-        reconnect(vo.getId().toString());
+        reconnect(one.getId().toString());
         //保存从表数据
         sourceService.edit(vo);
         return true;
@@ -349,7 +350,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         if (source == null) {
             return false;
         }
-        List<Long> ids = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).list().stream().map(FollowTraderEntity::getId).toList();
+        List<Long> ids = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId,vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).list().stream().map(FollowTraderEntity::getId).toList();
         delete(ids);
         //删除从表数据
         sourceService.del(vo.getId());
