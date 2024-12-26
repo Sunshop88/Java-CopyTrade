@@ -67,7 +67,7 @@ public class SourceInsertVO implements Serializable {
    //预付款比例低于% ,
     @JsonProperty(value = "CloseAllMarginLevelLow")
     private Double closeAllMarginLevelLow;
-  //预付款比例高于% ,
+    //预付款比例高于% ,
     @JsonProperty(value = "CloseAllMarginLevelHigh")
     private Double closeAllMarginLevelHigh;
     

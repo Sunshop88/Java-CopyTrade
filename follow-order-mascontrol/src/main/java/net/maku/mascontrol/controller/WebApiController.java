@@ -136,8 +136,8 @@ public class WebApiController {
      * **/
     private String getServerIp(Integer serverId){
         FollowVpsEntity vps = followVpsService.getById(serverId);
-      //  return vps.getIpAddress();
-        return "127.0.0.1";
+      //
+        return vps.getIpAddress();
     }
     /**
      * 远程调用方法封装
