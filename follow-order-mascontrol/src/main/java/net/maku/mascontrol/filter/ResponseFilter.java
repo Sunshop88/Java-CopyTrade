@@ -1,5 +1,6 @@
 package net.maku.mascontrol.filter;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +30,7 @@ public class ResponseFilter implements Filter {
             String sign = httpRequest.getHeader("x-sign");
             //把返回值输出到客户端
             ServletOutputStream out = servletResponse.getOutputStream();
-            if(!sign.equals("417B110F1E71BD2CFE96366E67849B0B")){
+            if(ObjectUtil.isEmpty(sign) || !sign.equals("417B110F1E71BD2CFE96366E67849B0B")){
                 JSONObject json = new JSONObject();
                 // 0表示成功，其他值表示失败
                 json.put("success", false);
