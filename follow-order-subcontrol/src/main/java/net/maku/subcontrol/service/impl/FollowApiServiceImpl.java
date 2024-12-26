@@ -367,7 +367,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         if (ObjectUtil.isEmpty(platform)) {
             throw new ServerException("暂无可用服务器商");
         }
+        SourceEntity source = sourceService.getEntityById(vo.getSourceId());
+        FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getClientId()).one();
         followAddSalveVo.setPlatform(platform.getServer());
+        followAddSalveVo.setTraderId(one.getId());
         //判断主表如果保存失败，则返回false
         Boolean result = addSlave(followAddSalveVo);
         if (!result) {
