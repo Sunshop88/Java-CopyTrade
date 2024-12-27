@@ -37,6 +37,11 @@ public class WebApiController {
     private static final Logger log = LoggerFactory.getLogger(WebApiController.class);
     private final FollowVpsService followVpsService;
 
+    /**
+     * 喊单添加
+     * @param vo 喊单者
+     * @param req 请求
+     * */
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
     public Result<String> insertSource(@RequestBody @Valid SourceInsertVO vo, HttpServletRequest req) {
@@ -108,11 +113,11 @@ public class WebApiController {
 
     @PostMapping("/orderclose")
     @Operation(summary = "平仓")
-    public Result<OrderClosePageVO> orderclose(@RequestBody @Valid OrderCloseVO vo, HttpServletRequest req) {
+    public Result<String> orderclose(@RequestBody @Valid OrderCloseVO vo, HttpServletRequest req) {
         //根据vpsId查询ip
         String host = getServerIp(vo.getClientId());
-        Result<String> stringResult = sendRequest(req, host, FollowConstant.ORDERCLOSE, vo);
-        return Result.ok(JSONObject.parseObject(stringResult.getData(), OrderClosePageVO.class));
+
+        return sendRequest(req, host, FollowConstant.ORDERCLOSE, vo);
     }
 
     @PostMapping("/ordercloseall")
@@ -136,9 +141,8 @@ public class WebApiController {
      * **/
     private String getServerIp(Integer serverId){
         FollowVpsEntity vps = followVpsService.getById(serverId);
-      //
-        return vps.getIpAddress();
-       // return  "127.0.0.1";
+      //  return  vps.getIpAddress();
+        return  "39.101.133.150";
     }
     /**
      * 远程调用方法封装

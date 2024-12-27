@@ -20,6 +20,7 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -334,6 +335,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
 
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
+       if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
         followTrader.setId(one.getId());
         followTraderService.updateById(followTrader);
         //重连
@@ -392,6 +394,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         LambdaQueryWrapper<FollowTraderEntity> query = new LambdaQueryWrapper<>();
         query.eq(FollowTraderEntity::getAccount, followEntity.getUser()).eq(FollowTraderEntity::getServerId,vo.getClientId()).eq(FollowTraderEntity::getPlatformId, followEntity.getPlatformId());
         FollowTraderEntity entity = followTraderService.getOne(query);
+        if (ObjectUtil.isEmpty(entity)) { throw  new ServerException("账号不存在,请检查id");}
 
         FollowUpdateSalveVo followUpdateSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
    /*     Integer mode = FollowModeEnum.getVal(vo.getMode());
@@ -435,9 +438,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         query.in(ObjectUtil.isNotEmpty(vo.getPlaceType()),FollowOrderDetailEntity::getPlacedType, vo.getPlaceType());
         query.in(ObjectUtil.isNotEmpty(vo.getType()),FollowOrderDetailEntity::getType, vo.getType());
         query.ge(ObjectUtil.isNotEmpty(vo.getCloseFrom()),FollowOrderDetailEntity::getCloseTime,vo.getCloseFrom());
-        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getCloseTime,vo.getCloseTo());
-        query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()),FollowOrderDetailEntity::getOpenTime,vo.getOpenFrom());
-        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getOpenTime,vo.getOpenTo());
+        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseTo(),DateUtils.DATE_TIME_PATTERN));
+        query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenFrom(),DateUtils.DATE_TIME_PATTERN));
+        query.le(ObjectUtil.isNotEmpty(vo.getOpenTo()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenTo(),DateUtils.DATE_TIME_PATTERN));
         if(ObjectUtil.isNotEmpty(vo.getClientId())){
             FollowVpsEntity vps = followVps.getById(vo.getClientId());
             query.eq(ObjectUtil.isNotEmpty(vps),FollowOrderDetailEntity::getIpAddr,vps.getIpAddress());

@@ -17,9 +17,10 @@ import java.io.Serializable;
 public class SourceDelVo implements Serializable {
     @Serial
     private static final long serialVersionUID = 630045799655058400L;
-
+    //vps服务器id
     @JsonProperty("ClientId")
     private Integer serverId;
+    //账号id
     @JsonProperty("Id")
     @NotNull(message = "Id不能为空")
     private Long id;

@@ -18,8 +18,9 @@ import java.io.Serializable;
 public class SourceInsertVO implements Serializable {
     @Serial
     private static final long serialVersionUID = 3774316922670977306L;
+    //vps服务器id
     @JsonProperty("ClientId")
-    @NotNull(message = "ClientId不能为空")
+    @NotNull(message = "vps服务器不能为空")
     private Integer serverId;
     //平台Id
     @JsonProperty("PlatformId")
@@ -36,11 +37,13 @@ public class SourceInsertVO implements Serializable {
     //备注
     @JsonProperty("Comment")
     private String remark;
-    //状态
+    //状态  true：开启，false：关闭
     @JsonProperty("Status")
     @NotNull(message = "状态不能为空")
     private Boolean status;
-    //亏损高于(点)
+    /**
+     * 亏损高于(点)
+     * */
     @JsonProperty(value = "CloseLossPointHigh")
     private Integer closeLossPointHigh;
     // 获利高于(点
@@ -64,10 +67,10 @@ public class SourceInsertVO implements Serializable {
     //净值高于
     @JsonProperty(value = "CloseAllEquityHigh")
     private Double closeAllEquityHigh;
-   //预付款比例低于% ,
+   // 预付款比例低于% ,
     @JsonProperty(value = "CloseAllMarginLevelLow")
     private Double closeAllMarginLevelLow;
-    //预付款比例高于% ,
+    /**预付款比例高于%*/
     @JsonProperty(value = "CloseAllMarginLevelHigh")
     private Double closeAllMarginLevelHigh;
     

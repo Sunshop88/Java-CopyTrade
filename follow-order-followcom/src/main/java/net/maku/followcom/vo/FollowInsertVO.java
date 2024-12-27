@@ -47,19 +47,19 @@ public class FollowInsertVO implements Serializable {
     private String comment;
     //模式 跟单方向 0=正跟 1=反跟 ,
     @JsonProperty(value = "Direction")
-    @Min(value = 0, message = "跟单方向只能为0或1")
-    @Max(value = 1, message = "跟单方向只能为0或1")
+    @Min(value = 0, message = "跟单方向只能为正跟0或反跟1")
+    @Max(value = 1, message = "跟单方向只能为正跟0或反跟1")
     @NotNull(message = "平台不能为空")
     private Integer direction;
     //模式-类型 0=多空跟单 1=只跟多单 2=只跟空单 3=挂单 4=全部
     @JsonProperty(value = "Type")
-    @Min(value = 0, message = "跟随模式只能为0、1、2、3或4")
-    @Max(value = 4, message = "跟随模式只能为0、1、2、3或4")
+    @Min(value = 0, message = "跟随模式只能为多空跟单0、只跟多单1、只跟空单2、挂单3或全部4")
+    @Max(value = 4, message = "跟随模式只能为多空跟单0、只跟多单1、只跟空单2、挂单3或全部4")
     private Integer type;
     //模式-模式 0=资金比例(净值) 1=手数比例 2=固定手数 3=资金比例(余额) 4=自定义 ,
     @JsonProperty(value = "Mode")
-    @Min(value = 0, message = "跟随模式只能为0、1、2、3或4")
-    @Max(value = 4, message = "跟随模式只能为0、1、2、3或4")
+    @Min(value = 0, message = "跟随模式只能为资金比例(净值)0、手数比例1、固定手数2、资金比例(余额)3或自定义4")
+    @Max(value = 4, message = "跟随模式只能为资金比例(净值)0、手数比例1、固定手数2、资金比例(余额)3或自定义4")
     @NotNull(message = "跟随模式不能为空")
     private Integer mode;
     //模式-参数
@@ -198,10 +198,10 @@ public class FollowInsertVO implements Serializable {
     //风控-注释模板
     @JsonProperty(value = "CommentRegex")
     private String commentRegex;
-    //状态
+    //跟单状态只能为0-未开启 1-已开启
     @JsonProperty(value = "Status")
-    @Min(value = 0, message = "跟单状态只能为0或1")
-    @Max(value = 1, message = "跟单状态只能为0或1")
+    @Min(value = 0, message = "跟单状态只能为未开启0或已开启1")
+    @Max(value = 1, message = "跟单状态只能为未开启0或已开启1")
     @NotNull(message = "跟单状态不能为空")
     private Integer status;
     //同步止盈止损状态
@@ -210,22 +210,22 @@ public class FollowInsertVO implements Serializable {
     //充用
     @JsonProperty(value = "PositionComment")
     private String positionComment;
-    //补单状态
+    //补单状态 0-未开启 1-开启
     @JsonProperty(value = "RepairStatus")
-    @Min(value = 0, message = "跟单补单状态只能为0或1")
-    @Max(value = 1, message = "跟单补单状态只能为0或1")
+    @Min(value = 0, message = "跟单补单状态只能为未开启0或已开启1")
+    @Max(value = 1, message = "跟单补单状态只能为未开启0或已开启1")
     @NotNull(message = "跟单补单状态不能为空")
     private Integer repairStatus;
-    //开仓状态
+    //开仓状态 0-未开启 1-开启
     @JsonProperty(value = "OpenOrderStatus")
-    @Min(value = 0, message = "跟单开仓状态只能为0或1")
-    @Max(value = 1, message = "跟单开仓状态只能为0或1")
+    @Min(value = 0, message = "跟单开仓状态为未开启0或已开启1")
+    @Max(value = 1, message = "跟单开仓状态为未开启0或已开启1")
     @NotNull(message = "跟单开仓状态不能为空")
     private Integer openOrderStatus;
-    //平仓状态
+    //平仓状态0-未开启 1-开启
     @JsonProperty(value = "CloseOrderStatus")
-    @Min(value = 0, message = "跟单平仓状态只能为0或1")
-    @Max(value = 1, message = "跟单平仓状态只能为0或1")
+    @Min(value = 0, message = "跟单平仓状态为未开启0或已开启1")
+    @Max(value = 1, message = "跟单平仓状态为未开启0或已开启1")
     @NotNull(message = "跟单平仓状态不能为空")
     private Integer closeOrderStatus;
     //同步止损加点
