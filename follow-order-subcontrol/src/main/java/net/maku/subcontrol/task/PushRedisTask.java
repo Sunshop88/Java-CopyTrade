@@ -13,13 +13,16 @@ import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.service.impl.FollowVpsServiceImpl;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.AccountCacheVO;
@@ -58,12 +61,13 @@ public class PushRedisTask {
     private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
+    private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
 
 
     @Scheduled(cron = "0 0/5 * * * ?")
     public void execute(){
-        FollowTraderEntity one = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
-        pushCache(one.getServerId());
+        FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
+        pushCache(one.getId());
     }
     /**
      * 推送redis缓存
