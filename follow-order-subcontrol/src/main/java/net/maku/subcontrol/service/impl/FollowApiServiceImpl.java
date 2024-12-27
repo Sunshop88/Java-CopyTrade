@@ -561,9 +561,9 @@ public class FollowApiServiceImpl implements FollowApiService {
             try {
                 quoteClient.ChangePassword(vo.getPassword(), vo.getInvestor());
             } catch (IOException e) {
-                throw new ServerException("MT4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ vo.getInvestor());
+                throw new ServerException("MT4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ vo.getInvestor()+",异常原因"+e);
             } catch (online.mtapi.mt4.Exception.ServerException e) {
-                throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ vo.getInvestor());
+                throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ vo.getInvestor()+",异常原因"+e);
             }
             //如果修改登录密码触发
             if (!vo.getInvestor()){
