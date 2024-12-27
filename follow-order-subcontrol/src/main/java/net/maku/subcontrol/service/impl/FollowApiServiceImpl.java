@@ -299,7 +299,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             throw new ServerException("修改失败" + e);
         }
 
-        return false;
+        return true;
     }
 
     /**
