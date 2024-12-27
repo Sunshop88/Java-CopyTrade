@@ -62,7 +62,8 @@ public class PushRedisTask {
 
     @Scheduled(cron = "0 0/5 * * * ?")
     public void execute(){
-        pushCache(Integer.parseInt(FollowConstant.LOCAL_HOST));
+        FollowTraderEntity one = followTraderService.getOne(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
+        pushCache(one.getServerId());
     }
     /**
      * 推送redis缓存
