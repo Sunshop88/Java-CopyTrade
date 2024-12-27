@@ -441,10 +441,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseTo(),DateUtils.DATE_TIME_PATTERN));
         query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenFrom(),DateUtils.DATE_TIME_PATTERN));
         query.le(ObjectUtil.isNotEmpty(vo.getOpenTo()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenTo(),DateUtils.DATE_TIME_PATTERN));
-       /* if(ObjectUtil.isNotEmpty(vo.getClientId())){
+        if(ObjectUtil.isNotEmpty(vo.getClientId())){
             FollowVpsEntity vps = followVps.getById(vo.getClientId());
             query.eq(ObjectUtil.isNotEmpty(vps),FollowOrderDetailEntity::getIpAddr,vps.getIpAddress());
-        }*/
+        }
         if(ObjectUtil.isNotEmpty(vo.getAccount())){
             List<Long> traderIds =new ArrayList<>();
             List<Integer> types = vo.getAccount().stream().map(AccountModelVO::getType).collect(Collectors.toList());
