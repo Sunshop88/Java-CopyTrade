@@ -105,7 +105,7 @@ public class MasControlServiceImpl implements MasControlService {
         }
     }
 
-    //    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
         FollowPlatformEntity currentPlatform = followPlatformService.getById(vo.getId());
