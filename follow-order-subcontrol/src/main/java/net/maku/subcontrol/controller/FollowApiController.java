@@ -79,7 +79,7 @@ public class FollowApiController {
     public Result<Boolean> orderClose(@RequestBody @Valid OrderCloseVO vo) {
         return  Result.ok(followApiService.orderClose(vo)) ;
     }
-    @PostMapping("/ordercloseall")
+    @PostMapping("/orderCloseAll")
     @Operation(summary = "平仓")
     public Result<Boolean> orderCloseAll(@RequestBody @Valid OrderCloseAllVO vo) {
         return  Result.ok(followApiService.orderCloseAll(vo)) ;
