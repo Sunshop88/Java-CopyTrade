@@ -107,7 +107,7 @@ public class PushRedisTask {
                             accountCache.setPlatformType(platformType);
                             //订单信息
                             QuoteClient quoteClient = null;
-                            getQuoteClient(h.getId(),h,quoteClient);
+                            quoteClient= getQuoteClient(h.getId(),h,quoteClient);
                             //所有持仓
                             if (ObjectUtil.isNotEmpty(quoteClient)) {
                                 Order[] orders = quoteClient.GetOpenedOrders();
