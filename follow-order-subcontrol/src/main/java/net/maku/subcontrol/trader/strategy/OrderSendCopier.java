@@ -71,7 +71,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         // 查看品种匹配 模板
         List<FollowVarietyEntity> followVarietyEntityListCopier= followVarietyService.getListByTemplated(copier.getTemplateId());
         List<FollowVarietyEntity> collectCopy = followVarietyEntityListCopier.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
-        log.info("跟单品种匹配"+collectCopy);
+        log.info("跟单品种匹配"+collectCopy+"服务商:"+copyPlat.getBrokerName()+"模板:"+copier.getTemplateId()+"类型:"+finalStdSymbol);
         List<String> symbolList = orderInfo.getSymbolList();
         collectCopy.forEach(o-> {
             if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){

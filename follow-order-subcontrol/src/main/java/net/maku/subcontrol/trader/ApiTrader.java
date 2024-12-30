@@ -46,7 +46,7 @@ public class ApiTrader {
     @Getter
     protected final FollowTraderService traderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);;
     protected final FollowBrokeServerService followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);;
-    protected final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(100);
+    protected final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(0,Thread.ofVirtual().factory());
 
     protected final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);;
     protected final FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);;
