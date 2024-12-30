@@ -19,7 +19,7 @@ public class AccountCacheVO {
     @JsonProperty("Key")
     private String key;
     //  id+user
-    @JsonProperty("group")
+    @JsonProperty("Group")
     private String group;
     //  SOURCE喊单 FOLLOW跟单
     @JsonProperty("Type")
