@@ -263,6 +263,10 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean insertPlatform(FollowPlatformVO vo) {
+        //platformList不能为空
+        if (ObjectUtil.isEmpty(vo.getPlatformList())) {
+            throw new ServerException("服务列表不能为空");
+        }
         Long userId = SecurityUser.getUserId();
         List<FollowPlatformEntity> existingPlatforms = followPlatformService.list(
                 new LambdaQueryWrapper<FollowPlatformEntity>()
