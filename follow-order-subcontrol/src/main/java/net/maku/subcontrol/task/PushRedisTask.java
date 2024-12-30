@@ -106,11 +106,19 @@ public class PushRedisTask {
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
                             accountCache.setKey(akey);
-                            FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
-                            if(sb!=null) {
-                                String group = sb.getMasterId() + " " + sb.getMasterAccount();
+                            if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                String group = h.getId() + " " + h.getAccount();
                                 accountCache.setGroup(group);
+                            }else{
+                                FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
+                                if(sb!=null) {
+                                    String group = sb.getMasterId() + " " + sb.getMasterAccount();
+                                    accountCache.setGroup(group);
+                                }
                             }
+
+
+
                             String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
                             accountCache.setPlatformType(platformType);
                             //订单信息
@@ -191,10 +199,10 @@ public class PushRedisTask {
                                             orderCacheVO.setProfit(x.Profit);
                                             if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                                 FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                                orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
+                                               // orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
                                             }
                                             orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
-                                            //  orderCacheVO.setPlaceType(h.getUpdater());
+                                              orderCacheVO.setPlaceType("Client");
                                             orderCaches.add(orderCacheVO);
                                             accountCache.setLots(accountCache.getLots() + x.Lots);
                                             accountCache.setProfit(accountCache.getProfit() + x.Profit);

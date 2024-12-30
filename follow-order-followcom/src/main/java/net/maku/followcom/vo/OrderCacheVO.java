@@ -49,6 +49,6 @@ public class OrderCacheVO {
     @JsonProperty(value = "Profit")
     private Double profit;
     @JsonProperty(value = "PlaceType")
-    private Integer placeType;
+    private String placeType;
 
 }
