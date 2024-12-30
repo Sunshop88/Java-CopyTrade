@@ -96,13 +96,21 @@ public class PushRedisTask {
                     for (FollowTraderEntity h : v) {
                         ThreadPoolUtils.execute(() -> {
                             AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
-                            accountCache.setType("4");
+                            if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                accountCache.setType("FOLLOW");
+                            }else{
+                                accountCache.setType("SOURCE");
+                            }
+
                             List<OrderCacheVO> orderCaches = new ArrayList<>();
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
                             accountCache.setKey(akey);
-                            String group = h.getId() + " " + h.getAccount();
-                            accountCache.setGroup(group);
+                            FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
+                            if(sb!=null) {
+                                String group = sb.getMasterId() + " " + sb.getMasterAccount();
+                                accountCache.setGroup(group);
+                            }
                             String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
                             accountCache.setPlatformType(platformType);
                             //订单信息
@@ -139,7 +147,9 @@ public class PushRedisTask {
                                     }
                                     accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                                 }
-
+                                if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                    accountCache.setModeString("");
+                                }
                                 if(quoteClient.Connected()){
                                     accountCache.setManagerStatus("Connected");
                                 }else{
@@ -193,6 +203,10 @@ public class PushRedisTask {
                                     accountCache.setOrders(orderCaches);
                                 });
                             }
+                            if(ObjectUtil.isEmpty(accountCache.getOrders())){
+                                accountCache.setOrders(new ArrayList<>());
+                            }
+
                             accounts.add(accountCache);
                             countDownLatch.countDown();
                         });
