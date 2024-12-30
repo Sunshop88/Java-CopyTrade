@@ -18,10 +18,10 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
+import net.maku.subcontrol.task.UpdateTraderInfoTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -75,6 +75,7 @@ public class InitRunner implements ApplicationRunner {
     private FollowSubscribeOrderService followSubscribeOrderService;
     @Autowired
     private CacheManager cacheManager;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
@@ -110,29 +111,36 @@ public class InitRunner implements ApplicationRunner {
         long slave = mt4TraderList.stream().filter(o->o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).count();
         log.info("===============跟单者{}", slave);
         copierApiTradersAdmin.startUp();
+
     }
 
 
     private void getCache() {
         //品种匹配缓存
-        followVarietyService.getListByTemplate().parallelStream().forEach(o->{
-            followVarietyService.getListByTemplated(o.getTemplateId());
+        followVarietyService.getListByTemplate().forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followVarietyService.getListByTemplated(o.getTemplateId());
+            });
         });
 
         List<FollowTraderEntity> list = followTraderService.list();
-        list.parallelStream().forEach(o->{
-            //券商缓存
-            followPlatformService.getPlatFormById(o.getPlatformId().toString());
-            //账户信息缓存
-            followTraderService.getFollowById(o.getId());
-            //品种规格缓存
-            followSysmbolSpecificationService.getByTraderId(o.getId());
+        list.forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                //券商缓存
+                followPlatformService.getPlatFormById(o.getPlatformId().toString());
+                //账户信息缓存
+                followTraderService.getFollowById(o.getId());
+                //品种规格缓存
+                followSysmbolSpecificationService.getByTraderId(o.getId());
+            });
         });
 
         //订单关系缓存
         List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list();
-        followTraderSubscribeEntityList.parallelStream().forEach(o->{
-            followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+        followTraderSubscribeEntityList.forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+            });
         });
 
         //喊单所有跟单缓存
@@ -140,22 +148,10 @@ public class InitRunner implements ApplicationRunner {
                 .map(FollowTraderSubscribeEntity::getMasterId) // 获取每个实体的 masterId
                 .filter(Objects::nonNull)          // 过滤掉可能为 null 的值
                 .collect(Collectors.toSet());
-        collect.stream().toList().parallelStream().forEach(o->{
-            followTraderSubscribeService.getSubscribeOrder(o);
+        collect.stream().toList().forEach(o->{
+            ThreadPoolUtils.getExecutor().execute(()->{
+                followTraderSubscribeService.getSubscribeOrder(o);
+            });
         });
-
-        //获取未平仓订单缓存
-        List<FollowSubscribeOrderEntity> followSubscribeOrderEntityList = followSubscribeOrderService.list(new LambdaQueryWrapper<FollowSubscribeOrderEntity>().eq(FollowSubscribeOrderEntity::getMasterOrSlave,TraderTypeEnum.SLAVE_REAL.getType()).isNotNull(FollowSubscribeOrderEntity::getSlaveTicket).isNull(FollowSubscribeOrderEntity::getSlaveCloseTime));
-        followSubscribeOrderEntityList.parallelStream().forEach(o->{
-            String mapKey=o.getSlaveId()+"#"+o.getSlaveAccount();
-            CachedCopierOrderInfo cachedCopierOrderInfo = (CachedCopierOrderInfo) redisCache.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(o.getMasterTicket()));
-            if (ObjectUtil.isNotEmpty(cachedCopierOrderInfo)){
-                Cache cache = cacheManager.getCache("followOrdersendCache");
-                if (cache != null) {
-                    cache.put(mapKey+"#"+o.getMasterTicket(),cachedCopierOrderInfo); // 移除指定缓存条目
-                }
-            }
-        });
-
     }
 }

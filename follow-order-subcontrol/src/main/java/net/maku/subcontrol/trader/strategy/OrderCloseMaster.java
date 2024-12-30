@@ -14,6 +14,7 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -59,13 +60,14 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
         List<FollowTraderSubscribeEntity> subscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterId, orderInfo.getMasterId()));
         //保存所需要平仓的用户到redis，用备注记录 set类型存储
         subscribeEntityList.forEach(o->{
+            FollowTraderEntity follow=followTraderService.getFollowById(o.getSlaveId());
             //创建平仓redis记录
-            redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
+            redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
             //删除跟单redis记录
-            redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
+            redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
         });
 
-        threeStrategyThreadPoolExecutor.schedule(()->{
+        ThreadPoolUtils.getExecutor().execute(()->{
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
@@ -79,6 +81,6 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             String remark= FollowConstant.FOLLOW_CLOSE+"策略账号="+orderInfo.getAccount()+",单号="+orderInfo.getTicket()+",品种="+orderInfo.getSymbol()+",手数="+orderInfo.getLots()+",类型="+ Op.forValue(orderInfo.getType()).name();
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogService.save(followTraderLogEntity);
-        },100, TimeUnit.MILLISECONDS);
+        });
     }
 }

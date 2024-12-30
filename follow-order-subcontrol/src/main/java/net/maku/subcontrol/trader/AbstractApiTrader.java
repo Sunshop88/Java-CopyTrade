@@ -24,6 +24,7 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.even.OnQuoteTraderHandler;
 import net.maku.subcontrol.even.OrderUpdateHandler;
 import net.maku.subcontrol.even.CopierOrderUpdateEventHandlerImpl;
@@ -95,7 +96,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     /**
      * 连接服务器
      */
-    protected void connect2Broker() throws Exception {
+    public void connect2Broker() throws Exception {
         this.initPrefixSuffix = Boolean.FALSE;
         this.quoteClient.Connect();
         if (this.quoteClient.OrderClient == null) {
@@ -106,11 +107,8 @@ public abstract class AbstractApiTrader extends ApiTrader {
             if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
-            } else {
-                //订单变化监听
-                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
-            this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
         }
 
         if (this.onQuoteTraderHandler==null){

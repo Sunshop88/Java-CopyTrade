@@ -57,6 +57,11 @@ public class FollowVpsVO implements Serializable {
 	@Max(value = 1, message = "连接状态只能为0或1")
 	private Integer connectionStatus;
 
+	@Schema(description = "是否同步，0否，1是")
+	@Min(value = 0, message = "状态只能为0或1")
+	@Max(value = 1, message = "状态只能为0或1")
+	private Integer isSyn;
+
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;
 
@@ -77,4 +82,5 @@ public class FollowVpsVO implements Serializable {
 	private BigDecimal profit;
 	@Schema(description = "总手数")
 	private BigDecimal lots;
+
 }

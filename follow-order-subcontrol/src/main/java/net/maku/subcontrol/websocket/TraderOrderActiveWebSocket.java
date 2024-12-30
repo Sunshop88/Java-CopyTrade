@@ -31,6 +31,7 @@ import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.enums.TraderRepairOrderEnum;
 import net.maku.subcontrol.pojo.OrderActiveInfoVOPool;
@@ -71,13 +72,9 @@ public class TraderOrderActiveWebSocket {
 
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
-    private FollowSubscribeOrderService followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
-    private final OrderActiveInfoVOPool orderActiveInfoVOPool = new OrderActiveInfoVOPool();
-    private final List<OrderActiveInfoVO> pendingReturnObjects = new ArrayList<>();
     private FollowTraderSubscribeService followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-    private FollowPlatformService followPlatformService = SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
     private FollowTraderService followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
@@ -113,7 +110,6 @@ public class TraderOrderActiveWebSocket {
     public void sendPeriodicMessage(String traderId, String slaveId) {
 
         try {
-            returnObjectsInBatch();
             Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
             if (ObjectUtil.isEmpty(sessionSet)) {
                 return;
@@ -125,7 +121,7 @@ public class TraderOrderActiveWebSocket {
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
-                followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
+                followTraderEntity = followTraderService.getFollowById(Long.valueOf(accountId));
                 abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
@@ -167,11 +163,11 @@ public class TraderOrderActiveWebSocket {
             }
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")) {
-                log.info("follow sub" + slaveId + ":" + traderId);
                 FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
-
-                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
-                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+                FollowTraderEntity master = followTraderService.getFollowById(Long.valueOf(traderId));
+                FollowTraderEntity slave = followTraderService.getFollowById(Long.valueOf(slaveId));
+                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
 
                 List<Object> sendRepairToExtract = new ArrayList<>();
 
@@ -195,7 +191,7 @@ public class TraderOrderActiveWebSocket {
                 }
                 closeRepairToRemove.forEach(repair ->{
                     EaOrderInfo repair1 = (EaOrderInfo) repair;
-                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
+                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
                 });
 
                 List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
@@ -216,7 +212,7 @@ public class TraderOrderActiveWebSocket {
                     //通过备注查询未平仓记录
                     List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
                     if (ObjectUtil.isNotEmpty(detailServiceList)) {
-                        detailServiceList.forEach(detail->{
+                        detailServiceList.forEach(detail -> {
                             OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                             orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
                             orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
@@ -326,21 +322,5 @@ public class TraderOrderActiveWebSocket {
         // vo.setOpenTime(order.OpenTime);
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
-    }
-
-    private void returnObjectsInBatch() {
-        synchronized (pendingReturnObjects) {
-            if (pendingReturnObjects.isEmpty()) {
-                return; // 如果没有待归还的对象，直接返回
-            }
-
-            // 归还所有对象
-            for (OrderActiveInfoVO vo : pendingReturnObjects) {
-                orderActiveInfoVOPool.returnObject(vo);
-            }
-
-            // 清空待归还列表
-            pendingReturnObjects.clear();
-        }
     }
 }

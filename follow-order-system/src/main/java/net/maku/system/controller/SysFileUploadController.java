@@ -70,14 +70,19 @@ public class SysFileUploadController {
             if (matcher.find()) {
                 String result1 = matcher.group();
                 //1秒后执行
-                ThreadPoolUtils.scheduledExecute(()->{
-                    String uppath= OSUtil.isWindows()?properties.getLocal().getPath():properties.getLocal().getLinuxpath();
+                ThreadPoolUtils.getExecutor().execute(()->{
                     try {
-                        serversDatIniUtil.ExportServersIni(uppath+"/"+result1);
-                    } catch (IOException e) {
+                        Thread.sleep(1000);
+                        String uppath= OSUtil.isWindows()?properties.getLocal().getPath():properties.getLocal().getLinuxpath();
+                        try {
+                            serversDatIniUtil.ExportServersIni(uppath+"/"+result1);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                },1,TimeUnit.SECONDS);
+                });
             }
             return Result.ok(vo);
         }

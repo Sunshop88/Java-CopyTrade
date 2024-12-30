@@ -20,9 +20,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
@@ -37,7 +35,6 @@ public class AbstractOperation {
     protected FollowSubscribeOrderService followSubscribeOrderService;
     protected RedisUtil redisUtil;
     protected FollowRule followRule;
-    protected ScheduledThreadPoolExecutor threeStrategyThreadPoolExecutor;
     protected FollowOrderHistoryService followOrderHistoryService;
     protected FollowVarietyService followVarietyService;
     protected FollowTraderService followTraderService;
@@ -53,7 +50,6 @@ public class AbstractOperation {
         this.redisUtil = SpringContextUtils.getBean(RedisUtil.class);
         followTraderSubscribeService = SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
         followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderServiceImpl.class);
-        this.threeStrategyThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         followRule = new FollowRule();
         this.followOrderHistoryService=SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
         this.followVarietyService=SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
@@ -114,8 +110,17 @@ public class AbstractOperation {
 
     // 初始化定时任务
     public void startBatchSender() {
-        ThreadPoolUtils.getScheduledExecute().scheduleAtFixedRate(() -> {
-            batchSendKafkaMessages();
-        }, 0, 1, TimeUnit.SECONDS); // 每 1 秒调用一次
+        CompletableFuture.runAsync(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    batchSendKafkaMessages();
+                    TimeUnit.SECONDS.sleep(1); // 固定延迟
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    log.error("定时任务异常: ", e);
+                }
+            }
+        }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
     }
 }

@@ -9,6 +9,7 @@ import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.common.utils.PageResult;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.entity.FollowOrderDetailEntity;

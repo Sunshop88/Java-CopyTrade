@@ -14,6 +14,7 @@ import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -52,9 +53,10 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
         //保存所需要下单的用户到redis，用魔术号记录 set类型存储
         //保存下单信息
         subscribeEntityList.forEach(o -> {
-            redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
+            FollowTraderEntity follow = followTraderService.getFollowById(o.getSlaveId());
+            redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
         });
-        threeStrategyThreadPoolExecutor.schedule(() -> {
+        ThreadPoolUtils.getExecutor().execute(() -> {
             //生成记录
             FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, trader);
             followSubscribeOrderService.save(openOrderMapping);
@@ -71,7 +73,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             historyEntity.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
             historyEntity.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
             //止损
-            BigDecimal copierProfit = new BigDecimal(orderInfo.getSwap() + orderInfo.getComment() + orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal copierProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add( orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
             historyEntity.setProfit(copierProfit);
             historyEntity.setComment(orderInfo.getComment());
             historyEntity.setSwap(orderInfo.getSwap());
@@ -96,7 +98,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
             followTraderLogService.save(followTraderLogEntity);
-        }, 100, TimeUnit.MILLISECONDS);
+        });
     }
 
 }

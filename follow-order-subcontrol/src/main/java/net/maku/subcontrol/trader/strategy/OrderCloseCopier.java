@@ -78,7 +78,6 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            log.info("获取信息时间"+copier.getId());
         }
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
             log.info("未发现缓存" + mapKey);
@@ -104,11 +103,11 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
      * @param orderInfo             订单信息
      * @return 是否继续尝试 true false
      */
-    Order closeOrder(AbstractApiTrader trader, CachedCopierOrderInfo cachedCopierOrderInfo, EaOrderInfo orderInfo, int flag, String mapKey) {
-        Order order = null;
+    void closeOrder(AbstractApiTrader trader, CachedCopierOrderInfo cachedCopierOrderInfo, EaOrderInfo orderInfo, int flag, String mapKey) {
         FollowTraderEntity copier = trader.getTrader();
         Long orderId = copier.getId();
         try {
+            Order order = null;
             FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
             if (leaderCopier == null) {
                 throw new RuntimeException("跟随关系不存在");
@@ -150,11 +149,14 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
+            long start = System.currentTimeMillis();
             if (copier.getType() == Buy.getValue()) {
-                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), lots, bid, Integer.MAX_VALUE);
+                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), bid, Integer.MAX_VALUE);
             } else {
-                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), lots, ask, Integer.MAX_VALUE);
+                order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), ask, Integer.MAX_VALUE);
             }
+            long end = System.currentTimeMillis();
+            log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
             LocalDateTime endTime = LocalDateTime.now();
             if (flag == 1) {
                 log.info("补单平仓开始");
@@ -200,20 +202,15 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
             //跟单信息
             String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "【失败】策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
-                    "跟单账号=" + copier.getAccount() + ",单号=" + order.Ticket + ",品种=" + order.Symbol + ",手数=" + order.Lots + ",类型=" + order.Type.name();
+                    "跟单账号=" + copier.getAccount() + ",单号=" + cachedCopierOrderInfo.getSlaveTicket() + ",品种=" + cachedCopierOrderInfo.getSlaveSymbol() + ",手数=" + cachedCopierOrderInfo.getSlavePosition() + ",类型=" +Op.forValue(cachedCopierOrderInfo.getSlaveType()).name();
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
             followTraderLogService.save(followTraderLogEntity);
 
             redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
-            Cache cache = cacheManager.getCache("followOrdersendCache");
-            if (cache != null) {
-                cache.evictIfPresent(mapKey + "#" + orderInfo.getTicket());
-            }
             log.error("跟单者完全平仓订单最终尝试失败，[原因：{}],[跟单者{}-{}-{}]完全平仓{}订单失败，[喊单者{}-{}-{}],喊单者订单信息[{}]", e.getMessage(), orderId, copier.getAccount(), copier.getServerName(), cachedCopierOrderInfo.getSlaveTicket(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         }
-        return order;
     }
 
 
-    }
+}

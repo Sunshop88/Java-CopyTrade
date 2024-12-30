@@ -19,7 +19,6 @@ import online.mtapi.mt4.OrderUpdateEventHandler;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * @author samson bruce
@@ -31,7 +30,6 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected String topic;
     protected FollowTraderEntity leader;
     protected AbstractApiTrader abstractApiTrader;
-    protected ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
     protected FollowSubscribeOrderService followSubscribeOrderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
@@ -39,7 +37,6 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
     public OrderUpdateHandler() {
-        this.scheduledThreadPoolExecutor = ThreadPoolUtils.getScheduledExecute();
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);

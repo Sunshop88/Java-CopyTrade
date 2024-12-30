@@ -164,7 +164,6 @@ public class FollowTraderController {
             leaderApiTradersAdmin.removeTrader(o.getId().toString());
             copierApiTradersAdmin.removeTrader(o.getId().toString());
             redisCache.deleteByPattern(o.getId().toString());
-            redisCache.deleteByPattern(o.getAccount());
             //账号缓存移除
             Cache cache = cacheManager.getCache("followFollowCache");
             if (cache != null) {
@@ -233,7 +232,7 @@ public class FollowTraderController {
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<String>> listSymbol() {
-        List<String> collect = detailService.list().stream().map(FollowOrderDetailEntity::getSymbol).distinct().collect(Collectors.toList());
+        List<String> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST)).stream().map(FollowOrderDetailEntity::getSymbol).distinct().collect(Collectors.toList());
         return Result.ok(collect);
     }
 
@@ -347,7 +346,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo) {
         if(vo.getIsCloseAll() ==null || vo.getIsCloseAll()== TraderRepairEnum.SEND.getType()){
-             checkParams(vo);
+            checkParams(vo);
         }
         FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
         if (ObjectUtil.isEmpty(followTraderVO)) {
@@ -563,14 +562,7 @@ public class FollowTraderController {
         //查询平台信息
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
         //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId))) {
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + traderId);
-        } else {
-            //查询改账号的品种规格
-            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, followSysmbolSpecificationEntityList);
-        }
+        Map<String, FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(traderId);
 
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
@@ -581,8 +573,7 @@ public class FollowTraderController {
             for (FollowVarietyEntity o : list) {
                 if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
                     //查看品种规格
-                    Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationEntityList.stream().filter(fl -> ObjectUtil.equals(o.getBrokerSymbol(), fl.getSymbol())).findFirst();
-                    if (specificationEntity.isPresent()) {
+                    if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))) {
                         return o.getBrokerSymbol();
                     }
                 }

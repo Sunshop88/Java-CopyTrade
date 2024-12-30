@@ -27,6 +27,9 @@ import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.task.UpdateAllTraderInfoTask;
+import net.maku.subcontrol.task.UpdateTraderInfoTask;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -86,7 +89,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         //倒计时门栓，大小为mt5账户个数，添加完成一个mt5账户倒计时门栓就减1，直到所有都添加完成。
         CountDownLatch countDownLatch = new CountDownLatch(leaders.size());
         for (FollowTraderEntity leader : leaders) {
-            scheduledExecutorService.submit(() -> {
+            ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
@@ -109,6 +112,19 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         countDownLatch.await();
         log.info("所有的mt4喊单者结束连接服务器");
         this.launchOn = true;
+        //定时更新
+//        CompletableFuture.runAsync(() -> {
+//            while (!Thread.currentThread().isInterrupted()) {
+//                try {
+//                    new UpdateAllTraderInfoTask(TraderTypeEnum.MASTER_REAL.getType());
+//                    TimeUnit.SECONDS.sleep(120); // 固定延迟
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                } catch (Exception e) {
+//                    log.error("定时任务异常: ", e);
+//                }
+//            }
+//        }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
     }
 
     /**
@@ -117,7 +133,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public void startUp(List<FollowTraderEntity> list){
         for (FollowTraderEntity leader : list) {
-            scheduledExecutorService.submit(() -> {
+            ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
@@ -175,7 +191,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         try {
             LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
             ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
-            FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) scheduledExecutorService.submit(connectionTask);
+            FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
             ConnectionResult result = submit.get();
             FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
             traderUpdateEn.setId(leader.getId());
