@@ -120,6 +120,10 @@ public class MasControlServiceImpl implements MasControlService {
                 throw new ServerException("券商名称重复，请重新输入");
             }
         }
+        //platformList不能为空
+        if (ObjectUtil.isEmpty(vo.getPlatformList())) {
+            throw new ServerException("服务列表不能为空");
+        }
         //根据vo的brokerName获取所有的券商名称，并且去重
         Long userId = SecurityUser.getUserId();
 
