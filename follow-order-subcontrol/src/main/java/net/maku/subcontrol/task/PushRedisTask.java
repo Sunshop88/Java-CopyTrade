@@ -106,7 +106,7 @@ public class PushRedisTask {
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
                             accountCache.setKey(akey);
-                            if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                            if (h.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                                 String group = h.getId() + " " + h.getAccount();
                                 accountCache.setGroup(group);
                             }else{
