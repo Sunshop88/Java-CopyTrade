@@ -439,11 +439,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
                 ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
                 Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
+                long start = System.currentTimeMillis();
                 if (order.Type.getValue() == Buy.getValue()) {
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
                 } else {
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
                 }
+                long end = System.currentTimeMillis();
+                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
             } catch (Exception e) {
                 log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
             }
@@ -865,10 +868,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             Order orderResult;
             if (followOrderDetailEntity.getType() == Buy.getValue()) {
+                long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
+                long end = System.currentTimeMillis();
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
+                long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
+                long end = System.currentTimeMillis();
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
             log.info("订单 " + orderNo + ": 平仓 " + orderResult);
@@ -1032,10 +1041,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
             if (type.equals(Buy.getValue())) {
+                long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+                long end = System.currentTimeMillis();
+                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
             } else {
+                long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+                long end = System.currentTimeMillis();
+                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());

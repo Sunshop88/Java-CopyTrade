@@ -178,6 +178,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
                 // 记录开始时间
                 LocalDateTime startTime=LocalDateTime.now();
+                long start = System.currentTimeMillis();
                 Order order = quoteClient.OrderClient.OrderSend(
                         orderInfo.getSymbol(),
                         op,
@@ -190,6 +191,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         orderInfo.getTicket(),
                         null
                 );
+                long end = System.currentTimeMillis();
+                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
                 // 记录结束时间
                 LocalDateTime endTime = LocalDateTime.now();
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
@@ -315,6 +318,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
             // 记录开始时间
             LocalDateTime startTime=LocalDateTime.now();
+            long start = System.currentTimeMillis();
             Order order = quoteClient.OrderClient.OrderSend(
                     orderInfo.getSymbol(),
                     op,
@@ -327,6 +331,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     orderInfo.getTicket(),
                     null
             );
+            long end = System.currentTimeMillis();
+            log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
             // 记录结束时间
             LocalDateTime endTime = LocalDateTime.now();
             log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
