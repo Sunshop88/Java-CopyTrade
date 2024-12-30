@@ -101,7 +101,7 @@ public class PushRedisTask {
                             }else{
                                 accountCache.setType("SOURCE");
                             }
-
+                            accountCache.setServer(h.getIpAddr());
                             List<OrderCacheVO> orderCaches = new ArrayList<>();
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
