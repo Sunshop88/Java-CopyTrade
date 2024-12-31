@@ -545,7 +545,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             } else {
                 orderActive = orderActiveInfoVOS.stream().filter(o -> o.getSymbol().equals(vo.getSymbol()) && o.getType().equals(Op.forValue(vo.getType()).name())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
             }
-            orderCount = vo.getNum();
+            orderCount = ObjectUtil.isEmpty(vo.getNum())?orderActive.size():vo.getNum();
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
                     .eq(FollowOrderDetailEntity::getSymbol, vo.getSymbol()).isNotNull(FollowOrderDetailEntity::getOpenTime)

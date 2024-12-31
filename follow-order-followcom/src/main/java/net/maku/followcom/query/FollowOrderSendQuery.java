@@ -70,4 +70,7 @@ public class FollowOrderSendQuery extends Query {
 
     @Schema(description = "平仓id")
     private Integer closeId;
+
+    @Schema(description = "魔术号")
+    private Integer magic;
 }

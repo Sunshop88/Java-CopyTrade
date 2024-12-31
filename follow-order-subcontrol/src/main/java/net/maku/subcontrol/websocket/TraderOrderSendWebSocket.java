@@ -33,6 +33,7 @@ import net.maku.followcom.util.SpringContextUtils;
 import net.maku.subcontrol.vo.FollowOrderSendSocketVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
+import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
@@ -114,20 +115,33 @@ public class TraderOrderSendWebSocket {
             List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(leaderApiTrader.getTrader().getTemplateId());
             List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
             log.info("匹配品种"+listv);
-            for (FollowVarietyEntity o:listv){
-                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                    //查看品种规格
-                    if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
-                        log.info("匹配symbol"+o.getBrokerSymbol());
-                        this.symbol=o.getBrokerSymbol();
-                        break;
+            QuoteEventArgs eventArgs = null;
+            if (ObjectUtil.isEmpty(listv)){
+                eventArgs = getEventArgs(leaderApiTrader,quoteClient);
+            }else {
+                for (FollowVarietyEntity o:listv){
+                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                        //查看品种规格
+                        if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
+                            log.info("匹配symbol"+o.getBrokerSymbol());
+                            this.symbol=o.getBrokerSymbol();
+                            eventArgs = getEventArgs(leaderApiTrader,quoteClient);
+                            if (ObjectUtil.isNotEmpty(eventArgs)){
+                                break;
+                            }
+                        }
                     }
+                }
+                if (ObjectUtil.isEmpty(eventArgs)){
+                    this.symbol=symbol;
+                    eventArgs = getEventArgs(leaderApiTrader,quoteClient);
                 }
             }
             //开启定时任务
+            QuoteEventArgs finalEventArgs = eventArgs;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(leaderApiTrader,quoteClient);
+                    sendPeriodicMessage(leaderApiTrader, finalEventArgs);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -140,8 +154,7 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private void sendPeriodicMessage(LeaderApiTrader leaderApiTrader,QuoteClient quoteClient){
-
+    private QuoteEventArgs getEventArgs(LeaderApiTrader leaderApiTrader,QuoteClient quoteClient){
         QuoteEventArgs eventArgs = null;
         try {
             if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient.GetQuote(this.symbol))){
@@ -157,10 +170,14 @@ public class TraderOrderSendWebSocket {
                 eventArgs=quoteClient.GetQuote(this.symbol);
             }
             eventArgs = leaderApiTrader.quoteClient.GetQuote(this.symbol);
-        }catch (InvalidSymbolException | online.mtapi.mt4.Exception.TimeoutException | ConnectException e) {
-            throw new ServerException("获取报价失败,品种不正确,请先配置品种");
+            return eventArgs;
+        }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
+            log.info("获取报价失败,品种不正确,请先配置品种");
+            return eventArgs;
         }
+    }
 
+    private void sendPeriodicMessage(LeaderApiTrader leaderApiTrader,QuoteEventArgs eventArgs){
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
@@ -183,12 +200,10 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-
     @OnClose
     public void onClose() {
         try {
             sessionPool.get(traderId+symbol).remove(session);
-            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
             // 需要移除监听器时调用
         } catch (Exception e) {

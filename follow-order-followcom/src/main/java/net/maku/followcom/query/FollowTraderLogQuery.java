@@ -24,5 +24,6 @@ public class FollowTraderLogQuery extends Query {
     private String logDetail;
     //类型0-新增 1-编辑 2-删除 3-下单 4-平仓 5-补单
     private Integer type;
-
+    //状态 0-失败 1-成功
+    private Integer status;
 }
