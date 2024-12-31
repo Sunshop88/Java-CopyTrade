@@ -5,6 +5,7 @@ import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.mybatis.dao.BaseDao;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -17,5 +18,5 @@ import java.util.List;
 @Mapper
 public interface FollowTestDetailDao extends BaseDao<FollowTestDetailEntity> {
 
-    List<FollowTestDetailVO> selectServer(FollowTestServerQuery query);
+    List<FollowTestDetailVO> selectServer(@Param("query")FollowTestServerQuery query);
 }

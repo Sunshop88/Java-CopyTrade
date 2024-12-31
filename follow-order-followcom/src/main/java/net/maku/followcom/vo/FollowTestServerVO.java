@@ -1,10 +1,7 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -30,6 +27,6 @@ public class FollowTestServerVO implements Serializable {
     private String platformType;
 
     @Schema(description = "服务器节点列表")
-    @NotBlank(message = "服务器节点列表不能为空")
+    @NotEmpty(message = "服务器节点列表不能为空")
     private List<String> serverNodeList;
 }
