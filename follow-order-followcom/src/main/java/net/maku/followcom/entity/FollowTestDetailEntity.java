@@ -1,6 +1,7 @@
 package net.maku.followcom.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -101,4 +102,16 @@ public class FollowTestDetailEntity {
 	 */
 	@TableField(value = "vps_name")
 	private String vpsName;
+
+	/**
+	 * 服务器更新时间
+	 */
+	@TableField(value = "server_update_time")
+	private LocalDateTime serverUpdateTime;
+
+	/**
+	 * 默认节点 0：是
+	 */
+	@TableField(value = "is_default_server")
+	private Integer isDefaultServer;
 }

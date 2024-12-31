@@ -82,4 +82,10 @@ public class FollowTestDetailVO implements Serializable {
 	@Size(max = 100, message = "VPS名称长度不能超过100个字符")
 	private String vpsName;
 
+	@Schema(description = "服务器更新时间")
+	private LocalDateTime serverUpdateTime;
+
+	@Schema(description = "默认节点 0：是")
+	private Integer isDefaultServer;
+
 }

@@ -57,6 +57,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     //查询功能
     private LambdaQueryWrapper<FollowPlatformEntity> getWrapper(FollowPlatformQuery query){
         LambdaQueryWrapper<FollowPlatformEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.like(ObjectUtil.isNotEmpty(query.getServer()), FollowPlatformEntity::getServer, query.getServer());
         wrapper.eq(FollowPlatformEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
         if(ObjectUtil.isNotEmpty(query.getBrokerName())){
          //   wrapper.apply("LOWER(broker_name)","like" , "\'%"+query.getBrokerName().toLowerCase()+"%\'");
@@ -202,6 +203,17 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     )
     public FollowPlatformEntity updatePlatCache(String id) {
         return this.getById(id);
+    }
+
+    @Override
+    public String getbrokerName(String serverName) {
+        LambdaQueryWrapper<FollowPlatformEntity> queryWrapper = Wrappers.lambdaQuery();
+                queryWrapper.eq(FollowPlatformEntity::getServer, serverName)
+                .orderByDesc(FollowPlatformEntity::getCreateTime) // 按创建时间降序排列
+                .last("LIMIT 1");
+
+        FollowPlatformEntity entity = baseMapper.selectOne(queryWrapper);
+        return entity != null ? entity.getBrokerName() : null;
     }
 
 

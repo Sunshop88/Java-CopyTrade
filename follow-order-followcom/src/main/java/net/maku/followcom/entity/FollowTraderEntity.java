@@ -189,4 +189,9 @@ public class FollowTraderEntity {
 	@TableField(value = "is_first_sync")
 	private Integer isFirstSync;
 
+	/**
+	 *登录节点地址
+	 */
+	@TableField(value = "login_node")
+	private String loginNode;
 }

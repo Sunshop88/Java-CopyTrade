@@ -28,10 +28,7 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
 
     void export();
 
-//    List<String> getBrokeName(List<Long> idList);
-
     List<FollowPlatformVO> getList();
-
 
     QuoteClient tologin(FollowTraderEntity trader);
 
@@ -42,7 +39,10 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     List<FollowPlatformVO> listHavingServer(String name);
 
     List<FollowPlatformVO> listByServer();
+    
     FollowPlatformEntity getPlatFormById(String id);
 
     FollowPlatformEntity updatePlatCache(String id);
+
+    String getbrokerName(String serverName);
 }

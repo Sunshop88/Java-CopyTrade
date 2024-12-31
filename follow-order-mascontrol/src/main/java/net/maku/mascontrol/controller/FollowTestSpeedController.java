@@ -16,6 +16,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTestSpeedQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
@@ -346,4 +347,61 @@ public class FollowTestSpeedController {
 
         return Result.ok(list);
     }
+
+    @PostMapping("addServer")
+    @Operation(summary = "添加服务器")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> addServer(@RequestParam String server) {
+            // 根据名称查询其信息
+            FollowBrokeServerEntity followBrokeServerEntity = followBrokeServerService.getByName(server);
+            if (ObjectUtil.isEmpty(followBrokeServerEntity)) {
+                FollowBrokeServerVO followBrokeServer = new FollowBrokeServerVO();
+                followBrokeServer.setServerName(server);
+                followBrokeServerService.save(followBrokeServer);
+                followBrokeServerEntity = followBrokeServerService.getByName(server); // 重新查询以获取生成的ID
+            }
+
+            FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
+            followTestDetail.setServerName(server);
+            followTestDetail.setServerId(followBrokeServerEntity.getId());
+            followTestDetail.setPlatformType("MT4");
+            followTestDetailService.save(followTestDetail);
+
+            return Result.ok("添加成功");
+    }
+
+    @PostMapping("addServerNode")
+    @Operation(summary = "添加服务器节点")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> addServerNode(@RequestBody @Valid FollowTestServerVO followTestServerVO) {
+        //添加到券商表
+        followTestServerVO.getServerNodeList().parallelStream().forEach(server -> {
+            FollowBrokeServerVO  followBrokeServer = new FollowBrokeServerVO();
+            followBrokeServer.setServerName(followTestServerVO.getServerName());
+            String[] split = server.split(":");
+            followBrokeServer.setServerNode(split[0]);
+            followBrokeServer.setServerPort(split[1]);
+            followBrokeServerService.save(followBrokeServer);
+
+            FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
+            followTestDetail.setServerName(followTestServerVO.getServerName());
+            followTestDetail.setServerId(followBrokeServer.getId());
+            followTestDetail.setPlatformType(followTestServerVO.getPlatformType());
+            followTestDetail.setServerNode(server);
+            followTestDetailService.save(followTestDetail);
+        });
+
+        return Result.ok("添加成功");
+    }
+
+    @GetMapping("listTestServer")
+    @Operation(summary = "服务器管理列表")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<PageResult<String[]>> listTestServer(@ParameterObject FollowTestServerQuery query) {
+        PageResult<String[]>list = followTestDetailService.pageServer(query);
+
+        return Result.ok(list);
+    }
+
+
 }

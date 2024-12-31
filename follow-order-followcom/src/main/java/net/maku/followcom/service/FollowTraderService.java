@@ -79,4 +79,8 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     List<Long> getShare(Integer oldId, Integer newId);
 
     FollowTraderEntity getFollowById(Long masterId);
+
+    String getAccountCount(String serverName);
+
+    String getDefaultAccountCount(String serverName,String defaultServerNode);
 }

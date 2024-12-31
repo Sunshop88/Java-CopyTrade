@@ -2,6 +2,7 @@ package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowTestDetailEntity;
 import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
@@ -33,9 +34,11 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
 
     List<FollowTestDetailVO> listServerAndVps();
 
- void updates(FollowTestDetailVO convert);
+    void updates(FollowTestDetailVO convert);
 
- PageResult<String[]> page(FollowTestDetailQuery query);
+    PageResult<String[]> page(FollowTestDetailQuery query);
 
     void deleteByTestId(Integer id);
+
+    PageResult<String[]> pageServer(FollowTestServerQuery query);
 }

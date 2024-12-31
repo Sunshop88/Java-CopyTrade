@@ -17,4 +17,9 @@ import net.maku.framework.common.query.Query;
 public class FollowPlatformQuery extends Query {
 
     private String brokerName;
+
+    /**
+     * 服务器
+     */
+    private String server;
 }

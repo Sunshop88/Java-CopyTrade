@@ -168,4 +168,6 @@ public class FollowTraderVO implements Serializable {
 	//信用
 	private Double credit;
 
+	@Schema(description = "登录节点")
+	private String loginNode;
 }

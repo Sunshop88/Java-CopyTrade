@@ -1,8 +1,12 @@
 package net.maku.followcom.dao;
 
 import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.query.FollowTestServerQuery;
+import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.mybatis.dao.BaseDao;
 import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
 
 /**
  * 测速详情
@@ -13,4 +17,5 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface FollowTestDetailDao extends BaseDao<FollowTestDetailEntity> {
 
+    List<FollowTestDetailVO> selectServer(FollowTestServerQuery query);
 }

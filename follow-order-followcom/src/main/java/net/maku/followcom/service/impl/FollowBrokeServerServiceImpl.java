@@ -118,4 +118,14 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
         }
     }
 
+    @Override
+    public FollowBrokeServerEntity getByName(String server) {
+        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                .eq(FollowBrokeServerEntity::getServerName, server)
+                .orderByDesc(FollowBrokeServerEntity::getCreateTime)) // 按照创建时间降序排列
+                .stream()
+                .findFirst()
+                .orElse(null);
+    }
+
 }
