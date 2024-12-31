@@ -178,6 +178,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     followTraderSubscribeEntityList.forEach(o-> {
                         if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
                             ThreadPoolUtils.getExecutor().execute(() -> {
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
                                 String slaveId = o.getSlaveId().toString();
                                 if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                     log.info("未开通跟单状态");
