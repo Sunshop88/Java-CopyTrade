@@ -65,9 +65,9 @@ public class VpsInfoWebSocket {
             this.session = session;
             this.page = page;
             this.userId=userId;
-            Set<Session> sessionSet = sessionPool.getOrDefault(userId, ConcurrentHashMap.newKeySet());
+            Set<Session> sessionSet = sessionPool.getOrDefault(userId.toString()+page, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
-            sessionPool.put(userId.toString(), sessionSet);
+            sessionPool.put(userId.toString()+page, sessionSet);
             //开启定时任务
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
@@ -87,6 +87,7 @@ public class VpsInfoWebSocket {
         FollowVpsQuery query=new FollowVpsQuery();
         query.setPage(page);
         query.setUserId(userId);
+        query.setIsOpen(1);
         query.setLimit(10);
         PageResult<FollowVpsVO> pageData = followVpsService.page(query);
         if(ObjectUtil.isNotEmpty(pageData)){

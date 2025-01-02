@@ -1,8 +1,9 @@
 package net.maku.followcom.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import net.maku.followcom.entity.FollowOrderSendEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -83,4 +84,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     String getAccountCount(String serverName);
 
     String getDefaultAccountCount(String serverName,String defaultServerNode);
+
+    IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo);
 }

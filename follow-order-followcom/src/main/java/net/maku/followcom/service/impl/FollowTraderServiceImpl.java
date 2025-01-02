@@ -16,6 +16,7 @@ import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.dao.FollowTraderDao;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
+import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
@@ -1573,5 +1574,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return String.valueOf(count);
     }
 
-
+    @Override
+    public IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo) {
+        return baseMapper.getAccountDataPage(page,vo);
+    }
 }

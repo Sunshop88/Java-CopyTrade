@@ -116,4 +116,5 @@ public interface FollowTraderConvert {
         return type == 0 ? "SOURCE" : "FOLLOW";
     }
 
+    List<DashboardAccountDataVO> convertAccountData(List<FollowTraderEntity> records);
 }
