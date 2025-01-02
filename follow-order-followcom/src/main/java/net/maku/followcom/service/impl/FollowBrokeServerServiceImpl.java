@@ -101,7 +101,7 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
 
     @Override
     public List<FollowBrokeServerEntity> listByServerName(String name) {
-        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getSpeed));
+        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName,name).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed));
     }
 
     @Override

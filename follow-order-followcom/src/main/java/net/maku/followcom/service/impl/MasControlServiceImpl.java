@@ -170,7 +170,7 @@ public class MasControlServiceImpl implements MasControlService {
 //                vo.getPlatformList().forEach(bro -> {
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
-                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
+                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed));
                     if (!list.isEmpty()) {
                         FollowBrokeServerEntity followBrokeServer = list.get(0);
                         followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
@@ -279,7 +279,7 @@ public class MasControlServiceImpl implements MasControlService {
 //                vo.getPlatformList().forEach(bro -> {
 //                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
 //                platformEntity.eq("id", vo.getId());
-            List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).orderByAsc(FollowBrokeServerEntity::getSpeed));
+            List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed));
             if (!list.isEmpty()) {
                 FollowBrokeServerEntity followBrokeServer = list.get(0);
                 followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));

@@ -134,6 +134,7 @@ public class FollowTraderController {
             vo.setTemplateId(followVarietyService.getLatestTemplateId());
         }
         followTraderService.update(vo);
+        leaderApiTradersAdmin.removeTrader(vo.getId().toString());
         //重连
         Boolean reconnect = reconnect(vo.getId().toString());
         if (!reconnect){

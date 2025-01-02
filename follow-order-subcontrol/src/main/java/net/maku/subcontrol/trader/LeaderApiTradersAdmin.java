@@ -11,15 +11,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.followcom.vo.FollowTraderVO;
@@ -174,12 +172,36 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             conCodeEnum = connectTrader(leader, conCodeEnum, split[0], Integer.valueOf(split[1]));
             if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                 //循环连接
-                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
-                for (FollowBrokeServerEntity address : serverEntityList) {
-                    // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                    if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
-                        break;
+                FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+                // 先查询 test_id 最大值
+                FollowTestDetailEntity  followTestDetailEntity = followTestDetailService.getOne(
+                        new LambdaQueryWrapper<FollowTestDetailEntity>()
+                                .eq(FollowTestDetailEntity::getServerName, leader.getPlatform())
+                                .eq(FollowTestDetailEntity::getVpsId, vps.getId())
+                                .orderByDesc(FollowTestDetailEntity::getTestId)
+                                .select(FollowTestDetailEntity::getTestId)
+                                .last("LIMIT 1")
+                );
+                Integer maxTestId = followTestDetailEntity != null ? followTestDetailEntity.getTestId() : null;
+                if (ObjectUtil.isNotEmpty(maxTestId)){
+                    //测速记录
+                    List<FollowTestDetailEntity> list = followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, leader.getPlatform()).eq(FollowTestDetailEntity::getVpsId, vps.getId()).eq(FollowTestDetailEntity::getTestId, maxTestId).orderByAsc(FollowTestDetailEntity::getSpeed));
+                    for (FollowTestDetailEntity address : list) {
+                        // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                        String[] strings = address.getServerNode().split(":");
+                        conCodeEnum = connectTrader(leader, conCodeEnum, strings[0], Integer.valueOf(strings[1]));
+                        if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                            break;
+                        }
+                    }
+                }else {
+                    List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
+                    for (FollowBrokeServerEntity address : serverEntityList) {
+                        // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                        conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
+                        if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                            break;
+                        }
                     }
                 }
             }
