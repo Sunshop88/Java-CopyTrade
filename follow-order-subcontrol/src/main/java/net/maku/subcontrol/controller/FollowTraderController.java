@@ -232,8 +232,8 @@ public class FollowTraderController {
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<String>> listSymbol() {
-        List<String> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST)).stream().map(FollowOrderDetailEntity::getSymbol).distinct().collect(Collectors.toList());
-        return Result.ok(collect);
+        List<FollowOrderDetailEntity> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getSymbol).eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).groupBy(FollowOrderDetailEntity::getSymbol)).stream().toList();
+        return Result.ok(collect.stream().map(FollowOrderDetailEntity::getSymbol).toList());
     }
 
     @PostMapping("orderSend")
