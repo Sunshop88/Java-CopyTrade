@@ -175,8 +175,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 if (leader.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
                     //查询订阅关系
                     List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList=followTraderSubscribeService.getSubscribeOrder(leader.getId());
-                    followTraderSubscribeEntityList.forEach(o-> {
-                        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                    if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                        followTraderSubscribeEntityList.forEach(o-> {
                             ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
                                     Thread.sleep(100);
@@ -225,9 +225,17 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                         log.info("开始下单请求" + slaveId);
                                         strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                     }
+
                                 }
                             });
-                        }else {
+                        });
+                    }else {
+                        followTraderSubscribeEntityList.forEach(o-> {
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
                             String slaveId = o.getSlaveId().toString();
                             if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单状态");
@@ -271,9 +279,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
                             }
-                        }
-                    });
-
+                        });
+                    }
                 } else {
                     //喊单账号未开启
                     log.info(leader.getId() + "喊单账号状态未开启");
