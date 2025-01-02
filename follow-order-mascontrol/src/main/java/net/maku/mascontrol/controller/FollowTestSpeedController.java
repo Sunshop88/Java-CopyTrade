@@ -231,6 +231,7 @@ public class FollowTestSpeedController {
         if (allSuccess) {
             overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
 
+            /**
             List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
                     new LambdaQueryWrapper<FollowTestDetailEntity>()
                             .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
@@ -265,6 +266,7 @@ public class FollowTestSpeedController {
                     }
                 });
             });
+            */
         } else {
             overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
             // 延迟删除操作，确保在所有测速请求完成后再进行删除
@@ -430,17 +432,38 @@ public class FollowTestSpeedController {
     @PutMapping("updateServerNode")
     @Operation(summary = "修改服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> updateServerNode(@RequestBody List<FollowTestDetailVO> followTestServerVO,String name) {
-        for (FollowTestDetailVO followTestDetailVO : followTestServerVO){
-            //确保名称的唯一性,查询followTestDetailService的serverName
+    public Result<String> updateServerNode(@RequestBody List<FollowTestDetailVO> followTestServerVO, @RequestParam(required = false) String name) {
+        for (FollowTestDetailVO followTestDetailVO : followTestServerVO) {
+            // 确保名称的唯一性
             if (followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
                     .eq(FollowTestDetailEntity::getServerName, followTestDetailVO.getServerName())
                     .ne(FollowTestDetailEntity::getId, followTestDetailVO.getId())).size() > 0) {
                 return Result.error("服务器名称重复");
             }
-            followTestDetailVO.setServerName(name);
+            // 如果 name 不为空，则更新 serverName
+            if (ObjectUtil.isNotEmpty(name)) {
+                followTestDetailVO.setServerName(name);
+            }
             followTestDetailService.update(followTestDetailVO);
         }
+        //redis更新
+        // 查询 isDefaultServer 为 0的数据
+        List<FollowTestDetailEntity> defaultServerNodes = new ArrayList<>();
+        for (FollowTestDetailVO vo : followTestServerVO) {
+            List<FollowTestDetailEntity> entities = followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
+                    .eq(FollowTestDetailEntity::getIsDefaultServer, 0));
+            defaultServerNodes.addAll(entities);
+        }
+
+        // 将数据存储到 Redis 中
+        for (FollowTestDetailEntity entity : defaultServerNodes) {
+            Integer vpsId = entity.getVpsId();
+            String serverName = entity.getServerName();
+            String serverNode = entity.getServerNode();
+
+            redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, serverNode, 0);
+        }
+
         return Result.ok("修改成功");
     }
 
@@ -473,7 +496,7 @@ public class FollowTestSpeedController {
         //判断该服务器名称的账号数量是否为0
         String accountCount = followTraderService.getAccountCount(server);
         if (Integer.parseInt(accountCount) > 0) {
-            return Result.error("该服务器名称的账号数量不为0，无法删除");
+            return Result.error("该服务器账号数量不为0，无法删除");
         }
         followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, server));
 //        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
