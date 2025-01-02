@@ -36,6 +36,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import org.springframework.web.client.RestTemplate;
@@ -355,7 +356,7 @@ public class FollowTestSpeedController {
             // 根据名称查询其信息
             FollowBrokeServerEntity followBrokeServerEntity = followBrokeServerService.getByName(server);
             if (ObjectUtil.isEmpty(followBrokeServerEntity)) {
-                FollowBrokeServerVO followBrokeServer = new FollowBrokeServerVO();
+                FollowBrokeServerEntity  followBrokeServer = new FollowBrokeServerEntity();
                 followBrokeServer.setServerName(server);
                 followBrokeServerService.save(followBrokeServer);
                 followBrokeServerEntity = followBrokeServerService.getByName(server); // 重新查询以获取生成的ID
@@ -373,12 +374,17 @@ public class FollowTestSpeedController {
     @PostMapping("addServerNode")
     @Operation(summary = "添加服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
+    @Transactional(rollbackFor = Exception.class)
     public Result<String> addServerNode(@RequestBody @Valid FollowTestServerVO followTestServerVO) {
+        try {
         //添加到券商表
-        followTestServerVO.getServerNodeList().parallelStream().forEach(server -> {
-            FollowBrokeServerVO  followBrokeServer = new FollowBrokeServerVO();
+        followTestServerVO.getServerNodeList().stream().forEach(server -> {
+            FollowBrokeServerEntity  followBrokeServer = new FollowBrokeServerEntity();
             followBrokeServer.setServerName(followTestServerVO.getServerName());
             String[] split = server.split(":");
+            if (split.length != 2) {
+                throw new ServerException("服务器节点格式不正确");
+            }
             followBrokeServer.setServerNode(split[0]);
             followBrokeServer.setServerPort(split[1]);
             followBrokeServerService.save(followBrokeServer);
@@ -392,6 +398,10 @@ public class FollowTestSpeedController {
         });
 
         return Result.ok("添加成功");
+        } catch (Exception e) {
+            log.error("添加服务器节点失败", e);
+            throw e; // 确保异常被抛出，触发事务回滚
+        }
     }
 
     @GetMapping("listTestServer")
@@ -403,5 +413,13 @@ public class FollowTestSpeedController {
         return Result.ok(list);
     }
 
+    @GetMapping("listTestServerNode")
+    @Operation(summary = "节点列表")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<PageResult<String[]>> listTestServerNode(@ParameterObject FollowTestServerQuery query) {
+        PageResult<String[]>list = followTestDetailService.pageServerNode(query);
+
+        return Result.ok(list);
+    }
 
 }

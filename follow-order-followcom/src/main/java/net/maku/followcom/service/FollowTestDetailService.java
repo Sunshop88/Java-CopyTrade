@@ -41,4 +41,6 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
     void deleteByTestId(Integer id);
 
     PageResult<String[]> pageServer(FollowTestServerQuery query);
+
+    PageResult<String[]> pageServerNode(FollowTestServerQuery query);
 }

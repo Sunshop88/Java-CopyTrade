@@ -2,8 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="net.maku.followcom.dao.FollowTestDetailDao">
-    <select id="selectServer" resultType="net.maku.followcom.entity.FollowTestDetailEntity">
-        SELECT t1.*
+    <select id="selectServer" parameterType="net.maku.followcom.query.FollowTestServerQuery" resultType="net.maku.followcom.vo.FollowTestDetailVO">
+    SELECT t1.*
         FROM follow_test_detail t1
         JOIN (
         SELECT server_name, platform_type, server_node, MAX(create_time) AS latest_time
@@ -14,7 +14,7 @@
         AND t1.platform_type = t2.platform_type
         AND t1.server_node = t2.server_node
         AND t1.create_time = t2.latest_time
-        WHERE 1=1
+        WHERE  1=1
         <if test="query.brokerName != null and query.brokerName != ''">
             AND t1.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
         </if>
