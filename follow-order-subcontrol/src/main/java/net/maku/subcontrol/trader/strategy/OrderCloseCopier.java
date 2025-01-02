@@ -199,6 +199,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             followTraderLogEntity.setVpsClient(followVpsEntity.getClientId());
             followTraderLogEntity.setVpsName(followVpsEntity.getName());
             followTraderLogEntity.setCreateTime(LocalDateTime.now());
+            followTraderLogEntity.setStatus(CloseOrOpenEnum.CLOSE.getValue());
             followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
             //跟单信息
             String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "【失败】策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +

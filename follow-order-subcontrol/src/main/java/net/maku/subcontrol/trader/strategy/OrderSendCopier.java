@@ -255,6 +255,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         logEntity.setVpsName(copier.getServerName());
         logEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
         logEntity.setCreateTime(LocalDateTime.now());
+        logEntity.setStatus(CloseOrOpenEnum.CLOSE.getValue());
         logEntity.setType(flag == 0 ? TraderLogTypeEnum.SEND.getType() : TraderLogTypeEnum.REPAIR.getType());
         String remark = (flag == 0 ? FollowConstant.FOLLOW_SEND : FollowConstant.FOLLOW_REPAIR_SEND)
                 + ", 【失败】策略账号=" + orderInfo.getAccount()

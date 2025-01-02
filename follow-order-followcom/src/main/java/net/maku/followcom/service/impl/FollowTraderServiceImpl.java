@@ -1578,4 +1578,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo) {
         return baseMapper.getAccountDataPage(page,vo);
     }
+    @Override
+    public List<FollowTraderEntity> listByServerName(String name) {
+        //根据名称查询列表信息
+        LambdaQueryWrapper<FollowTraderEntity> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(FollowTraderEntity::getPlatform, name)
+                .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue());
+        // 执行查询并返回结果
+        return baseMapper.selectList(queryWrapper);
+    }
+
 }

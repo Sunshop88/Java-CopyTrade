@@ -97,4 +97,11 @@ public class FollowTraderLogEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 状态 0-失败 1-成功
+	 */
+	@TableField(value = "status")
+	private Integer status;
+
+
 }

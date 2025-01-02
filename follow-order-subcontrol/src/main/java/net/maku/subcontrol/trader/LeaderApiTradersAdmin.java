@@ -44,6 +44,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static net.maku.framework.common.constant.Constant.VPS_NODE_SPEED;
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
 
@@ -162,8 +163,8 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
         String serverNode;
         //优先查看平台默认节点
-        if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform()))){
-            serverNode=(String)redisUtil.hGet(Constant.VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform());
+        if (ObjectUtil.isNotEmpty(redisUtil.hGet(VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform()))){
+            serverNode=(String)redisUtil.hGet(VPS_NODE_SPEED+leader.getServerId(),leader.getPlatform());
         }else {
             FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
             serverNode=followPlatformServiceOne.getServerNode();

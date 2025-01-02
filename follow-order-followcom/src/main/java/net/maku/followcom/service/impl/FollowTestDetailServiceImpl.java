@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTestDetailConvert;
 import net.maku.followcom.dao.FollowTestDetailDao;
 import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.service.FollowPlatformService;
@@ -19,6 +22,7 @@ import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

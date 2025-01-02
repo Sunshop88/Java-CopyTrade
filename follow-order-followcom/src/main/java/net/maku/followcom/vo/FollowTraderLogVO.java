@@ -61,4 +61,6 @@ public class FollowTraderLogVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "状态0-失败 1-成功")
+	private Integer status;
 }

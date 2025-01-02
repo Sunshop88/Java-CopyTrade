@@ -4,13 +4,18 @@ import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.VpsSpendEnum;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.security.user.SecurityUser;
+import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
+import net.maku.subcontrol.trader.LeaderApiTrader;
+import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -32,7 +37,15 @@ public class SpeedTestTask {
     @Autowired
     private FollowTestDetailService followTestDetailService;
     @Autowired
+    private  FollowSpeedSettingService followSpeedSettingService;
+    @Autowired
+    private FollowTraderService followTraderService;
+    @Autowired
     private RedisUtil redisUtil;
+    @Autowired
+    private  LeaderApiTradersAdmin leaderApiTradersAdmin;
+    @Autowired
+    private CopierApiTradersAdmin copierApiTradersAdmin;
 
     @Scheduled(cron = "0 0 0 ? * SAT")
     //    @Scheduled(cron = "*/60 * * * * ?")//测试
@@ -62,6 +75,8 @@ public class SpeedTestTask {
             // 保存到数据库
             followTestSpeedService.saveTestSpeed(overallResult);
 
+            FollowSpeedSettingEntity settingEntity = followSpeedSettingService.getById(1);
+
             boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, overallResult.getId());
             if (isSuccess) {
                 overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
@@ -90,7 +105,7 @@ public class SpeedTestTask {
                                 .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
                                 .orElse(null);
 
-                        if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+                        if (ObjectUtil.isNotEmpty(minLatencyEntity) && settingEntity.getDefaultServerNode() == 0) {
                             //查询vps名称所对应的id
                             Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName)).getId();
                             redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
@@ -108,8 +123,58 @@ public class SpeedTestTask {
             followTestSpeedService.update(overallResult);
             log.info("每周测速任务执行完成...");
 
+            if (settingEntity.getDefaultServerNodeLogin() == 0){
+                LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue());
+                List<FollowTraderEntity> list = followTraderService.list(wrapper);
+                Map<String, Boolean> reconnectResults = new HashMap<>();
+
+                for (FollowTraderEntity followTraderEntity : list) {
+                    String traderId = followTraderEntity.getId().toString();
+                    Boolean reconnect = reconnect(traderId);
+                    reconnectResults.put(traderId, reconnect);
+                }
+                log.info("连接结果: {}", reconnectResults.toString());
+            }
+
         } catch (Exception e) {
             log.error("每周测速任务执行异常: ", e);
         }
+    }
+
+    private Boolean reconnect(String traderId) {
+        Boolean result=false;
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            leaderApiTradersAdmin.removeTrader(traderId);
+            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                leaderApiTrader.startTrade();
+                result=true;
+            }
+        }else {
+            copierApiTradersAdmin.removeTrader(traderId);
+            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                followTraderService.updateById(followTraderEntity);
+                log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                throw new ServerException("重连失败");
+            } else {
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                copierApiTrader.startTrade();
+                result=true;
+            }
+        }
+
+        return result;
     }
 }
