@@ -10,11 +10,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.VpsSpendEnum;
+import net.maku.followcom.query.FollowSpeedSettingQuery;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTestSpeedQuery;
@@ -73,6 +75,8 @@ public class FollowTestSpeedController {
     private final FollowPlatformService followPlatformService;
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
+    private final FollowTraderService followTraderService;
+    private final FollowSpeedSettingService followSpeedSettingService;
 
     @GetMapping("{id}")
     @Operation(summary = "信息")
@@ -422,4 +426,76 @@ public class FollowTestSpeedController {
         return Result.ok(list);
     }
 
+
+    @PutMapping("updateServerNode")
+    @Operation(summary = "修改服务器节点")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> updateServerNode(@RequestBody List<FollowTestDetailVO> followTestServerVO,String name) {
+        for (FollowTestDetailVO followTestDetailVO : followTestServerVO){
+            //确保名称的唯一性,查询followTestDetailService的serverName
+            if (followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
+                    .eq(FollowTestDetailEntity::getServerName, followTestDetailVO.getServerName())
+                    .ne(FollowTestDetailEntity::getId, followTestDetailVO.getId())).size() > 0) {
+                return Result.error("服务器名称重复");
+            }
+            followTestDetailVO.setServerName(name);
+            followTestDetailService.update(followTestDetailVO);
+        }
+        return Result.ok("修改成功");
+    }
+
+    @PostMapping("measureServer")
+    @Operation(summary = "节点列表测速")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<FollowTestSpeedVO> measures(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+        FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
+        overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
+        overallResult.setDoTime(new Date());
+        overallResult.setVersion(0);
+        overallResult.setDeleted(0);
+        overallResult.setCreator(SecurityUser.getUserId());
+        overallResult.setCreateTime(LocalDateTime.now());
+        overallResult.setTestName(SecurityUser.getUser().getUsername());
+        followTestSpeedService.saveTestSpeed(overallResult);
+
+        List<String> servers = request.getServers();
+        //查询vps
+        List<String> vps = followVpsService.listByVps().stream().map(FollowVpsVO::getName).collect(Collectors.toList());
+
+        extracted(req, vps, servers, overallResult);
+        return Result.ok();
+    }
+
+    @DeleteMapping("deleteServer")
+    @Operation(summary = "删除服务器")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> deleteServer(@RequestParam String server) {
+        //判断该服务器名称的账号数量是否为0
+        String accountCount = followTraderService.getAccountCount(server);
+        if (Integer.parseInt(accountCount) > 0) {
+            return Result.error("该服务器名称的账号数量不为0，无法删除");
+        }
+        followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, server));
+//        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
+        return Result.ok("删除成功");
+    }
+
+    @GetMapping("pageSetting")
+    @Operation(summary = "配置开关")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<PageResult<FollowSpeedSettingVO>> page(@ParameterObject @Valid FollowSpeedSettingQuery query){
+        PageResult<FollowSpeedSettingVO> page = followSpeedSettingService.page(query);
+
+        return Result.ok(page);
+    }
+
+    @PutMapping("updateSetting")
+    @Operation(summary = "修改配置")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> update(@RequestBody @Valid FollowSpeedSettingVO vo){
+        followSpeedSettingService.update(vo);
+
+        return Result.ok();
+    }
 }

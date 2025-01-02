@@ -83,4 +83,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     String getAccountCount(String serverName);
 
     String getDefaultAccountCount(String serverName,String defaultServerNode);
+
+    List<FollowTraderEntity> listByServerName(String name);
 }

@@ -642,5 +642,21 @@ public class FollowTraderController {
         return ask;
     }
 
+    @GetMapping("reconnectionServer")
+    @Operation(summary = "重连服务器账号")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<Map<String, Boolean>> reconnectionServer(@Parameter(description = "name") String name) {
+        // 查询serverName中的所有信息
+        List<FollowTraderEntity> list = followTraderService.listByServerName(name);
+        Map<String, Boolean> reconnectResults = new HashMap<>();
+
+        for (FollowTraderEntity followTraderEntity : list) {
+            String traderId = followTraderEntity.getId().toString();
+            Boolean reconnect = reconnect(traderId);
+            reconnectResults.put(traderId, reconnect);
+        }
+
+        return Result.ok(reconnectResults);
+    }
 
 }

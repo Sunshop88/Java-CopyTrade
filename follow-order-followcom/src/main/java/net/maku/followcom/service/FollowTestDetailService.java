@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.vo.FollowTestDetailVO;
