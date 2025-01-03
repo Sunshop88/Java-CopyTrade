@@ -28,15 +28,15 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://39.99.241.16:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://139.196.238.6:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: 5v07DqL!F7333
+          password: 8dWjmWvJd3JDvkQt
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://39.99.241.16:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://3139.196.238.6:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: 5v07DqL!F7333
+          password: 8dWjmWvJd3JDvkQt
   mqtt:
     host: tcp://localhost:1883
     username: maku
