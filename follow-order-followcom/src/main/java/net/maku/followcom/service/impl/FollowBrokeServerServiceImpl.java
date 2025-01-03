@@ -5,9 +5,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
-import net.maku.followcom.convert.FollowPlatformConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowBrokeServerConvert;
@@ -19,7 +16,6 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowBrokeServerExcelVO;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,6 +122,16 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
                 .stream()
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    public FollowBrokeServerEntity existsByServerNodeAndServerPort(String serverName, String serverNode, String serverPort) {
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                .eq(FollowBrokeServerEntity::getServerName, serverName)
+                .eq(FollowBrokeServerEntity::getServerNode, serverNode)
+                .eq(FollowBrokeServerEntity::getServerPort, serverPort)
+                .orderByDesc(FollowBrokeServerEntity::getCreateTime)
+                .last("LIMIT 1")); // 确保只返回一条记录
     }
 
 }

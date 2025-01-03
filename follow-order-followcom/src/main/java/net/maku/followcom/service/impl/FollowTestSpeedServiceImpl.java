@@ -12,8 +12,10 @@ import net.maku.followcom.convert.FollowTestSpeedConvert;
 import net.maku.followcom.dao.FollowTestSpeedDao;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.VpsSpendEnum;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTestSpeedQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTestSpeedExcelVO;
 import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.framework.common.exception.ServerException;
@@ -131,6 +133,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
+                //将服务器更新时间写进来
+                FollowTestServerQuery query = new FollowTestServerQuery();
+                query.setServerName(serverNode.getServerName());
+                query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数

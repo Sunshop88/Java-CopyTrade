@@ -190,8 +190,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
                     .map(FollowTestDetailVO::getServerNode)
                     .findFirst() // 获取最新的一条数据
-                    .orElse(null); // 如果没有符合条件的记录，返回 null
-            System.out.println(defaultServerNode);
+                    .orElse("null"); // 如果没有符合条件的记录，返回 null
             dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
             //平台类型
             dataRow[4] = platformType;
@@ -291,6 +290,11 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
+    }
+
+    @Override
+    public List<FollowTestDetailVO> selectServer(FollowTestServerQuery query) {
+        return baseMapper.selectServer(query);
     }
 
 

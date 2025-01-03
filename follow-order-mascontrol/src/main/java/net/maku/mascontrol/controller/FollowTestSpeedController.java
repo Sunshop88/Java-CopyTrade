@@ -358,23 +358,32 @@ public class FollowTestSpeedController {
     @PostMapping("addServer")
     @Operation(summary = "添加服务器")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> addServer(@RequestParam String server) {
-            // 根据名称查询其信息
-            FollowBrokeServerEntity followBrokeServerEntity = followBrokeServerService.getByName(server);
-            if (ObjectUtil.isEmpty(followBrokeServerEntity)) {
-                FollowBrokeServerEntity  followBrokeServer = new FollowBrokeServerEntity();
-                followBrokeServer.setServerName(server);
-                followBrokeServerService.save(followBrokeServer);
-                followBrokeServerEntity = followBrokeServerService.getByName(server); // 重新查询以获取生成的ID
-            }
+    public Result<String> addServer(@RequestBody FollowTestServerVO vo) {
+        // 根据名称查询其信息
+        FollowBrokeServerEntity followBrokeServerEntity = followBrokeServerService.getByName(vo.getServerName());
+        if (ObjectUtil.isEmpty(followBrokeServerEntity)) {
+            FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
+            followBrokeServer.setServerName(vo.getServerName());
+            followBrokeServerService.save(followBrokeServer);
+            followBrokeServerEntity = followBrokeServerService.getByName(vo.getServerName()); // 重新查询以获取生成的ID
+        }
 
-            FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
-            followTestDetail.setServerName(server);
-            followTestDetail.setServerId(followBrokeServerEntity.getId());
-            followTestDetail.setPlatformType("MT4");
-            followTestDetailService.save(followTestDetail);
+        FollowTestDetailEntity followTestDetailEntity = followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
+                        .eq(FollowTestDetailEntity::getServerName, vo.getServerName())
+                        .orderByDesc(FollowTestDetailEntity::getCreateTime)) // 按照创建时间降序排列
+                .stream()
+                .findFirst()
+                .orElse(null);
+        if (ObjectUtil.isNotEmpty(followTestDetailEntity)) {
+            return Result.error("该服务器已存在");
+        }
+        FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
+        followTestDetail.setServerName(vo.getServerName());
+        followTestDetail.setServerId(followBrokeServerEntity.getId());
+        followTestDetail.setPlatformType("MT4");
+        followTestDetailService.save(followTestDetail);
 
-            return Result.ok("添加成功");
+        return Result.ok("添加成功");
     }
 
     @PostMapping("addServerNode")
@@ -383,27 +392,45 @@ public class FollowTestSpeedController {
     @Transactional(rollbackFor = Exception.class)
     public Result<String> addServerNode(@RequestBody @Valid FollowTestServerVO followTestServerVO) {
         try {
-        //添加到券商表
-        followTestServerVO.getServerNodeList().stream().forEach(server -> {
-            FollowBrokeServerEntity  followBrokeServer = new FollowBrokeServerEntity();
-            followBrokeServer.setServerName(followTestServerVO.getServerName());
-            String[] split = server.split(":");
-            if (split.length != 2) {
-                throw new ServerException("服务器节点格式不正确");
+            //添加到券商表
+            for (String server : followTestServerVO.getServerNodeList()) {
+                String[] split = server.split(":");
+                if (split.length != 2) {
+                    throw new ServerException("服务器节点格式不正确");
+                }
+
+                FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
+                if (ObjectUtil.isEmpty(followBrokeServerService.existsByServerNodeAndServerPort(followTestServerVO.getServerName(), split[0], split[1]))) {
+                    followBrokeServer = new FollowBrokeServerEntity();
+                    followBrokeServer.setServerName(followTestServerVO.getServerName());
+                    followBrokeServer.setServerNode(split[0]);
+                    followBrokeServer.setServerPort(split[1]);
+                    followBrokeServerService.save(followBrokeServer);
+                } else {
+                    // 查询已存在的记录
+                    followBrokeServer = followBrokeServerService.existsByServerNodeAndServerPort(followTestServerVO.getServerName(), split[0], split[1]);
+                }
+
+                FollowTestDetailEntity existingDetail = followTestDetailService.getOne(
+                        Wrappers.<FollowTestDetailEntity>lambdaQuery()
+                                .eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName())
+                                .eq(FollowTestDetailEntity::getServerNode, server)
+                );
+
+                if (existingDetail != null) {
+                    log.info("服务器节点已存在: {}", server);
+                    continue; // 跳过当前循环
+                }
+
+                FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
+                followTestDetail.setServerName(followTestServerVO.getServerName());
+                followTestDetail.setServerId(followBrokeServer.getId());
+                followTestDetail.setPlatformType(followTestServerVO.getPlatformType());
+                followTestDetail.setServerNode(server);
+                followTestDetailService.save(followTestDetail);
             }
-            followBrokeServer.setServerNode(split[0]);
-            followBrokeServer.setServerPort(split[1]);
-            followBrokeServerService.save(followBrokeServer);
 
-            FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
-            followTestDetail.setServerName(followTestServerVO.getServerName());
-            followTestDetail.setServerId(followBrokeServer.getId());
-            followTestDetail.setPlatformType(followTestServerVO.getPlatformType());
-            followTestDetail.setServerNode(server);
-            followTestDetailService.save(followTestDetail);
-        });
-
-        return Result.ok("添加成功");
+            return Result.ok("添加成功");
         } catch (Exception e) {
             log.error("添加服务器节点失败", e);
             throw e; // 确保异常被抛出，触发事务回滚
@@ -492,14 +519,17 @@ public class FollowTestSpeedController {
     @DeleteMapping("deleteServer")
     @Operation(summary = "删除服务器")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> deleteServer(@RequestParam String server) {
+    public Result<String> deleteServer(@RequestBody FollowTestServerVO vo) {
         //判断该服务器名称的账号数量是否为0
-        String accountCount = followTraderService.getAccountCount(server);
+        String accountCount = followTraderService.getAccountCount(vo.getServerName());
         if (Integer.parseInt(accountCount) > 0) {
             return Result.error("该服务器账号数量不为0，无法删除");
         }
-        followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, server));
+        log.info("Removing FollowTestDetailEntity with serverName: {}", vo.getServerName());
+        followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
 //        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
+
+
         return Result.ok("删除成功");
     }
 

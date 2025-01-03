@@ -3,27 +3,49 @@
 
 <mapper namespace="net.maku.followcom.dao.FollowTestDetailDao">
     <select id="selectServer" parameterType="net.maku.followcom.query.FollowTestServerQuery" resultType="net.maku.followcom.vo.FollowTestDetailVO">
-    SELECT t1.*
+<!--    SELECT t1.*-->
+<!--        FROM follow_test_detail t1-->
+<!--        JOIN (-->
+<!--        SELECT server_name, platform_type, server_node, MAX(create_time) AS latest_time-->
+<!--        FROM follow_test_detail-->
+<!--        WHERE deleted = 0-->
+<!--        GROUP BY server_name, platform_type, server_node-->
+<!--        ) t2 ON t1.server_name = t2.server_name-->
+<!--        AND t1.platform_type = t2.platform_type-->
+<!--        AND t1.server_node = t2.server_node-->
+<!--        AND t1.create_time = t2.latest_time-->
+<!--        WHERE  1=1-->
+<!--        <if test="query.brokerName != null and query.brokerName != ''">-->
+<!--            AND t1.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')-->
+<!--        </if>-->
+<!--        <if test="query.serverName != null and query.serverName != ''">-->
+<!--            AND t1.server_name LIKE CONCAT('%', #{query.serverName}, '%')-->
+<!--        </if>-->
+<!--        <if test="query.serverNode != null and query.serverNode != ''">-->
+<!--            AND t1.server_node LIKE CONCAT('%', #{query.serverNode}, '%')-->
+<!--        </if>-->
+
+        SELECT t1.*, fp.broker_name
         FROM follow_test_detail t1
         JOIN (
-        SELECT server_name, platform_type, server_node, MAX(create_time) AS latest_time
+        SELECT server_name, platform_type, COALESCE(server_node, '') AS server_node, MAX(create_time) AS latest_time
         FROM follow_test_detail
         WHERE deleted = 0
-        GROUP BY server_name, platform_type, server_node
+        GROUP BY server_name, platform_type, COALESCE(server_node, '')
         ) t2 ON t1.server_name = t2.server_name
         AND t1.platform_type = t2.platform_type
-        AND t1.server_node = t2.server_node
+        AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
         AND t1.create_time = t2.latest_time
-        WHERE  1=1
+        JOIN follow_platform fp ON t1.server_name = fp.server
+        WHERE 1 = 1
         <if test="query.brokerName != null and query.brokerName != ''">
-            AND t1.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
+            AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
         </if>
         <if test="query.serverName != null and query.serverName != ''">
             AND t1.server_name LIKE CONCAT('%', #{query.serverName}, '%')
         </if>
         <if test="query.serverNode != null and query.serverNode != ''">
-            AND t1.server_node LIKE CONCAT('%', #{query.serverNode}, '%')
+            AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
         </if>
     </select>
-
 </mapper>
