@@ -88,6 +88,7 @@ public class VpsInfoWebSocket {
         query.setPage(page);
         query.setUserId(userId);
         query.setIsOpen(1);
+        query.setIsOpen(1);
         query.setLimit(10);
         PageResult<FollowVpsVO> pageData = followVpsService.page(query);
         if(ObjectUtil.isNotEmpty(pageData)){
@@ -165,8 +166,8 @@ public class VpsInfoWebSocket {
         try {
             stopPeriodicTask();
 
-            if(sessionPool.get(userId)!=null){
-                sessionPool.get(userId).remove(session);
+            if(sessionPool.get(userId.toString()+page)!=null){
+                sessionPool.get(userId.toString()+page).remove(session);
             }
 
         } catch (Exception e) {
