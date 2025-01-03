@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -138,6 +139,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 query.setServerName(serverNode.getServerName());
                 query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
                 List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
+                //拿时间最新的一条数据
+                FollowTestDetailVO detailVO = detailVOList.stream()
+                            .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
+                            .orElse(null);
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
@@ -173,6 +178,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             newEntity.setVpsId(vpsEntity.getId());
                             newEntity.setSpeed((int) duration);
                             newEntity.setTestId(testId);
+                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
                             followTestDetailService.save(newEntity);
                             break; // 测试成功，跳出重试循环
                         } catch (Exception e) {

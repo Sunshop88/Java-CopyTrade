@@ -127,6 +127,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
      */
     public PageResult<String[]> pageServer(FollowTestServerQuery query) {
         List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
+        System.out.println(detailVOList.size());
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
 
