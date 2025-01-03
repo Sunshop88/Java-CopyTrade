@@ -1,17 +1,25 @@
 spring:
   data:
     redis:
-      database: 1
-      host: localhost
-      port: 6379
-      #password:
-      #timeout: 6000ms  # 连接超时时长（毫秒）
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: r-8vb1xdwunlmzzq4p2spd.redis.zhangbei.rds.aliyuncs.com
+        port: 6379
+        password: diVMn9bMpACrXh79QyYY
+        #timeout: 6000ms  # 连接超时时长（毫秒）
+
+      redis2:
+        database: 2
+        host: 39.99.241.16
+        port: 6379
+        password: d@OgcOQdvQ09
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
         connection-timeout: 30000     # 等待连接池分配链接的最大时长（毫秒），超过这个时长还没有可用的连接则发生 SQLException，默认：30 秒
-        minimum-idle: 2               # 最小空闲连接数
-        maximum-pool-size: 10         # 最大连接数
+        minimum-idle: 10               # 最小空闲连接数
+        maximum-pool-size: 1000         # 最大连接数
         idle-timeout: 600000          # 连接超时的最大时长（毫秒），超时则被释放（retired），默认：10 分钟
         max-lifetime: 1800000         # 连接的生命时长（毫秒），超时而且没被使用则被释放（retired），默认： 30 分钟
         connection-test-query: SELECT 1
@@ -20,19 +28,15 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://39.99.241.16:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: 123456
-          # 达梦
-          #    driver-class-name: dm.jdbc.driver.DmDriver
-          #    url: jdbc:dm://192.168.3.19:5236/maku_boot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
-          #    username: maku_boot
-          #    password: 12345678
-          # PostgreSQL
-          #    driver-class-name: org.postgresql.Driver
-          #    url: jdbc:postgresql://192.168.3.19:5432/postgres
-          #    username: postgres
-          #    password: 123456
+          password: 5v07DqL!F7333
+
+        slave:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://39.99.241.16:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: 5v07DqL!F7333
   mqtt:
     host: tcp://localhost:1883
     username: maku
