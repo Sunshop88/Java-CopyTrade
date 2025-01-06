@@ -72,5 +72,24 @@ public class FollowOrderSendQuery extends Query {
     private Integer closeId;
 
     @Schema(description = "魔术号")
-    private Integer magic;
+    private Integer magical;
+
+    @Schema(description = "开仓VPS名称")
+    private String serverName;
+
+    @Schema(description = "平仓VPS名称")
+    private String closeServerName;
+
+    @Schema(description = "开仓请求时间-开始")
+    private String requestOpenTimeStart;
+
+    @Schema(description = "开仓请求时间-结束")
+    private String requestOpenTimeEnd;
+
+    @Schema(description = "平仓请求时间-开始")
+    private String requestCloseTimeStart;
+
+    @Schema(description = "平仓请求时间-结束")
+    private String requestCloseTimeEnd;
+
 }

@@ -869,6 +869,45 @@ public class RedisUtil {
     }
 
     /**
+     * 根据三个条件模糊匹配 Redis 的键并获取其值
+     *
+     * @param pattern  主模糊匹配模式 (如 "follow:repair:*")
+     * @param ip       第一个条件，对应键中 IP 部分 (如 "39.98.109.212")
+     * @param part1    第二个条件，对应键中第二个 "#" 后的内容
+     * @param part3    第三个条件，对应键中第四个 "#" 后的内容
+     * @return Map<String, Map<Object, Object>> 返回符合条件的键和值 (hash 类型)
+     */
+    public Map<String, Map<Object, Object>> getKeysByThreeConditions(String pattern, String ip, String part1, String part3) {
+        try {
+            // 获取符合主模式的所有键
+            Set<String> keys = getKeysByPattern(pattern);
+            Map<String, Map<Object, Object>> resultMap = new HashMap<>();
+
+            for (String key : keys) {
+                // 拆分键，检查是否符合三个条件
+                String[] parts = key.split("#");
+                if (parts.length >= 4) { // 确保键格式正确
+                    // 提取主键部分的 IP 部分
+                    String[] prefixParts = parts[0].split(":");
+                    String extractedIp = prefixParts[prefixParts.length - 1]; // 获取最后一个部分作为 IP
+
+                    // 校验三个条件是否匹配
+                    if (extractedIp.equals(ip) && parts[2].equals(part1) && parts[4].equals(part3)) {
+                        // 获取键的值，假定为 hash 类型
+                        Map<Object, Object> hashValues = hGetAll(key);
+                        resultMap.put(key, hashValues);
+                    }
+                }
+            }
+
+            return resultMap;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
      * redis2普通缓存放入
      *
      * @param key   键

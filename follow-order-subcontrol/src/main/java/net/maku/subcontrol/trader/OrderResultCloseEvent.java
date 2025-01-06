@@ -24,6 +24,7 @@ public class OrderResultCloseEvent implements Serializable {
     private final String ipAddress;
     private final BigDecimal leaderProfit;
     private final BigDecimal copierProfit;
+
     public OrderResultCloseEvent(Order order, EaOrderInfo orderInfo,
                                  FollowTraderEntity copier, Integer flag, BigDecimal leaderProfit, BigDecimal copierProfit, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress) {
         this.order = order;

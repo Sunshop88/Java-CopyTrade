@@ -232,8 +232,8 @@ public class FollowTraderController {
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<String>> listSymbol() {
-        List<String> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST)).stream().map(FollowOrderDetailEntity::getSymbol).distinct().collect(Collectors.toList());
-        return Result.ok(collect);
+        List<FollowOrderDetailEntity> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getSymbol).eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).groupBy(FollowOrderDetailEntity::getSymbol)).stream().toList();
+        return Result.ok(collect.stream().map(FollowOrderDetailEntity::getSymbol).toList());
     }
 
     @PostMapping("orderSend")
@@ -543,13 +543,13 @@ public class FollowTraderController {
     }
 
     private void  checkParams(FollowOrderSendCloseVO vo){
-        if (vo.getNum()==null && vo.getFlag().equals( TraderRepairEnum.SEND.getType())) {
-            throw new ServerException("总单数最少一单");
-        }
-        if(ObjectUtil.isEmpty(vo.getSymbol()) && vo.getFlag().equals( TraderRepairEnum.SEND.getType())){
+//        if (vo.getNum()==null && vo.getFlag().equals( TraderRepairEnum.SEND.getType())) {
+//            throw new ServerException("总单数最少一单");
+//        }
+        if(ObjectUtil.isEmpty(vo.getSymbol()) && vo.getFlag().equals( CloseOrOpenEnum.CLOSE.getValue())){
             throw  new ServerException("品种不能为空");
         }
-        if(ObjectUtil.isEmpty(vo.getType()) && vo.getFlag().equals( TraderRepairEnum.SEND.getType())){
+        if(ObjectUtil.isEmpty(vo.getType()) && vo.getFlag().equals( CloseOrOpenEnum.CLOSE.getValue())){
             throw  new ServerException("订单方向不能为空");
         }
         if(ObjectUtil.isEmpty(vo.getFlag())){

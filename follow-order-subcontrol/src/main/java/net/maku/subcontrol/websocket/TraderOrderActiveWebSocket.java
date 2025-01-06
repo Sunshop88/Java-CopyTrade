@@ -1,6 +1,5 @@
 package net.maku.subcontrol.websocket;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -13,10 +12,8 @@ import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
-import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.*;
@@ -30,20 +27,12 @@ import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.JsonUtils;
-import net.maku.framework.common.utils.Result;
-import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
-import net.maku.subcontrol.enums.TraderRepairOrderEnum;
-import net.maku.subcontrol.pojo.OrderActiveInfoVOPool;
-import net.maku.subcontrol.service.FollowSubscribeOrderService;
-import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
+import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.subcontrol.trader.*;
-import net.maku.subcontrol.trader.strategy.AbstractOperation;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
-import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -51,9 +40,6 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
-
-import static online.mtapi.mt4.Op.Buy;
-import static online.mtapi.mt4.Op.Sell;
 
 @Component
 @ServerEndpoint("/socket/trader/orderRepair/{traderId}/{slaveId}") //此注解相当于设置访问URL

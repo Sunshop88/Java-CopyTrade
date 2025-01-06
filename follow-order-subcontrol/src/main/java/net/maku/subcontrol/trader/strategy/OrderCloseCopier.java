@@ -106,6 +106,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     void closeOrder(AbstractApiTrader trader, CachedCopierOrderInfo cachedCopierOrderInfo, EaOrderInfo orderInfo, int flag, String mapKey) {
         FollowTraderEntity copier = trader.getTrader();
         Long orderId = copier.getId();
+        String ip="";
         try {
             Order order = null;
             FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
@@ -155,6 +156,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             } else {
                 order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), ask, Integer.MAX_VALUE);
             }
+            ip=quoteClient.Host+":"+quoteClient.Port;
             long end = System.currentTimeMillis();
             log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
             LocalDateTime endTime = LocalDateTime.now();
@@ -166,7 +168,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             BigDecimal leaderProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add(orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal copierProfit = new BigDecimal(order.Swap + order.Commission + order.Profit).setScale(2, RoundingMode.HALF_UP);
             // 创建订单结果事件
-            OrderResultCloseEvent event = new OrderResultCloseEvent(order, orderInfo, copier,flag,leaderProfit, copierProfit, startTime, endTime, startPrice, quoteClient.Host + ":" + quoteClient.Port);
+            OrderResultCloseEvent event = new OrderResultCloseEvent(order, orderInfo, copier,flag,leaderProfit, copierProfit, startTime, endTime, startPrice, ip);
             ObjectMapper mapper = JacksonConfig.getObjectMapper();
             String jsonEvent = null;
             try {
@@ -203,7 +205,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
             //跟单信息
             String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "【失败】策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
-                    "跟单账号=" + copier.getAccount() + ",单号=" + cachedCopierOrderInfo.getSlaveTicket() + ",品种=" + cachedCopierOrderInfo.getSlaveSymbol() + ",手数=" + cachedCopierOrderInfo.getSlavePosition() + ",类型=" +Op.forValue(cachedCopierOrderInfo.getSlaveType()).name();
+                    "跟单账号=" + copier.getAccount() + ",单号=" + cachedCopierOrderInfo.getSlaveTicket() + ",品种=" + cachedCopierOrderInfo.getSlaveSymbol() + ",手数=" + cachedCopierOrderInfo.getSlavePosition() + ",类型=" +Op.forValue(cachedCopierOrderInfo.getSlaveType()).name()+",节点="+ip;
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
             followTraderLogService.save(followTraderLogEntity);

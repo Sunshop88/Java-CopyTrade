@@ -91,7 +91,7 @@ public class TraderAccountSlaveWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId,number), 0, 1, TimeUnit.SECONDS);
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId,number), 0, 2, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {

@@ -336,34 +336,46 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getFlag()) && query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())) {
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
             // 解析字符串为 LocalDateTime
             LocalDateTime startTime = LocalDateTime.parse(query.getStartTime(), formatter);
             LocalDateTime endTime = LocalDateTime.parse(query.getEndTime(), formatter);
-
             // 减去 8 小时
             LocalDateTime adjustedStartTime = startTime.minusHours(8);
             LocalDateTime adjustedEndTime = endTime.minusHours(8);
             wrapper.ge(FollowOrderDetailEntity::getOpenTime, adjustedStartTime);  // 大于或等于开始时间
             wrapper.le(FollowOrderDetailEntity::getOpenTime, adjustedEndTime);    // 小于或等于结束时间
-
-//            wrapper.ge(FollowOrderDetailEntity::getOpenTime, query.getStartTime());  // 大于或等于开始时间
-//            wrapper.le(FollowOrderDetailEntity::getOpenTime, query.getEndTime());    // 小于或等于结束时间
-
-
-//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-//            ZonedDateTime startTime = ZonedDateTime.parse(query.getStartTime(), formatter).withZoneSameInstant(ZoneOffset.UTC);
-//            ZonedDateTime endTime = ZonedDateTime.parse(query.getEndTime(), formatter).withZoneSameInstant(ZoneOffset.UTC);
-//
-//            wrapper.ge(FollowOrderDetailEntity::getOpenTime, startTime);
-//            wrapper.le(FollowOrderDetailEntity::getOpenTime, endTime);
+        }
+        if (ObjectUtil.isNotEmpty(query.getRequestOpenTimeStart()) && ObjectUtil.isNotEmpty(query.getRequestOpenTimeEnd())) {
+            // 解析字符串为 LocalDateTime
+            LocalDateTime startTime = LocalDateTime.parse(query.getRequestOpenTimeStart(), formatter);
+            LocalDateTime endTime = LocalDateTime.parse(query.getRequestOpenTimeEnd(), formatter);
+            wrapper.ge(FollowOrderDetailEntity::getRequestOpenTime, startTime);  // 大于或等于开始时间
+            wrapper.le(FollowOrderDetailEntity::getRequestOpenTime, endTime);    // 小于或等于结束时间
+        }
+        if (ObjectUtil.isNotEmpty(query.getRequestCloseTimeStart()) && ObjectUtil.isNotEmpty(query.getRequestCloseTimeEnd())) {
+            // 解析字符串为 LocalDateTime
+            LocalDateTime startTime = LocalDateTime.parse(query.getRequestCloseTimeStart(), formatter);
+            LocalDateTime endTime = LocalDateTime.parse(query.getRequestCloseTimeEnd(), formatter);
+            wrapper.ge(FollowOrderDetailEntity::getRequestCloseTime, startTime);  // 大于或等于开始时间
+            wrapper.le(FollowOrderDetailEntity::getRequestCloseTime, endTime);    // 小于或等于结束时间
         }
         if (ObjectUtil.isNotEmpty(query.getCloseStartTime()) && ObjectUtil.isNotEmpty(query.getCloseEndTime())) {
             wrapper.ge(FollowOrderDetailEntity::getCloseTime, query.getCloseStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderDetailEntity::getCloseTime, query.getCloseEndTime());    // 小于或等于结束时间
+        }
+        if (ObjectUtil.isNotEmpty(query.getServerName())) {
+            wrapper.like(FollowOrderDetailEntity::getServerName, query.getServerName());
+        }
+        if (ObjectUtil.isNotEmpty(query.getMagical())) {
+            wrapper.like(FollowOrderDetailEntity::getMagical, query.getMagical());
+        }
+        if (ObjectUtil.isNotEmpty(query.getCloseServerName())) {
+            wrapper.like(FollowOrderDetailEntity::getCloseServerName, query.getCloseServerName());
+        }
+        if (ObjectUtil.isNotEmpty(query.getSendNo())) {
+            wrapper.eq(FollowOrderDetailEntity::getSendNo, query.getSendNo());
         }
         if (ObjectUtil.isNotEmpty(query.getSendNo())) {
             wrapper.eq(FollowOrderDetailEntity::getSendNo, query.getSendNo());
@@ -378,7 +390,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             wrapper.eq(FollowOrderDetailEntity::getPlacedType, query.getPlacedType());
         }
         if (ObjectUtil.isNotEmpty(query.getAccount())) {
-            wrapper.eq(FollowOrderDetailEntity::getAccount, query.getAccount());
+            wrapper.like(FollowOrderDetailEntity::getAccount, query.getAccount());
         }
         if (ObjectUtil.isNotEmpty(query.getBrokeName())) {
             String[] brokerName = query.getBrokeName().split(",");
@@ -546,7 +558,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             } else {
                 orderActive = orderActiveInfoVOS.stream().filter(o -> o.getSymbol().equals(vo.getSymbol()) && o.getType().equals(Op.forValue(vo.getType()).name())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
             }
-            orderCount = vo.getNum();
+            orderCount =ObjectUtil.isNotEmpty(vo.getNum())?vo.getNum():orderActive.size();
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
                     .eq(FollowOrderDetailEntity::getSymbol, vo.getSymbol()).isNotNull(FollowOrderDetailEntity::getOpenTime)
@@ -891,6 +903,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
             followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+            FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+            followOrderDetailEntity.setCloseServerName(vps.getName());
+            followOrderDetailEntity.setCloseServerHost(quoteClient.Host+":"+quoteClient.Port);
+            followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
         } catch (Exception e) {
             log.error(orderNo+"平仓出错" + e.getMessage());
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
@@ -1069,7 +1085,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setRateMargin(order.RateMargin);
             followOrderDetailEntity.setMagical(order.Ticket);
             followOrderDetailEntity.setSourceUser(account);
-            followOrderDetailEntity.setServerHost(quoteClient.Host);
+            followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
         } catch (TimeoutException e) {
             log.info("下单超时");
             followOrderDetailEntity.setRemark("下单超时" + e.getMessage());

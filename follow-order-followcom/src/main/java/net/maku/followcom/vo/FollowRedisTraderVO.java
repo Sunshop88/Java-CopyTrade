@@ -51,4 +51,7 @@ public class FollowRedisTraderVO implements Serializable {
 	@Schema(description = "信用")
 	private Double credit;
 
+	@Schema(description = "跟单账号数量")
+	private Integer slaveNum;
+
 }

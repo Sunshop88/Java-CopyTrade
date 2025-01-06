@@ -1,8 +1,7 @@
-package net.maku.subcontrol.enums;
+package net.maku.followcom.enums;
 
 
 import lombok.Getter;
-import net.maku.followcom.enums.TraderTypeEnum;
 
 @Getter
 public enum TraderRepairOrderEnum {
