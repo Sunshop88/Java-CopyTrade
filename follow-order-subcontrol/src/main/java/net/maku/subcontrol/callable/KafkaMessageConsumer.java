@@ -146,7 +146,7 @@ public class KafkaMessageConsumer {
                 followTraderLogEntity.setType(flag == 0 ? TraderLogTypeEnum.CLOSE.getType() : TraderLogTypeEnum.REPAIR.getType());
                 //跟单信息
                 String remark = (flag == 0 ? FollowConstant.FOLLOW_CLOSE : FollowConstant.FOLLOW_REPAIR_CLOSE) + "策略账号=" + orderInfo.getAccount() + "单号=" + orderInfo.getTicket() +
-                        "跟单账号=" + followTraderEntity.getAccount() + ",单号=" + order.Ticket + ",品种=" + order.Symbol + ",手数=" + order.Lots + ",类型=" + order.Type.name();
+                        "跟单账号=" + followTraderEntity.getAccount() + ",单号=" + order.Ticket + ",品种=" + order.Symbol + ",手数=" + order.Lots + ",类型=" + order.Type.name()+",节点="+orderResultEvent.getIpAddress();
                 followTraderLogEntity.setLogDetail(remark);
                 followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
                 followTraderLogService.save(followTraderLogEntity);
@@ -154,7 +154,7 @@ public class KafkaMessageConsumer {
                 FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
                 if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                     log.info("记录详情"+detailServiceOne.getTraderId()+"订单"+detailServiceOne.getOrderNo());
-                    updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice());
+                    updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice(),orderResultEvent.getIpAddress());
                 }
                 //删除redis中的缓存
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
@@ -164,7 +164,7 @@ public class KafkaMessageConsumer {
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
     }
 
-    private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price) {
+    private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price,String ipaddr) {
         //保存平仓信息
         followOrderDetailEntity.setRequestCloseTime(startTime);
         followOrderDetailEntity.setResponseCloseTime(endTime);
@@ -175,6 +175,10 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
         followOrderDetailEntity.setProfit(BigDecimal.valueOf(order.Profit));
         followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+        FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+        followOrderDetailEntity.setCloseServerName(vps.getName());
+        followOrderDetailEntity.setCloseServerHost(ipaddr);
+        followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
         followOrderDetailEntity.setCloseId(0);
         //获取symbol信息
         Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(followOrderDetailEntity.getTraderId());

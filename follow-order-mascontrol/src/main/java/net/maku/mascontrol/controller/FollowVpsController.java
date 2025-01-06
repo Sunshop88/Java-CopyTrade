@@ -344,4 +344,14 @@ public class FollowVpsController {
         return Result.ok(followVpsService.getStatByVpsId(vpsId, traderId, followTraderService));
     }
 
+    /**
+     * 获取所有VPS集合
+     */
+    @GetMapping("listVpsAll")
+    @Operation(summary = "获取所有VPS集合")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<List<FollowVpsEntity>> listVpsAll() {
+        return Result.ok(followVpsService.list());
+    }
+
 }

@@ -232,7 +232,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
                 followOrderDetailEntity.setSize(openOrderMapping.getSlaveLots());
                 followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
-                followOrderDetailEntity.setServerHost(FollowConstant.LOCAL_HOST);
+                followOrderDetailEntity.setServerHost(ip);
                 followOrderDetailEntity.setRemark(e.getMessage());
                 followOrderDetailService.save(followOrderDetailEntity);
                 logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage(),op);
@@ -373,7 +373,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
             followOrderDetailEntity.setSize(openOrderMapping.getSlaveLots());
             followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
-            followOrderDetailEntity.setServerHost(FollowConstant.LOCAL_HOST);
+            followOrderDetailEntity.setServerHost(ip);
             followOrderDetailEntity.setRemark(e.getMessage());
             followOrderDetailService.save(followOrderDetailEntity);
             logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage(),op);

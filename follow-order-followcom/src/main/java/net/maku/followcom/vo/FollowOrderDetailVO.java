@@ -149,14 +149,40 @@ public class FollowOrderDetailVO  implements Serializable {
 	private Integer closeStatus;
 
 	//喊单账号
+	@Schema(description = "喊单账号")
 	private  String sourceUser;
+
 	//结算汇率
+	@Schema(description = "结算汇率")
 	private  String rateMargin;
+
 	//魔术号
+	@Schema(description = "魔术号")
 	private  String magical;
+
 	//节点地址
+	@Schema(description = "节点地址")
 	private  String serverHost;
 
+	/**
+	 * 平仓VPS
+	 */
+	@Schema(description = "平仓VPS")
+	private String closeServerName;
 
+	/**
+	 * 平仓VPS地址
+	 */
+	@Schema(description = "平仓VPS地址")
+	private  String closeIpAddr;
+
+	/**
+	 * 平仓节点
+	 */
+	@Schema(description = "平仓节点")
+	private  String closeServerHost;
+
+	@Schema(description = "是否外部")
+	private Integer isExternal;
 
 }

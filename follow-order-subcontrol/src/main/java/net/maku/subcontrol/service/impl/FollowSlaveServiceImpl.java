@@ -14,6 +14,8 @@ import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowSlaveService;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
@@ -125,7 +127,18 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString()))) {
                             EaOrderInfo objects = (EaOrderInfo) redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
                             orderCloseCopier.operate(copierApiTrader, objects, 1);
-                            redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
+                            ThreadPoolUtils.getExecutor().execute(()->{
+                                try {
+                                    Thread.sleep(3000);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                //删除平仓redis记录
+                                String mapKey = copierApiTrader.getTrader().getId() + "#" + copierApiTrader.getTrader().getAccount();
+                                if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(objects.getTicket())))){
+                                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
+                                }
+                            });
                         } else {
                             throw new ServerException("暂无订单需处理");
                         }

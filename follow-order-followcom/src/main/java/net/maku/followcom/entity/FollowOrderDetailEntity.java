@@ -265,11 +265,44 @@ public class FollowOrderDetailEntity {
     /**
 	 * 结算汇率
 	 * */
+	@TableField(value = "rate_margin")
 	private Double rateMargin;
+
 	//喊单账号
+	@TableField(value = "source_user")
 	private  String sourceUser;
+
 	//魔术号
+	@TableField(value = "magical")
 	private  Integer magical;
 
+	/**
+	 * 节点
+	 */
+	@TableField(value = "server_host")
 	private  String serverHost;
+
+	/**
+	 * 平仓VPS
+	 */
+	@TableField(value = "close_server_name")
+	private String closeServerName;
+
+	/**
+	 * 平仓VPS地址
+	 */
+	@TableField(value = "close_ip_addr")
+	private  String closeIpAddr;
+
+	/**
+	 * 平仓节点
+	 */
+	@TableField(value = "close_server_host")
+	private  String closeServerHost;
+
+	/**
+	 * 是否外部0-否 1-是
+	 */
+	@TableField(value = "is_external")
+	private  Integer isExternal;
 }

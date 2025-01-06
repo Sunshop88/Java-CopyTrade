@@ -8,9 +8,13 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
@@ -48,7 +52,7 @@ public class TraderAccountWebSocket {
     private List<FollowTraderVO> listFollow=new ArrayList<>();
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Future<?> scheduledTask;
-
+    private FollowTraderSubscribeService followTraderSubscribeService= SpringContextUtils.getBean( FollowTraderSubscribeServiceImpl.class);
     @OnOpen
     public void onOpen(Session session, @PathParam(value = "page") String page, @PathParam(value = "limit") String limit, @PathParam(value = "number") String number) {
         try {
@@ -79,7 +83,7 @@ public class TraderAccountWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,number), 0, 1, TimeUnit.SECONDS);
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,number), 0, 2, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
@@ -92,7 +96,12 @@ public class TraderAccountWebSocket {
     private void sendPeriodicMessage(String page ,String limit,String number) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
-        listFollow.forEach(o->followRedisTraderVOS.add((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId())));
+        listFollow.forEach(o->{
+            FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+            List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(followRedisTraderVO.getTraderId());
+            followRedisTraderVO.setSlaveNum(subscribeOrder.size());
+            followRedisTraderVOS.add(followRedisTraderVO);
+        });
         pushMessage(page,limit,number,JsonUtils.toJsonString(followRedisTraderVOS));
     }
 
