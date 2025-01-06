@@ -263,10 +263,11 @@ public class MasControlServiceImpl implements MasControlService {
                         }
                         long endTime = System.currentTimeMillis(); // 记录结束时间
                         o.setSpeed((int) (endTime - startTime));
-                        System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
+                        log.info("连接成功，延迟：" + (endTime - startTime) + "ms");
                         followBrokeServerService.updateById(o);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.info("连接异常"+e.getMessage());
+//                        e.printStackTrace();
                     } finally {
                         latch.countDown();
                     }
