@@ -20,12 +20,15 @@ import net.maku.framework.security.user.SecurityUser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
@@ -88,215 +91,197 @@ public class MasControlServiceImpl implements MasControlService {
         return true;
     }
 
-//    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updatePlatform(FollowPlatformVO vo, HttpServletRequest req) {
         FollowPlatformEntity currentPlatform = followPlatformService.getById(vo.getId());
         String currentBrokerName = currentPlatform.getBrokerName();
         String newBrokerName = vo.getBrokerName();
 
-        // 如果新的券商名称与当前记录的券商名称不同，则检查新的券商名称是否重复
+        // 检查券商名称是否重复
         if (!currentBrokerName.equals(newBrokerName)) {
-            List<FollowPlatformEntity> existingPlatforms = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>()
-                    .eq(FollowPlatformEntity::getBrokerName, newBrokerName));
-            if (!existingPlatforms.isEmpty()) {
+            boolean brokerNameExists = followPlatformService.count(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getBrokerName, newBrokerName)) > 0;
+            if (brokerNameExists) {
                 throw new ServerException("券商名称重复，请重新输入");
             }
         }
-        //根据vo的brokerName获取所有的券商名称，并且去重
+
         Long userId = SecurityUser.getUserId();
 
-        // 获取当前数据库中已有的服务器列表
+        // 获取当前已有的服务器列表
         List<String> existingServers = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>()
-                        .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName()))
+                        .eq(FollowPlatformEntity::getBrokerName, currentBrokerName))
                 .stream()
                 .map(FollowPlatformEntity::getServer)
                 .collect(Collectors.toList());
+
         // 找出需要删除的服务器
         List<String> serversToRemove = existingServers.stream()
                 .filter(server -> !vo.getPlatformList().contains(server))
                 .collect(Collectors.toList());
 
-        CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
-        //保存服务数据
-        vo.getPlatformList().forEach(bro -> {
-            ThreadPoolUtils.execute(() -> {
-                try {
-                    List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro));
-                    if (ObjectUtil.isEmpty(followPlatformEntityList)) {
-                        FollowPlatformVO followPlatformVO = new FollowPlatformVO();
-                        followPlatformVO.setBrokerName(vo.getBrokerName());
-                        followPlatformVO.setServer(bro);
-                        followPlatformVO.setPlatformType(vo.getPlatformType());
-                        followPlatformVO.setCreator(userId.toString());
-                        followPlatformVO.setLogo(vo.getLogo());
-                        followPlatformVO.setRemark(vo.getRemark());
-                        followPlatformService.save(followPlatformVO);
-                    }
-                    // 进行测速
-                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
-                    list.forEach(o -> {
-                        ThreadPoolUtils.getExecutor().execute(()->{
-                            String ipAddress = o.getServerNode(); // 目标IP地址
-                            int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                            try {
-                                AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                                long startTime = System.currentTimeMillis(); // 记录起始时间
-                                Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                                // 等待连接完成
-                                long timeout = 5000; // 设置超时时间
-                                try {
-                                    future.get(timeout, TimeUnit.MILLISECONDS);
-                                } catch (TimeoutException e) {
-                                    log.error("连接超时，服务器：" + ipAddress + ":" + port);
-                                    return; // 连接超时，返回
-                                }
-                                long endTime = System.currentTimeMillis(); // 记录结束时间
-                                o.setSpeed((int) (endTime - startTime));
-                                System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
-                                followBrokeServerService.updateById(o);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            } finally {
-                                latch.countDown();
-                            }
-                        });
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-//            });
-//                });
-//                vo.getPlatformList().forEach(bro -> {
-//                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
-//                platformEntity.eq("id", vo.getId());
-                    List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed));
-                    if (!list.isEmpty()) {
-                        FollowBrokeServerEntity followBrokeServer = list.get(0);
-                        followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
-                    }
-//                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
-                    });
-        });
-//                platformEntity.set("name", bro);
-//                platformEntity.set("type", vo.getPlatformType());
-//                platformService.update(platformEntity);
+        // 找出需要新增的服务器
+        List<String> serversToAdd = vo.getPlatformList().stream()
+                .filter(server -> !existingServers.contains(server))
+                .collect(Collectors.toList());
 
-            try {
-                // 等待所有线程完成
-                latch.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        followPlatformService.update(vo);
-        // 删除已移除的服务器
+        // 批量删除需要移除的服务器
         if (!serversToRemove.isEmpty()) {
             followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
-                    .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
+                    .eq(FollowPlatformEntity::getBrokerName, currentBrokerName)
                     .in(FollowPlatformEntity::getServer, serversToRemove));
         }
-        String authorization=req.getHeader("Authorization");
-        ThreadPoolUtils.getExecutor().execute(()->{
-            //更新缓存
-            for (FollowVpsEntity o : followVpsService.list()) {
-                String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE);
-                JSONObject jsonObject = new JSONObject();
-                jsonObject.put("id", vo.getId());
-                HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
-                header.add("Authorization", authorization);
-                JSONObject body = RestUtil.request(url, HttpMethod.GET, header, jsonObject, null, JSONObject.class).getBody();
-                log.info("修改缓存" + body.toString());
+
+        // 批量新增需要添加的服务器
+        if (!serversToAdd.isEmpty()) {
+            List<FollowPlatformEntity> newPlatforms = serversToAdd.stream().map(server -> {
+                FollowPlatformEntity platform = new FollowPlatformEntity();
+                platform.setBrokerName(newBrokerName);
+                platform.setServer(server);
+                platform.setPlatformType(vo.getPlatformType());
+                platform.setCreator(userId);
+                platform.setLogo(vo.getLogo());
+                platform.setRemark(vo.getRemark());
+                return platform;
+            }).collect(Collectors.toList());
+            followPlatformService.saveBatch(newPlatforms);
+        }
+
+        // 更新当前券商记录
+        currentPlatform.setBrokerName(newBrokerName);
+        currentPlatform.setPlatformType(vo.getPlatformType());
+        currentPlatform.setLogo(vo.getLogo());
+        currentPlatform.setRemark(vo.getRemark());
+        followPlatformService.updateById(currentPlatform);
+
+        // 异步测速逻辑
+        asyncTestServerSpeed(vo.getPlatformList());
+
+        // 异步更新缓存
+        asyncUpdateCache(vo, req);
+
+        return true;
+    }
+
+    // 异步更新缓存逻辑
+    @Async
+    public void asyncUpdateCache(FollowPlatformVO vo, HttpServletRequest req) {
+        String authorization = req.getHeader("Authorization");
+        followVpsService.list().forEach(vps -> {
+            String url = MessageFormat.format("http://{0}:{1}{2}", vps.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE);
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("id", vo.getId());
+            HttpHeaders headers = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+            headers.add("Authorization", authorization);
+            try {
+                JSONObject response = RestUtil.request(url, HttpMethod.GET, headers, jsonObject, null, JSONObject.class).getBody();
+                log.info("更新缓存成功：" + response.toString());
+            } catch (Exception e) {
+                log.error("更新缓存失败：" + e.getMessage());
             }
         });
-        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean insertPlatform(FollowPlatformVO vo) {
         Long userId = SecurityUser.getUserId();
+
+        // 查询是否存在相同券商的数据
         List<FollowPlatformEntity> existingPlatforms = followPlatformService.list(
                 new LambdaQueryWrapper<FollowPlatformEntity>()
                         .eq(FollowPlatformEntity::getBrokerName, vo.getBrokerName())
         );
+
+        // 如果存在相同券商，批量更新信息
         if (!existingPlatforms.isEmpty()) {
-            // 如果存在，则更新数据库中所有相同券商的信息
-            for (FollowPlatformEntity existingPlatform : existingPlatforms) {
+            existingPlatforms.forEach(existingPlatform -> {
                 existingPlatform.setPlatformType(vo.getPlatformType());
                 existingPlatform.setRemark(vo.getRemark());
                 existingPlatform.setLogo(vo.getLogo());
-                followPlatformService.updateById(existingPlatform);
-            }
-        }
-
-        CountDownLatch latch = new CountDownLatch(vo.getPlatformList().size());
-        //保存服务数据
-        vo.getPlatformList().parallelStream().forEach(bro -> {
-            try {
-                List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro));
-                if (ObjectUtil.isEmpty(followPlatformEntityList)) {
-                    FollowPlatformVO followPlatformVO = new FollowPlatformVO();
-                    followPlatformVO.setBrokerName(vo.getBrokerName());
-                    followPlatformVO.setServer(bro);
-                    followPlatformVO.setPlatformType(vo.getPlatformType());
-                    followPlatformVO.setCreator(userId.toString());
-                    followPlatformVO.setLogo(vo.getLogo());
-                    followPlatformVO.setRemark(vo.getRemark());
-                    followPlatformService.save(followPlatformVO);
-                }
-                // 进行测速
-                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
-                list.parallelStream().forEach(o -> {
-                    String ipAddress = o.getServerNode(); // 目标IP地址
-                    int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                    try {
-                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                        long startTime = System.currentTimeMillis(); // 记录起始时间
-                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                        // 等待连接完成
-                        long timeout = 5000; // 设置超时时间
-                        try {
-                            future.get(timeout, TimeUnit.MILLISECONDS);
-                        } catch (TimeoutException e) {
-                            log.error("连接超时，服务器：" + ipAddress + ":" + port);
-                            return; // 连接超时，返回
-                        }
-                        long endTime = System.currentTimeMillis(); // 记录结束时间
-                        o.setSpeed((int) (endTime - startTime));
-                        log.info("连接成功，延迟：" + (endTime - startTime) + "ms");
-                        followBrokeServerService.updateById(o);
-                    } catch (Exception e) {
-                        log.info("连接异常"+e.getMessage());
-//                        e.printStackTrace();
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-//            });
-//                });
-//                vo.getPlatformList().forEach(bro -> {
-//                UpdateWrapper<PlatformEntity> platformEntity = new UpdateWrapper<>();
-//                platformEntity.eq("id", vo.getId());
-            List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro).isNotNull(FollowBrokeServerEntity::getSpeed).orderByAsc(FollowBrokeServerEntity::getSpeed));
-            if (!list.isEmpty()) {
-                FollowBrokeServerEntity followBrokeServer = list.get(0);
-                followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
-            }
-//                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
-//                platformEntity.set("name", bro);
-//                platformEntity.set("type", vo.getPlatformType());
-//                platformService.update(platformEntity);
-
-        try {
-            // 等待所有线程完成
-            latch.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            followPlatformService.updateBatchById(existingPlatforms); // 批量更新，减少数据库交互
         }
+
+        // 插入或更新 platformList 数据
+        List<String> platformList = vo.getPlatformList();
+        List<FollowPlatformEntity> newPlatforms = new ArrayList<>();
+        for (String bro : platformList) {
+            List<FollowPlatformEntity> existingBroPlatform = followPlatformService.list(
+                    new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro)
+            );
+
+            // 如果不存在，则新增
+            if (existingBroPlatform.isEmpty()) {
+                FollowPlatformEntity platform = new FollowPlatformEntity();
+                platform.setBrokerName(vo.getBrokerName());
+                platform.setServer(bro);
+                platform.setPlatformType(vo.getPlatformType());
+                platform.setCreator(userId);
+                platform.setLogo(vo.getLogo());
+                platform.setRemark(vo.getRemark());
+                newPlatforms.add(platform);
+            }
+        }
+
+        if (!newPlatforms.isEmpty()) {
+            followPlatformService.saveBatch(newPlatforms); // 批量保存
+        }
+
+        // 测速逻辑移出事务，避免锁等待
+        asyncTestServerSpeed(platformList);
+
         return true;
     }
+
+    // 异步测速逻辑
+    @Async
+    public void asyncTestServerSpeed(List<String> platformList) {
+        platformList.forEach(bro -> {
+            List<FollowBrokeServerEntity> serverList = followBrokeServerService.list(
+                    new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro)
+            );
+
+            serverList.forEach(server -> {
+                String ipAddress = server.getServerNode();
+                int port = Integer.parseInt(server.getServerPort());
+                try (AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open()) {
+                    long startTime = System.currentTimeMillis();
+                    Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                    try {
+                        future.get(5000, TimeUnit.MILLISECONDS); // 设置超时时间
+                        long endTime = System.currentTimeMillis();
+                        server.setSpeed((int) (endTime - startTime));
+                        log.info("连接成功，延迟：" + (endTime - startTime) + "ms");
+                    } catch (TimeoutException e) {
+                        log.error("连接超时，服务器：" + ipAddress + ":" + port);
+                    } catch (Exception e) {
+                        log.error("测速异常：" + e.getMessage());
+                    }
+                    followBrokeServerService.updateById(server);
+                } catch (IOException e) {
+                    log.error("Socket连接异常：" + e.getMessage());
+                }
+            });
+
+            // 更新最快的服务器节点
+            List<FollowBrokeServerEntity> sortedServers = followBrokeServerService.list(
+                    new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                            .eq(FollowBrokeServerEntity::getServerName, bro)
+                            .isNotNull(FollowBrokeServerEntity::getSpeed)
+                            .orderByAsc(FollowBrokeServerEntity::getSpeed)
+            );
+
+            if (!sortedServers.isEmpty()) {
+                FollowBrokeServerEntity fastestServer = sortedServers.get(0);
+                followPlatformService.update(
+                        Wrappers.<FollowPlatformEntity>lambdaUpdate()
+                                .eq(FollowPlatformEntity::getServer, fastestServer.getServerName())
+                                .set(FollowPlatformEntity::getServerNode, fastestServer.getServerNode() + ":" + fastestServer.getServerPort())
+                );
+            }
+        });
+    }
+
 }
