@@ -1,7 +1,6 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -10,7 +9,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
@@ -36,7 +34,6 @@ import net.maku.framework.security.user.SecurityUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,13 +44,9 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -458,37 +451,59 @@ public class FollowTestSpeedController {
         return Result.ok(list);
     }
 
+    @GetMapping("listServerAndNode")
+    @Operation(summary = "查询默认节点列表")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<List<FollowTestDetailVO>> listServerAndNode(@RequestParam String name) {
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setServerName(name);
+        List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
+
+        return Result.ok(list);
+    }
 
     @PutMapping("updateServerNode")
     @Operation(summary = "修改服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> updateServerNode(@RequestBody List<FollowTestDetailVO> followTestServerVO, @RequestParam(required = false) String name) {
-        for (FollowTestDetailVO followTestDetailVO : followTestServerVO) {
-            // 确保名称的唯一性
-            if (followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
-                    .eq(FollowTestDetailEntity::getServerName, followTestDetailVO.getServerName())
-                    .ne(FollowTestDetailEntity::getId, followTestDetailVO.getId())).size() > 0) {
-                return Result.error("服务器名称重复");
+    public Result<String> updateServerNode(@RequestBody List<FollowTestDetailVO> followTestServerVO) {
+        String name = followTestServerVO.get(0).getServerName();
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setServerName(name);
+        List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
+        LocalDateTime now = LocalDateTime.now();
+        for (FollowTestDetailVO vo : followTestServerVO) {
+            // 根据 vo 的 serverNode 和 vpsName 在 list 中找到相应的数据
+            FollowTestDetailVO targetVO = list.stream()
+                    .filter(item ->
+                            item.getServerNode().equals(vo.getServerNode()) &&
+                                    (vo.getVpsName() == null ? item.getVpsName() == null : vo.getVpsName().equals(item.getVpsName()))
+                    )
+                    .findFirst()
+                    .orElse(null);
+            if (targetVO != null) {
+                // 修改 isDefaultServer 字段
+                targetVO.setIsDefaultServer(vo.getIsDefaultServer());
+                targetVO.setUpdateTime(targetVO.getUpdateTime());
+                System.out.println(targetVO.getUpdateTime());
+                targetVO.setServerUpdateTime(now);
+                // 更新数据库
+                followTestDetailService.update(targetVO);
+            } else {
+                // 如果没有找到匹配的数据，可以选择记录日志或返回错误信息
+                log.warn("未找到匹配的 serverNode: {} ", vo.getServerNode());
             }
-            // 如果 name 不为空，则更新 serverName
-            if (ObjectUtil.isNotEmpty(name)) {
-                followTestDetailVO.setServerName(name);
-            }
-
-//            followTestDetailVO.setUpdateTime();
-            followTestDetailService.update(followTestDetailVO);
         }
         //redis更新
-        // 查询 isDefaultServer 为 0的数据
-        List<FollowTestDetailEntity> defaultServerNodes = new ArrayList<>();
-        for (FollowTestDetailVO vo : followTestServerVO) {
-            List<FollowTestDetailEntity> entities = followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>()
-                    .eq(FollowTestDetailEntity::getIsDefaultServer, 0));
-            defaultServerNodes.addAll(entities);
-        }
-
+        List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
+        //查询IsDefaultServer为0的数据
+        List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                .filter(vo -> {
+                    Integer isDefaultServer = vo.getIsDefaultServer();
+                    return isDefaultServer != null && isDefaultServer == 0;
+                })
+                .collect(Collectors.toList());
         // 将数据存储到 Redis 中
-        for (FollowTestDetailEntity entity : defaultServerNodes) {
+        for (FollowTestDetailVO entity : defaultServerNodes) {
             Integer vpsId = entity.getVpsId();
             String serverName = entity.getServerName();
             String serverNode = entity.getServerNode();
@@ -502,6 +517,56 @@ public class FollowTestSpeedController {
 
         return Result.ok("修改成功");
     }
+
+    @PutMapping("updateServerName")
+    @Operation(summary = "修改服务器名称")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> updateServerName(@RequestBody @Valid FollowTestServerNameVO followTestServerNameVO) {
+        // 确保名称的唯一性
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setServerName(followTestServerNameVO.getOldName());
+        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+        boolean isNameExists = detailVOLists.stream()
+                .anyMatch(vo -> !vo.getServerName().equals(followTestServerNameVO.getOldName()) && vo.getServerName().equals(followTestServerNameVO.getNewName()));
+        if (isNameExists) {
+            return Result.error("服务器名称重复");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (FollowTestDetailVO vo : detailVOLists) {
+            vo.setServerName(followTestServerNameVO.getNewName());
+            vo.setServerUpdateTime(now);
+            vo.setUpdateTime(vo.getUpdateTime());
+            followTestDetailService.update(vo);
+        }
+
+        query.setServerName(followTestServerNameVO.getNewName());
+        List<FollowTestDetailVO> newlist = followTestDetailService.selectServer(query);
+        //查询IsDefaultServer为0的数据
+        List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                .filter(vo -> {
+                    Integer isDefaultServer = vo.getIsDefaultServer();
+                    return isDefaultServer != null && isDefaultServer == 0;
+                })
+                .collect(Collectors.toList());
+        //更改默认节点
+        // 将数据存储到 Redis 中
+        for (FollowTestDetailVO entity : defaultServerNodes) {
+            Integer vpsId = entity.getVpsId();
+            String oldServerName = followTestServerNameVO.getOldName();
+            String newServerName = entity.getServerName();
+
+            // 获取旧键名对应的值
+            String value = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + vpsId, oldServerName);
+
+            if (value != null) {
+                // 使用新键名设置相同的值
+                redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, newServerName, value, 0);
+                // 删除旧键名
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, oldServerName);
+            }
+        }
+            return Result.ok("修改成功");
+        }
 
     @PostMapping("measureServer")
     @Operation(summary = "节点列表测速")
@@ -602,7 +667,6 @@ public class FollowTestSpeedController {
         log.info("Removing FollowTestDetailEntity with serverName: {}", vo.getServerName());
         followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
 //        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
-
 
         return Result.ok("删除成功");
     }

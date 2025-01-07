@@ -43,7 +43,7 @@
         AND t1.platform_type = t2.platform_type
         AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
         AND t1.create_time = t2.latest_time
-        AND t1.vps_id = t2.vps_id
+        AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
         <if test="query.brokerName != null and query.brokerName != ''">
             LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         </if>
@@ -86,16 +86,13 @@
                 AND t1.platform_type = t2.platform_type
                 AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
                 AND t1.create_time = t2.latest_time
-                AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
+                AND t1.vps_id = t2.vps_id
         <if test="query.brokerName != null and query.brokerName != ''">
             LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         </if>
         <where>
-            <if test="query.brokerName != null and query.brokerName != ''">
-                AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
-            </if>
             <if test="query.serverName != null and query.serverName != ''">
-                AND t1.server_name LIKE CONCAT('%', #{query.serverName}, '%')
+                AND t1.server_name = #{query.serverName}
             </if>
             <if test="query.serverNode != null and query.serverNode != ''">
                 AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')

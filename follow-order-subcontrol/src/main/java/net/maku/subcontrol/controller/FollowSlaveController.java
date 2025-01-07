@@ -303,14 +303,7 @@ public class FollowSlaveController {
         List<String> servers = request.getServers();
         FollowVpsEntity vpsEntity = request.getVpsEntity();
         Integer testId = request.getTestId();
-//        List<FollowTestDetailVO> vo = request.getFollowTestDetailVOS();
-//        if (ObjectUtil.isEmpty(request.getFollowTestDetailVOS())){
-//            boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId);
-//        }else {
-//            // 批量调用服务进行测速
-//            boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId, request.getFollowTestDetailVOS());
-//
-//        }
+            // 批量调用服务进行测速
         boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId);
         if (isSuccess) {
             return Result.ok();

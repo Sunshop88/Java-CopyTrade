@@ -378,6 +378,11 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         return baseMapper.selectServer(query);
     }
 
+    @Override
+    public List<FollowTestDetailVO> selectServerNode(FollowTestServerQuery query) {
+        return baseMapper.selectServerNode(query);
+    }
+
 
     @Override
     public FollowTestDetailVO get(Long id) {

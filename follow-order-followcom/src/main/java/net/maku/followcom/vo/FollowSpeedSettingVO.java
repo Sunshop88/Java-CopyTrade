@@ -3,6 +3,8 @@ package net.maku.followcom.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -34,12 +36,12 @@ public class FollowSpeedSettingVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

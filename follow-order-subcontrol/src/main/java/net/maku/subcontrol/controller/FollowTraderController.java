@@ -642,7 +642,7 @@ public class FollowTraderController {
         return ask;
     }
 
-    @GetMapping("reconnectionServer")
+    @PostMapping("reconnectionServer")
     @Operation(summary = "重连服务器账号")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<Map<String, Boolean>> reconnectionServer(@Parameter(description = "name") String name) {
