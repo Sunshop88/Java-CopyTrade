@@ -93,7 +93,7 @@ public class FollowTraderController {
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
         //默认模板最新的模板id
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(followVarietyService.getLatestTemplateId());
+            vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         //本机处理
         try {
@@ -131,7 +131,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> update(@RequestBody @Valid FollowTraderVO vo) {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(followVarietyService.getLatestTemplateId());
+            vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         followTraderService.update(vo);
         //重连

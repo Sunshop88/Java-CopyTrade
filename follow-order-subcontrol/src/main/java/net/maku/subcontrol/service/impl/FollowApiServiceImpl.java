@@ -78,7 +78,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean save(FollowTraderVO vo) {
         //默认模板最新的模板id
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-            vo.setTemplateId(followVarietyService.getLatestTemplateId());
+            vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         //本机处理
         try {
@@ -190,7 +190,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(followVarietyService.getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
@@ -258,7 +258,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(followVarietyService.getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
             followTraderService.updateById(followTraderEntity);

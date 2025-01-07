@@ -163,12 +163,12 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public int getLatestTemplateId() {
+    public int getBeginTemplateId() {
         //数据库中模板id全为空抛异常
         if (baseMapper.selectCount(new LambdaQueryWrapper<FollowVarietyEntity>().isNull(FollowVarietyEntity::getTemplateId)).equals(baseMapper.selectCount(new LambdaQueryWrapper<FollowVarietyEntity>()))) {
             throw new ServerException("模板id不能为空");
         }
-        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVarietyEntity>().orderByDesc(FollowVarietyEntity::getTemplateId).last("limit 1")).getTemplateId();
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowVarietyEntity>().orderByAsc(FollowVarietyEntity::getTemplateId).last("limit 1")).getTemplateId();
     }
 
     @Override
