@@ -142,18 +142,18 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
 
-                    while (retryCount < 3) {
+                    while (retryCount < 2) {
                         try {
                             AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
                             long startTime = System.currentTimeMillis(); // 记录起始时间
                             Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
 
-                            long timeout = 10000; // 设置超时时间
+                            long timeout = 5000; // 设置超时时间
                             try {
                                 future.get(timeout, TimeUnit.MILLISECONDS);
                             } catch (TimeoutException e) {
                                 retryCount++; // 增加重试次数
-                                if (retryCount == 3) {
+                                if (retryCount == 2) {
                                     log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
                                     break; // 超过最大重试次数后跳出循环
                                 }

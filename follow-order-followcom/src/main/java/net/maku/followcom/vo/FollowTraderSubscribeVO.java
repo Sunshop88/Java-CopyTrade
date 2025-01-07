@@ -1,15 +1,11 @@
 package net.maku.followcom.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 
 /**
  * 订阅关系表
@@ -81,4 +77,12 @@ public class FollowTraderSubscribeVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "固定注释")
+	private String fixedComment;
+
+	@Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
+	private Integer commentType;
+
+	@Schema(description = "位数")
+	private Integer digits;
 }

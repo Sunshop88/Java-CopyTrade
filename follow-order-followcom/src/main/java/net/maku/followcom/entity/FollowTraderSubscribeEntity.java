@@ -152,6 +152,27 @@ public class FollowTraderSubscribeEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 手数取余
+	 */
 	@TableField(value = "remainder")
 	private Integer remainder;
+
+	/**
+	 * 固定注释
+	 */
+	@TableField(value = "fixed_comment")
+	private String fixedComment;
+
+	/**
+	 * 注释类型0-英文 1-数字 2-英文+数字+符号
+	 */
+	@TableField(value = "comment_type")
+	private Integer commentType;
+
+	/**
+	 * 位数
+	 */
+	@TableField(value = "digits")
+	private Integer digits;
 }

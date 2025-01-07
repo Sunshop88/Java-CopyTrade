@@ -6,6 +6,7 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
+import net.maku.followcom.util.CommentGenerator;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
@@ -65,9 +66,8 @@ public class AbstractOperation {
         startBatchSender();
     }
 
-    protected String comment(EaOrderInfo orderInfo,Integer serverId) {
-        //#喊单者账号(36进制)#喊单者订单号(订单号)#AUTO
-        return "#"+serverId+"#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
+    protected String comment(FollowTraderSubscribeEntity followTraderSubscribeEntity) {
+        return CommentGenerator.generateComment(followTraderSubscribeEntity.getFixedComment(),followTraderSubscribeEntity.getCommentType(),followTraderSubscribeEntity.getDigits());
     }
 
     protected Op op(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier) {
