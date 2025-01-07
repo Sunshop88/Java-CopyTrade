@@ -3,6 +3,7 @@ package net.maku.followcom.service;
 import net.maku.followcom.entity.FollowTestSpeedEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.query.FollowTestSpeedQuery;
+import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
