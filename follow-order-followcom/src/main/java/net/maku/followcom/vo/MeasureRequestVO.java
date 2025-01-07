@@ -37,4 +37,7 @@ public class MeasureRequestVO {
 
     @Schema(description = "到期时间")
     private String ExpiryDateStr;
+
+    @Schema(description = "节点信息")
+    private List<FollowTestDetailVO> followTestDetailVOS;
 }

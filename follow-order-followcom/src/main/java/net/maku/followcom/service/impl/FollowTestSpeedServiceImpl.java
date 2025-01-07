@@ -18,6 +18,9 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTestSpeedExcelVO;
 import net.maku.followcom.vo.FollowTestSpeedVO;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -54,6 +57,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
+    private final RedisUtil redisUtil;
 
     @Override
     public PageResult<FollowTestSpeedVO> page(FollowTestSpeedQuery query) {
@@ -124,8 +128,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
         // 创建一个固定大小的线程池
-        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
+//        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
 
+//        FollowTestServerQuery query = new FollowTestServerQuery();
+//        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+//        List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
@@ -135,16 +142,20 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
                 //将服务器更新时间写进来
-                FollowTestServerQuery query = new FollowTestServerQuery();
-                query.setServerName(serverNode.getServerName());
-                query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
+//                FollowTestServerQuery query = new FollowTestServerQuery();
+//                query.setServerName(serverNode.getServerName());
+//                query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+//                List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
+                List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
+                List<FollowTestDetailVO> detailVOList = vo.stream()
+                        .filter(detail -> detail.getServerName().equals(serverNode.getServerName()) && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
+                        .collect(Collectors.toList());
                 //拿时间最新的一条数据
                 FollowTestDetailVO detailVO = detailVOList.stream()
                             .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
                             .orElse(null);
                 // 提交测速任务到线程池
-                executorService.submit(() -> {
+//                executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
 
                     while (retryCount < 3) {
@@ -178,7 +189,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             newEntity.setVpsId(vpsEntity.getId());
                             newEntity.setSpeed((int) duration);
                             newEntity.setTestId(testId);
-                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
+//                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
+//                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer());
+                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : null);
                             followTestDetailService.save(newEntity);
                             break; // 测试成功，跳出重试循环
                         } catch (Exception e) {
@@ -186,19 +200,19 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             break; // 出现异常时跳出重试循环
                         }
                     }
-                });
+//                });
             }
         }
 
-        // 关闭线程池并等待所有任务完成
-        executorService.shutdown();
-        try {
-            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
-                executorService.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executorService.shutdownNow();
-        }
+//        // 关闭线程池并等待所有任务完成
+//        executorService.shutdown();
+//        try {
+//            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+//                executorService.shutdownNow();
+//            }
+//        } catch (InterruptedException e) {
+//            executorService.shutdownNow();
+//        }
 
         return true; // 返回 true 表示所有任务提交成功
     }

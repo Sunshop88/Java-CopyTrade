@@ -1602,8 +1602,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()
                 );
         // 执行查询并返回结果
-        int size = baseMapper.selectList(queryWrapper).size();
-        System.out.println(size);
         return baseMapper.selectList(queryWrapper);
     }
 

@@ -12,10 +12,8 @@ import java.util.List;
 public class FollowTestServerVO implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "服务器id")
-    @NotNull(message = "服务器ID不能为空")
-    @Min(value = 1, message = "服务器ID必须大于等于1")
-    private Integer serverId;
+//    @Schema(description = "服务器id")
+//    private Integer serverId;
 
     @Schema(description = "服务器名称")
     @NotBlank(message = "服务器名称不能为空")

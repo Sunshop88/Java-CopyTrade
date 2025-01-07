@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.query.FollowSpeedSettingQuery;
 import net.maku.followcom.query.FollowTestDetailQuery;
@@ -156,6 +157,10 @@ public class FollowTestSpeedController {
         List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
         ObjectMapper objectMapper = new ObjectMapper();
         boolean allSuccess = true;
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+        //将detailVOLists的数据存储在redis
+        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
 
         ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
         List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
@@ -398,7 +403,16 @@ public class FollowTestSpeedController {
                 if (split.length != 2) {
                     throw new ServerException("服务器节点格式不正确");
                 }
+                //确保服务器节点唯一
+                FollowTestDetailEntity existingDetail = followTestDetailService.getOne(
+                        Wrappers.<FollowTestDetailEntity>lambdaQuery()
+                                .eq(FollowTestDetailEntity::getServerNode, server)
+                );
 
+                if (existingDetail != null) {
+                    log.info("服务器节点已存在: {}", server);
+                    continue; // 跳过当前循环
+                }
                 FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
                 if (ObjectUtil.isEmpty(followBrokeServerService.existsByServerNodeAndServerPort(followTestServerVO.getServerName(), split[0], split[1]))) {
                     followBrokeServer = new FollowBrokeServerEntity();
@@ -409,17 +423,6 @@ public class FollowTestSpeedController {
                 } else {
                     // 查询已存在的记录
                     followBrokeServer = followBrokeServerService.existsByServerNodeAndServerPort(followTestServerVO.getServerName(), split[0], split[1]);
-                }
-
-                FollowTestDetailEntity existingDetail = followTestDetailService.getOne(
-                        Wrappers.<FollowTestDetailEntity>lambdaQuery()
-                                .eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName())
-                                .eq(FollowTestDetailEntity::getServerNode, server)
-                );
-
-                if (existingDetail != null) {
-                    log.info("服务器节点已存在: {}", server);
-                    continue; // 跳过当前循环
                 }
 
                 FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
@@ -471,6 +474,8 @@ public class FollowTestSpeedController {
             if (ObjectUtil.isNotEmpty(name)) {
                 followTestDetailVO.setServerName(name);
             }
+
+//            followTestDetailVO.setUpdateTime();
             followTestDetailService.update(followTestDetailVO);
         }
         //redis更新
@@ -490,6 +495,10 @@ public class FollowTestSpeedController {
 
             redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, serverNode, 0);
         }
+
+        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(new FollowTestServerQuery());
+        //将detailVOLists的数据存储在redis
+        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
 
         return Result.ok("修改成功");
     }
@@ -516,6 +525,71 @@ public class FollowTestSpeedController {
         return Result.ok();
     }
 
+    private void extract(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
+        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
+        ObjectMapper objectMapper = new ObjectMapper();
+        boolean allSuccess = true;
+
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+        //将detailVOLists的数据存储在redis,我存所有的数据，方便后面查询
+        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
+
+        for (FollowVpsEntity vpsEntity : vpsList) {
+            // 平台点击测速的时候，断开连接的VPS不需要发起测速请求
+            try {
+                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+                boolean reachable = inet.isReachable(5000);
+                if (!reachable) {
+                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                    continue;
+                }
+                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
+                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
+                } catch (IOException e) {
+                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+                    continue;
+                }
+            } catch (IOException e) {
+                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
+                continue;
+            }
+
+            String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+
+            MeasureRequestVO startRequest = new MeasureRequestVO();
+            startRequest.setServers(servers);
+            startRequest.setVpsEntity(vpsEntity);
+            startRequest.setTestId(overallResult.getId());
+            // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+            String expiryDateStr = vpsEntity.getExpiryDate().toString();
+            startRequest.setExpiryDateStr(expiryDateStr);
+
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+            HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
+            ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+            log.info("测速请求:" + response.getBody());
+
+            if (!response.getBody().getString("msg").equals("success")) {
+                log.error("测速失败ip: " + vpsEntity.getIpAddress());
+                allSuccess = false;
+                break; // 如果一个任务失败，可以提前退出
+            }
+        }
+
+        // 根据所有任务的执行结果更新 overallResult
+        if (allSuccess) {
+            overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+        } else {
+            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+            // 延迟删除操作，确保在所有测速请求完成后再进行删除
+            followTestDetailService.deleteByTestId(overallResult.getId());
+        }
+        update(overallResult);
+    }
+
+
     @DeleteMapping("deleteServer")
     @Operation(summary = "删除服务器")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
@@ -530,6 +604,22 @@ public class FollowTestSpeedController {
 //        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
 
 
+        return Result.ok("删除成功");
+    }
+
+    @DeleteMapping("deleteServerNode")
+    @Operation(summary = "删除服务器节点")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> deleteServerNode(@RequestBody FollowTestServerVO vo) {
+        for (String serverNode : vo.getServerNodeList()) {
+            long count = followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>()
+                    .eq(FollowTraderEntity::getLoginNode, serverNode)
+                    .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+            if (count > 0){
+                return Result.error("该服务器节点账号数量不为0，无法删除");
+            }
+            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+        }
         return Result.ok("删除成功");
     }
 

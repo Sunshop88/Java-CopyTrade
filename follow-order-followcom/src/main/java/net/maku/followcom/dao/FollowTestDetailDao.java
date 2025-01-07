@@ -19,4 +19,6 @@ import java.util.List;
 public interface FollowTestDetailDao extends BaseDao<FollowTestDetailEntity> {
 
     List<FollowTestDetailVO> selectServer(@Param("query")FollowTestServerQuery query);
+
+    List<FollowTestDetailVO> selectServerNode(@Param("query")FollowTestServerQuery query);
 }
