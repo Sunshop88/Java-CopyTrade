@@ -156,4 +156,12 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
             throw new ServerException("操作过于频繁，请稍后再试");
         }
     }
+
+    @Override
+    public Boolean batchRepairSend(List<RepairSendVO> repairSendVO) {
+        repairSendVO.forEach(repair -> {
+            repairSend(repair);
+        });
+        return true;
+    }
 }

@@ -210,7 +210,9 @@ public class TraderRepairManageWebSocket {
                             detailServiceList.forEach(detail -> {
                                 OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                                 orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
+                                orderRepairInfoVO.setMasterCloseTime(eaOrderInfo.getCloseTime());
                                 orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
+                                orderRepairInfoVO.setMasterOpenPrice(eaOrderInfo.getOpenPrice());
                                 orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
                                 orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
                                 orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
@@ -219,7 +221,11 @@ public class TraderRepairManageWebSocket {
                                 orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
                                 orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
                                 orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
+                                orderRepairInfoVO.setSlaveOpenPrice(eaOrderInfo.getOpenPrice());
+                                orderRepairInfoVO.setSlaveCloseTime(detail.getCloseTime());
                                 orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
+                                orderRepairInfoVO.setSlaveAccount(detail.getAccount());
+                                orderRepairInfoVO.setSlavePlatform( detail.getPlatform());
                                 orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
                                 orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
                                 orderRepairInfoVOList.add(orderRepairInfoVO);

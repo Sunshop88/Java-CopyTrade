@@ -23,6 +23,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.subcontrol.task.ObtainOrderHistoryTask;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -67,6 +68,7 @@ public class FollowTraderController {
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsService followVpsService;
     private final CacheManager cacheManager;
+    private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -107,6 +109,9 @@ public class FollowTraderController {
             }
             LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
             leaderApiTrader1.startTrade();
+            //添加订单数据
+            List<FollowTraderEntity> newList = new ArrayList<>();
+            obtainOrderHistoryTask.update(convert,newList);
             ThreadPoolUtils.execute(() -> {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTradersAdmin.pushRedisData(followTraderVO,leaderApiTrader.quoteClient);

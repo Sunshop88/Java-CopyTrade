@@ -26,6 +26,7 @@ import net.maku.subcontrol.query.FollowOrderHistoryQuery;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.FollowSlaveService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
+import net.maku.subcontrol.task.ObtainOrderHistoryTask;
 import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import net.maku.subcontrol.trader.LeaderApiTrader;
@@ -46,10 +47,7 @@ import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -73,6 +71,7 @@ public class FollowSlaveController {
     private final FollowVarietyService followVarietyService;
     private final FollowPlatformService followPlatformService;
     private final CacheManager cacheManager;
+    private final ObtainOrderHistoryTask obtainOrderHistoryTask;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -124,6 +123,9 @@ public class FollowSlaveController {
                 followTraderService.removeById(followTraderVO.getId());
                 return Result.error("账号无法连接");
             }
+            //添加订单数据
+            List<FollowTraderEntity> newList = new ArrayList<>();
+            obtainOrderHistoryTask.update(convert,newList);
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
@@ -319,6 +321,12 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO) {
         return Result.ok(followSlaveService.repairSend(repairSendVO));
+    }
+    @PostMapping("batchRepairSend")
+    @Operation(summary = "漏单处理")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> batchRepairSend(@RequestBody List<RepairSendVO> repairSendVO) {
+        return Result.ok(followSlaveService.batchRepairSend(repairSendVO));
     }
 
     private void reconnect(String traderId) {

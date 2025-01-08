@@ -18,7 +18,10 @@ public class OrderRepairInfoVO implements Serializable {
 
 	@Schema(description = "喊单开仓时间")
 	private LocalDateTime masterOpenTime;
-
+	@Schema(description = "喊单关仓时间")
+	private LocalDateTime masterCloseTime;
+	@Schema(description = "喊单开仓价格")
+	private double masterOpenPrice;
 	@Schema(description = "喊单品种")
 	private String masterSymbol;
 
@@ -37,11 +40,20 @@ public class OrderRepairInfoVO implements Serializable {
 	@Schema(description = "跟单开仓时间")
 	private LocalDateTime slaveOpenTime;
 
+	@Schema(description = "跟单关仓时间")
+	private LocalDateTime slaveCloseTime;
+	@Schema(description = "跟单账号")
+	private String slaveAccount;
+	@Schema(description = "跟单服务器")
+	private String slavePlatform;
 	@Schema(description = "跟单品种")
 	private String slaveSymbol;
 
 	@Schema(description = "跟单手数")
 	private double slaveLots;
+
+	@Schema(description = "跟单开仓价格")
+	private double slaveOpenPrice;
 
 	@Schema(description = "跟单盈亏")
 	private double slaverProfit;

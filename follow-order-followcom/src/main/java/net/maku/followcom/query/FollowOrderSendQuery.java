@@ -92,4 +92,8 @@ public class FollowOrderSendQuery extends Query {
     @Schema(description = "平仓请求时间-结束")
     private String requestCloseTimeEnd;
 
+    //喊单账号
+    @Schema(description = "喊单账号")
+    private  String sourceUser;
+
 }
