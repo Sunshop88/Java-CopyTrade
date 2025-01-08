@@ -14,7 +14,7 @@ import net.maku.framework.mybatis.service.BaseService;
 public interface SourceService extends BaseService<SourceEntity> {
 
 
-    void add(SourceInsertVO vo);
+    Integer add(SourceInsertVO vo);
 
     void edit(SourceUpdateVO vo);
     void edit(SourceEntity source);

@@ -33,7 +33,7 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
 
     @Override
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
-    public void add(SourceInsertVO vo) {
+    public Integer add(SourceInsertVO vo) {
         //参数转化
         SourceEntity sourceEntity = SourceConvert.INSTANCE.convert(vo);
         //暴力反射设置默认值
@@ -60,6 +60,7 @@ public class SourceServiceImpl extends BaseServiceImpl<SourceDao, SourceEntity> 
         });
         //保存从表数据
         save(sourceEntity);
+        return sourceEntity.getId();
 
     }
 

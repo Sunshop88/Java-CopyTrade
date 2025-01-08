@@ -21,8 +21,9 @@ public class FollowApiController {
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
-    public Result<Boolean> insertSource(@RequestBody @Valid SourceInsertVO vo) {
-        return followApiService.insertSource(vo) ? Result.ok() : Result.error();
+    public Result<Integer> insertSource(@RequestBody @Valid SourceInsertVO vo) {
+        Integer id = followApiService.insertSource(vo);
+        return id!=null ? Result.ok(id) : Result.error();
     }
 
     @PostMapping("/source/update")
@@ -41,9 +42,10 @@ public class FollowApiController {
 
     @PostMapping("/follow/insert")
     @Operation(summary = "跟单添加")
-    public Result<String> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
+    public Result<Integer> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
+        Integer id = followApiService.insertFollow(vo);
+        return id!=null ? Result.ok(id) : Result.error();
 
-        return followApiService.insertFollow(vo) ? Result.ok() : Result.error();
     }
 
     @PostMapping("/follow/update")

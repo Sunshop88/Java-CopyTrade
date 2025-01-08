@@ -17,7 +17,7 @@ public interface FollowApiService {
     Boolean updateSlave(FollowUpdateSalveVo vo);
 
     //喊单表主从表同时增加
-    Boolean insertSource(SourceInsertVO vo);
+    Integer insertSource(SourceInsertVO vo);
 
     //喊单表主从表同时更新
     Boolean updateSource(SourceUpdateVO vo);
@@ -25,7 +25,7 @@ public interface FollowApiService {
     //喊单表主从表同时更新
     Boolean delSource(SourceDelVo vo);
 
-    Boolean insertFollow(FollowInsertVO vo);
+    Integer insertFollow(FollowInsertVO vo);
 
     Boolean updateFollow(FollowUpdateVO vo);
 

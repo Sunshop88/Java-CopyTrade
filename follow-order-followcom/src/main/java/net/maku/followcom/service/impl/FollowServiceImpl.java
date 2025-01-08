@@ -33,7 +33,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
 
     @Override
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
-    public void add(FollowInsertVO followInsertVO) {
+    public Integer add(FollowInsertVO followInsertVO) {
         FollowEntity follow = FollowConvert.INSTANCE.convert(followInsertVO);
         //默认值赋值
         //暴力反射设置默认值
@@ -62,6 +62,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
             }
         });
         save(follow);
+        return follow.getId();
     }
 
     @Override

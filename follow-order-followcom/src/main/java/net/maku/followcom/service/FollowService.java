@@ -13,7 +13,7 @@ import net.maku.framework.mybatis.service.BaseService;
 public interface FollowService extends BaseService<FollowEntity> {
 
 
-    void add(FollowInsertVO followInsertVO);
+    Integer add(FollowInsertVO followInsertVO);
 
 
     void edit(FollowUpdateVO followUpdateVO);

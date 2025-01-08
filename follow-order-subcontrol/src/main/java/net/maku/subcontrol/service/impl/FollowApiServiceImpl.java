@@ -308,7 +308,7 @@ public class FollowApiServiceImpl implements FollowApiService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean insertSource(SourceInsertVO vo) {
+    public Integer insertSource(SourceInsertVO vo) {
         //参数转换，转成主表数据
         FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -320,11 +320,11 @@ public class FollowApiServiceImpl implements FollowApiService {
         //判断主表如果保存失败，则返回false
         Boolean result = save(followTrader);
         if (!result) {
-            return false;
+            return null;
         }
         //保存从表数据
-        sourceService.add(vo);
-        return true;
+        Integer id = sourceService.add(vo);
+        return id;
 
     }
 
@@ -362,7 +362,7 @@ public class FollowApiServiceImpl implements FollowApiService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean insertFollow(FollowInsertVO vo) {
+    public Integer insertFollow(FollowInsertVO vo) {
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -377,11 +377,11 @@ public class FollowApiServiceImpl implements FollowApiService {
         //判断主表如果保存失败，则返回false
         Boolean result = addSlave(followAddSalveVo);
         if (!result) {
-            return false;
+            return null;
         }
         //处理副表数据
-        followService.add(vo);
-        return true;
+        Integer id = followService.add(vo);
+        return id;
     }
 
 
