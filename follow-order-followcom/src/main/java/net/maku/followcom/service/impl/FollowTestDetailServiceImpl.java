@@ -125,27 +125,34 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
      * @param query
      * @return
      */
+
     public PageResult<String[]> pageServer(FollowTestServerQuery query) {
         List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
         System.out.println(detailVOList.size());
+
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
 
+        // 获取所有唯一的 vpsNames
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
         for (FollowTestDetailVO detail : detailVOList) {
-            uniqueVpsNames.add(detail.getVpsName());
+            String vpsName = detail.getVpsName();
+            if (vpsName != null) {
+                uniqueVpsNames.add(vpsName);
+            }
         }
+
+        // 表头处理
         List<String> header = new ArrayList<>();
-        header.add("服务器名称");
         header.add("券商名称");
+        header.add("服务器名称");
         header.add("账号数量");
         header.add("非默认节点账号数量");
         header.add("平台类型");
         header.add("更新时间");
         header.add("服务器节点");
         header.addAll(uniqueVpsNames);
-        // 将表头转换为数组并作为固定的第一行加入结果中
-        result.add(header.toArray(new String[0]));
+        result.add(header.toArray(new String[0]));  // 将表头加入结果中
 
         // 暂存每个 key 对应的速度数据
         Map<String, Map<String, Double>> speedMap = new HashMap<>();
@@ -158,62 +165,71 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 double speedValue = speed.doubleValue();
                 speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
             } else {
-                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
+                // 处理 speed 为 null 的情况
                 speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
             }
         }
 
+        // Step 1: 按照 brokerName 分组
+        Map<String, List<FollowTestDetailVO>> brokerGroups = new HashMap<>();
+        for (FollowTestDetailVO detail : detailVOList) {
+            String brokerName = followPlatformService.getbrokerName(detail.getServerName());
+            brokerGroups.computeIfAbsent(brokerName, k -> new ArrayList<>()).add(detail);
+        }
+
+        // Step 2: 对每个 brokerGroup 按照 serverName 排序
         List<String[]> dataRows = new ArrayList<>();
-        List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
-        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
+        for (String brokerName : brokerGroups.keySet()) {
+            // 获取当前 brokerName 下的所有 serverName 对应的数据
+            List<FollowTestDetailVO> serverList = brokerGroups.get(brokerName);
 
-        for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
-            String key = entry.getKey();
-            String[] keyParts = key.split("_");
-            String serverName = keyParts[0];
-            String platformType = keyParts[1];
-            String serverNode = keyParts[2];
+            // 对该 brokerName 下的数据按 serverName 排序
+            serverList.sort(Comparator.comparing(FollowTestDetailVO::getServerName));
 
-            Map<String, Double> vpsSpeeds = entry.getValue();
-            String[] dataRow = new String[7 + uniqueVpsNames.size()];
-            //服务器名称
-            dataRow[0] = serverName;
-            //券商名称
-            dataRow[1] = followPlatformService.getbrokerName(serverName);
-            //获取账号数量
-            dataRow[2] = followTraderService.getAccountCount(serverName);
-            //非默认节点账号数量
-            //查询该severName默认节点
-            String defaultServerNode = detailVOList.stream()
-                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-                            && detailVO.getIsDefaultServer() != null
-                            && detailVO.getIsDefaultServer() == 0)
-                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-                    .map(FollowTestDetailVO::getServerNode)
-                    .findFirst() // 获取最新的一条数据
-                    .orElse("null"); // 如果没有符合条件的记录，返回 null
-            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
-            //平台类型
-            dataRow[4] = platformType;
-            //更新时间
-            dataRow[5] = String.valueOf(detailVOList.stream()
-                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-                            && detailVO.getIsDefaultServer() != null
-                            && detailVO.getIsDefaultServer() == 0)
-                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-                    .map(FollowTestDetailVO::getServerUpdateTime)
-                    .findFirst() // 获取最新的一条数据
-                    .orElse(null));
-            //服务器节点
-            dataRow[6] = serverNode;
-            //vps名称
-            int index = 7;
-            for (String vpsName : uniqueVpsNames) {
-                Double speed = vpsSpeeds.get(vpsName);
-                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+            // Step 3: 生成每行数据
+            for (FollowTestDetailVO detail : serverList) {
+                String serverName = detail.getServerName();
+                String platformType = detail.getPlatformType();
+                String serverNode = detail.getServerNode();
+
+                // 构建数据行
+                String[] dataRow = new String[7 + uniqueVpsNames.size()];
+                dataRow[0] = brokerName; // 券商名称
+                dataRow[1] = serverName; // 服务器名称
+                dataRow[2] = followTraderService.getAccountCount(serverName); // 账号数量
+
+                // 获取非默认节点账号数量
+                String defaultServerNode = serverList.stream()
+                        .filter(d -> serverName.equals(d.getServerName())
+                                && d.getIsDefaultServer() != null
+                                && d.getIsDefaultServer() == 0)
+                        .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
+                        .map(FollowTestDetailVO::getServerNode)
+                        .findFirst()
+                        .orElse("null"); // 默认值为 null
+                dataRow[3] = followTraderService.getDefaultAccountCount(serverName, defaultServerNode);
+
+                dataRow[4] = platformType; // 平台类型
+                dataRow[5] = String.valueOf(serverList.stream()
+                        .filter(d -> serverName.equals(d.getServerName())
+                                && d.getIsDefaultServer() != null
+                                && d.getIsDefaultServer() == 0)
+                        .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
+                        .map(FollowTestDetailVO::getServerUpdateTime)
+                        .findFirst()
+                        .orElse(null)); // 更新时间
+
+                dataRow[6] = serverNode; // 服务器节点
+
+                // 填充 VPS 名称的速度数据
+                int index = 7;
+                for (String vpsName : uniqueVpsNames) {
+                    Double speed = speedMap.get(serverName + "_" + platformType + "_" + serverNode).get(vpsName);
+                    dataRow[index++] = (speed != null) ? speed.toString() : "null";
+                }
+
+                dataRows.add(dataRow); // 将生成的行加入结果
             }
-
-            dataRows.add(dataRow);
         }
 
         // 计算分页的开始和结束索引
@@ -222,11 +238,129 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         int start = (page - 1) * limit;
         int end = Math.min(start + limit, dataRows.size());
         List<String[]> paginatedDataRows = dataRows.subList(start, end);
+
         result.addAll(paginatedDataRows);
 
+        // 返回分页结果
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
     }
+
+//    public PageResult<String[]> pageServer(FollowTestServerQuery query) {
+//        List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
+//        System.out.println(detailVOList.size());
+//        // 用于最终结果的列表
+//        List<String[]> result = new ArrayList<>();
+//
+//        Set<String> uniqueVpsNames = new LinkedHashSet<>();
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String vpsName = detail.getVpsName();
+//            if (vpsName != null) {
+//                uniqueVpsNames.add(vpsName);
+//            }
+//        }
+//        List<String> header = new ArrayList<>();
+//        header.add("券商名称");
+//        header.add("服务器名称");
+//        header.add("账号数量");
+//        header.add("非默认节点账号数量");
+//        header.add("平台类型");
+//        header.add("更新时间");
+//        header.add("服务器节点");
+//        header.addAll(uniqueVpsNames);
+//        // 将表头转换为数组并作为固定的第一行加入结果中
+//        result.add(header.toArray(new String[0]));
+//
+//        // 暂存每个 key 对应的速度数据
+//        Map<String, Map<String, Double>> speedMap = new HashMap<>();
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
+//            String vpsName = detail.getVpsName();
+//            Integer speed = detail.getSpeed();
+//
+//            if (speed != null) {
+//                double speedValue = speed.doubleValue();
+//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
+//            } else {
+//                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
+//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
+//            }
+//        }
+//
+//        List<String[]> dataRows = new ArrayList<>();
+//        List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
+//        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
+//
+//        for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
+//            String key = entry.getKey();
+//            String[] keyParts = key.split("_");
+//            String serverName = keyParts[0];
+//            String platformType = keyParts[1];
+//            String serverNode = keyParts[2];
+//
+//            Map<String, Double> vpsSpeeds = entry.getValue();
+//            String[] dataRow = new String[7 + uniqueVpsNames.size()];
+//            //券商名称
+//            dataRow[0] = followPlatformService.getbrokerName(serverName);
+//            //服务器名称
+//            dataRow[1] = serverName;
+//            //获取账号数量
+//            dataRow[2] = followTraderService.getAccountCount(serverName);
+//            //非默认节点账号数量
+//            //查询该severName默认节点
+//            String defaultServerNode = detailVOList.stream()
+//                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
+//                            && detailVO.getIsDefaultServer() != null
+//                            && detailVO.getIsDefaultServer() == 0)
+//                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
+//                    .map(FollowTestDetailVO::getServerNode)
+//                    .findFirst() // 获取最新的一条数据
+//                    .orElse("null"); // 如果没有符合条件的记录，返回 null
+//            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
+//            //平台类型
+//            dataRow[4] = platformType;
+//            //更新时间
+//            dataRow[5] = String.valueOf(detailVOList.stream()
+//                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
+//                            && detailVO.getIsDefaultServer() != null
+//                            && detailVO.getIsDefaultServer() == 0)
+//                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
+//                    .map(FollowTestDetailVO::getServerUpdateTime)
+//                    .findFirst() // 获取最新的一条数据
+//                    .orElse(null));
+//            //服务器节点
+//            dataRow[6] = serverNode;
+//            //vps名称
+//            int index = 7;
+//            for (String vpsName : uniqueVpsNames) {
+//                Double speed = vpsSpeeds.get(vpsName);
+//                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+//            }
+//
+//            dataRows.add(dataRow);
+//        }
+//
+//        // 计算分页的开始和结束索引
+//        int page = query.getPage();
+//        int limit = query.getLimit();
+//        int start = (page - 1) * limit;
+//        int end = Math.min(start + limit, dataRows.size());
+//        List<String[]> paginatedDataRows = dataRows.subList(start, end);
+//        result.addAll(paginatedDataRows);
+//
+//        Map<String, List<String[]>> groupedByBrokerName = result.stream()
+//                .filter(row -> row != null && row.length > 0 && row[0] != null)
+//                .collect(Collectors.groupingBy(row -> row[0]));
+//
+//        List<String[]> sortedResult = groupedByBrokerName.values().stream()
+//                .flatMap(List::stream)
+//                .sorted(Comparator.comparing((String[] row) -> row[0])
+//                        .thenComparing(row -> row[1]))
+//                .collect(Collectors.toList());
+//
+//        PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
+//        return pageResult;
+//    }
 
     /**
      * 节点列表
@@ -274,14 +408,20 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRow[0] = serverNode;
 
             // 获取最新的更新时间（假设每条记录的时间不同）
-//            dataRow[1] = String.valueOf(detail.getServerUpdateTime());
             FollowTestDetailVO latestDetail = detailVOList.stream()
-                    .filter(detail -> detail.getServerNode().equals(serverNode))
+                    .filter(detail -> Optional.ofNullable(detail.getServerNode()).orElse("").equals(serverNode))
                     .max(Comparator.comparing(
                             FollowTestDetailVO::getServerUpdateTime,
                             Comparator.nullsLast(Comparator.naturalOrder())
                     ))
                     .orElse(null);
+//            FollowTestDetailVO latestDetail = detailVOList.stream()
+//                    .filter(detail -> detail.getServerNode().equals(serverNode))
+//                    .max(Comparator.comparing(
+//                            FollowTestDetailVO::getServerUpdateTime,
+//                            Comparator.nullsLast(Comparator.naturalOrder())
+//                    ))
+//                    .orElse(null);
 
             System.out.println(latestDetail);
             if (latestDetail != null) {

@@ -454,9 +454,9 @@ public class FollowTestSpeedController {
     @GetMapping("listServerAndNode")
     @Operation(summary = "查询默认节点列表")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<List<FollowTestDetailVO>> listServerAndNode(@RequestParam String name) {
+    public Result<List<FollowTestDetailVO>> listServerAndNode(@RequestParam(required = false) String name) {
         FollowTestServerQuery query = new FollowTestServerQuery();
-        query.setServerName(name);
+//        query.setServerName(name);
         List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
 
         return Result.ok(list);
@@ -482,7 +482,12 @@ public class FollowTestSpeedController {
                     .orElse(null);
             if (targetVO != null) {
                 // 修改 isDefaultServer 字段
-                targetVO.setIsDefaultServer(vo.getIsDefaultServer());
+//                targetVO.setIsDefaultServer(vo.getIsDefaultServer());
+                Integer isDefaultServer = vo.getIsDefaultServer();
+                if (isDefaultServer == null) {
+                    isDefaultServer = 1;
+                }
+                targetVO.setIsDefaultServer(isDefaultServer);
                 targetVO.setUpdateTime(targetVO.getUpdateTime());
                 System.out.println(targetVO.getUpdateTime());
                 targetVO.setServerUpdateTime(now);
@@ -658,15 +663,34 @@ public class FollowTestSpeedController {
     @DeleteMapping("deleteServer")
     @Operation(summary = "删除服务器")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> deleteServer(@RequestBody FollowTestServerVO vo) {
+    public Result<String> deleteServer(@RequestBody FollowTestServerVO followTestServerVO) {
+        //删掉redis中该服务器的数据
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setServerName(followTestServerVO.getServerName());
+        List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
+
         //判断该服务器名称的账号数量是否为0
-        String accountCount = followTraderService.getAccountCount(vo.getServerName());
+        String accountCount = followTraderService.getAccountCount(followTestServerVO.getServerName());
         if (Integer.parseInt(accountCount) > 0) {
             return Result.error("该服务器账号数量不为0，无法删除");
         }
-        log.info("Removing FollowTestDetailEntity with serverName: {}", vo.getServerName());
-        followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
-//        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
+        log.info("删除的服务器名称为: {}", followTestServerVO.getServerName());
+        followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName()));
+        followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName()));
+
+        //查询IsDefaultServer为0的数据
+        List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                .filter(vo -> {
+                    Integer isDefaultServer = vo.getIsDefaultServer();
+                    return isDefaultServer != null && isDefaultServer == 0;
+                })
+                .collect(Collectors.toList());
+        for (FollowTestDetailVO entity : defaultServerNodes) {
+            Integer vpsId = entity.getVpsId();
+            String serverName = entity.getServerName();
+                // 删除键名
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
+        }
 
         return Result.ok("删除成功");
     }
@@ -682,6 +706,52 @@ public class FollowTestSpeedController {
             if (count > 0){
                 return Result.error("该服务器节点账号数量不为0，无法删除");
             }
+//            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+//        }
+        //删掉redis中该服务器的数据
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setServerName(vo.getServerName());
+        List<FollowTestDetailVO> newlist = followTestDetailService.selectServer(query);   //查询IsDefaultServer为0的数据
+        List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                .filter(vos -> {
+                    Integer isDefaultServer = vos.getIsDefaultServer();
+                    return isDefaultServer != null && isDefaultServer == 0;
+                })
+                .collect(Collectors.toList());
+
+        for (FollowTestDetailVO entity : defaultServerNodes) {
+            Integer vpsId = entity.getVpsId();
+            String serverName = entity.getServerName();
+            String node = (String)redisUtil.hGet(Constant.VPS_NODE_SPEED + vpsId, serverName);
+//            System.out.println("node:"+node);
+            if (serverNode.equals(node) && node != null){
+                // 删除键名
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
+                // 找到速度最快的非默认服务器节点
+
+                FollowTestDetailVO fastestNode = newlist.stream()
+                        .filter(s -> s.getServerNode() != null && !s.getServerNode().equals(serverNode))
+                        .filter(s -> s.getSpeed() != null && s.getSpeed() > 0)
+                        .min(Comparator.comparingInt(s -> {
+                            Integer speed = s.getSpeed();
+                            return speed != null ? speed : Integer.MAX_VALUE; // 防止空指针异常
+                        }))
+                        .orElse(null);
+                log.info("fastestNode:{}" + fastestNode);
+                System.out.println("fastestNode:"+fastestNode);
+                if (fastestNode != null) {
+                    // 修改 fastestNode 中 isDefaultServer 为 0
+                    fastestNode.setIsDefaultServer(0);
+                    // 更新数据库
+                    followTestDetailService.update(fastestNode);
+                    // 更新 Redis 中的节点为最快的节点
+                    redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, fastestNode.getServerName(), fastestNode.getServerNode(),0);}
+//                } else {
+//                    log.warn("未找到有效的最快节点");
+//                    continue;
+//                }
+            }
+        }
             followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
         }
         return Result.ok("删除成功");
@@ -700,7 +770,7 @@ public class FollowTestSpeedController {
     @Operation(summary = "修改配置")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<String> update(@RequestBody @Valid FollowSpeedSettingVO vo){
+    public Result<String> updates(@RequestBody @Valid FollowSpeedSettingVO vo){
         followSpeedSettingService.update(vo);
 
         return Result.ok();
