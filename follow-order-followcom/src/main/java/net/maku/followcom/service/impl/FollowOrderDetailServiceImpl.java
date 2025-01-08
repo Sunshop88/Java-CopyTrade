@@ -168,6 +168,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setRateMargin(order.RateMargin);
         entity.setMagical(order.Ticket);
         entity.setRemark(order.Comment);
+        entity.setIsExternal(1);
         // entity.setBrokeName(u.get);
         //    entity.setSourceUser(account);
         entity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
@@ -184,6 +185,9 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             entity.setIsExternal(1);
             list.add(entity);
         });
+        if(ObjectUtil.isNotEmpty(list)) {
+            customBatchSaveOrUpdate(list);
+        }
     }
 
     /**

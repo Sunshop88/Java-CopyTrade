@@ -114,6 +114,7 @@ public class FollowTraderController {
             leaderApiTrader1.startTrade();
             //添加订单数据
             List<FollowTraderEntity> newList = new ArrayList<>();
+            convert.setIsFirstSync(1);
             obtainOrderHistoryTask.update(convert,newList);
             ThreadPoolUtils.execute(() -> {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());

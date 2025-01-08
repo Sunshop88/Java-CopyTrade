@@ -125,6 +125,7 @@ public class FollowSlaveController {
             }
             //添加订单数据
             List<FollowTraderEntity> newList = new ArrayList<>();
+            convert.setIsFirstSync(1);
             obtainOrderHistoryTask.update(convert,newList);
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
