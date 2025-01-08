@@ -114,4 +114,6 @@ public class ObtainOrderHistoryTask {
             followTraderService.updateBatchById(newList);
         }
     }
+
+
 }
