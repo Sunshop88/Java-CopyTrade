@@ -21,10 +21,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.rmi.ServerException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -39,14 +41,14 @@ public class WebDashboardSymbolSocket {
 
     private final DashboardService dashboardService= SpringContextUtils.getBean(DashboardService.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    
+    private Map<String,ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     // 当客户端连接时调用
     @OnOpen
     public void onOpen(Session session, @PathParam("rankOrder") String rankOrder, @PathParam("rankAsc") Boolean rankAsc, @PathParam("brokerName") String brokerName,
                        @PathParam("accountOrder") String accountOrder, @PathParam("accountPage") Integer accountPage,@PathParam("accountAsc") Boolean accountAsc) throws IOException  {
-
-            //开启定时任务
-            scheduledExecutorService.scheduleAtFixedRate(() -> {
+        String id = session.getId();
+        //开启定时任务
+        ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 //仪表盘-头部统计
                 StatDataVO statData = dashboardService.getStatData();
@@ -91,6 +93,7 @@ public class WebDashboardSymbolSocket {
 
             }
         }, 0, 1, TimeUnit.SECONDS);
+        this.scheduledFutureMap.put(id,scheduledFuture);
     }
 
 
@@ -111,9 +114,15 @@ public class WebDashboardSymbolSocket {
     @OnClose
     public void onClose(Session session) {
         try {
+            String id = session.getId();
+            ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(id);
+            if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+                scheduledFuture.cancel(true);
+            }
             if(session!=null && session.getBasicRemote()!=null) {
                 session.close();
             }
+
         } catch (IOException e) {
             log.error("关闭链接异常{}",e.getMessage());
             throw new RuntimeException(e);
