@@ -32,9 +32,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * Author:  zsd
  * Date:  2025/1/8/周三 9:33
+ * /{rankOrder}/{rankAsc}/{brokerName}/{accountOrder}/{accountPage}/{accountAsc}"
  */
 @Component
-@ServerEndpoint("/socket/dashboardSymbol/{rankOrder}/{rankAsc}/{brokerName}/{accountOrder}/{accountPage}/{accountAsc}")
+@ServerEndpoint("/socket/dashboardSymbol")
 @Slf4j
 public class WebDashboardSymbolSocket {
 
@@ -43,67 +44,95 @@ public class WebDashboardSymbolSocket {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String,ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     // 当客户端连接时调用
-    @OnOpen
+/*    @OnOpen
     public void onOpen(Session session, @PathParam("rankOrder") String rankOrder, @PathParam("rankAsc") Boolean rankAsc, @PathParam("brokerName") String brokerName,
-                       @PathParam("accountOrder") String accountOrder, @PathParam("accountPage") Integer accountPage,@PathParam("accountAsc") Boolean accountAsc) throws IOException  {
-        String id = session.getId();
-        //开启定时任务
+                       @PathParam("accountOrder") String accountOrder, @PathParam("accountPage") Integer accountPage,@PathParam("accountAsc") Boolean accountAsc) throws IOException  {*/
+        @OnOpen
+        public void onOpen(Session session) throws IOException  {
+    /*      String id = session.getId();
+      //开启定时任务
         ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
-                //仪表盘-头部统计
-                StatDataVO statData = dashboardService.getStatData();
-                //仪表盘-头寸监控-统计
-                List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
-                //仪表盘-头寸监控-统计明细
-                Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
-                //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
-                List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
-                //仪表盘-盈利排行榜
-                Query query=new Query();
-                query.setAsc(rankAsc);
-                query.setOrder(rankOrder);
-                query.setLimit(10);
-                List<RankVO> ranking = dashboardService.getRanking(query);
-                //账号数据
-                DashboardAccountQuery vo=new DashboardAccountQuery();
-                vo.setLimit(20);
-                vo.setPage(accountPage);
-                vo.setAsc(accountAsc);
-                if(!brokerName.equals("null")){
-                    vo.setBrokerName(brokerName);
-                }
-
-                PageResult<DashboardAccountDataVO> accountDataPage = dashboardService.getAccountDataPage(vo);
-                JSONObject json=new JSONObject();
-                //仪表盘-头部统计
-                json.put("statData",statData);
-                //仪表盘-头寸监控-统计
-                json.put("symbolAnalysis",symbolAnalysis);
-                //仪表盘-头寸监控-统计明细
-                json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
-                //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
-                json.put("symbolChart",symbolChart);
-                ///仪表盘-盈利排行榜
-                json.put("ranking",ranking);
-                //账号数据
-                json.put("accountDataPage",accountDataPage);
+                JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc);
                 session.getBasicRemote().sendText(json.toJSONString());
             } catch (Exception e) {
                 log.error("推送异常:{}",e.getMessage());
 
             }
         }, 0, 1, TimeUnit.SECONDS);
-        this.scheduledFutureMap.put(id,scheduledFuture);
+        this.scheduledFutureMap.put(id,scheduledFuture);*/
     }
 
+        private JSONObject send(String rankOrder,  Boolean rankAsc,  String brokerName,
+                                 String accountOrder,  Integer accountPage, Boolean accountAsc){
+            //仪表盘-头部统计
+            StatDataVO statData = dashboardService.getStatData();
+            //仪表盘-头寸监控-统计
+            List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
+            //仪表盘-头寸监控-统计明细
+            Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
+            //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
+            List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
+            //仪表盘-盈利排行榜
+            Query query=new Query();
+            query.setAsc(rankAsc);
+            query.setOrder(rankOrder);
+            query.setLimit(10);
+            List<RankVO> ranking = dashboardService.getRanking(query);
+            //账号数据
+            DashboardAccountQuery vo=new DashboardAccountQuery();
+            vo.setLimit(20);
+            vo.setPage(accountPage);
+            vo.setAsc(accountAsc);
+            if(!brokerName.equals("null")){
+                vo.setBrokerName(brokerName);
+            }
 
+            PageResult<DashboardAccountDataVO> accountDataPage = dashboardService.getAccountDataPage(vo);
+            JSONObject json=new JSONObject();
+            //仪表盘-头部统计
+            json.put("statData",statData);
+            //仪表盘-头寸监控-统计
+            json.put("symbolAnalysis",symbolAnalysis);
+            //仪表盘-头寸监控-统计明细
+            json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
+            //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
+            json.put("symbolChart",symbolChart);
+            ///仪表盘-盈利排行榜
+            json.put("ranking",ranking);
+            //账号数据
+            json.put("accountDataPage",accountDataPage);
+            return  json;
+
+    }
 
     // 当接收到客户端的消息时调用
     @OnMessage
     public void onMessage(String message, Session session) throws ServerException {
         try {
-            session.getBasicRemote().sendText("Echo: " + message);
-        } catch (IOException e) {
+            String id = session.getId();
+            JSONObject jsonObject = JSONObject.parseObject(message);
+            String rankOrder = jsonObject.getString("rankOrder");
+            Boolean rankAsc = jsonObject.getBoolean("rankAsc");
+            String brokerName = jsonObject.getString("brokerName");
+            String accountOrder = jsonObject.getString("accountOrder");
+            Integer accountPage = jsonObject.getInteger("accountPage");
+            Boolean accountAsc = jsonObject.getBoolean("accountAsc");
+            ScheduledFuture<?> st = scheduledFutureMap.get(id);
+            if(st!=null){
+                st.cancel(true);
+            }
+            ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
+                try {
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc);
+                    session.getBasicRemote().sendText(json.toJSONString());
+                } catch (Exception e) {
+                    log.error("推送异常:{}",e.getMessage());
+
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+            scheduledFutureMap.put(id,scheduledFuture);
+        } catch (Exception e) {
             log.error(e.getMessage());
             throw new ServerException(e.getMessage());
 

@@ -37,7 +37,7 @@ public interface FollowTraderLogDao extends BaseDao<FollowTraderLogEntity> {
             "<if test='query!=null and query.logDetail != null and   query.logDetail.trim() != \"\" '>",
             " and  log_detail LIKE CONCAT('%',#{query.logDetail},'%')",
             " </if>",
-            "<if test='query!=null and query.status != null and   query.status!= \"\" '>",
+            "<if test='query!=null and query.status != null  '>",
             " and  status  =#{query.status} ",
             " </if>",
             "<if test='query!=null and query.type != null  '>",
