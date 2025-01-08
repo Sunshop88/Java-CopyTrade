@@ -20,4 +20,15 @@ public class RankVO {
     private String platform;
     //盈利
     private BigDecimal profit;
+    /**
+     * 总持仓手数
+     */
+
+    private BigDecimal lots;
+
+    /**
+     * 总订单数
+     */
+
+    private BigDecimal num;
 }

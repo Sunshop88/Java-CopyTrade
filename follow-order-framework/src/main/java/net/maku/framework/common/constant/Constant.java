@@ -123,4 +123,9 @@ public interface Constant {
      * 监听幂等校验
      */
     String FOLLOW_ON_EVEN="follow:on:even:";
+
+    /**
+     *
+     */
+    String STATISTICS_SYMBOL_INFO="statistics:symbol:info";
 }

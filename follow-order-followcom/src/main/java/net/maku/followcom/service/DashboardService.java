@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.FollowTraderAnalysisQuery;
@@ -9,6 +10,7 @@ import net.maku.framework.common.query.Query;
 import net.maku.framework.common.utils.PageResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Author:  zsd
@@ -19,13 +21,17 @@ public interface DashboardService {
     //仪表盘-账号数据
     PageResult<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo);
 
-    List<SymbolAnalysisVO> getSymbolAnalysis(SymbolAnalysisQuery vo);
+    List<SymbolChartVO> getSymbolAnalysis();
 
     List<FollowTraderAnalysisEntity> getSymbolAnalysisDetails(TraderAnalysisVO vo);
+//TraderAnalysisVO vo
+     Map<String,List<FollowTraderAnalysisEntity>> getSymbolAnalysisMapDetails();
 
     StatDataVO getStatData();
 
     List<RankVO> getRanking(Query query);
 
     List<SymbolChartVO> getSymbolChart();
+
+    List<FollowPlatformEntity> searchPlatform(String platform);
 }

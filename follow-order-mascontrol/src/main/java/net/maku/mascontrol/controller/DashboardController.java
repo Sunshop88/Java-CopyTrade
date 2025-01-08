@@ -3,6 +3,7 @@ package net.maku.mascontrol.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.SymbolAnalysisQuery;
@@ -13,10 +14,12 @@ import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Author:  zsd
@@ -55,21 +58,32 @@ public class DashboardController {
      * */
     @GetMapping("/getAccountDataPage")
     @Operation(summary = "账号数据")
-    //@PreAuthorize("hasAuthority('dashboard:accountData')")
+   // @PreAuthorize("hasAuthority('dashboard:accountData')")
     public Result<PageResult<DashboardAccountDataVO>> getAccountDataPage(@ParameterObject @Valid DashboardAccountQuery vo) {
 
         return Result.ok(dashboardService.getAccountDataPage(vo));
     }
     /**
      * 仪表盘-头寸监控-统计
-     *
+     *    @ParameterObject @Valid SymbolAnalysisQuery vo
      * */
     @GetMapping("/getSymbolAnalysis")
     @Operation(summary = "仪表盘-头寸监控-统计")
-    public Result<List<SymbolAnalysisVO>> getSymbolAnalysis(@ParameterObject @Valid SymbolAnalysisQuery vo ) {
+    public Result<List<SymbolChartVO>> getSymbolAnalysis() {
 
-        return Result.ok(dashboardService.getSymbolAnalysis(vo));
+        return Result.ok(dashboardService.getSymbolAnalysis());
     }
+
+/*    *//**
+     * 仪表盘-头寸监控-统计明细
+     *
+     * *//*
+    @GetMapping("/getSymbolAnalysisDetails")
+    @Operation(summary = "仪表盘-头寸监控-统计明细")
+    public Result<List<FollowTraderAnalysisEntity>> getSymbolAnalysisDetails(@ParameterObject @Valid TraderAnalysisVO vo ) {
+
+        return Result.ok(dashboardService.getSymbolAnalysisDetails(vo));
+    }*/
 
     /**
      * 仪表盘-头寸监控-统计明细
@@ -77,9 +91,9 @@ public class DashboardController {
      * */
     @GetMapping("/getSymbolAnalysisDetails")
     @Operation(summary = "仪表盘-头寸监控-统计明细")
-    public Result<List<FollowTraderAnalysisEntity>> getSymbolAnalysisDetails(@ParameterObject @Valid TraderAnalysisVO vo ) {
+    public Result<Map<String,List<FollowTraderAnalysisEntity>>> getSymbolAnalysisDetails() {
 
-        return Result.ok(dashboardService.getSymbolAnalysisDetails(vo));
+        return Result.ok(dashboardService.getSymbolAnalysisMapDetails());
     }
     /***
      * 仪表盘-Symbool数据图表
@@ -89,6 +103,16 @@ public class DashboardController {
     public Result<List<SymbolChartVO>> getSymbolChart() {
 
         return Result.ok(dashboardService.getSymbolChart());
+    }
+
+    /***
+     * 仪表盘-劵商搜索
+     * **/
+    @GetMapping("/searchPlatform")
+    @Operation(summary = "仪表盘-劵商搜索")
+    public Result<List<FollowPlatformEntity>> searchPlatform(String brokerName) {
+
+        return Result.ok(dashboardService.searchPlatform(brokerName));
     }
 
 }

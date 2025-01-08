@@ -1,6 +1,7 @@
 package net.maku.followcom.vo;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,7 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class SymbolChartVO {
     /**
      * 品种
@@ -47,4 +49,28 @@ public class SymbolChartVO {
      * sell盈利
      */
     private BigDecimal sellProfit;
+
+    /**
+     * 净头寸
+     */
+
+    private BigDecimal position;
+
+    /**
+     * 总持仓手数
+     */
+
+    private BigDecimal lots;
+
+    /**
+     * 总订单数
+     */
+
+    private BigDecimal num;
+
+    /**
+     * 总盈利
+     */
+
+    private BigDecimal profit;
 }
