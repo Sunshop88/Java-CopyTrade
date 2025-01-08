@@ -18,6 +18,7 @@ import net.maku.subcontrol.trader.LeaderApiTrader;
 import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,7 +27,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Service
+//@Service
+@Component
 public class SpeedTestTask {
     @Autowired
     private FollowPlatformService followPlatformService;
@@ -43,7 +45,7 @@ public class SpeedTestTask {
     @Autowired
     private RedisUtil redisUtil;
     @Autowired
-    private  LeaderApiTradersAdmin leaderApiTradersAdmin;
+    private LeaderApiTradersAdmin leaderApiTradersAdmin;
     @Autowired
     private CopierApiTradersAdmin copierApiTradersAdmin;
 

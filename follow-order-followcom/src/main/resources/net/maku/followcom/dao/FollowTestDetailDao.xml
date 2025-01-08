@@ -70,7 +70,7 @@
                 SELECT
                     server_name,
                     platform_type,
-                    COALESCE(server_node, '') AS server_node,
+                    server_node AS server_node,
                     MAX(create_time) AS latest_time,
                     vps_id
                 FROM
@@ -80,13 +80,13 @@
                 GROUP BY
                     server_name,
                     platform_type,
-                    COALESCE(server_node, ''),
+                    server_node,
                     vps_id
             ) t2 ON t1.server_name = t2.server_name
                 AND t1.platform_type = t2.platform_type
-                AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
+                AND t1.server_node = t2.server_node
                 AND t1.create_time = t2.latest_time
-                AND t1.vps_id = t2.vps_id
+                AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
         <if test="query.brokerName != null and query.brokerName != ''">
             LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         </if>

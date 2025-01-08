@@ -23,7 +23,6 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
-import net.maku.subcontrol.task.ObtainOrderHistoryTask;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
@@ -68,6 +67,8 @@ public class FollowTraderController {
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsService followVpsService;
     private final CacheManager cacheManager;
+    private final SpeedTestTask speedTestTask;
+
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -664,4 +665,11 @@ public class FollowTraderController {
         return Result.ok(reconnectResults);
     }
 
+    @PostMapping("test")
+    @Operation(summary = "手动定时测速任务")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> test() throws IOException {
+        speedTestTask.weeklySpeedTest();
+        return Result.ok("手动测速成功");
+    }
 }
