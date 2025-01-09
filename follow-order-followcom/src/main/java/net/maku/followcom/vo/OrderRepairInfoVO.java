@@ -63,4 +63,11 @@ public class OrderRepairInfoVO implements Serializable {
 
 	@Schema(description = "漏单类型0-跟单 1-平仓")
 	private Integer repairType;
+
+	@Schema(description = "喊单者的ID")
+	private Long masterId;
+
+	@Schema(description = "跟单者的ID")
+	private Long slaveId;
+
 }

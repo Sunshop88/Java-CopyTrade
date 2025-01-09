@@ -190,6 +190,7 @@ public class TraderRepairManageWebSocket {
                         orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
                         orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
                         orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
+                        orderRepairInfoVO.setMasterId(eaOrderInfo.getMasterId());
                         orderRepairInfoVOList.add(orderRepairInfoVO);
                         if (flag.get() ==0){
                             flag.set(1);
@@ -228,6 +229,8 @@ public class TraderRepairManageWebSocket {
                                 orderRepairInfoVO.setSlavePlatform( detail.getPlatform());
                                 orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
                                 orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
+                                orderRepairInfoVO.setMasterId(eaOrderInfo.getMasterId());
+                                orderRepairInfoVO.setSlaveId(detail.getTraderId());
                                 orderRepairInfoVOList.add(orderRepairInfoVO);
                                 if (flag.get() ==0){
                                     flag.set(1);

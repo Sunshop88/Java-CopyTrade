@@ -676,9 +676,9 @@ public class FollowTraderController {
         return Result.ok("手动测速成功");
     }
 
-    @PostMapping("synchData")
+    @PostMapping("/synchData/{traderId}")
     @Operation(summary = "同步数据")
-    public Result<String> synchData(Long traderId) throws IOException {
+    public Result<String> synchData(@PathVariable("traderId") Long traderId) throws IOException {
         if(traderId==null){
             throw new ServerException("账号id不能为空");
         }
