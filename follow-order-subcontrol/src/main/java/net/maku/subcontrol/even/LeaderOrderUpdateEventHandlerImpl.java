@@ -176,10 +176,12 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     //查询订阅关系
                     List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList=followTraderSubscribeService.getSubscribeOrder(leader.getId());
                     if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
-                        followTraderSubscribeEntityList.forEach(o-> {
-                            ThreadPoolUtils.getExecutor().execute(() -> {
+                        for (FollowTraderSubscribeEntity o : followTraderSubscribeEntityList) {
+//                            ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
-                                    Thread.sleep(100);
+                                    log.info("暂停1秒...");
+                                    Thread.sleep(1000);
+                                    log.info("暂停结束，开始执行任务...");
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -227,15 +229,15 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     }
 
                                 }
-                            });
-                        });
+//                            });
+                        }
                     }else {
-                        followTraderSubscribeEntityList.forEach(o-> {
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
+                        for (FollowTraderSubscribeEntity o : followTraderSubscribeEntityList) {
+//                            try {
+//                                Thread.sleep(1000);
+//                            } catch (InterruptedException e) {
+//                                throw new RuntimeException(e);
+//                            }
                             String slaveId = o.getSlaveId().toString();
                             if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单状态");
@@ -279,7 +281,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
                             }
-                        });
+                        }
                     }
                 } else {
                     //喊单账号未开启
@@ -328,7 +330,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
                             accountCache.setPlatformType(platformType);
                             //订单信息
-                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId());
+                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {

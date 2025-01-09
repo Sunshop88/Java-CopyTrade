@@ -216,7 +216,6 @@ public class FollowSlaveController {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
-                copierApiTrader.startTrade();
                 FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                 //修改缓存
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
@@ -329,6 +328,7 @@ public class FollowSlaveController {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             copierApiTradersAdmin.removeTrader(traderId);
+            log.info("fofofo");
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
             if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {

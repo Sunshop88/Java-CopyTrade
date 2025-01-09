@@ -23,6 +23,7 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
@@ -52,6 +53,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -78,8 +80,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final CacheManager cacheManager;
-
-
+    private final RedissonLockUtil redissonLockUtil;
     @Autowired
     @Qualifier(value = "commonThreadPool")
     private ExecutorService commonThreadPool;
@@ -419,36 +420,42 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 });
             }
         } else {
-            try {
-                if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))) {
-                    //订阅
-                    quoteClient.Subscribe(vo.getSymbol());
-                }
-                double bid =0;
-                double ask =0;
-                int loopTimes=1;
-                QuoteEventArgs quoteEventArgs = null;
-                while (quoteEventArgs == null && quoteClient.Connected()) {
-                    quoteEventArgs = quoteClient.GetQuote(vo.getSymbol());
-                    if (++loopTimes > 20) {
-                        break;
+            if (redissonLockUtil.tryLockForShortTime("orderCloseMaster"+FollowConstant.LOCAL_HOST+quoteClient.Host+quoteClient.AccountName(),10,10, TimeUnit.SECONDS)) {
+                try {
+                    if (ObjectUtil.isEmpty(quoteClient.GetQuote(vo.getSymbol()))) {
+                        //订阅
+                        quoteClient.Subscribe(vo.getSymbol());
+                    }
+                    double bid = 0;
+                    double ask = 0;
+                    int loopTimes = 1;
+                    QuoteEventArgs quoteEventArgs = null;
+                    while (quoteEventArgs == null && quoteClient.Connected()) {
+                        quoteEventArgs = quoteClient.GetQuote(vo.getSymbol());
+                        if (++loopTimes > 20) {
+                            break;
+                        } else {
+                            Thread.sleep(50);
+                        }
+                    }
+                    bid = ObjectUtil.isNotEmpty(quoteEventArgs.Bid) ? quoteEventArgs.Bid : 0;
+                    ask = ObjectUtil.isNotEmpty(quoteEventArgs.Ask) ? quoteEventArgs.Bid : 0;
+                    Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
+                    long start = System.currentTimeMillis();
+                    if (order.Type.getValue() == Buy.getValue()) {
+                        oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
                     } else {
-                        Thread.sleep(50);
+                        oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
+                    }
+                    long end = System.currentTimeMillis();
+                    log.info("MT4平仓时间差 订单:" + order.Ticket + "内部时间差:" + order.closeTimeDifference + "外部时间差:" + (end - start));
+                } catch (Exception e) {
+                    log.error(vo.getOrderNo() + "平仓出错" + e.getMessage());
+                }finally {
+                    if (redissonLockUtil.isLockedByCurrentThread("orderCloseMaster" + FollowConstant.LOCAL_HOST+quoteClient.Host+quoteClient.AccountName())) {
+                        redissonLockUtil.unlock("orderCloseMaster" + FollowConstant.LOCAL_HOST+quoteClient.Host+quoteClient.AccountName());
                     }
                 }
-                bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
-                Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
-                long start = System.currentTimeMillis();
-                if (order.Type.getValue() == Buy.getValue()) {
-                    oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), bid, 0);
-                } else {
-                    oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
-                }
-                long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
-            } catch (Exception e) {
-                log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
             }
         }
     }
@@ -842,14 +849,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, QuoteClient quoteClient, OrderClient oc, FollowOrderCloseEntity followOrderCloseEntity) {
         String symbol = followOrderDetailEntity.getSymbol();
         Integer orderNo = followOrderDetailEntity.getOrderNo();
-        try {
+        if (redissonLockUtil.tryLockForShortTime("orderCloseMaster" +FollowConstant.LOCAL_HOST+quoteClient.Host+ quoteClient.AccountName(), 10, 10, TimeUnit.SECONDS)) {
+            try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
                 //订阅
                 quoteClient.Subscribe(symbol);
             }
-            double bid =0;
-            double ask =0;
-            int loopTimes=1;
+            double bid = 0;
+            double ask = 0;
+            int loopTimes = 1;
             QuoteEventArgs quoteEventArgs = null;
             while (quoteEventArgs == null && quoteClient.Connected()) {
                 quoteEventArgs = quoteClient.GetQuote(symbol);
@@ -859,47 +867,53 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     Thread.sleep(50);
                 }
             }
-            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+            bid = ObjectUtil.isNotEmpty(quoteEventArgs.Bid) ? quoteEventArgs.Bid : 0;
+            ask = ObjectUtil.isNotEmpty(quoteEventArgs.Ask) ? quoteEventArgs.Bid : 0;
             LocalDateTime nowdate = LocalDateTime.now();
             log.info("平仓信息{},{},{},{},{}", symbol, orderNo, followOrderDetailEntity.getSize(), bid, ask);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
                 followOrderDetailEntity.setCloseId(followOrderCloseEntity.getId());
             }
             Order orderResult;
-            if (followOrderDetailEntity.getType() == Buy.getValue()) {
-                long start = System.currentTimeMillis();
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
-                long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
-            } else {
-                long start = System.currentTimeMillis();
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
-                long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
+                if (followOrderDetailEntity.getType() == Buy.getValue()) {
+                    long start = System.currentTimeMillis();
+                    orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
+                    long end = System.currentTimeMillis();
+                    log.info("MT4平仓时间差 订单:" + orderResult.Ticket + "内部时间差:" + orderResult.closeTimeDifference + "外部时间差:" + (end - start));
+                    followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
+                } else {
+                    long start = System.currentTimeMillis();
+                    orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
+                    long end = System.currentTimeMillis();
+                    log.info("MT4平仓时间差 订单:" + orderResult.Ticket + "内部时间差:" + orderResult.closeTimeDifference + "外部时间差:" + (end - start));
+                    followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
+                }
+                log.info("订单 " + orderNo + ": 平仓 " + orderResult);
+                //保存平仓信息
+                followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
+                followOrderDetailEntity.setRequestCloseTime(nowdate);
+                followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
+                followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
+                followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
+                followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
+                followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
+                followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+            } catch(Exception e){
+                log.error(orderNo + "平仓出错" + e.getMessage());
+                if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
+                    followOrderDetailEntity.setRemark("平仓出错" + e.getMessage());
+                }
+            }finally {
+                if (redissonLockUtil.isLockedByCurrentThread("orderCloseMaster" +FollowConstant.LOCAL_HOST+quoteClient.Host+ quoteClient.AccountName())) {
+                    redissonLockUtil.unlock("orderCloseMaster" +FollowConstant.LOCAL_HOST+quoteClient.Host+ quoteClient.AccountName());
+                }
             }
-            log.info("订单 " + orderNo + ": 平仓 " + orderResult);
-            //保存平仓信息
-            followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
-            followOrderDetailEntity.setRequestCloseTime(nowdate);
-            followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
-            followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
-            followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
-            followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
-            followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
-            followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
-        } catch (Exception e) {
-            log.error(orderNo+"平仓出错" + e.getMessage());
+            followOrderDetailService.updateById(followOrderDetailEntity);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
-                followOrderDetailEntity.setRemark("平仓出错" + e.getMessage());
+                followOrderCloseService.updateById(followOrderCloseEntity);
             }
         }
-        followOrderDetailService.updateById(followOrderDetailEntity);
-        if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
-            followOrderCloseService.updateById(followOrderCloseEntity);
-        }
+
     }
 
     // 示例 1: 每笔订单的下单数量为 总手数/订单数量
@@ -1036,53 +1050,59 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         followOrderDetailEntity.setServerName(serverName);
         //下单方式
         oc.PlacedType = PlacedType.forValue(placedType);
-        try {
-            double asksub = quoteClient.GetQuote(symbol).Ask;
-            double bidsub = quoteClient.GetQuote(symbol).Bid;
-            Order order;
-            if (type.equals(Buy.getValue())) {
-                long start = System.currentTimeMillis();
-                order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
-                long end = System.currentTimeMillis();
-                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
-            } else {
-                long start = System.currentTimeMillis();
-                order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
-                long end = System.currentTimeMillis();
-                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
+        if (redissonLockUtil.tryLockForShortTime("orderSendMaster"+traderId,10,10, TimeUnit.SECONDS)){
+            try {
+                double asksub = quoteClient.GetQuote(symbol).Ask;
+                double bidsub = quoteClient.GetQuote(symbol).Bid;
+                Order order;
+                if (type.equals(Buy.getValue())) {
+                    long start = System.currentTimeMillis();
+                    order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+                    long end = System.currentTimeMillis();
+                    log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
+                    followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
+                } else {
+                    long start = System.currentTimeMillis();
+                    order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
+                    long end = System.currentTimeMillis();
+                    log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
+                    followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
+                }
+                followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
+                log.info("下单详情 账号:"+traderId+"平台:"+platform+"节点:"+oc.QuoteClient.Host+":"+oc.QuoteClient.Port);
+                log.info("订单" + orderId + "开仓时刻数据价格:" + order.OpenPrice + " 时间" + order.OpenTime);
+                followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
+                followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
+                followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+                followOrderDetailEntity.setOrderNo(order.Ticket);
+                followOrderDetailEntity.setRequestOpenTime(nowdate);
+                followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
+                followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
+                followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
+                followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
+                followOrderDetailEntity.setRateMargin(order.RateMargin);
+                followOrderDetailEntity.setMagical(order.Ticket);
+                followOrderDetailEntity.setSourceUser(account);
+                followOrderDetailEntity.setServerHost(quoteClient.Host);
+            } catch (TimeoutException e) {
+                log.info("下单超时");
+                followOrderDetailEntity.setRemark("下单超时" + e.getMessage());
+            } catch (ConnectException e) {
+                log.info("连接异常");
+                followOrderDetailEntity.setRemark("连接异常" + e.getMessage());
+            } catch (TradeException | RuntimeException e) {
+                log.info("交易异常" + e);
+                followOrderDetailEntity.setRemark("交易异常" + e.getMessage());
+            } catch (InvalidSymbolException e) {
+                log.info("无效symbol");
+                followOrderDetailEntity.setRemark("无效symbol" + e.getMessage());
+            }finally {
+                if (redissonLockUtil.isLockedByCurrentThread("orderSendMaster" + traderId)) {
+                    redissonLockUtil.unlock("orderSendMaster" + traderId);
+                }
             }
-            followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
-            log.info("下单详情 账号:"+traderId+"平台:"+platform+"节点:"+oc.QuoteClient.Host+":"+oc.QuoteClient.Port);
-            log.info("订单" + orderId + "开仓时刻数据价格:" + order.OpenPrice + " 时间" + order.OpenTime);
-            followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
-            followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
-            followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
-            followOrderDetailEntity.setOrderNo(order.Ticket);
-            followOrderDetailEntity.setRequestOpenTime(nowdate);
-            followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
-            followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
-            followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
-            followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
-            followOrderDetailEntity.setRateMargin(order.RateMargin);
-            followOrderDetailEntity.setMagical(order.Ticket);
-            followOrderDetailEntity.setSourceUser(account);
-            followOrderDetailEntity.setServerHost(quoteClient.Host);
-        } catch (TimeoutException e) {
-            log.info("下单超时");
-            followOrderDetailEntity.setRemark("下单超时" + e.getMessage());
-        } catch (ConnectException e) {
-            log.info("连接异常");
-            followOrderDetailEntity.setRemark("连接异常" + e.getMessage());
-        } catch (TradeException | RuntimeException e) {
-            log.info("交易异常" + e);
-            followOrderDetailEntity.setRemark("交易异常" + e.getMessage());
-        } catch (InvalidSymbolException e) {
-            log.info("无效symbol");
-            followOrderDetailEntity.setRemark("无效symbol" + e.getMessage());
+            followOrderDetailService.save(followOrderDetailEntity);
         }
-        followOrderDetailService.save(followOrderDetailEntity);
     }
 
 

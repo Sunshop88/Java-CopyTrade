@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -152,67 +153,74 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }
+                if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)){
+                   try{
+                       if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
+                           //订阅
+                           quoteClient.Subscribe(orderInfo.getSymbol());
+                       }
+                       ip=quoteClient.Host+":"+quoteClient.Port;
+                       double bidsub =0;
+                       double asksub =0;
+                       int loopTimes=1;
+                       QuoteEventArgs quoteEventArgs = null;
+                       while (quoteEventArgs == null && quoteClient.Connected()) {
+                           quoteEventArgs = quoteClient.GetQuote(orderInfo.getSymbol());
+                           if (++loopTimes > 20) {
+                               break;
+                           } else {
+                               Thread.sleep(50);
+                           }
+                       }
+                       bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                       asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                       log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
-                if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
-                    //订阅
-                    quoteClient.Subscribe(orderInfo.getSymbol());
+                       // 执行订单发送
+                       double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
+                       // 记录开始时间
+                       LocalDateTime startTime=LocalDateTime.now();
+                       long start = System.currentTimeMillis();
+                       Order order = quoteClient.OrderClient.OrderSend(
+                               orderInfo.getSymbol(),
+                               op,
+                               openOrderMapping.getSlaveLots().doubleValue(),
+                               startPrice,
+                               Integer.MAX_VALUE,
+                               BigDecimal.ZERO.doubleValue(),
+                               BigDecimal.ZERO.doubleValue(),
+                               comment(orderInfo,followTraderEntity.getServerId()).toUpperCase(),
+                               orderInfo.getTicket(),
+                               null
+                       );
+                       long end = System.currentTimeMillis();
+                       log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
+                       // 记录结束时间
+                       LocalDateTime endTime = LocalDateTime.now();
+                       log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
+                       log.info("请求进入时间结束: " + followTraderEntity.getId());
+                       openOrderMapping.setCopierOrder(order, orderInfo);
+                       openOrderMapping.setFlag(CopyTradeFlag.OS);
+                       openOrderMapping.setExtra("[开仓]即时价格成交");
+                       followSubscribeOrderService.saveOrUpdate(openOrderMapping);
+                       cacheCopierOrder(orderInfo, order,openOrderMapping);
+                       // 创建订单结果事件
+                       OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+                       ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                       String jsonEvent = null;
+                       try {
+                           jsonEvent = mapper.writeValueAsString(event);
+                       } catch (JsonProcessingException e) {
+                           throw new RuntimeException(e);
+                       }
+                       // 保存到批量发送队列
+                       kafkaMessages.add(jsonEvent);
+                   }finally {
+                       if (redissonLockUtil.isLockedByCurrentThread("orderSend" + trader.getTrader().getId())) {
+                           redissonLockUtil.unlock("orderSend" + trader.getTrader().getId());
+                       }
+                   }
                 }
-                ip=quoteClient.Host+":"+quoteClient.Port;
-                double bidsub =0;
-                double asksub =0;
-                int loopTimes=1;
-                QuoteEventArgs quoteEventArgs = null;
-                while (quoteEventArgs == null && quoteClient.Connected()) {
-                    quoteEventArgs = quoteClient.GetQuote(orderInfo.getSymbol());
-                    if (++loopTimes > 20) {
-                        break;
-                    } else {
-                        Thread.sleep(50);
-                    }
-                }
-                bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
-                log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
-
-                // 执行订单发送
-                double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
-                // 记录开始时间
-                LocalDateTime startTime=LocalDateTime.now();
-                long start = System.currentTimeMillis();
-                Order order = quoteClient.OrderClient.OrderSend(
-                        orderInfo.getSymbol(),
-                        op,
-                        openOrderMapping.getSlaveLots().doubleValue(),
-                        startPrice,
-                        Integer.MAX_VALUE,
-                        BigDecimal.ZERO.doubleValue(),
-                        BigDecimal.ZERO.doubleValue(),
-                        comment(orderInfo,followTraderEntity.getServerId()).toUpperCase(),
-                        orderInfo.getTicket(),
-                        null
-                );
-                long end = System.currentTimeMillis();
-                log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                // 记录结束时间
-                LocalDateTime endTime = LocalDateTime.now();
-                log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
-                log.info("请求进入时间结束: " + followTraderEntity.getId());
-                openOrderMapping.setCopierOrder(order, orderInfo);
-                openOrderMapping.setFlag(CopyTradeFlag.OS);
-                openOrderMapping.setExtra("[开仓]即时价格成交");
-                followSubscribeOrderService.saveOrUpdate(openOrderMapping);
-                cacheCopierOrder(orderInfo, order,openOrderMapping);
-                // 创建订单结果事件
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
-                ObjectMapper mapper = JacksonConfig.getObjectMapper();
-                String jsonEvent = null;
-                try {
-                    jsonEvent = mapper.writeValueAsString(event);
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-                // 保存到批量发送队列
-                kafkaMessages.add(jsonEvent);
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -292,67 +300,74 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     throw new RuntimeException("登录异常" + trader.getTrader().getId());
                 }
             }
+            if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)) {
+                try {
+                    if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
+                        //订阅
+                        quoteClient.Subscribe(orderInfo.getSymbol());
+                    }
+                    ip=quoteClient.Host+":"+quoteClient.Port;
+                    double bidsub =0;
+                    double asksub =0;
+                    int loopTimes=1;
+                    QuoteEventArgs quoteEventArgs = null;
+                    while (quoteEventArgs == null && quoteClient.Connected()) {
+                        quoteEventArgs = quoteClient.GetQuote(orderInfo.getSymbol());
+                        if (++loopTimes > 20) {
+                            break;
+                        } else {
+                            Thread.sleep(50);
+                        }
+                    }
+                    bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                    asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                    log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
-            if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
-                //订阅
-                quoteClient.Subscribe(orderInfo.getSymbol());
-            }
-            ip=quoteClient.Host+":"+quoteClient.Port;
-            double bidsub =0;
-            double asksub =0;
-            int loopTimes=1;
-            QuoteEventArgs quoteEventArgs = null;
-            while (quoteEventArgs == null && quoteClient.Connected()) {
-                quoteEventArgs = quoteClient.GetQuote(orderInfo.getSymbol());
-                if (++loopTimes > 20) {
-                    break;
-                } else {
-                    Thread.sleep(50);
+                    // 执行订单发送
+                    double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
+                    // 记录开始时间
+                    LocalDateTime startTime=LocalDateTime.now();
+                    long start = System.currentTimeMillis();
+                    Order order = quoteClient.OrderClient.OrderSend(
+                            orderInfo.getSymbol(),
+                            op,
+                            openOrderMapping.getSlaveLots().doubleValue(),
+                            startPrice,
+                            Integer.MAX_VALUE,
+                            BigDecimal.ZERO.doubleValue(),
+                            BigDecimal.ZERO.doubleValue(),
+                            comment(orderInfo,followTraderEntity.getServerId()).toUpperCase(),
+                            orderInfo.getTicket(),
+                            null
+                    );
+                    long end = System.currentTimeMillis();
+                    log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
+                    // 记录结束时间
+                    LocalDateTime endTime = LocalDateTime.now();
+                    log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
+                    log.info("请求进入时间结束: " + followTraderEntity.getId());
+                    openOrderMapping.setCopierOrder(order, orderInfo);
+                    openOrderMapping.setFlag(CopyTradeFlag.OS);
+                    openOrderMapping.setExtra("[开仓]即时价格成交");
+                    followSubscribeOrderService.saveOrUpdate(openOrderMapping);
+                    cacheCopierOrder(orderInfo, order,openOrderMapping);
+                    // 创建订单结果事件
+                    OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                    String jsonEvent = null;
+                    try {
+                        jsonEvent = mapper.writeValueAsString(event);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    // 保存到批量发送队列
+                    kafkaMessages.add(jsonEvent);
+                }finally {
+                    if (redissonLockUtil.isLockedByCurrentThread("orderSend" + trader.getTrader().getId())) {
+                        redissonLockUtil.unlock("orderSend" + trader.getTrader().getId());
+                    }
                 }
             }
-            bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-            asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
-            log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
-
-            // 执行订单发送
-            double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
-            // 记录开始时间
-            LocalDateTime startTime=LocalDateTime.now();
-            long start = System.currentTimeMillis();
-            Order order = quoteClient.OrderClient.OrderSend(
-                    orderInfo.getSymbol(),
-                    op,
-                    openOrderMapping.getSlaveLots().doubleValue(),
-                    startPrice,
-                    Integer.MAX_VALUE,
-                    BigDecimal.ZERO.doubleValue(),
-                    BigDecimal.ZERO.doubleValue(),
-                    comment(orderInfo,followTraderEntity.getServerId()).toUpperCase(),
-                    orderInfo.getTicket(),
-                    null
-            );
-            long end = System.currentTimeMillis();
-            log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-            // 记录结束时间
-            LocalDateTime endTime = LocalDateTime.now();
-            log.info("下单详情 账号: " + followTraderEntity.getId() + " 平台: " + followTraderEntity.getPlatform() + " 节点: " + quoteClient.Host + ":" + quoteClient.Port);
-            log.info("请求进入时间结束: " + followTraderEntity.getId());
-            openOrderMapping.setCopierOrder(order, orderInfo);
-            openOrderMapping.setFlag(CopyTradeFlag.OS);
-            openOrderMapping.setExtra("[开仓]即时价格成交");
-            followSubscribeOrderService.saveOrUpdate(openOrderMapping);
-            cacheCopierOrder(orderInfo, order,openOrderMapping);
-            // 创建订单结果事件
-            OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
-            ObjectMapper mapper = JacksonConfig.getObjectMapper();
-            String jsonEvent = null;
-            try {
-                jsonEvent = mapper.writeValueAsString(event);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-            // 保存到批量发送队列
-            kafkaMessages.add(jsonEvent);
         } catch (Exception e) {
             openOrderMapping.setExtra("开仓失败"+e.getMessage());
             followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));

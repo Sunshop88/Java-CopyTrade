@@ -1,5 +1,6 @@
 package net.maku.subcontrol.trader;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.subcontrol.task.UpdateTraderInfoTask;

@@ -95,8 +95,12 @@ public class TraderOrderSendWebSocket {
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                 if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                     quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    leaderApiTrader1.startTrade();
+                    leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    leaderApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    quoteClient = leaderApiTrader.quoteClient;
                 } else {
                     quoteClient = null;
                 }
@@ -125,9 +129,10 @@ public class TraderOrderSendWebSocket {
                 }
             }
             //开启定时任务
+            LeaderApiTrader finalLeaderApiTrader = leaderApiTrader;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(leaderApiTrader,quoteClient);
+                    sendPeriodicMessage(finalLeaderApiTrader,quoteClient);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();

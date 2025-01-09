@@ -9,6 +9,7 @@ import net.maku.followcom.service.impl.FollowTestDetailServiceImpl;
 import net.maku.followcom.service.impl.FollowVpsServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
@@ -30,6 +31,7 @@ public abstract class AbstractApiTradersAdmin {
     protected RedisUtil redisUtil;
     protected FollowTestDetailService followTestDetailService;
     protected FollowVpsService followVpsService;
+    protected final RedissonLockUtil redissonLockUtil;
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
@@ -37,6 +39,7 @@ public abstract class AbstractApiTradersAdmin {
         this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
         this.followTestDetailService=SpringContextUtils.getBean(FollowTestDetailServiceImpl.class);
         this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+        this.redissonLockUtil= SpringContextUtils.getBean(RedissonLockUtil.class);
     }
 
     protected int traderCount = 0;
