@@ -211,13 +211,15 @@ public class TraderOrderActiveWebSocket {
                         closeRepairToExtract.add(repairComment);
                     }
                 }
-                closeRepairToRemove.forEach(repair ->{
-                    EaOrderInfo repair1 = (EaOrderInfo) repair;
-                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
+                String repairKey = Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform()+ "#" +
+                        master.getPlatform()+ "#" + followTraderSubscribe.getSlaveAccount() + "#" + followTraderSubscribe.getMasterAccount();
+
+                redisUtil.pipeline(connection -> {
+                    closeRepairToRemove.forEach(ticket -> connection.hDel(repairKey.getBytes(), ticket.toString().getBytes()));
                 });
 
                 List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
-                sendRepairToExtract.parallelStream().forEach(o -> {
+                sendRepairToExtract.forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                     orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
@@ -229,7 +231,7 @@ public class TraderOrderActiveWebSocket {
                     orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
                     list.add(orderRepairInfoVO);
                 });
-                closeRepairToExtract.parallelStream().forEach(o -> {
+                closeRepairToExtract.forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     //通过备注查询未平仓记录
                     List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
@@ -262,13 +264,17 @@ public class TraderOrderActiveWebSocket {
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
         }finally {
-            redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
+            if (!Thread.currentThread().isInterrupted()) { // 检查线程是否被中断
+                redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
+            } else {
+                log.warn("线程已中断，跳过释放锁");
+            }
         }
     }
 
     private void stopPeriodicTask() {
         if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel(false); // 避免中断线程
         }
     }
 

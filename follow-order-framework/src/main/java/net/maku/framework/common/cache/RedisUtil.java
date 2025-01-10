@@ -16,6 +16,7 @@ import org.springframework.util.ObjectUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * redis 工具类
@@ -842,6 +843,12 @@ public class RedisUtil {
         return resultMap;
     }
 
+    public void pipeline(Consumer<RedisConnection> action) {
+        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            action.accept(connection);
+            return null; // 必须返回 null
+        });
+    }
     /**
      * 使用 RedisConnection 执行 SCAN 命令实现模糊查询
      *

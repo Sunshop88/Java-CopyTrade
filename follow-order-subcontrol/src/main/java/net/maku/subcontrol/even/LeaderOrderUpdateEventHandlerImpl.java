@@ -177,14 +177,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList=followTraderSubscribeService.getSubscribeOrder(leader.getId());
                     if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())) {
                         for (FollowTraderSubscribeEntity o : followTraderSubscribeEntityList) {
-//                            ThreadPoolUtils.getExecutor().execute(() -> {
-                                try {
-                                    log.info("暂停1秒...");
-                                    Thread.sleep(1000);
-                                    log.info("暂停结束，开始执行任务...");
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                }
+                            ThreadPoolUtils.getExecutor().execute(() -> {
+//                                try {
+//                                    log.info("暂停1秒...");
+//                                    Thread.sleep(1000);
+//                                    log.info("暂停结束，开始执行任务...");
+//                                } catch (InterruptedException e) {
+//                                    throw new RuntimeException(e);
+//                                }
                                 String slaveId = o.getSlaveId().toString();
                                 if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                     log.info("未开通跟单状态");
@@ -229,7 +229,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     }
 
                                 }
-//                            });
+                            });
                         }
                     }else {
                         for (FollowTraderSubscribeEntity o : followTraderSubscribeEntityList) {
@@ -241,15 +241,15 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             String slaveId = o.getSlaveId().toString();
                             if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单状态");
-                                return;
+                                continue;
                             }
                             if (orderUpdateEventArgs.Action == PositionClose && o.getFollowClose().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单平仓状态");
-                                return;
+                                continue;
                             }
                             if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                                 log.info("未开通跟单下单状态");
-                                return;
+                                continue;
                             }
                             // 构造订单信息并发布
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, currency, LocalDateTime.now());
