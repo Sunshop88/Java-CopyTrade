@@ -10,9 +10,9 @@ spring:
         #timeout: 6000ms  # 连接超时时长（毫秒）
       redis2:
         database: 3
-        host: 98.142.143.187
+        host: 66.112.212.130
         port: 6379
-        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+        password: 9DWNS2wzy@dp
 
   kafka:
     bootstrap-servers: 127.0.0.1:9092
