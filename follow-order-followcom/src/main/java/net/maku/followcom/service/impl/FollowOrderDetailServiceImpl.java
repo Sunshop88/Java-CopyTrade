@@ -150,10 +150,10 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setAccount(u.getAccount());
         //  entity.setRequestOpenTime(order.OpenTime);
         // entity.setRequestCloseTime(order.CloseTime);
-        entity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
+        entity.setOpenTime(order.OpenTime);
         entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
         entity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
-        entity.setCloseTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.CloseTime), -8)));
+        entity.setCloseTime(order.CloseTime);
         entity.setSize(BigDecimal.valueOf(order.Lots));
         entity.setSl(BigDecimal.valueOf(order.StopLoss));
         entity.setSwap(BigDecimal.valueOf(order.Swap));
@@ -163,8 +163,8 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         // entity.setPlacedType(order);
         //   entity.setBrokeName();
         entity.setPlatform(u.getPlatform());
-        entity.setIpAddr(u.getIpAddr());
-        entity.setServerName(u.getServerName());
+      //  entity.setIpAddr(u.getIpAddr());
+        //entity.setServerName(u.getServerName());
         entity.setRateMargin(order.RateMargin);
         entity.setMagical(order.Ticket);
         entity.setRemark(order.Comment);

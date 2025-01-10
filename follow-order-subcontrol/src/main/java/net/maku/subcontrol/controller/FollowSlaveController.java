@@ -255,6 +255,9 @@ public class FollowSlaveController {
                 o.setFollowParam(subscribes.get(0).getFollowParam());
                 o.setFollowDirection(subscribes.get(0).getFollowDirection());
                 o.setRemainder(subscribes.get(0).getRemainder());
+                o.setFixedComment(subscribes.get(0).getFixedComment());
+                o.setCommentType(subscribes.get(0).getCommentType());
+                o.setDigits(subscribes.get(0).getDigits());
             }
             ;
         });

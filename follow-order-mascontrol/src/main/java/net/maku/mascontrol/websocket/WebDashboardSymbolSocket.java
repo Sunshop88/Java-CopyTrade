@@ -1,5 +1,6 @@
 package net.maku.mascontrol.websocket;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -84,10 +85,11 @@ public class WebDashboardSymbolSocket {
             vo.setLimit(20);
             vo.setPage(accountPage);
             vo.setAsc(accountAsc);
+
             if(!brokerName.equals("null")){
                 vo.setBrokerName(brokerName);
             }
-
+            vo.setBrokerName(null);
             PageResult<DashboardAccountDataVO> accountDataPage = dashboardService.getAccountDataPage(vo);
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
@@ -118,6 +120,11 @@ public class WebDashboardSymbolSocket {
             String accountOrder = jsonObject.getString("accountOrder");
             Integer accountPage = jsonObject.getInteger("accountPage");
             Boolean accountAsc = jsonObject.getBoolean("accountAsc");
+
+            String server = jsonObject.getString("server");
+            String vpsName = jsonObject.getString("vpsName");
+            String account = jsonObject.getString("account");
+            String sourceAccount = jsonObject.getString("sourceAccount");
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
             if(st!=null){
                 st.cancel(true);

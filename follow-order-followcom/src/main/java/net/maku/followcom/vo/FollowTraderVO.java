@@ -172,4 +172,16 @@ public class FollowTraderVO implements Serializable {
 	private String loginNode;
 
 	private String defaultServerAccount;
+
+
+
+	@Schema(description = "固定注释")
+	private String fixedComment;
+
+	@Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
+	private Integer commentType;
+
+	@Schema(description = "位数")
+	private Integer digits;
+
 }

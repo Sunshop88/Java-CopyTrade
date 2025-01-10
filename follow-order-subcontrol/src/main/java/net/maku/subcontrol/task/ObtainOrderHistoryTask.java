@@ -94,7 +94,7 @@ public class ObtainOrderHistoryTask {
 
             if (u.getIsFirstSync()!=null && u.getIsFirstSync()==CloseOrOpenEnum.OPEN.getValue()){
                 //保存历史订单
-                //  followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
+              //    followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
                 //修改状态
                 u.setIsFirstSync(CloseOrOpenEnum.CLOSE.getValue());
                 //订单详情保存订单
