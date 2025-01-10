@@ -88,4 +88,7 @@ public class FollowTestDetailVO implements Serializable {
 	@Schema(description = "默认节点 0：是")
 	private Integer isDefaultServer;
 
+	@Schema(description = "broker_name")
+	private String brokerName;
+
 }
