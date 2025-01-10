@@ -2,6 +2,7 @@ package net.maku.followcom.service.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -154,6 +155,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
         entity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
         entity.setCloseTime(order.CloseTime);
+        entity.setCloseTime(null);
         entity.setSize(BigDecimal.valueOf(order.Lots));
         entity.setSl(BigDecimal.valueOf(order.StopLoss));
         entity.setSwap(BigDecimal.valueOf(order.Swap));

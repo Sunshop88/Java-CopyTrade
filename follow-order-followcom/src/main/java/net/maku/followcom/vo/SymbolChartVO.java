@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Author:  zsd
@@ -73,4 +75,6 @@ public class SymbolChartVO {
      */
 
     private BigDecimal profit;
+
+    List<FollowTraderAnalysisEntity>  symbolAnalysisDetails;
 }

@@ -94,10 +94,15 @@ public class WebDashboardSymbolSocket {
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
             json.put("statData",statData);
+
+            symbolAnalysis.forEach(o->{
+                List<FollowTraderAnalysisEntity> followTraderAnalysisEntities = symbolAnalysisMapDetails.get(o.getSymbol());
+                o.setSymbolAnalysisDetails(followTraderAnalysisEntities);
+            });
             //仪表盘-头寸监控-统计
             json.put("symbolAnalysis",symbolAnalysis);
             //仪表盘-头寸监控-统计明细
-            json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
+          //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
             //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
             json.put("symbolChart",symbolChart);
             ///仪表盘-盈利排行榜
