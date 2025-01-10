@@ -1596,6 +1596,27 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo) {
         return baseMapper.getAccountDataPage(page,vo);
     }
+
+    @Override
+    public  List<FollowTraderVO> getAccountCounts() {
+//        //我想查询serverName和所对应的账号数量
+//        List<FollowTraderEntity> list = list();
+//        for (FollowTraderEntity followTraderEntity : list) {
+//            long count = this.count(new LambdaQueryWrapper<FollowTraderEntity>()
+//                    .eq(FollowTraderEntity::getPlatform, followTraderEntity.getServerName())
+//                    .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+//
+//        }
+        return baseMapper.getServerAccounts();
+
+
+    }
+
+    @Override
+    public List<FollowTraderVO> getDefaultAccountCounts() {
+        return baseMapper.getDefaultAccountCounts();
+    }
+
     @Override
     public List<FollowTraderEntity> listByServerName(String name) {
         //根据名称查询列表信息

@@ -48,4 +48,6 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
     List<FollowTestDetailVO> selectServer(FollowTestServerQuery query);
 
     List<FollowTestDetailVO> selectServerNode(FollowTestServerQuery query);
+
+    List<FollowTestDetailVO> selectServer1(FollowTestServerQuery followTestServerQuery);
 }

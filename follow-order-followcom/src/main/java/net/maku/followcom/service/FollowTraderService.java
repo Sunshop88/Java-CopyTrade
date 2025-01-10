@@ -14,6 +14,7 @@ import net.maku.framework.mybatis.service.BaseService;
 import online.mtapi.mt4.QuoteClient;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * mt4账号
@@ -89,4 +90,8 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     List<FollowTraderEntity> listByServerName(String name);
 
     IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo);
+
+    List<FollowTraderVO> getAccountCounts();
+
+    List<FollowTraderVO> getDefaultAccountCounts();
 }

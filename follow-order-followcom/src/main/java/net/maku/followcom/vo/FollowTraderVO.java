@@ -170,4 +170,6 @@ public class FollowTraderVO implements Serializable {
 
 	@Schema(description = "登录节点")
 	private String loginNode;
+
+	private String defaultServerAccount;
 }

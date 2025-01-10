@@ -456,10 +456,17 @@ public class FollowTestSpeedController {
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<List<FollowTestDetailVO>> listServerAndNode(@RequestParam(required = false) String name) {
         FollowTestServerQuery query = new FollowTestServerQuery();
-//        query.setServerName(name);
+        query.setServerName(name);
         List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
 
         return Result.ok(list);
+    }
+
+    @GetMapping("ttt")
+    @Operation(summary = "测试")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<List<FollowTestDetailVO>> ttt() {
+        return Result.ok(followTestDetailService.selectServer1(new FollowTestServerQuery()));
     }
 
     @PutMapping("updateServerNode")
