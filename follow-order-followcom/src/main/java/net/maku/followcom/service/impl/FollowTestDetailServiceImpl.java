@@ -19,6 +19,7 @@ import net.maku.followcom.service.FollowTestDetailService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.vo.FollowTestDetailExcelVO;
 import net.maku.followcom.vo.FollowTestDetailVO;
+import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -44,6 +45,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
     private final TransService transService;
     private final FollowPlatformService followPlatformService;
     private final FollowTraderService followTraderService;
+    private final FollowVpsServiceImpl followVpsServiceImpl;
 
     public PageResult<String[]> page(FollowTestDetailQuery query) {
         List<FollowTestDetailEntity> allRecords = baseMapper.selectList(getWrapper(query));
@@ -260,11 +262,11 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         List<String> header = new ArrayList<>();
         header.add("券商名称");
         header.add("服务器名称");
+        header.add("平台类型");
         header.add("账号数量");
         header.add("非默认节点账号数量");
-        header.add("平台类型");
-        header.add("更新时间");
         header.add("服务器节点");
+        header.add("更新时间");
         header.addAll(uniqueVpsNames);
         // 将表头转换为数组并作为固定的第一行加入结果中
         result.add(header.toArray(new String[0]));
@@ -288,17 +290,33 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         List<String[]> dataRows = new ArrayList<>();
         List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
         sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
-        //list->map   serverName->dataRow
-//        List<FollowTraderVO> accountCounts = followTraderService.getAccountCounts();
-//        Map<String, FollowTraderVO> accountCountMap = new HashMap<>();
-//        if (ObjectUtil.isNotEmpty(accountCounts)){
-//            accountCountMap = accountCounts.stream().collect(Collectors.toMap(FollowTraderVO::getServerName, Function.identity()));
-//        }
-//        List<FollowTraderVO> defaultAccountCounts = followTraderService.getDefaultAccountCounts();
-//        Map<String, FollowTraderVO> defaultAccountCountMap = new HashMap<>();
-//        if (ObjectUtil.isNotEmpty(accountCounts)){
-//            defaultAccountCountMap = defaultAccountCounts.stream().collect(Collectors.toMap(FollowTraderVO::getServerName, Function.identity()));
-//        }
+
+        // 将每个字段对应的数据全量获取，通过map赋值
+        // 券商名称map
+        List<FollowTraderCountVO> brokerNames = followPlatformService.getBrokerNames();
+        Map<String, String> brokerNameMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(brokerNames)){
+            brokerNameMap = brokerNames.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getBrokerName));
+        }
+        // 账号数量map
+        List<FollowTraderCountVO> accountCounts = followTraderService.getAccountCounts();
+        Map<String, String> accountCountMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(accountCounts)){
+            accountCountMap = accountCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getAccountCount));
+        }
+        // 统计每个服务的节点数量
+        List<FollowTraderCountVO> serverNodeCounts = followTraderService.getServerNodeCounts();
+        Map<String, Integer> serverNodeCountMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(serverNodeCounts)){
+            serverNodeCountMap = serverNodeCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getNodeCount));
+        }
+        // 统计每个服务对应的节点数量
+        List<FollowTraderCountVO> defaultAccountCounts = followTraderService.getDefaultAccountCounts();
+        Map<String, Integer> defaultAccountCountMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(defaultAccountCounts)){
+            defaultAccountCountMap = defaultAccountCounts.stream().collect(Collectors.toMap(f -> f.getServerName() + f.getDefaultServerNode(), FollowTraderCountVO::getNodeCount));
+        }
+
         for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
             String key = entry.getKey();
             String[] keyParts = key.split("_");
@@ -309,14 +327,15 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             Map<String, Double> vpsSpeeds = entry.getValue();
             String[] dataRow = new String[7 + uniqueVpsNames.size()];
             //券商名称
-//            dataRow[0] = followPlatformService.getbrokerName(serverName);//map.get(serverName)
-            dataRow[0] = followPlatformService.getbrokerName(serverName);
+//            dataRow[0] = followPlatformService.getbrokerName(serverName);
+            dataRow[0] = brokerNameMap.get(serverName);;
             //服务器名称
             dataRow[1] = serverName;
+            //平台类型
+            dataRow[2] = platformType;
             //获取账号数量
-//            FollowTraderVO followTraderVO = accountCountMap.get(serverName);
-//            dataRow[2] = followTraderVO != null ? followTraderVO.getDefaultServerAccount(): "0";
-            dataRow[2] = followTraderService.getAccountCount(serverName);
+//            dataRow[2] = followTraderService.getAccountCount(serverName);
+            dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName): "0";
             //非默认节点账号数量
             //查询该severName默认节点
             String defaultServerNode = detailVOList.stream()
@@ -328,11 +347,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     .findFirst() // 获取最新的一条数据
                     .orElse("null"); // 如果没有符合条件的记录，返回 null
 
-            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
-            //平台类型
-            dataRow[4] = platformType;
+//            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
+            Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
+            Integer defaultAccountCount = defaultAccountCountMap.get(serverName.concat(defaultServerNode)) != null ? defaultAccountCountMap.get(serverName.concat(defaultServerNode)) : 0;
+            dataRow[4] = String.valueOf(Math.max(serverNodeCount - defaultAccountCount, 0));
+            //服务器节点
+            dataRow[5] = serverNode;
             //更新时间
-            dataRow[5] = String.valueOf(detailVOList.stream()
+            dataRow[6] = String.valueOf(detailVOList.stream()
                     .filter(detailVO -> serverName.equals(detailVO.getServerName())
                             && detailVO.getIsDefaultServer() != null
                             && detailVO.getIsDefaultServer() == 0)
@@ -340,8 +362,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     .map(FollowTestDetailVO::getServerUpdateTime)
                     .findFirst() // 获取最新的一条数据
                     .orElse(null));
-            //服务器节点
-            dataRow[6] = serverNode;
             //vps名称
             int index = 7;
             for (String vpsName : uniqueVpsNames) {
@@ -385,12 +405,17 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
-        for (FollowTestDetailVO detail : detailVOList) {
-            String vpsName = detail.getVpsName();
-            if (vpsName != null) {
-                uniqueVpsNames.add(vpsName);
-            }
-        }
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String vpsName = detail.getVpsName();
+//            if (vpsName != null) {
+//                uniqueVpsNames.add(vpsName);
+//            }
+//        }
+        followVpsServiceImpl.list().stream()
+                .filter(vps -> vps.getName() != null
+                && vps.getDeleted()==0
+                && vps.getConnectionStatus() == 1)
+                .forEach(vps -> uniqueVpsNames.add(vps.getName()));
         List<String> header = new ArrayList<>();
         header.add("服务器节点");
         header.add("更新测速时间");
