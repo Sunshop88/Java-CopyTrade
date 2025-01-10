@@ -156,7 +156,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
         if(order.CloseTime!=null){
             String time = DateUtil.format(order.CloseTime, "yyyy-MM-dd");
-            if(!"1970-01-01".equals(order.CloseTime)){
+            if(!"1970-01-01".equals(time)){
                 entity.setCloseTime(order.CloseTime);
             }
 
