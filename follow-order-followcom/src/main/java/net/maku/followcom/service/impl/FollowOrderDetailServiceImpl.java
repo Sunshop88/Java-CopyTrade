@@ -154,8 +154,11 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setOpenTime(order.OpenTime);
         entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
         entity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
-        entity.setCloseTime(order.CloseTime);
-        entity.setCloseTime(null);
+
+        LocalDateTime min = LocalDateTime.MIN;
+        if(!order.CloseTime.equals(min)){
+            entity.setCloseTime(order.CloseTime);
+         }
         entity.setSize(BigDecimal.valueOf(order.Lots));
         entity.setSl(BigDecimal.valueOf(order.StopLoss));
         entity.setSwap(BigDecimal.valueOf(order.Swap));
