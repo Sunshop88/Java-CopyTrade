@@ -1598,7 +1598,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public  List<FollowTraderVO> getAccountCounts() {
+    public  List<FollowTraderCountVO> getAccountCounts() {
 //        //我想查询serverName和所对应的账号数量
 //        List<FollowTraderEntity> list = list();
 //        for (FollowTraderEntity followTraderEntity : list) {
@@ -1613,8 +1613,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public List<FollowTraderVO> getDefaultAccountCounts() {
+    public List<FollowTraderCountVO> getDefaultAccountCounts() {
         return baseMapper.getDefaultAccountCounts();
+    }
+
+    @Override
+    public List<FollowTraderCountVO> getServerNodeCounts() {
+        return baseMapper.getServerNodeCounts();
     }
 
     @Override

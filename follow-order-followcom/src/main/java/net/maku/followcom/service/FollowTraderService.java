@@ -91,7 +91,9 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
 
     IPage<DashboardAccountDataVO> getAccountDataPage(IPage<FollowTraderEntity> page, DashboardAccountQuery vo);
 
-    List<FollowTraderVO> getAccountCounts();
+    List<FollowTraderCountVO> getAccountCounts();
 
-    List<FollowTraderVO> getDefaultAccountCounts();
+    List<FollowTraderCountVO> getDefaultAccountCounts();
+
+    List<FollowTraderCountVO> getServerNodeCounts();
 }

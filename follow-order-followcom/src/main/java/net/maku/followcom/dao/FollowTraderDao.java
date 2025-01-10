@@ -3,6 +3,7 @@ package net.maku.followcom.dao;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.vo.DashboardAccountDataVO;
+import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -41,9 +42,9 @@ public interface FollowTraderDao extends BaseDao<FollowTraderEntity> {
     })
     IPage<DashboardAccountDataVO> getAccountDataPage(@Param("page") IPage<FollowTraderEntity> page, @Param("query") DashboardAccountQuery query);
 
-    @Select("SELECT platform,count(1) as defaultServerAccount FROM follow_trader WHERE `status`= 0 GROUP BY platform")
-    List<FollowTraderVO> getServerAccounts();
+    List<FollowTraderCountVO> getServerAccounts();
 
-    @Select("SELECT platform,count(1) as defaultServerAccount FROM follow_trader WHERE `status`= 0 AND  GROUP BY platform")
-    List<FollowTraderVO> getDefaultAccountCounts();
+    List<FollowTraderCountVO> getDefaultAccountCounts();
+
+    List<FollowTraderCountVO> getServerNodeCounts();
 }

@@ -12,6 +12,7 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
+import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -214,6 +215,11 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
 
         FollowPlatformEntity entity = baseMapper.selectOne(queryWrapper);
         return entity != null ? entity.getBrokerName() : null;
+    }
+
+    @Override
+    public List<FollowTraderCountVO> getBrokerNames() {
+        return baseMapper.getBrokerNames();
     }
 
 
