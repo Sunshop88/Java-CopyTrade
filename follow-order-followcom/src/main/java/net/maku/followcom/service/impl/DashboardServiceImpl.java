@@ -320,7 +320,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<FollowPlatformEntity> searchPlatform(String brokerName) {
-        List<FollowPlatformEntity> list = followPlatformService.lambdaQuery().select(FollowPlatformEntity::getBrokerName).like(ObjectUtil.isNotEmpty(brokerName), FollowPlatformEntity::getBrokerName, brokerName).groupBy(FollowPlatformEntity::getBrokerName).list();
+        List<FollowPlatformEntity> list = followPlatformService.lambdaQuery().select(FollowPlatformEntity::getBrokerName,FollowPlatformEntity::getServer).like(ObjectUtil.isNotEmpty(brokerName), FollowPlatformEntity::getBrokerName, brokerName).groupBy(FollowPlatformEntity::getBrokerName).list();
         return list;
     }
 }
