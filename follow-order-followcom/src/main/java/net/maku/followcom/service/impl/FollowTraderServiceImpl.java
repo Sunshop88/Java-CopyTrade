@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -181,7 +182,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         entity.setCreator(SecurityUser.getUserId());
         entity.setCreateTime(LocalDateTime.now());
         entity.setFollowStatus(vo.getFollowStatus());
-        baseMapper.insert(entity);
+        try {
+            baseMapper.insert(entity);
+        } catch (DuplicateKeyException e) {
+            throw new ServerException("账号已存在");
+        }
+
         FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(entity);
         followTraderVO.setId(entity.getId());
         return followTraderVO;

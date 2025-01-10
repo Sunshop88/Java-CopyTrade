@@ -3,6 +3,8 @@ package net.maku.followcom.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+import net.maku.followcom.vo.FollowTraderAnalysisEntityVO;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -129,5 +131,5 @@ public class FollowTraderAnalysisEntity {
 	private Integer type;
 
 	@TableField(exist = false)
-	List<FollowTraderAnalysisEntity>  symbolsDetails;
+	List<FollowTraderAnalysisEntityVO>  symbolAnalysisDetails;
 }

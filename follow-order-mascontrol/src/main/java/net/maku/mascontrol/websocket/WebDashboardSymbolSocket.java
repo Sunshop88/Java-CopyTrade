@@ -8,15 +8,13 @@ import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTraderAnalysisConvert;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.service.DashboardService;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.followcom.vo.DashboardAccountDataVO;
-import net.maku.followcom.vo.RankVO;
-import net.maku.followcom.vo.StatDataVO;
-import net.maku.followcom.vo.SymbolChartVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.query.Query;
 import net.maku.framework.common.utils.PageResult;
@@ -107,22 +105,23 @@ public class WebDashboardSymbolSocket {
             symbolAnalysis.forEach(o->{
                 List<FollowTraderAnalysisEntity> followTraderAnalysisEntities = symbolAnalysisMapDetails.get(o.getSymbol());
                 List<FollowTraderAnalysisEntity> sourceSymbolDetails=new ArrayList<>();
-               Map<String, List<FollowTraderAnalysisEntity>>  symbolMap=new HashMap<>();
+               Map<String, List<FollowTraderAnalysisEntityVO>>  symbolMap=new HashMap<>();
                 followTraderAnalysisEntities.forEach(s->{
-                    List<FollowTraderAnalysisEntity> ls = symbolMap.get(s.getSourceAccount());
+                    List<FollowTraderAnalysisEntityVO> ls = symbolMap.get(s.getSourceAccount()+s.getVpsId());
                     if(ls==null){
-                        List<FollowTraderAnalysisEntity>  follows= new ArrayList<>();
-                        follows.add(s);
-                        symbolMap.put(s.getSourceAccount(),follows);
-
+                         ls= new ArrayList<>();
                     }
+
+                    FollowTraderAnalysisEntityVO followTraderAnalysisEntityVO = FollowTraderAnalysisConvert.INSTANCE.convertVo(s);
+                    ls.add(followTraderAnalysisEntityVO);
+                    symbolMap.put(s.getSourceAccount()+s.getVpsId(),ls);
                     if (s.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
-                        s.setSymbolsDetails(symbolMap.get(s.getSourceAccount()));
+                        s.setSymbolAnalysisDetails(symbolMap.get(s.getSourceAccount()+s.getVpsId()));
                         sourceSymbolDetails.add(s);
 
                     }
-
                 });
+
                 o.setSymbolAnalysisDetails(sourceSymbolDetails);
                // o.setSourceSymbolDetails(sourceSymbolDetails);
               //  o.setSymbolMap(symbolMap);

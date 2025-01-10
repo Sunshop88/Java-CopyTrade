@@ -1,6 +1,7 @@
 package net.maku.followcom.convert;
 
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
+import net.maku.followcom.vo.FollowTraderAnalysisEntityVO;
 import net.maku.followcom.vo.FollowTraderAnalysisVO;
 import net.maku.followcom.vo.RankVO;
 import org.mapstruct.Mapper;
@@ -28,4 +29,6 @@ public interface FollowTraderAnalysisConvert {
 
 
     List<RankVO> convertRank(List<FollowTraderAnalysisEntity> list);
+
+    FollowTraderAnalysisEntityVO convertVo(FollowTraderAnalysisEntity entity);
 }
