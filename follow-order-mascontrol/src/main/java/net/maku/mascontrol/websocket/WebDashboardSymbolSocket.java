@@ -1,12 +1,15 @@
 package net.maku.mascontrol.websocket;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.aliyun.core.utils.StringUtils;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.service.DashboardService;
 import net.maku.followcom.util.SpringContextUtils;
@@ -22,9 +25,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.rmi.ServerException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -65,7 +66,7 @@ public class WebDashboardSymbolSocket {
     }
 
         private JSONObject send(String rankOrder,  Boolean rankAsc,  String brokerName,
-                                 String accountOrder,  Integer accountPage, Boolean accountAsc){
+                                 String accountOrder,  Integer accountPage, Boolean accountAsc,String server,String vpsName,String account,String sourceAccount){
             //仪表盘-头部统计
             StatDataVO statData = dashboardService.getStatData();
             //仪表盘-头寸监控-统计
@@ -85,11 +86,19 @@ public class WebDashboardSymbolSocket {
             vo.setLimit(20);
             vo.setPage(accountPage);
             vo.setAsc(accountAsc);
-
-            if(!brokerName.equals("null")){
-                vo.setBrokerName(brokerName);
+            if(ObjectUtil.isNotEmpty(brokerName)){
+                List<String> brokers = JSONArray.parseArray(brokerName, String.class);
+                String brokerstr = String.join(",", brokers);
+                vo.setBrokerName(brokerstr);
             }
-            vo.setBrokerName(null);
+            if(ObjectUtil.isNotEmpty(server)){
+                List<String> servers = JSONArray.parseArray(server, String.class);
+                String serversstr = String.join(",", servers);
+                vo.setServer(serversstr);
+            }
+            vo.setVpsName(vpsName);
+            vo.setAccount(account);
+            vo.setSourceAccount(sourceAccount);
             PageResult<DashboardAccountDataVO> accountDataPage = dashboardService.getAccountDataPage(vo);
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
@@ -97,7 +106,26 @@ public class WebDashboardSymbolSocket {
 
             symbolAnalysis.forEach(o->{
                 List<FollowTraderAnalysisEntity> followTraderAnalysisEntities = symbolAnalysisMapDetails.get(o.getSymbol());
-                o.setSymbolAnalysisDetails(followTraderAnalysisEntities);
+                List<FollowTraderAnalysisEntity> sourceSymbolDetails=new ArrayList<>();
+               Map<String, List<FollowTraderAnalysisEntity>>  symbolMap=new HashMap<>();
+                followTraderAnalysisEntities.forEach(s->{
+                    List<FollowTraderAnalysisEntity> ls = symbolMap.get(s.getSourceAccount());
+                    if(ls==null){
+                        List<FollowTraderAnalysisEntity>  follows= new ArrayList<>();
+                        follows.add(s);
+                        symbolMap.put(s.getSourceAccount(),follows);
+
+                    }
+                    if (s.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                        s.setSymbolsDetails(symbolMap.get(s.getSourceAccount()));
+                        sourceSymbolDetails.add(s);
+
+                    }
+
+                });
+                o.setSymbolAnalysisDetails(sourceSymbolDetails);
+               // o.setSourceSymbolDetails(sourceSymbolDetails);
+              //  o.setSymbolMap(symbolMap);
             });
             //仪表盘-头寸监控-统计
             json.put("symbolAnalysis",symbolAnalysis);
@@ -136,7 +164,7 @@ public class WebDashboardSymbolSocket {
             }
             ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,server,vpsName,account,sourceAccount);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     log.error("推送异常:{}",e.getMessage());

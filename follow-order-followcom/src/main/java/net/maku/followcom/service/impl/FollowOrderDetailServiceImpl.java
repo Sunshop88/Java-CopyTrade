@@ -158,6 +158,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             String time = DateUtil.format(order.CloseTime, "yyyy-MM-dd");
             if(!"1970-01-01".equals(time)){
                 entity.setCloseTime(order.CloseTime);
+                entity.setCloseServerHost(quoteClient.Host+":"+ quoteClient.Port);
             }
 
         }
@@ -182,6 +183,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         // entity.setBrokeName(u.get);
         //    entity.setSourceUser(account);
         entity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
+
         return entity;
     }
 

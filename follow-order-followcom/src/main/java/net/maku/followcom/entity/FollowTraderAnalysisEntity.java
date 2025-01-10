@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 账号数据分析表
@@ -127,4 +128,6 @@ public class FollowTraderAnalysisEntity {
 	@TableField(value = "type")
 	private Integer type;
 
+	@TableField(exist = false)
+	List<FollowTraderAnalysisEntity>  symbolsDetails;
 }

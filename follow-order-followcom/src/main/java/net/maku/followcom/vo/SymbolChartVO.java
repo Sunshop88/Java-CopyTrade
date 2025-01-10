@@ -8,6 +8,7 @@ import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Author:  zsd
@@ -76,5 +77,9 @@ public class SymbolChartVO {
 
     private BigDecimal profit;
 
+
+   //信号源
+ // List<FollowTraderAnalysisEntity>  sourceSymbolDetails;
     List<FollowTraderAnalysisEntity>  symbolAnalysisDetails;
+ //   Map<String, List<FollowTraderAnalysisEntity>>  symbolMap;
 }
