@@ -1,8 +1,10 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
@@ -28,6 +30,7 @@ import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -354,14 +357,24 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             //服务器节点
             dataRow[5] = serverNode;
             //更新时间
-            dataRow[6] = String.valueOf(detailVOList.stream()
+            LocalDateTime localDateTime = detailVOList.stream()
                     .filter(detailVO -> serverName.equals(detailVO.getServerName())
                             && detailVO.getIsDefaultServer() != null
                             && detailVO.getIsDefaultServer() == 0)
                     .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
                     .map(FollowTestDetailVO::getServerUpdateTime)
                     .findFirst() // 获取最新的一条数据
-                    .orElse(null));
+                    .orElse(null);
+            dataRow[6] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
+
+            /*dataRow[6] = String.valueOf(detailVOList.stream()
+                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
+                            && detailVO.getIsDefaultServer() != null
+                            && detailVO.getIsDefaultServer() == 0)
+                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
+                    .map(FollowTestDetailVO::getServerUpdateTime)
+                    .findFirst() // 获取最新的一条数据
+                    .orElse(null));*/
             //vps名称
             int index = 7;
             for (String vpsName : uniqueVpsNames) {
