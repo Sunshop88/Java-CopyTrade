@@ -12,7 +12,7 @@ spring:
         database: 3
         host: 66.112.212.130
         port: 6379
-        password: 9DWNS2wzy@dp
+        password: kU7c7E2rhbRA
 
   kafka:
     bootstrap-servers: 127.0.0.1:9092
