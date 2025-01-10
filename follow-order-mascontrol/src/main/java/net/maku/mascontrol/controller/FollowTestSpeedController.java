@@ -357,6 +357,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "添加服务器")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<String> addServer(@RequestBody FollowTestServerVO vo) {
+        if (ObjectUtil.isEmpty(vo.getServerName())){
+            return Result.error("服务器名称不能为空");
+        }
         // 根据名称查询其信息
         FollowBrokeServerEntity followBrokeServerEntity = followBrokeServerService.getByName(vo.getServerName());
         if (ObjectUtil.isEmpty(followBrokeServerEntity)) {
@@ -768,6 +771,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "配置开关")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<PageResult<FollowSpeedSettingVO>> page(@ParameterObject @Valid FollowSpeedSettingQuery query){
+        if (query.getPage() == null || query.getLimit() == null){
+            return Result.error("未传页码或条数");
+        }
         PageResult<FollowSpeedSettingVO> page = followSpeedSettingService.page(query);
 
         return Result.ok(page);

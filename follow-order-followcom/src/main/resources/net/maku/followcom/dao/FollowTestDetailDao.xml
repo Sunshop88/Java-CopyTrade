@@ -123,9 +123,6 @@
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name = #{query.serverName}
             </if>
-            <if test="query.serverNode != null and query.serverNode != ''">
-                AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
-            </if>
         </where>
     </select>
 

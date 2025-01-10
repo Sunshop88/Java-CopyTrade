@@ -1,7 +1,10 @@
 package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.checkerframework.checker.units.qual.N;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,9 +24,11 @@ public class FollowSpeedSettingVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "默认节点为最快节点 0：开启 1：关闭")
+	@NotNull(message = "默认节点为最快节点不能为空")
 	private Integer defaultServerNode;
 
 	@Schema(description = "默认节点登录 0：开启 1：关闭")
+	@NotNull(message = "默认节点登录不能为空")
 	private Integer defaultServerNodeLogin;
 
 	@Schema(description = "版本号")
