@@ -173,6 +173,7 @@ public class WebDashboardSymbolSocket {
                     JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,server,vpsName,account,sourceAccount);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
+                    e.printStackTrace();
                     log.error("推送异常:{}",e.getMessage());
 
                 }
