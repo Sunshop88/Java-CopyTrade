@@ -58,7 +58,7 @@ public class DashboardController {
      * */
     @GetMapping("/getAccountDataPage")
     @Operation(summary = "账号数据")
-   // @PreAuthorize("hasAuthority('dashboard:accountData')")
+    @PreAuthorize("hasAuthority('dashboard:accountData')")
     public Result<PageResult<DashboardAccountDataVO>> getAccountDataPage(@ParameterObject @Valid DashboardAccountQuery vo) {
 
         return Result.ok(dashboardService.getAccountDataPage(vo));

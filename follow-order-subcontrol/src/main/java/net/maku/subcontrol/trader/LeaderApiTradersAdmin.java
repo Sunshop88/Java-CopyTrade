@@ -202,6 +202,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 leader4ApiTraderConcurrentHashMap.put(String.valueOf(leader.getId()), leaderApiTrader);
                 traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
                 traderUpdateEn.setStatusExtra("启动成功");
+                traderUpdateEn.setLoginNode(serverNode+":"+serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
