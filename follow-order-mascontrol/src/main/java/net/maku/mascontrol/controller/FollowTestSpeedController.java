@@ -412,6 +412,7 @@ public class FollowTestSpeedController {
                 //确保服务器节点唯一
                 List<FollowTestDetailEntity> existingDetails = followTestDetailService.list(
                         Wrappers.<FollowTestDetailEntity>lambdaQuery()
+                                .eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName())
                                 .eq(FollowTestDetailEntity::getServerNode, server)
                 );
                 if (!existingDetails.isEmpty()) {
