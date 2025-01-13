@@ -216,6 +216,7 @@ public class DashboardServiceImpl implements DashboardService {
                            rankVO.setLots(analysis.getLots());
                            rankVO.setNum(analysis.getNum());
                            rankVO.setProfit(analysis.getProfit());
+                           rankVO.setFreeMargin(analysis.getFreeMargin());
                        }else{
                            rankVO.setAccount(analysis.getAccount());
                            rankVO.setPlatform(analysis.getPlatform());
@@ -225,6 +226,7 @@ public class DashboardServiceImpl implements DashboardService {
                            rankVO.setNum(num);
                            BigDecimal profit = rankVO.getProfit().add(analysis.getProfit());
                            rankVO.setProfit(profit);
+                           rankVO.setFreeMargin(analysis.getFreeMargin());
                        }
                        rankMap.put(analysis.getAccount(),rankVO);
                        map.put(analysis.getSymbol() + "_" + analysis.getAccount(),1);
@@ -260,6 +262,15 @@ public class DashboardServiceImpl implements DashboardService {
              }else {
                  return o2.getNum().compareTo(o1.getNum());
              }
+            }).limit(query.getLimit()).toList();
+        }
+        if (query.getOrder().equals("freeMargin")) {
+            list = rankMap.values().stream().sorted((o1, o2) -> {
+                if(query.isAsc()){
+                    return o1.getFreeMargin().compareTo(o2.getFreeMargin());
+                }else {
+                    return o2.getFreeMargin().compareTo(o1.getFreeMargin());
+                }
             }).limit(query.getLimit()).toList();
         }
        return list;

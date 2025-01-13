@@ -130,6 +130,12 @@ public class FollowTraderAnalysisEntity {
 	@TableField(value = "type")
 	private Integer type;
 
+	/**
+	 * 可用预付款比例
+	 * */
+	@TableField(value = "free_margin")
+	private BigDecimal freeMargin;
+
 	@TableField(exist = false)
 	List<FollowTraderAnalysisEntityVO>  symbolAnalysisDetails;
 }

@@ -20,6 +20,8 @@ public class RankVO {
     private String platform;
     //盈利
     private BigDecimal profit;
+    //可用预付款比例
+    private BigDecimal freeMargin;
     /**
      * 总持仓手数
      */

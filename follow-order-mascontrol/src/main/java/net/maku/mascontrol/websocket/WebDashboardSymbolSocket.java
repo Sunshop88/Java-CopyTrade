@@ -87,7 +87,7 @@ public class WebDashboardSymbolSocket {
             PageResult<DashboardAccountDataVO> accountDataPage =null;
             if(ObjectUtil.isNotEmpty(accountPage)) {
                 DashboardAccountQuery vo = new DashboardAccountQuery();
-                vo.setLimit(20);
+                vo.setLimit(50);
                 vo.setPage(accountPage);
                 vo.setAsc(accountAsc);
                 if (ObjectUtil.isNotEmpty(brokerName)) {
