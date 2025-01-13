@@ -177,7 +177,7 @@ public class WebDashboardSymbolSocket {
                     log.error("推送异常:{}",e.getMessage());
 
                 }
-            }, 0, 3, TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
             scheduledFutureMap.put(id,scheduledFuture);
         } catch (Exception e) {
             log.error(e.getMessage());

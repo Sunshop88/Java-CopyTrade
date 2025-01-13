@@ -38,7 +38,7 @@ public interface FollowTraderDao extends BaseDao<FollowTraderEntity> {
             " AND  FIND_IN_SET(p.broker_name,#{query.brokerName}) ",
             "</if>",
             "<if test='query!=null and query.server != null and   query.server.trim() != \"\" '>",
-            " AND  FIND_IN_SET(p.platform,#{query.server}) ",
+            " AND  FIND_IN_SET(p.server,#{query.server}) ",
             "</if>",
             "<if test='query!=null and query.vpsName != null and   query.vpsName.trim() != \"\" '>",
             " AND t.server_name LIKE CONCAT('%',#{query.vpsName},'%')",
