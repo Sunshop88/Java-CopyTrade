@@ -118,9 +118,12 @@ public class PushRedisTask {
                             }
 
 
+                            List<FollowPlatformEntity> followPlatformEntities = platformMap.get(Long.valueOf(h.getPlatformId()));
+                            if(followPlatformEntities!=null && followPlatformEntities.size()>0) {
+                                String platformType = followPlatformEntities.get(0).getPlatformType();
+                                accountCache.setPlatformType(platformType);
+                            }
 
-                            String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
-                            accountCache.setPlatformType(platformType);
                             //订单信息
                             QuoteClient quoteClient = null;
                             quoteClient= getQuoteClient(h.getId(),h,quoteClient);
