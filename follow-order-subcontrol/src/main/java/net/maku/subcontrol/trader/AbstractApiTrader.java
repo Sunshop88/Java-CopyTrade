@@ -163,7 +163,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 reconnectTimes = 0;
                 end = System.currentTimeMillis();
                 log.info("[MT4账号：{}-{}-{}]掉线后在{}:{}立刻重连成功,耗时{}秒", trader.getId(), trader.getAccount(), trader.getServerName(), this.quoteClient.Host, this.quoteClient.Port, (end - start) / 1000.0);
-                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId()));
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getLoginNode,this.quoteClient.Host+":"+this.quoteClient.Port).set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId()));
             } catch (Exception ex) {
                 log.error("", ex);
                 traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
