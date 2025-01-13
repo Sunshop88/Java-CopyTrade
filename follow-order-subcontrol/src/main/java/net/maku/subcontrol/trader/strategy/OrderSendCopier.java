@@ -153,7 +153,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }
-                if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)){
+//                if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)){
                    try{
                        if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
                            //订阅
@@ -220,7 +220,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                            redissonLockUtil.unlock("orderSend" + trader.getTrader().getId());
                        }
                    }
-                }
+//                }
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -300,7 +300,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     throw new RuntimeException("登录异常" + trader.getTrader().getId());
                 }
             }
-            if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)) {
+//            if(redissonLockUtil.tryLockForShortTime("orderSend"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)) {
                 try {
                     if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderInfo.getSymbol()))){
                         //订阅
@@ -367,7 +367,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         redissonLockUtil.unlock("orderSend" + trader.getTrader().getId());
                     }
                 }
-            }
+//            }
         } catch (Exception e) {
             openOrderMapping.setExtra("开仓失败"+e.getMessage());
             followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -392,6 +392,10 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             followOrderDetailService.save(followOrderDetailEntity);
             logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage(),op);
             return false;
+        }finally {
+            if (redissonLockUtil.isLockedByCurrentThread("orderSend" + trader.getTrader().getId())) {
+                redissonLockUtil.unlock("orderSend" + trader.getTrader().getId());
+            }
         }
         return true;
     }

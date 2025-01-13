@@ -95,7 +95,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)||ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
             log.error("[MT4跟单者:{}-{}-{}]没有找到对应平仓订单号,因为该对应的订单开仓失败，[喊单者:{}-{}-{}],喊单者订单信息[{}]", orderId, copier.getAccount(), copier.getServerName(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         } else {
-            if(redissonLockUtil.tryLockForShortTime("closeOrder"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)) {
+//            if(redissonLockUtil.tryLockForShortTime("closeOrder"+trader.getTrader().getId(),10,10, TimeUnit.SECONDS)) {
                 try {
                     closeOrder(trader, cachedCopierOrderInfo, orderInfo, flag, mapKey);
                 }finally {
@@ -103,7 +103,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                         redissonLockUtil.unlock("closeOrder" + trader.getTrader().getId());
                     }
                 }
-            }
+//            }
         }
     }
 
