@@ -252,6 +252,11 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
     public PageResult<String[]> pageServer(FollowTestServerQuery query) {
         List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
+        List<FollowTestDetailVO> collect = detailVOList.stream()
+                .filter(detail -> detail.getIsDefaultServer() != null
+                        && detail.getIsDefaultServer() == 0)
+                .collect(Collectors.toList());
+
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
 
@@ -302,6 +307,16 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 //        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
 
         // 将每个字段对应的数据全量获取，通过map赋值
+        //severName默认节点
+        Map<String, String> defaultServerNodeMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(collect)){
+            defaultServerNodeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode));
+        }
+        //更新时间
+        Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
+        if (ObjectUtil.isNotEmpty(collect)){
+            serverUpdateTimeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime));
+        }
         // 券商名称map
         List<FollowTraderCountVO> brokerNames = followPlatformService.getBrokerNames();
         Map<String, String> brokerNameMap = new HashMap<>();
@@ -348,14 +363,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName): "0";
             //非默认节点账号数量
             //查询该severName默认节点
-            String defaultServerNode = detailVOList.stream()
-                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-                            && detailVO.getIsDefaultServer() != null
-                            && detailVO.getIsDefaultServer() == 0)
-                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-                    .map(FollowTestDetailVO::getServerNode)
-                    .findFirst() // 获取最新的一条数据
-                    .orElse("null"); // 如果没有符合条件的记录，返回 null
+            String defaultServerNode = defaultServerNodeMap.get(serverName) != null ? defaultServerNodeMap.get(serverName) : "null";
 
 //            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
             Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
@@ -364,24 +372,9 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             //服务器节点
             dataRow[5] = serverNode;
             //更新时间
-            LocalDateTime localDateTime = detailVOList.stream()
-                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-                            && detailVO.getIsDefaultServer() != null
-                            && detailVO.getIsDefaultServer() == 0)
-                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-                    .map(FollowTestDetailVO::getServerUpdateTime)
-                    .findFirst() // 获取最新的一条数据
-                    .orElse(null);
+            LocalDateTime localDateTime = serverUpdateTimeMap.get(serverName) != null ? serverUpdateTimeMap.get(serverName) : null;
             dataRow[6] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
-            /*dataRow[6] = String.valueOf(detailVOList.stream()
-                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-                            && detailVO.getIsDefaultServer() != null
-                            && detailVO.getIsDefaultServer() == 0)
-                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-                    .map(FollowTestDetailVO::getServerUpdateTime)
-                    .findFirst() // 获取最新的一条数据
-                    .orElse(null));*/
             //vps名称
             int index = 7;
             for (String vpsName : uniqueVpsNames) {

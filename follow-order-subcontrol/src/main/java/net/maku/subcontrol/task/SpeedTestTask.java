@@ -49,7 +49,7 @@ public class SpeedTestTask {
     @Autowired
     private CopierApiTradersAdmin copierApiTradersAdmin;
 
-    @Scheduled(cron = "0 0 0 ? * SAT")
+    @Scheduled(cron = "0 0 14 ? * SAT")
     //    @Scheduled(cron = "*/60 * * * * ?")//测试
     public void weeklySpeedTest() throws IOException {
         log.info("开始执行每周测速任务...");
@@ -108,6 +108,9 @@ public class SpeedTestTask {
                                 .orElse(null);
 
                         if (ObjectUtil.isNotEmpty(minLatencyEntity) && settingEntity.getDefaultServerNode() == 0) {
+                            //将最快的节点后面加上isDefaultServerNode =0
+                            minLatencyEntity.setIsDefaultServer(0);
+                            followTestDetailService.updateById(minLatencyEntity);
                             //查询vps名称所对应的id
                             Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName)).getId();
                             redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
