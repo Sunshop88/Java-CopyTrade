@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -393,6 +394,15 @@ public class FollowTestSpeedController {
     @Transactional(rollbackFor = Exception.class)
     public Result<String> addServerNode(@RequestBody @Valid FollowTestServerVO followTestServerVO) {
         try {
+            // 删除已存在的空节点
+            String serverName = followTestServerVO.getServerName();
+            if (StringUtils.isNotBlank(serverName)) {
+                followTestDetailService.remove(Wrappers.<FollowTestDetailEntity>lambdaQuery(FollowTestDetailEntity.class)
+                        .eq(FollowTestDetailEntity::getServerName, serverName)
+                        .and(wrapper ->wrapper.isNull(FollowTestDetailEntity::getServerNode)
+                                .or().eq(FollowTestDetailEntity::getServerNode, "")));
+            }
+
             //添加到券商表
             for (String server : followTestServerVO.getServerNodeList()) {
                 String[] split = server.split(":");
