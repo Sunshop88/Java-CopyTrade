@@ -458,6 +458,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "节点列表")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<PageResult<String[]>> listTestServerNode(@ParameterObject FollowTestServerQuery query) {
+        if (query.getPage() == null || query.getLimit() == null){
+            return Result.error("未传页码或条数");
+        }
         PageResult<String[]>list = followTestDetailService.pageServerNode(query);
 
         return Result.ok(list);

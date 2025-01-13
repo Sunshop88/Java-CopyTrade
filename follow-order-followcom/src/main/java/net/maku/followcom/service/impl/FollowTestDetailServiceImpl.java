@@ -256,7 +256,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         List<String[]> result = new ArrayList<>();
 
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
+//        for  (FollowTestDetailVO detail : detailVOList) {
 //            String vpsName = detail.getVpsName();
 //            if (vpsName != null) {
 //                uniqueVpsNames.add(vpsName);
@@ -280,24 +280,26 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         result.add(header.toArray(new String[0]));
 
         // 暂存每个 key 对应的速度数据
-        Map<String, Map<String, Double>> speedMap = new HashMap<>();
+        Map<String, Map<String, String>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
             String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
             String vpsName = detail.getVpsName();
             Integer speed = detail.getSpeed();
+            Integer isDefault = detail.getIsDefaultServer();
 
             if (speed != null) {
-                double speedValue = speed.doubleValue();
+//                double speedValue = speed.doubleValue();
+                String speedValue = speed + "__" + isDefault;
                 speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
             } else {
                 // 处理 speed 为 null 的情况，例如记录日志或使用默认值
-                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
+                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 +"__" + isDefault); // 使用默认值 0.0
             }
         }
 
         List<String[]> dataRows = new ArrayList<>();
-        List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
-        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
+        List<Map.Entry<String, Map<String, String>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
+//        sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
 
         // 将每个字段对应的数据全量获取，通过map赋值
         // 券商名称map
@@ -325,14 +327,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             defaultAccountCountMap = defaultAccountCounts.stream().collect(Collectors.toMap(f -> f.getServerName() + f.getDefaultServerNode(), FollowTraderCountVO::getNodeCount));
         }
 
-        for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
+        for (Map.Entry<String, Map<String, String>> entry : sortedEntries) {
             String key = entry.getKey();
             String[] keyParts = key.split("_");
             String serverName = keyParts[0];
             String platformType = keyParts[1];
             String serverNode = keyParts[2];
 
-            Map<String, Double> vpsSpeeds = entry.getValue();
+            Map<String, String> vpsSpeeds = entry.getValue();
             String[] dataRow = new String[7 + uniqueVpsNames.size()];
             //券商名称
 //            dataRow[0] = followPlatformService.getbrokerName(serverName);
@@ -383,8 +385,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             //vps名称
             int index = 7;
             for (String vpsName : uniqueVpsNames) {
-                Double speed = vpsSpeeds.get(vpsName);
-                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+                //因为String speedValue = speed + "__" + isDefault;所以要截取判断
+//                if (vpsName.contains(serverName) && vpsName.contains(serverNode)) {
+//                    String speedValue = vpsName.split("__")[1];
+//                    Double speed = vpsSpeeds.get(vpsName);
+//                    dataRow[index++] = (speed != null) ? speed.toString() : "null";
+//                }
+
+                dataRow[index++] = vpsSpeeds.get(vpsName);
             }
 
             dataRows.add(dataRow);
