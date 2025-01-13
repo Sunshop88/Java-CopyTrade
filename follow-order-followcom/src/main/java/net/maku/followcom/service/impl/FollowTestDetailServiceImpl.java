@@ -336,7 +336,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             String[] dataRow = new String[7 + uniqueVpsNames.size()];
             //券商名称
 //            dataRow[0] = followPlatformService.getbrokerName(serverName);
-            dataRow[0] = brokerNameMap.get(serverName);;
+            dataRow[0] = brokerNameMap.get(serverName);
             //服务器名称
             dataRow[1] = serverName;
             //平台类型
@@ -389,6 +389,39 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
             dataRows.add(dataRow);
         }
+        // 排序
+        String order = query.getOrder();
+        boolean isAsc = query.isAsc();
+        dataRows.sort(new Comparator<String[]>() {
+            @Override
+            public int compare(String[] row1, String[] row2) {
+                // 如果 row1 或 row2 为 null，直接返回比较结果
+                if (row1 == null && row2 == null) return 0;
+                if (row1 == null) return -1;
+                if (row2 == null) return 1;
+
+                // 券商名称排序
+                int comparisonResult = compareStrings(row1[0], row2[0]);
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                // 服务器名称排序
+                comparisonResult = compareStrings(row1[1], row2[1]);
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                if ("prop3".equals(order)) {
+                    // 账号数量排序
+                    return isAsc ? compareStrings(row1[3], row2[3]) : compareStrings(row2[3], row1[3]);
+                } else if ("prop4".equals(order)) {
+                    // 非默认节点账号数量排序
+                    return isAsc ? compareStrings(row1[4], row2[4]) : compareStrings(row2[4], row1[4]);
+                } else {
+                    // 服务器名称排序
+                    return isAsc ? compareStrings(row1[1], row2[1]) : compareStrings(row2[1], row1[1]);
+                }
+            }
+        });
 
         // 计算分页的开始和结束索引
         int page = query.getPage();
@@ -410,6 +443,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
+    }
+
+    // 辅助方法：处理可能为 null 的字符串比较
+    private int compareStrings(String str1, String str2) {
+        if (str1 == null && str2 == null) return 0;
+        if (str1 == null) return -1;  // 让 null 值排在前面
+        if (str2 == null) return 1;   // 让 null 值排在前面
+        return str1.compareTo(str2);
     }
 
     /**

@@ -86,7 +86,20 @@
                 AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
             </if>
         </where>
-        ORDER BY fp.broker_name, t1.server_name;
+        ORDER BY fp.broker_name
+        <choose>
+            <when test="query.order=='prop1'">
+                ,t1.server_name
+            </when>
+        </choose>
+        <choose>
+            <when test="query.asc==1">
+                ASC
+            </when>
+            <otherwise>
+                DESC
+            </otherwise>
+        </choose>
     </select>
 
 
