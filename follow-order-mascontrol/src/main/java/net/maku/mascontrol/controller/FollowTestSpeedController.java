@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -393,6 +394,15 @@ public class FollowTestSpeedController {
     @Transactional(rollbackFor = Exception.class)
     public Result<String> addServerNode(@RequestBody @Valid FollowTestServerVO followTestServerVO) {
         try {
+            // 删除已存在的空节点
+            String serverName = followTestServerVO.getServerName();
+            if (StringUtils.isNotBlank(serverName)) {
+                followTestDetailService.remove(Wrappers.<FollowTestDetailEntity>lambdaQuery(FollowTestDetailEntity.class)
+                        .eq(FollowTestDetailEntity::getServerName, serverName)
+                        .and(wrapper ->wrapper.isNull(FollowTestDetailEntity::getServerNode)
+                                .or().eq(FollowTestDetailEntity::getServerNode, "")));
+            }
+
             //添加到券商表
             for (String server : followTestServerVO.getServerNodeList()) {
                 String[] split = server.split(":");
@@ -402,6 +412,7 @@ public class FollowTestSpeedController {
                 //确保服务器节点唯一
                 List<FollowTestDetailEntity> existingDetails = followTestDetailService.list(
                         Wrappers.<FollowTestDetailEntity>lambdaQuery()
+                                .eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName())
                                 .eq(FollowTestDetailEntity::getServerNode, server)
                 );
                 if (!existingDetails.isEmpty()) {
@@ -448,6 +459,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "节点列表")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<PageResult<String[]>> listTestServerNode(@ParameterObject FollowTestServerQuery query) {
+        if (query.getPage() == null || query.getLimit() == null){
+            return Result.error("未传页码或条数");
+        }
         PageResult<String[]>list = followTestDetailService.pageServerNode(query);
 
         return Result.ok(list);

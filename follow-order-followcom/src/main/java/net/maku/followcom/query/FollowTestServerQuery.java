@@ -20,4 +20,10 @@ public class FollowTestServerQuery extends Query {
 
     @Schema(description = "服务器节点")
     private String serverNode;
+
+    @Schema(description = "排序字段，默认服务器名称排序")
+    String order = "prop1";
+
+    @Schema(description = "是否升序，默认升序")
+    boolean asc = true;
 }
