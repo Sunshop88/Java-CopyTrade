@@ -408,16 +408,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 if (row1 == null) return -1;
                 if (row2 == null) return 1;
 
-                // 券商名称排序
-                int comparisonResult = compareStrings(row1[0], row2[0]);
-                if (comparisonResult != 0) {
-                    return comparisonResult;
-                }
-                // 服务器名称排序
-                comparisonResult = compareStrings(row1[1], row2[1]);
-                if (comparisonResult != 0) {
-                    return comparisonResult;
-                }
                 if ("prop3".equals(order)) {
                     // 账号数量排序
                     return isAsc ? compareStrings(row1[3], row2[3]) : compareStrings(row2[3], row1[3]);
