@@ -838,8 +838,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     //如果非forex 都是 100
                     hd = new BigDecimal("100");
                 }
-                long seconds = DateUtil.between(DateUtil.date(o.getResponseCloseTime()), DateUtil.date(o.getRequestCloseTime()), DateUnit.MS);
-                o.setCloseTimeDifference((int) seconds);
                 o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
@@ -890,6 +888,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }
                 log.info("订单 " + orderNo + ": 平仓 " + orderResult);
                 //保存平仓信息
+                followOrderDetailEntity.setCloseTimeDifference((int)orderResult.sendTimeDifference);
                 followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
                 followOrderDetailEntity.setRequestCloseTime(nowdate);
                 followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
