@@ -793,13 +793,31 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
                 redisCache.set(Constant.TRADER_SEND + traderId, 2);
             } else {
-                return false;
+                //查询正在下单中的数据
+                List<FollowOrderSendEntity> list = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId, traderId).eq(FollowOrderSendEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+                if (ObjectUtil.isNotEmpty(list)){
+                    list.forEach(o->{
+                        o.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                        followOrderSendService.updateById(o);
+                    });
+                }else {
+                    return false;
+                }
             }
         } else {
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + traderId))) {
                 redisCache.set(Constant.TRADER_CLOSE + traderId, 2);
             } else {
-                return false;
+                //查询正在平仓中的数据
+                List<FollowOrderCloseEntity> list = followOrderCloseService.list(new LambdaQueryWrapper<FollowOrderCloseEntity>().eq(FollowOrderCloseEntity::getTraderId, traderId).eq(FollowOrderCloseEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+                if (ObjectUtil.isNotEmpty(list)){
+                    list.forEach(o->{
+                        o.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                        followOrderCloseService.updateById(o);
+                    });
+                }else {
+                    return false;
+                }
             }
         }
         return true;
@@ -852,8 +870,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     //如果非forex 都是 100
                     hd = new BigDecimal("100");
                 }
-                long seconds = DateUtil.between(DateUtil.date(o.getResponseCloseTime()), DateUtil.date(o.getRequestCloseTime()), DateUnit.MS);
-                o.setCloseTimeDifference((int) seconds);
                 o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
@@ -903,6 +919,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             log.info("订单 " + orderNo + ": 平仓 " + orderResult);
             //保存平仓信息
+            followOrderDetailEntity.setCloseTimeDifference((int)orderResult.sendTimeDifference);
             followOrderDetailEntity.setResponseCloseTime(LocalDateTime.now());
             followOrderDetailEntity.setRequestCloseTime(nowdate);
             followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
@@ -1033,8 +1050,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         //如果非forex 都是 100
                         hd = new BigDecimal("100");
                     }
-                    long seconds = DateUtil.between(DateUtil.date(o.getResponseOpenTime()), DateUtil.date(o.getRequestOpenTime()), DateUnit.MS);
-                    o.setOpenTimeDifference((int) seconds);
                     o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
                     followOrderDetailService.updateById(o);
                 });
@@ -1078,6 +1093,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
             }
+            followOrderDetailEntity.setOpenTimeDifference((int) order.sendTimeDifference);
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
             log.info("下单详情 账号:"+traderId+"平台:"+platform+"节点:"+oc.QuoteClient.Host+":"+oc.QuoteClient.Port);
             log.info("订单" + orderId + "开仓时刻数据价格:" + order.OpenPrice + " 时间" + order.OpenTime);
@@ -1337,7 +1353,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             log.info("订单 " + orderId + ": 并发下单手数为 " + orders.get(finalI));
                             ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType,remark);
                         } catch (Exception e) {
-                            log.info("订单交易异常" + traderId);
+                            log.info("订单交易异常" + e.getMessage());
                         }
                     }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
@@ -1450,7 +1466,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         log.info("订单 " + orderId + ": 并发下单手数为 " + orders.get(finalI));
                         ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType,remark);
                     } catch (Exception e) {
-                        log.info("订单交易异常" + traderId);
+                        log.info("订单交易异常" + e.getMessage());
                     }
                 }
                 // 当所有订单任务完成后，执行更新操作

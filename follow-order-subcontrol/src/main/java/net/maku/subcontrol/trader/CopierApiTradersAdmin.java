@@ -9,9 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.entity.FollowBrokeServerEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
@@ -29,7 +27,9 @@ import net.maku.subcontrol.task.UpdateAllTraderInfoTask;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
+import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
+import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -203,32 +203,75 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity copier) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
-        if (!copier.getIpAddr().equals(FollowConstant.LOCAL_HOST)){
-            log.info("启动校验异常"+copier.getId());
-            return ConCodeEnum.EXCEPTION;
-        }
-        String serverNode;
-        //优先查看平台默认节点
-        if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED+copier.getServerId(),copier.getPlatform()))){
-            serverNode=(String)redisUtil.hGet(Constant.VPS_NODE_SPEED+copier.getServerId(),copier.getPlatform());
-        }else {
-            FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, copier.getPlatform()));
-            serverNode=followPlatformServiceOne.getServerNode();
-        }
-        if (ObjectUtil.isNotEmpty(serverNode)) {
-            //处理节点格式
-            String[] split = serverNode.split(":");
-            conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]));
-            if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
-                //循环连接
-                List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(copier.getPlatform());
-                for (FollowBrokeServerEntity address : serverEntityList) {
-                    // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
-                    conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
-                    if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
-                        break;
+        if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 10, TimeUnit.SECONDS)) {
+            try{
+                if (!copier.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
+                    log.info("启动校验异常" + copier.getId());
+                    return ConCodeEnum.EXCEPTION;
+                }
+                String serverNode;
+                //优先查看平台默认节点
+                if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + copier.getServerId(), copier.getPlatform()))) {
+                    serverNode = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + copier.getServerId(), copier.getPlatform());
+                } else {
+                    FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, copier.getPlatform()));
+                    serverNode = followPlatformServiceOne.getServerNode();
+                }
+                if (ObjectUtil.isNotEmpty(serverNode)) {
+                    //处理节点格式
+                    String[] split = serverNode.split(":");
+                    conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]));
+                    if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
+                        //循环连接
+                        FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+                        // 先查询 test_id 最大值
+                        FollowTestDetailEntity followTestDetailEntity = followTestDetailService.getOne(
+                                new LambdaQueryWrapper<FollowTestDetailEntity>()
+                                        .eq(FollowTestDetailEntity::getServerName, copier.getPlatform())
+                                        .eq(FollowTestDetailEntity::getVpsId, vps.getId())
+                                        .orderByDesc(FollowTestDetailEntity::getTestId)
+                                        .select(FollowTestDetailEntity::getTestId)
+                                        .last("LIMIT 1")
+                        );
+                        Integer maxTestId = followTestDetailEntity != null ? followTestDetailEntity.getTestId() : null;
+                        if (ObjectUtil.isNotEmpty(maxTestId)) {
+                            //测速记录
+                            List<FollowTestDetailEntity> list = followTestDetailService.list(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, copier.getPlatform()).eq(FollowTestDetailEntity::getVpsId, vps.getId()).eq(FollowTestDetailEntity::getTestId, maxTestId).orderByAsc(FollowTestDetailEntity::getSpeed));
+                            for (FollowTestDetailEntity address : list) {
+                                // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                                String[] strings = address.getServerNode().split(":");
+                                conCodeEnum = connectTrader(copier, conCodeEnum, strings[0], Integer.valueOf(strings[1]));
+                                if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                                    break;
+                                }
+                            }
+                        } else {
+                            //循环连接
+                            List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(copier.getPlatform());
+                            for (FollowBrokeServerEntity address : serverEntityList) {
+                                // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
+                                conCodeEnum = connectTrader(copier, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
+                                if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
+            }finally {
+                if (redissonLockUtil.isLockedByCurrentThread("addTrader" + copier.getId())) {
+                    redissonLockUtil.unlock("addTrader" + copier.getId());
+                }
+            }
+        }else {
+            return ConCodeEnum.AGAIN;
+        }
+
+        if (conCodeEnum==ConCodeEnum.SUCCESS){
+            FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, copier.getId()));
+            if (ObjectUtil.isNotEmpty(followTraderSubscribeEntity)){
+                QuoteClient quoteClient = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString()).quoteClient;
+                quoteClient.OrderClient.PlacedType= PlacedType.forValue(followTraderSubscribeEntity.getPlacedType());
             }
         }
         return conCodeEnum;

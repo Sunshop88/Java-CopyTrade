@@ -41,8 +41,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 
 
 @Slf4j
@@ -96,7 +95,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     /**
      * 连接服务器
      */
-    public void connect2Broker() throws Exception {
+    public synchronized void connect2Broker() throws Exception {
         this.initPrefixSuffix = Boolean.FALSE;
         this.quoteClient.Connect();
         if (this.quoteClient.OrderClient == null) {
@@ -311,6 +310,16 @@ public abstract class AbstractApiTrader extends ApiTrader {
             quoteClient.OnDisconnect.removeAllListeners();
             quoteClient.OnQuote.removeAllListeners();
             quoteClient.Disconnect();
+            // 关闭线程池
+            scheduledExecutorService.shutdown();
+            try {
+                if (!scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                    scheduledExecutorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduledExecutorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
             log.info("关闭mtapi");
         } catch (Exception e) {
             log.error("停止失败", e);

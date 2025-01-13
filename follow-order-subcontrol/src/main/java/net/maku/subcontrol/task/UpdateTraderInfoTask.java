@@ -27,9 +27,14 @@ public class UpdateTraderInfoTask implements Runnable {
     @Override
     public void run() {
         try {
+            if (Thread.currentThread().isInterrupted()) {
+                log.info("任务被中断，退出");
+                return;
+            }
             abstractApiTrader.updateTraderInfo();
         } catch (Exception e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt(); // 恢复线程中断状态
         }
     }
 }

@@ -318,7 +318,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             String platformType = platformMap.get(Long.valueOf(h.getPlatformId())).get(0).getPlatformType();
                             accountCache.setPlatformType(platformType);
                             //订单信息
-                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId());
+                            AbstractApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
                             QuoteClient quoteClient = null;
                             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient) || !leaderApiTrader.quoteClient.Connected()) {
                                 try {
