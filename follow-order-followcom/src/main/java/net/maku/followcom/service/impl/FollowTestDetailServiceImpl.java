@@ -521,7 +521,9 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
             System.out.println(latestDetail);
             if (latestDetail != null) {
-                dataRow[1] = String.valueOf(latestDetail.getServerUpdateTime());
+                // 更新测速时间格式化
+                LocalDateTime serverUpdateTime = latestDetail.getServerUpdateTime();
+                dataRow[1] = serverUpdateTime != null ? DateUtil.format(serverUpdateTime, "yyyy-MM-dd HH:mm:ss") : null;
             } else {
                 dataRow[1] = "null"; // 或者设置为其他默认值
             }
