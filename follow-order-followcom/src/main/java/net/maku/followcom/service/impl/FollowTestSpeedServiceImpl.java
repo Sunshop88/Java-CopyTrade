@@ -134,8 +134,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     int retryCount = 0; // 重试次数
 
                     while (retryCount < 3) {
-                        try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                       try (AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open()) {
                             long startTime = System.currentTimeMillis(); // 记录起始时间
                             Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
 
