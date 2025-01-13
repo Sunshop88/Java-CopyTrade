@@ -146,13 +146,18 @@ public class DashboardServiceImpl implements DashboardService {
                     followTraderAnalysisEntity.setSourcePlatform(followTraderAnalysisEntity.getPlatform());
                 }else{
                     FollowTraderEntity followTraderEntity = traderMap.get(followTraderAnalysisEntity.getVpsId() + ":" + followTraderAnalysisEntity.getAccount());
-                    FollowTraderSubscribeEntity subscribeEntity = finalSubscribeMap.get(followTraderEntity.getId());
-                    String masterAccount = subscribeEntity.getMasterAccount();
-                    followTraderAnalysisEntity.setSourceAccount(masterAccount);
-                    FollowTraderEntity masterTrader = traderMap.get(followTraderAnalysisEntity.getVpsId() + ":" + masterAccount);
-                    followTraderAnalysisEntity.setSourcePlatform(masterTrader.getPlatform());
-                }
+                    if(followTraderEntity!=null){
+                        FollowTraderSubscribeEntity subscribeEntity = finalSubscribeMap.get(followTraderEntity.getId());
+                        String masterAccount = subscribeEntity.getMasterAccount();
+                        followTraderAnalysisEntity.setSourceAccount(masterAccount);
+                        FollowTraderEntity masterTrader = traderMap.get(followTraderAnalysisEntity.getVpsId() + ":" + masterAccount);
+                        if(masterTrader!=null){
+                            followTraderAnalysisEntity.setSourcePlatform(masterTrader.getPlatform());
+                        }
+                    }
 
+
+                }
                 list.add(followTraderAnalysisEntity);
                 map.put(split[0],list);
             });

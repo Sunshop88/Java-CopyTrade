@@ -410,12 +410,11 @@ public class FollowTestSpeedController {
                     throw new ServerException("服务器节点格式不正确");
                 }
                 //确保服务器节点唯一
-                FollowTestDetailEntity existingDetail = followTestDetailService.getOne(
+                List<FollowTestDetailEntity> existingDetails = followTestDetailService.list(
                         Wrappers.<FollowTestDetailEntity>lambdaQuery()
                                 .eq(FollowTestDetailEntity::getServerNode, server)
                 );
-
-                if (existingDetail != null) {
+                if (!existingDetails.isEmpty()) {
                     log.info("服务器节点已存在: {}", server);
                     continue; // 跳过当前循环
                 }
@@ -726,7 +725,7 @@ public class FollowTestSpeedController {
             if (count > 0){
                 return Result.error("该服务器节点账号数量不为0，无法删除");
             }
-//            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
 //        }
         //删掉redis中该服务器的数据
         FollowTestServerQuery query = new FollowTestServerQuery();

@@ -116,9 +116,9 @@
                 AND t1.server_node = t2.server_node
                 AND t1.create_time = t2.latest_time
                 AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
-        <if test="query.brokerName != null and query.brokerName != ''">
-            LEFT JOIN follow_platform fp ON t1.server_name = fp.server
-        </if>
+<!--        <if test="query.brokerName != null and query.brokerName != ''">-->
+<!--            LEFT JOIN follow_platform fp ON t1.server_name = fp.server-->
+<!--        </if>-->
         <where>
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name = #{query.serverName}

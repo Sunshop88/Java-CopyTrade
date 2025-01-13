@@ -256,12 +256,17 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         List<String[]> result = new ArrayList<>();
 
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
-        for (FollowTestDetailVO detail : detailVOList) {
-            String vpsName = detail.getVpsName();
-            if (vpsName != null) {
-                uniqueVpsNames.add(vpsName);
-            }
-        }
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String vpsName = detail.getVpsName();
+//            if (vpsName != null) {
+//                uniqueVpsNames.add(vpsName);
+//            }
+//        }
+        followVpsServiceImpl.list().stream()
+                .filter(vps -> vps.getName() != null
+                        && vps.getDeleted()==0
+                        && vps.getConnectionStatus() == 1)
+                .forEach(vps -> uniqueVpsNames.add(vps.getName()));
         List<String> header = new ArrayList<>();
         header.add("券商名称");
         header.add("服务器名称");

@@ -74,30 +74,37 @@ public class WebDashboardSymbolSocket {
             //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
             List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
             //仪表盘-盈利排行榜
-            Query query=new Query();
-            query.setAsc(rankAsc);
-            query.setOrder(rankOrder);
-            query.setLimit(10);
-            List<RankVO> ranking = dashboardService.getRanking(query);
+            List<RankVO> ranking =null;
+            if(ObjectUtil.isNotEmpty(rankOrder)){
+                Query query=new Query();
+                query.setAsc(rankAsc);
+                query.setOrder(rankOrder);
+                query.setLimit(10);
+                ranking = dashboardService.getRanking(query);
+            }
+
             //账号数据
-            DashboardAccountQuery vo=new DashboardAccountQuery();
-            vo.setLimit(20);
-            vo.setPage(accountPage);
-            vo.setAsc(accountAsc);
-            if(ObjectUtil.isNotEmpty(brokerName)){
-                List<String> brokers = JSONArray.parseArray(brokerName, String.class);
-                String brokerstr = String.join(",", brokers);
-                vo.setBrokerName(brokerstr);
+            PageResult<DashboardAccountDataVO> accountDataPage =null;
+            if(ObjectUtil.isNotEmpty(accountPage)) {
+                DashboardAccountQuery vo = new DashboardAccountQuery();
+                vo.setLimit(20);
+                vo.setPage(accountPage);
+                vo.setAsc(accountAsc);
+                if (ObjectUtil.isNotEmpty(brokerName)) {
+                    List<String> brokers = JSONArray.parseArray(brokerName, String.class);
+                    String brokerstr = String.join(",", brokers);
+                    vo.setBrokerName(brokerstr);
+                }
+                if (ObjectUtil.isNotEmpty(server)) {
+                    List<String> servers = JSONArray.parseArray(server, String.class);
+                    String serversstr = String.join(",", servers);
+                    vo.setServer(serversstr);
+                }
+                vo.setVpsName(vpsName);
+                vo.setAccount(account);
+                vo.setSourceAccount(sourceAccount);
+               accountDataPage = dashboardService.getAccountDataPage(vo);
             }
-            if(ObjectUtil.isNotEmpty(server)){
-                List<String> servers = JSONArray.parseArray(server, String.class);
-                String serversstr = String.join(",", servers);
-                vo.setServer(serversstr);
-            }
-            vo.setVpsName(vpsName);
-            vo.setAccount(account);
-            vo.setSourceAccount(sourceAccount);
-            PageResult<DashboardAccountDataVO> accountDataPage = dashboardService.getAccountDataPage(vo);
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
             json.put("statData",statData);
@@ -166,6 +173,7 @@ public class WebDashboardSymbolSocket {
                     JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,server,vpsName,account,sourceAccount);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
+                    e.printStackTrace();
                     log.error("推送异常:{}",e.getMessage());
 
                 }
