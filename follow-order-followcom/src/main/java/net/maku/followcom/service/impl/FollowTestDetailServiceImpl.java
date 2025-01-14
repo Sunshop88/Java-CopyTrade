@@ -397,29 +397,42 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
             dataRows.add(dataRow);
         }
+
         // 排序
         String order = query.getOrder();
         boolean isAsc = query.isAsc();
-        dataRows.sort(new Comparator<String[]>() {
-            @Override
-            public int compare(String[] row1, String[] row2) {
-                // 如果 row1 或 row2 为 null，直接返回比较结果
-                if (row1 == null && row2 == null) return 0;
-                if (row1 == null) return -1;
-                if (row2 == null) return 1;
-
-                if ("prop3".equals(order)) {
-                    // 账号数量排序
-                    return isAsc ? compareStrings(row1[3], row2[3]) : compareStrings(row2[3], row1[3]);
-                } else if ("prop4".equals(order)) {
-                    // 非默认节点账号数量排序
-                    return isAsc ? compareStrings(row1[4], row2[4]) : compareStrings(row2[4], row1[4]);
-                } else {
-                    // 服务器名称排序
-                    return isAsc ? compareStrings(row1[1], row2[1]) : compareStrings(row2[1], row1[1]);
-                }
+        if ("prop3".equals(order)) {
+            // 账号数量排序
+            if (isAsc) {
+                dataRows.sort(Comparator.comparing(row -> Integer.parseInt(row[3])));
+            } else {
+                dataRows.sort((row1, row2) -> {
+                    // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+                    int value1 = Integer.parseInt(row1[3]);
+                    int value2 = Integer.parseInt(row2[3]);
+                    return Integer.compare(value2, value1); // 倒序：value2 排在前面
+                });
             }
-        });
+        } else if ("prop4".equals(order)) {
+            // 非默认节点账号数量排序
+            if (isAsc) {
+                dataRows.sort(Comparator.comparing(row -> row[4], Comparator.nullsFirst(String::compareTo)));
+            } else {
+                dataRows.sort((row1, row2) -> {
+                    // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+                    int value1 = Integer.parseInt(row1[4]);
+                    int value2 = Integer.parseInt(row2[4]);
+                    return Integer.compare(value2, value1); // 倒序：value2 排在前面
+                });
+            }
+        } else if ("prop1".equals(order)) {
+            // 服务器名称排序
+            if (isAsc) {
+                dataRows.sort(Comparator.comparing(row -> row[1], Comparator.nullsFirst(String::compareTo)));
+            } else {
+                dataRows.sort((row1, row2) -> row2[1].compareTo(row1[1]));
+            }
+        }
 
         // 计算分页的开始和结束索引
         int page = query.getPage();
