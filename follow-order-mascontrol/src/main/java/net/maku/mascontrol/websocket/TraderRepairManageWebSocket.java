@@ -179,6 +179,7 @@ public class TraderRepairManageWebSocket {
                 orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 //补单
                 for (Object repairObj : sendmap.keySet()) {
+                    try {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) sendmap.get(repairObj);
                     boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(eaOrderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                     if (!existsInActive) {
@@ -197,11 +198,15 @@ public class TraderRepairManageWebSocket {
                             num.updateAndGet(v -> v + 1);
                         }
                     }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 //补仓
                 Map<Object, Object> closemap = closeRepair.get(Constant.FOLLOW_REPAIR_CLOSE+ ipAddr + "#" + slave.getPlatform() + "#" + master.getPlatform() + "#" + o.getSlaveAccount() + "#" + o.getMasterAccount());
                 if (ObjectUtil.isEmpty(closemap))return;
                 for (Object repairObj : closemap.keySet()) {
+                    try {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) closemap.get(repairObj);
                     boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(eaOrderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                     if (existsInActive) {
@@ -226,18 +231,21 @@ public class TraderRepairManageWebSocket {
                                 orderRepairInfoVO.setSlaveCloseTime(detail.getCloseTime());
                                 orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
                                 orderRepairInfoVO.setSlaveAccount(detail.getAccount());
-                                orderRepairInfoVO.setSlavePlatform( detail.getPlatform());
+                                orderRepairInfoVO.setSlavePlatform(detail.getPlatform());
                                 orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
                                 orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
                                 orderRepairInfoVO.setMasterId(eaOrderInfo.getMasterId());
                                 orderRepairInfoVO.setSlaveId(detail.getTraderId());
                                 orderRepairInfoVOList.add(orderRepairInfoVO);
-                                if (flag.get() ==0){
+                                if (flag.get() == 0) {
                                     flag.set(1);
                                     num.updateAndGet(v -> v + 1);
                                 }
                             });
                         }
+                    }
+                } catch (Exception e) {
+                       e.printStackTrace();
                     }
                 }
             }

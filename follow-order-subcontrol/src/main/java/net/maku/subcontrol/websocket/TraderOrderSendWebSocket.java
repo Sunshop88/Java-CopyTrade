@@ -96,8 +96,12 @@ public class TraderOrderSendWebSocket {
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                 if (conCodeEnum == ConCodeEnum.SUCCESS ) {
                     quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    leaderApiTrader1.startTrade();
+                    leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    leaderApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    quoteClient = leaderApiTrader.quoteClient;
                 } else {
                     quoteClient = null;
                 }
@@ -139,9 +143,10 @@ public class TraderOrderSendWebSocket {
             }
             //开启定时任务
             QuoteEventArgs finalEventArgs = eventArgs;
+            LeaderApiTrader finalLeaderApiTrader = leaderApiTrader;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(leaderApiTrader, finalEventArgs);
+                    sendPeriodicMessage(finalLeaderApiTrader, finalEventArgs);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -200,12 +205,12 @@ public class TraderOrderSendWebSocket {
         }
     }
 
+
     @OnClose
     public void onClose() {
         try {
             sessionPool.get(traderId+symbol).remove(session);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
-            // 需要移除监听器时调用
         } catch (Exception e) {
             e.printStackTrace();
         }

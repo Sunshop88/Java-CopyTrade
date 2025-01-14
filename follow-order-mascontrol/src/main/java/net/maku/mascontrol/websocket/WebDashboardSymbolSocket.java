@@ -64,7 +64,7 @@ public class WebDashboardSymbolSocket {
     }
 
         private JSONObject send(String rankOrder,  Boolean rankAsc,  String brokerName,
-                                 String accountOrder,  Integer accountPage, Boolean accountAsc,String server,String vpsName,String account,String sourceAccount){
+                                 String accountOrder,  Integer accountPage, Boolean accountAsc,Integer accountLimit,String server,String vpsName,String account,String sourceAccount){
             //仪表盘-头部统计
             StatDataVO statData = dashboardService.getStatData();
             //仪表盘-头寸监控-统计
@@ -84,10 +84,15 @@ public class WebDashboardSymbolSocket {
             }
 
             //账号数据
-            PageResult<DashboardAccountDataVO> accountDataPage =null;
+            List<DashboardAccountDataVO> accountDataPage =null;
             if(ObjectUtil.isNotEmpty(accountPage)) {
                 DashboardAccountQuery vo = new DashboardAccountQuery();
-                vo.setLimit(50);
+                if(accountLimit==null){
+                    vo.setLimit(50);
+                }else{
+                    vo.setLimit(accountLimit);
+                }
+                vo.setAccount(account);
                 vo.setPage(accountPage);
                 vo.setAsc(accountAsc);
                 if (ObjectUtil.isNotEmpty(brokerName)) {
@@ -100,10 +105,10 @@ public class WebDashboardSymbolSocket {
                     String serversstr = String.join(",", servers);
                     vo.setServer(serversstr);
                 }
-                vo.setVpsName(vpsName);
+                vo.setOrder(accountOrder);
                 vo.setAccount(account);
                 vo.setSourceAccount(sourceAccount);
-               accountDataPage = dashboardService.getAccountDataPage(vo);
+                accountDataPage = dashboardService.getAccountDataPage(vo);
             }
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
@@ -156,8 +161,10 @@ public class WebDashboardSymbolSocket {
             String rankOrder = jsonObject.getString("rankOrder");
             Boolean rankAsc = jsonObject.getBoolean("rankAsc");
             String brokerName = jsonObject.getString("brokerName");
+
             String accountOrder = jsonObject.getString("accountOrder");
             Integer accountPage = jsonObject.getInteger("accountPage");
+            Integer accountLimit = jsonObject.getInteger("accountLimit");
             Boolean accountAsc = jsonObject.getBoolean("accountAsc");
 
             String server = jsonObject.getString("server");
@@ -170,7 +177,7 @@ public class WebDashboardSymbolSocket {
             }
             ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,server,vpsName,account,sourceAccount);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,accountLimit,server,vpsName,account,sourceAccount);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     e.printStackTrace();

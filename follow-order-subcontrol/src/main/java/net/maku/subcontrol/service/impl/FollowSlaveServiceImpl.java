@@ -129,7 +129,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             orderCloseCopier.operate(copierApiTrader, objects, 1);
                             ThreadPoolUtils.getExecutor().execute(()->{
                                 try {
-                                    Thread.sleep(3000);
+                                    Thread.sleep(1000);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }

@@ -4,16 +4,15 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.SymbolAnalysisQuery;
-import net.maku.followcom.vo.StatDataVO;
-import net.maku.followcom.vo.SymbolAnalysisVO;
-import net.maku.followcom.vo.SymbolChartVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowTraderAnalysisConvert;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 import net.maku.followcom.query.FollowTraderAnalysisQuery;
-import net.maku.followcom.vo.FollowTraderAnalysisVO;
 import net.maku.followcom.dao.FollowTraderAnalysisDao;
 import net.maku.followcom.service.FollowTraderAnalysisService;
 import com.fhs.trans.service.impl.TransService;
@@ -97,5 +96,10 @@ public class FollowTraderAnalysisServiceImpl extends BaseServiceImpl<FollowTrade
     @Override
     public List<SymbolChartVO> getSymbolChart() {
         return baseMapper.getSymbolChart();
+    }
+
+    @Override
+    public List<DashboardAccountDataVO> getAccountDataPage( DashboardAccountQuery vo) {
+        return baseMapper.getAccountDataPage(vo);
     }
 }

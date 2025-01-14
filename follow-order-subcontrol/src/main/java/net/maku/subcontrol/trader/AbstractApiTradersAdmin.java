@@ -3,13 +3,13 @@ package net.maku.subcontrol.trader;
 import lombok.Data;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
+import net.maku.followcom.service.impl.FollowTestDetailServiceImpl;
+import net.maku.followcom.service.impl.FollowVpsServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
@@ -29,12 +29,17 @@ public abstract class AbstractApiTradersAdmin {
     protected FollowTraderSubscribeService followTraderSubscribeService;
     protected FollowPlatformService followPlatformService;
     protected RedisUtil redisUtil;
-
+    protected FollowTestDetailService followTestDetailService;
+    protected FollowVpsService followVpsService;
+    protected final RedissonLockUtil redissonLockUtil;
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
         this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
         this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+        this.followTestDetailService=SpringContextUtils.getBean(FollowTestDetailServiceImpl.class);
+        this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+        this.redissonLockUtil= SpringContextUtils.getBean(RedissonLockUtil.class);
     }
 
     protected int traderCount = 0;

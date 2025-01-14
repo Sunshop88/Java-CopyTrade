@@ -99,7 +99,7 @@ public class FollowSlaveController {
                 traderSubscribeEntity.forEach(o -> {
                     FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
                     FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
-                    if (masterFollow.getServerName().equals(followTraderEntity.getServerName()) && slaveFollow.getServerName().equals(vo.getPlatform())) {
+                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
                         throw new ServerException("存在循环跟单,请检查");
                     }
                 });
@@ -205,8 +205,6 @@ public class FollowSlaveController {
             map.put("followClose", vo.getFollowClose());
             map.put("followRep", vo.getFollowRep());
             redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId(), map);
-            //删除缓存
-            copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
             redisCache.delete(Constant.FOLLOW_SUB_TRADER + vo.getId().toString());
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
@@ -216,7 +214,6 @@ public class FollowSlaveController {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
-                copierApiTrader.startTrade();
                 FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                 //修改缓存
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);

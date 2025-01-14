@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public interface DashboardService {
     //仪表盘-账号数据
-    PageResult<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo);
+    List<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo);
 
     List<SymbolChartVO> getSymbolAnalysis();
 
