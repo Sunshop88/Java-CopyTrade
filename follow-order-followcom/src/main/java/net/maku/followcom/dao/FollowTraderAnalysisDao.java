@@ -58,7 +58,7 @@ public interface FollowTraderAnalysisDao extends BaseDao<FollowTraderAnalysisEnt
     @Select({
             " <script>",
             "SELECT sum(position) as position,sum(lots) as lots,sum(num) as num,sum(profit) as profit, ",
-            "(SELECT COUNT(1) FROM follow_vps) as vpsNum, ",
+            "(SELECT COUNT(1) FROM follow_vps WHERE deleted=0) as vpsNum, ",
             "(SELECT COUNT(1) FROM follow_trader WHERE type=0) as sourceNum, ",
             "(SELECT COUNT(1) FROM follow_trader WHERE type=1) as followNum ",
             " FROM  follow_trader_analysis ",

@@ -179,6 +179,7 @@ public class TraderRepairManageWebSocket {
                 orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 //补单
                 for (Object repairObj : sendmap.keySet()) {
+                    try {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) sendmap.get(repairObj);
                     boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(eaOrderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                     if (!existsInActive) {
@@ -196,6 +197,9 @@ public class TraderRepairManageWebSocket {
                             flag.set(1);
                             num.updateAndGet(v -> v + 1);
                         }
+                    }
+                    } catch (Exception e) {
+
                     }
                 }
                 //补仓

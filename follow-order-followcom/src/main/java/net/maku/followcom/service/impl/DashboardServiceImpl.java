@@ -289,7 +289,7 @@ public class DashboardServiceImpl implements DashboardService {
         if(stringObjectMap!=null) {
             stringObjectMap.forEach((k, v) -> {
                 FollowTraderAnalysisEntity analysis = JSONObject.parseObject(v.toString(), FollowTraderAnalysisEntity.class);
-                Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount());
+                Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId());
                 if(i==null){
                     SymbolChartVO vo = symbolMap.get(analysis.getSymbol());
                     if(vo==null){
@@ -327,7 +327,7 @@ public class DashboardServiceImpl implements DashboardService {
                         vo.setProfit(profit);
                     }
                     vo.setSymbol(analysis.getSymbol());
-                    map.put(analysis.getSymbol() + "_" + analysis.getAccount(),1);
+                    map.put(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId(),1);
                     symbolMap.put(analysis.getSymbol() ,vo);
                 }
 
