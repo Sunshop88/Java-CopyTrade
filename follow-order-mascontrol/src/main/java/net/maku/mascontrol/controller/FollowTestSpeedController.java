@@ -804,4 +804,16 @@ public class FollowTestSpeedController {
 
         return Result.ok();
     }
+
+    /**
+     * 测试
+     * @param vo
+     * @return
+     */
+    @PostMapping("redis")
+    @Operation(summary = "redis测试")
+    public Result<String> redis(@RequestBody FollowTestDetailVO vo){
+        redisUtil.hset(Constant.VPS_NODE_SPEED + vo.getVpsId(), vo.getServerName(), vo.getServerNode(), 0);
+        return Result.ok("redis测试成功");
+    }
 }
