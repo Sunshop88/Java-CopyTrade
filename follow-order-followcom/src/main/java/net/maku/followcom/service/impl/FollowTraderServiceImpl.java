@@ -383,11 +383,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getSendNo())) {
             wrapper.eq(FollowOrderDetailEntity::getSendNo, query.getSendNo());
         }
-        if (ObjectUtil.isNotEmpty(query.getSendNo())) {
-            wrapper.eq(FollowOrderDetailEntity::getSendNo, query.getSendNo());
-        }
         if (ObjectUtil.isNotEmpty(query.getOrderNo())) {
-            wrapper.eq(FollowOrderDetailEntity::getOrderNo, query.getOrderNo());
+            wrapper.like(FollowOrderDetailEntity::getOrderNo, query.getOrderNo());
         }
         if (ObjectUtil.isNotEmpty(query.getSymbol())) {
             wrapper.like(FollowOrderDetailEntity::getSymbol, query.getSymbol());
@@ -409,7 +406,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getCloseId())) {
             wrapper.eq(FollowOrderDetailEntity::getCloseId, query.getCloseId());
         }
-        wrapper.eq(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
+        wrapper.like(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
         wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
