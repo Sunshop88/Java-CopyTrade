@@ -117,6 +117,17 @@ public class TraderOrderActiveWebSocket {
                         quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         leaderApiTrader1.startTrade();
+                    }else  if (conCodeEnum == ConCodeEnum.AGAIN){
+                        long startTime = System.currentTimeMillis(); // 记录开始时间
+                        while (ObjectUtil.isEmpty(leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId))){
+                            if (System.currentTimeMillis() - startTime > 5000) {
+                                throw new Exception("等待超时：超过 5 秒未获取到指定的 accountId 对应的 Leader4ApiTrader");
+                            }
+                            Thread.sleep(100);
+                        }
+                        //重复提交
+                        abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
+                        quoteClient = abstractApiTrader.quoteClient;
                     }
                 } else {
                     quoteClient = abstractApiTrader.quoteClient;
@@ -132,6 +143,17 @@ public class TraderOrderActiveWebSocket {
                         quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader.startTrade();
+                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        //重复提交
+                        long startTime = System.currentTimeMillis(); // 记录开始时间
+                        while (ObjectUtil.isEmpty(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId))){
+                            if (System.currentTimeMillis() - startTime > 5000) {
+                                throw new Exception("等待超时：超过 5 秒未获取到指定的 accountId 对应的 Leader4ApiTrader");
+                            }
+                            Thread.sleep(100);
+                        }
+                        abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
+                        quoteClient = abstractApiTrader.quoteClient;
                     }
                 } else {
                     quoteClient = abstractApiTrader.quoteClient;
@@ -175,13 +197,15 @@ public class TraderOrderActiveWebSocket {
                         closeRepairToExtract.add(repairComment);
                     }
                 }
-                closeRepairToRemove.forEach(repair ->{
-                    EaOrderInfo repair1 = (EaOrderInfo) repair;
-                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount(), repair1.getTicket().toString());
+                String repairKey = Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform()+ "#" +
+                        master.getPlatform()+ "#" + followTraderSubscribe.getSlaveAccount() + "#" + followTraderSubscribe.getMasterAccount();
+
+                redisUtil.pipeline(connection -> {
+                    closeRepairToRemove.forEach(ticket -> connection.hDel(repairKey.getBytes(), ticket.toString().getBytes()));
                 });
 
                 List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
-                sendRepairToExtract.parallelStream().forEach(o -> {
+                sendRepairToExtract.forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                     orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
@@ -193,7 +217,7 @@ public class TraderOrderActiveWebSocket {
                     orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
                     list.add(orderRepairInfoVO);
                 });
-                closeRepairToExtract.parallelStream().forEach(o -> {
+                closeRepairToExtract.forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     //通过备注查询未平仓记录
                     List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
@@ -226,13 +250,17 @@ public class TraderOrderActiveWebSocket {
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
         }finally {
-            redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
+            if (!Thread.currentThread().isInterrupted()) { // 检查线程是否被中断
+                redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
+            } else {
+                log.warn("线程已中断，跳过释放锁");
+            }
         }
     }
 
     private void stopPeriodicTask() {
         if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel(false); // 避免中断线程
         }
     }
 

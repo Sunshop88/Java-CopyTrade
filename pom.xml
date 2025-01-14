@@ -330,5 +330,12 @@
                 <profile.name>uat</profile.name>
             </properties>
         </profile>
+        <!-- prod -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <profile.name>prod</profile.name>
+            </properties>
+        </profile>
     </profiles>
 </project>
