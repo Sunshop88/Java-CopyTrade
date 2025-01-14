@@ -8,6 +8,7 @@ import net.maku.followcom.vo.FollowTestSpeedVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -36,6 +37,6 @@ public interface FollowTestSpeedService extends BaseService<FollowTestSpeedEntit
 
     void saveTestSpeed(FollowTestSpeedVO overallResult);
 
-    boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId);
+    boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime);
 
 }

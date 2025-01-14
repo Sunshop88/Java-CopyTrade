@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.maku.followcom.entity.FollowVpsEntity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -40,4 +41,7 @@ public class MeasureRequestVO {
 
     @Schema(description = "节点信息")
     private List<FollowTestDetailVO> followTestDetailVOS;
+
+    @Schema(description = "测速时间")
+    private LocalDateTime measureTime;
 }

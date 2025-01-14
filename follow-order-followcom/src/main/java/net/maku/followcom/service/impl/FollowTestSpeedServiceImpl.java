@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -119,7 +120,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
     }
 
     @Override
-    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId) {
+    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
         // 获取服务器列表
         List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
 
@@ -189,10 +190,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             newEntity.setVpsId(vpsEntity.getId());
                             newEntity.setSpeed((int) duration);
                             newEntity.setTestId(testId);
+                            newEntity.setUpdateTime(measureTime);
 //                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
 //                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer());
                             newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : null);
+                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
                             followTestDetailService.save(newEntity);
                             break; // 测试成功，跳出重试循环
                         } catch (Exception e) {

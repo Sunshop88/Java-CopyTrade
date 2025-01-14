@@ -310,7 +310,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         //severName默认节点
         Map<String, String> defaultServerNodeMap = new HashMap<>();
         if (ObjectUtil.isNotEmpty(collect)){
-            defaultServerNodeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode));
+            defaultServerNodeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName , FollowTestDetailVO::getServerNode));
         }
         //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();

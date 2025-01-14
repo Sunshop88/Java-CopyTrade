@@ -129,7 +129,8 @@ public class FollowTestSpeedController {
         }
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-        overallResult.setDoTime(new Date());
+//        overallResult.setDoTime(new Date());
+        overallResult.setDoTime(LocalDateTime.now());
         overallResult.setVersion(0);
         overallResult.setDeleted(0);
         overallResult.setCreator(SecurityUser.getUserId());
@@ -186,6 +187,7 @@ public class FollowTestSpeedController {
                 startRequest.setServers(servers);
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
+                startRequest.setMeasureTime(overallResult.getDoTime());
 
 //                // 将对象序列化为 JSON
 //                String jsonBody = objectMapper.writeValueAsString(startRequest);
@@ -434,7 +436,7 @@ public class FollowTestSpeedController {
                 FollowTestDetailVO followTestDetail = new FollowTestDetailVO();
                 followTestDetail.setServerName(followTestServerVO.getServerName());
                 followTestDetail.setServerId(followBrokeServer.getId());
-                followTestDetail.setPlatformType(followTestServerVO.getPlatformType());
+                followTestDetail.setPlatformType("MT4");
                 followTestDetail.setServerNode(server);
                 followTestDetailService.save(followTestDetail);
             }
@@ -602,7 +604,8 @@ public class FollowTestSpeedController {
     public Result<FollowTestSpeedVO> measures(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-        overallResult.setDoTime(new Date());
+//        overallResult.setDoTime(new Date());
+        overallResult.setDoTime(LocalDateTime.now());
         overallResult.setVersion(0);
         overallResult.setDeleted(0);
         overallResult.setCreator(SecurityUser.getUserId());

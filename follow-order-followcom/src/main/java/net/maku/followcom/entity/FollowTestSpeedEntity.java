@@ -23,7 +23,7 @@ public class FollowTestSpeedEntity {
 	* 测速时间
 	*/
 	@TableField(value = "do_time")
-	private Date doTime;
+	private LocalDateTime doTime;
 
 	/**
 	* 测试状态0-失败 1-进行中 2-成功
