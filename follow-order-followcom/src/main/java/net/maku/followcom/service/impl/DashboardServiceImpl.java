@@ -1,6 +1,7 @@
 package net.maku.followcom.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -64,12 +65,26 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public List<FollowTraderAnalysisEntity> getSymbolAnalysisDetails(TraderAnalysisVO vo) {
        LambdaQueryWrapper<FollowTraderAnalysisEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ObjectUtil.isNotEmpty(vo.getSymbol()), FollowTraderAnalysisEntity::getSymbol, vo.getSymbol());
+        if(ObjectUtil.isNotEmpty(vo.getSymbol())){
+            List<String> symbols = JSONArray.parseArray(vo.getSymbol(), String.class);
+            wrapper.in(ObjectUtil.isNotEmpty(symbols), FollowTraderAnalysisEntity::getSymbol, symbols);
+        }
+        if(ObjectUtil.isNotEmpty(vo.getVpsId())){
+            List<Integer> vpsIds = JSONArray.parseArray(vo.getVpsId(), Integer.class);
+            wrapper.in(ObjectUtil.isNotEmpty(vpsIds), FollowTraderAnalysisEntity::getVpsId, vpsIds);
+        }
+        if(ObjectUtil.isNotEmpty(vo.getSourcePlatform())){
+            List<String> sourcePlatforms = JSONArray.parseArray(vo.getSourcePlatform(), String.class);
+            wrapper.in(ObjectUtil.isNotEmpty(sourcePlatforms), FollowTraderAnalysisEntity::getSourcePlatform, sourcePlatforms);
+        }
+        if(ObjectUtil.isNotEmpty(vo.getPlatform())){
+            List<String> platforms = JSONArray.parseArray(vo.getPlatform(), String.class);
+            wrapper.in(ObjectUtil.isNotEmpty(platforms), FollowTraderAnalysisEntity::getSourcePlatform, platforms);
+        }
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getAccount()), FollowTraderAnalysisEntity::getAccount, vo.getAccount());
-        wrapper.eq(ObjectUtil.isNotEmpty(vo.getVpsId()), FollowTraderAnalysisEntity::getVpsId, vo.getVpsId());
-        wrapper.eq(ObjectUtil.isNotEmpty(vo.getPlatform()), FollowTraderAnalysisEntity::getPlatform, vo.getPlatform());
+
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getSourceAccount()), FollowTraderAnalysisEntity::getSourceAccount, vo.getSourceAccount());
-        wrapper.eq(ObjectUtil.isNotEmpty(vo.getSourcePlatform()), FollowTraderAnalysisEntity::getSourcePlatform, vo.getSourcePlatform());
+
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getType()), FollowTraderAnalysisEntity::getType, vo.getType());
         return    followTraderAnalysisService.list(wrapper);
 

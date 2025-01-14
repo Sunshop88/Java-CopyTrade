@@ -19,7 +19,7 @@ public class TraderAnalysisVO {
     /**
      * vpsId
      */
-    private Long vpsId;
+    private String vpsId;
 
     /**
      * 平台服务器
@@ -39,4 +39,8 @@ public class TraderAnalysisVO {
      * 账号类型
      */
     private Integer type;
+
+    private String order;
+
+    private Boolean asc;
 }
