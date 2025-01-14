@@ -48,55 +48,12 @@ public class DashboardServiceImpl implements DashboardService {
      * 仪表盘-账号数据
      * */
     @Override
-    public PageResult<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo) {
-        IPage<FollowTraderEntity> page=new Page<>(vo.getPage(), vo.getLimit());
-        IPage<DashboardAccountDataVO> accountDataPage = followTraderService.getAccountDataPage(page, vo);
-        List<DashboardAccountDataVO> records = accountDataPage.getRecords();
-        List<FollowTraderEntity> masters = followTraderService.lambdaQuery().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).list();
+    public List<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo) {
 
-        Map<Long, FollowTraderEntity> masterMap=new HashMap<>();
-        if(ObjectUtil.isNotEmpty(masters)){
-            masterMap = masters.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
-        }
-        //订阅关系
-        List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
-        //订阅关系map key：跟单者id val 喊单者id
-        Map<Long, Long> subscribeMap=new HashMap<>();
-        if(ObjectUtil.isNotEmpty(list)){
-            subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
-        }
-        if(ObjectUtil.isNotEmpty(records)){
-            for (int i = 0; i < records.size(); i++) {
-                DashboardAccountDataVO record = records.get(i);
-                //设置信号源数据
-                if(TraderTypeEnum.MASTER_REAL.getType().equals(record.getType())){
-                    record.setSourceAccount(record.getAccount());
-                    record.setSourceServer(record.getServer());
-                }else{
-                    Long masterId = subscribeMap.get(record.getTraderId());
-                    FollowTraderEntity followTraderEntity = masterMap.get(masterId);
-                    if(followTraderEntity != null){
-                        record.setSourceAccount(followTraderEntity.getAccount());
-                        record.setSourceServer(followTraderEntity.getPlatform());
-                    }
+        return  followTraderAnalysisService.getAccountDataPage(vo);
 
-                }
-                //处理redis的数据
-                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + record.getTraderId());
-                if(ObjectUtil.isNotEmpty(followRedisTraderVO)){
-                    record.setProfit(followRedisTraderVO.getProfit());
-                    record.setMarginProportion(followRedisTraderVO.getMarginProportion());
-                    double n = followRedisTraderVO.getBuyNum() + followRedisTraderVO.getSellNum();
-                    record.setOrderNum(followRedisTraderVO.getTotal());
-                    record.setLots(n);
-                }
-            }
-         
-        }
-
-        return new PageResult<>(accountDataPage.getRecords(), page.getTotal());
     }
-//SymbolAnalysisQuery vo
+
     @Override
     public List<SymbolChartVO> getSymbolAnalysis() {
 
