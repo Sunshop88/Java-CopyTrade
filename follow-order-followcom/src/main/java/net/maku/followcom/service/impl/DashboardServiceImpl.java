@@ -75,8 +75,11 @@ public class DashboardServiceImpl implements DashboardService {
                 }else{
                     Long masterId = subscribeMap.get(record.getTraderId());
                     FollowTraderEntity followTraderEntity = masterMap.get(masterId);
-                    record.setSourceAccount(followTraderEntity.getAccount());
-                    record.setSourceServer(followTraderEntity.getPlatform());
+                    if(followTraderEntity != null){
+                        record.setSourceAccount(followTraderEntity.getAccount());
+                        record.setSourceServer(followTraderEntity.getPlatform());
+                    }
+
                 }
                 //处理redis的数据
                 FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + record.getTraderId());
