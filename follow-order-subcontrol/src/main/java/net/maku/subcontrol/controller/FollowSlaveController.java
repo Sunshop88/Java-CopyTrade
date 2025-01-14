@@ -99,7 +99,7 @@ public class FollowSlaveController {
                 traderSubscribeEntity.forEach(o -> {
                     FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
                     FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
-                    if (masterFollow.getServerName().equals(followTraderEntity.getServerName()) && slaveFollow.getServerName().equals(vo.getPlatform())) {
+                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
                         throw new ServerException("存在循环跟单,请检查");
                     }
                 });
