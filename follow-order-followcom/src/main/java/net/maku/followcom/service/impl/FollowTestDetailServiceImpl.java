@@ -407,6 +407,10 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 dataRows.sort(Comparator.comparing(row -> Integer.parseInt(row[3])));
             } else {
                 dataRows.sort((row1, row2) -> {
+                    // 如果 row1 或 row2 为 null，直接返回比较结果
+                    if (row1 == null && row2 == null) return 0;
+                    if (row1 == null) return -1;
+                    if (row2 == null) return 1;
                     // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
                     int value1 = Integer.parseInt(row1[3]);
                     int value2 = Integer.parseInt(row2[3]);
@@ -419,6 +423,10 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 dataRows.sort(Comparator.comparing(row -> row[4], Comparator.nullsFirst(String::compareTo)));
             } else {
                 dataRows.sort((row1, row2) -> {
+                    // 如果 row1 或 row2 为 null，直接返回比较结果
+                    if (row1 == null && row2 == null) return 0;
+                    if (row1 == null) return -1;
+                    if (row2 == null) return 1;
                     // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
                     int value1 = Integer.parseInt(row1[4]);
                     int value2 = Integer.parseInt(row2[4]);
@@ -430,7 +438,34 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             if (isAsc) {
                 dataRows.sort(Comparator.comparing(row -> row[1], Comparator.nullsFirst(String::compareTo)));
             } else {
-                dataRows.sort((row1, row2) -> row2[1].compareTo(row1[1]));
+//                dataRows.sort((row1, row2) -> row2[1].compareTo(row1[1]));
+                dataRows.sort(new Comparator<String[]>() {
+                    @Override
+                    public int compare(String[] row1, String[] row2) {
+                        // 如果 row1 或 row2 为 null，直接返回比较结果
+                        if (row1 == null && row2 == null) return 0;
+                        if (row1 == null) return -1;
+                        if (row2 == null) return 1;
+                        return compareStrings(row2[1], row1[1]);
+                    }
+                });
+            }
+        } else {
+            // 券商名称排序
+            if (isAsc) {
+                dataRows.sort(Comparator.comparing(row -> row[0], Comparator.nullsFirst(String::compareTo)));
+            } else {
+//                dataRows.sort((row1, row2) -> row2[0].compareTo(row1[0]));
+                dataRows.sort(new Comparator<String[]>() {
+                    @Override
+                    public int compare(String[] row1, String[] row2) {
+                        // 如果 row1 或 row2 为 null，直接返回比较结果
+                        if (row1 == null && row2 == null) return 0;
+                        if (row1 == null) return -1;
+                        if (row2 == null) return 1;
+                        return compareStrings(row2[0], row1[0]);
+                    }
+                });
             }
         }
 
