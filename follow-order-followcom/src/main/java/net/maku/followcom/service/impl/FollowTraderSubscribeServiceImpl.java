@@ -201,6 +201,10 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
             if (cache1 != null) {
                 cache1.evict(o.getMasterId()); // 移除指定缓存条目
             }
+            Cache cache2 = cacheManager.getCache("followFollowCache");
+            if (cache2 != null) {
+                cache2.evict(id); // 修改指定缓存条目
+            }
         });
     }
 
