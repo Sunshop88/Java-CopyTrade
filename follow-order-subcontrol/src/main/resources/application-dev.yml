@@ -12,6 +12,12 @@ spring:
         host: 192.168.31.110
         port: 6379
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
   kafka:
     bootstrap-servers: 192.168.31.110:9092
     consumer:
@@ -52,3 +58,4 @@ spring:
     password: maku
     clientId: maku_boot_service_dev
     default-topic: topic_default
+

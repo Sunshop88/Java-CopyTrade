@@ -8,11 +8,15 @@ import net.maku.followcom.enums.OrderChangeTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.followcom.vo.OrderCacheVO;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.subcontrol.config.RabbitMQProducer;
+import net.maku.subcontrol.entity.Account;
+import net.maku.subcontrol.entity.MessagePayload;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.websocket.TraderOrderActiveWebSocket;
+import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 import online.mtapi.mt4.OrderUpdateEventHandler;
 
@@ -36,10 +40,13 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
 
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
+    protected RabbitMQProducer producer;
+
     public OrderUpdateHandler() {
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
+        this.producer=SpringContextUtils.getBean(RabbitMQProducer.class);
     }
 
     /**
@@ -101,4 +108,31 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     public void invoke(Object o, OrderUpdateEventArgs orderUpdateEventArgs) {
 
     }
+
+    protected MessagePayload getMessagePayload(Order x) {
+        MessagePayload messagePayload = new MessagePayload();
+        messagePayload.setAccount(Account.builder().id(leader.getId()).type(leader.getType()).build());
+        messagePayload.setUser(Long.parseLong(leader.getAccount()));
+        OrderCacheVO orderCacheVO = new OrderCacheVO();
+        orderCacheVO.setTicket(x.Ticket);
+        orderCacheVO.setOpenTime(x.OpenTime);
+        orderCacheVO.setCloseTime(x.CloseTime);
+        orderCacheVO.setType(x.Type);
+        orderCacheVO.setLots(x.Lots);
+        orderCacheVO.setSymbol(x.Symbol);
+        orderCacheVO.setOpenPrice(x.OpenPrice);
+        orderCacheVO.setStopLoss(x.StopLoss);
+        orderCacheVO.setTakeProfit(x.TakeProfit);
+        orderCacheVO.setClosePrice(x.ClosePrice);
+        orderCacheVO.setMagicNumber(x.MagicNumber);
+        orderCacheVO.setSwap(x.Swap);
+        orderCacheVO.setCommission(x.Commission);
+        orderCacheVO.setComment(x.Comment);
+        orderCacheVO.setProfit(x.Profit);
+        orderCacheVO.setPlaceType("Client");
+        orderCacheVO.setLogin(Long.parseLong(leader.getAccount()));
+        messagePayload.setOrder(orderCacheVO);
+        return messagePayload;
+    }
+
 }

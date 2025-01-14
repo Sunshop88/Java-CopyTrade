@@ -1,6 +1,7 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -163,6 +164,10 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     strategyMap.get(AcEnum.MC).operate(abstractApiTrader, eaOrderInfo, 0);
                 });
                 flag = 1;
+                Order x = orderUpdateEventArgs.Order;
+                log.info("喊单单发送平仓mq" + leader.getId());
+                //发送平仓MQ
+                producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
                 //推送到redis
           //    pushCache(leader.getServerId());
                 break;
