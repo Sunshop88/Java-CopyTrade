@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.rmi.ServerException;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -64,13 +65,16 @@ public class WebDashboardSymbolSocket {
     }
 
         private JSONObject send(String rankOrder,  Boolean rankAsc,  String brokerName,
-                                 String accountOrder,  Integer accountPage, Boolean accountAsc,Integer accountLimit,String server,String vpsName,String account,String sourceAccount){
+                                 String accountOrder,  Integer accountPage, Boolean accountAsc,Integer accountLimit,String server,String vpsName,String account,String sourceAccount,TraderAnalysisVO analysisVO){
             //仪表盘-头部统计
             StatDataVO statData = dashboardService.getStatData();
             //仪表盘-头寸监控-统计
-            List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
+          //  List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
+            Map<String,SymbolChartVO> symbolAnalysisMap = new HashMap<>();
+            //List<SymbolChartVO> symbolAnalysis=new ArrayList<>();
             //仪表盘-头寸监控-统计明细
-            Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
+            List<FollowTraderAnalysisEntity> details = dashboardService.getSymbolAnalysisDetails(analysisVO);
+           // Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
             //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
             List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
             //仪表盘-盈利排行榜
@@ -114,7 +118,49 @@ public class WebDashboardSymbolSocket {
             //仪表盘-头部统计
             json.put("statData",statData);
 
-            symbolAnalysis.forEach(o->{
+            details.forEach(o->{
+                SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
+                if(chartVO==null){
+                    chartVO = new SymbolChartVO();
+                    chartVO.setSymbol(o.getSymbol());
+
+                }
+                List<FollowTraderAnalysisEntity> symbolAnalysisDetails = chartVO.getSymbolAnalysisDetails();
+                if(symbolAnalysisDetails==null){
+                    symbolAnalysisDetails=new ArrayList<>();
+                }
+               BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
+                BigDecimal   profit = chartVO.getProfit()  == null ? BigDecimal.ZERO :chartVO.getProfit();
+                BigDecimal   num=chartVO.getNum() == null ? BigDecimal.ZERO :chartVO.getNum();
+                BigDecimal  buyNum = chartVO.getBuyNum() == null ?  BigDecimal.ZERO : chartVO.getBuyNum();
+                BigDecimal buyLots = chartVO.getBuyLots() == null ?  BigDecimal.ZERO : chartVO.getBuyLots();
+                BigDecimal buyProfit = chartVO.getBuyProfit() == null ?  BigDecimal.ZERO : chartVO.getBuyProfit();
+                BigDecimal sellNum = chartVO.getSellNum() == null ?  BigDecimal.ZERO : chartVO.getSellNum();
+                BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
+                BigDecimal sellProfit = chartVO.getSellProfit() == null ?  BigDecimal.ZERO : chartVO.getSellProfit();
+                  lots = o.getLots() == null ?lots :o.getLots().add(lots);
+                   profit = o.getProfit()  == null ? profit :profit.add(o.getProfit());
+                   num=o.getNum() == null ? num :num.add(o.getNum());
+                  buyNum = o.getBuyNum() == null ?  buyNum :buyNum.add(o.getBuyNum());
+                 buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
+                 buyProfit = o.getBuyProfit() == null ? buyProfit: buyProfit.add(o.getBuyProfit());
+                 sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
+                 sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
+                 sellProfit = o.getSellProfit() == null ?  sellProfit : sellProfit.add(o.getSellProfit());
+                chartVO.setLots(lots);
+                chartVO.setProfit(profit);
+                chartVO.setNum(num);
+                chartVO.setBuyNum(buyNum);
+                chartVO.setBuyLots(buyLots);
+                chartVO.setBuyProfit(buyProfit);
+                chartVO.setSellNum(sellNum);
+                chartVO.setSellLots(sellLots);
+                chartVO.setSellProfit(sellProfit);
+                symbolAnalysisDetails.add(o);
+                chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
+                symbolAnalysisMap.put(o.getSymbol(),chartVO);
+            });
+         /*   symbolAnalysis.forEach(o->{
                 List<FollowTraderAnalysisEntity> followTraderAnalysisEntities = symbolAnalysisMapDetails.get(o.getSymbol());
                 List<FollowTraderAnalysisEntity> sourceSymbolDetails=new ArrayList<>();
                Map<String, List<FollowTraderAnalysisEntityVO>>  symbolMap=new HashMap<>();
@@ -137,7 +183,8 @@ public class WebDashboardSymbolSocket {
                 o.setSymbolAnalysisDetails(sourceSymbolDetails);
                // o.setSourceSymbolDetails(sourceSymbolDetails);
               //  o.setSymbolMap(symbolMap);
-            });
+            });*/
+            Collection<SymbolChartVO> symbolAnalysis = symbolAnalysisMap.values();
             //仪表盘-头寸监控-统计
             json.put("symbolAnalysis",symbolAnalysis);
             //仪表盘-头寸监控-统计明细
@@ -161,23 +208,43 @@ public class WebDashboardSymbolSocket {
             String rankOrder = jsonObject.getString("rankOrder");
             Boolean rankAsc = jsonObject.getBoolean("rankAsc");
             String brokerName = jsonObject.getString("brokerName");
-
+           //账号监控数据
             String accountOrder = jsonObject.getString("accountOrder");
             Integer accountPage = jsonObject.getInteger("accountPage");
             Integer accountLimit = jsonObject.getInteger("accountLimit");
             Boolean accountAsc = jsonObject.getBoolean("accountAsc");
-
             String server = jsonObject.getString("server");
             String vpsName = jsonObject.getString("vpsName");
             String account = jsonObject.getString("account");
             String sourceAccount = jsonObject.getString("sourceAccount");
+            //头寸监控
+            //币种
+            String tsymbol = jsonObject.getString("tsymbol");
+            String taccount = jsonObject.getString("taccount");
+            String tvpsId = jsonObject.getString("tvpsId");
+            String tplatform = jsonObject.getString("tplatform");
+            String tsourceAccount = jsonObject.getString("tsourceAccount");
+            String tsourcePlatform = jsonObject.getString("tsourcePlatform");
+            Integer ttype = jsonObject.getInteger("ttype");
+            String torder = jsonObject.getString("torder");
+            Boolean tasc = jsonObject.getBoolean("tasc");
+            TraderAnalysisVO vo=new TraderAnalysisVO();
+            vo.setSymbol(tsymbol);
+            vo.setAccount(taccount);
+            vo.setVpsId(tvpsId);
+            vo.setPlatform(tplatform);
+            vo.setSourceAccount(tsourceAccount);
+            vo.setSourcePlatform(tsourcePlatform);
+            vo.setType(ttype);
+            vo.setOrder(torder);
+            vo.setAsc(tasc);
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
             if(st!=null){
                 st.cancel(true);
             }
             ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,accountLimit,server,vpsName,account,sourceAccount);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,accountLimit,server,vpsName,account,sourceAccount,vo);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     e.printStackTrace();
