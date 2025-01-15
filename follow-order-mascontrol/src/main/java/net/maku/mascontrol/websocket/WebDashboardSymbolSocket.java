@@ -130,6 +130,7 @@ public class WebDashboardSymbolSocket {
                     symbolAnalysisDetails=new ArrayList<>();
                 }
                BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
+                BigDecimal   position = chartVO.getPosition()  == null ? BigDecimal.ZERO :chartVO.getPosition();
                 BigDecimal   profit = chartVO.getProfit()  == null ? BigDecimal.ZERO :chartVO.getProfit();
                 BigDecimal   num=chartVO.getNum() == null ? BigDecimal.ZERO :chartVO.getNum();
                 BigDecimal  buyNum = chartVO.getBuyNum() == null ?  BigDecimal.ZERO : chartVO.getBuyNum();
@@ -147,6 +148,7 @@ public class WebDashboardSymbolSocket {
                  sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
                  sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
                  sellProfit = o.getSellProfit() == null ?  sellProfit : sellProfit.add(o.getSellProfit());
+                position = o.getPosition() == null ?  position : position.add(o.getPosition());
                 chartVO.setLots(lots);
                 chartVO.setProfit(profit);
                 chartVO.setNum(num);
@@ -156,6 +158,7 @@ public class WebDashboardSymbolSocket {
                 chartVO.setSellNum(sellNum);
                 chartVO.setSellLots(sellLots);
                 chartVO.setSellProfit(sellProfit);
+                chartVO.setPosition(position);
                 symbolAnalysisDetails.add(o);
                 chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
                 symbolAnalysisMap.put(o.getSymbol(),chartVO);
