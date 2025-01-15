@@ -722,9 +722,9 @@ public class FollowTestSpeedController {
                 .collect(Collectors.toList());
         for (FollowTestDetailVO entity : defaultServerNodes) {
             Integer vpsId = entity.getVpsId();
-            String serverName = entity.getServerName();
+            String serverNames = entity.getServerName();
                 // 删除键名
-                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverNames);
         }
 
         return Result.ok("删除成功");
