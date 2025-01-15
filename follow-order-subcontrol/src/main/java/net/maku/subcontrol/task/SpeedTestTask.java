@@ -62,8 +62,8 @@ public class SpeedTestTask {
                     //                    .filter(Objects::nonNull)  // 再次过滤掉可能的 null 值
                     .collect(Collectors.toList());
             //查看是哪个ip
-            String ip = "192.168.31.40";
-//            String ip = FollowConstant.LOCAL_HOST;
+//            String ip = "192.168.31.40";
+            String ip = FollowConstant.LOCAL_HOST;
             FollowVpsEntity vpsEntity = followVpsService.getVps(ip);
 
             // 调用现有测速逻辑
