@@ -75,6 +75,16 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         List<String> symbolList = orderInfo.getSymbolList();
         collectCopy.forEach(o-> {
             if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                //校验品种是否可以获取报价
+                try{
+                    //如果没有此品种匹配，校验是否可以获取报价
+                    if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getBrokerSymbol()))){
+                        //订阅
+                        trader.quoteClient.Subscribe(o.getBrokerSymbol());
+                    }
+                } catch (Exception e) {
+                    log.info("品种异常,不可下单{}+++++++账号{}" , o.getBrokerSymbol(),copier.getId());
+                }
                 symbolList.add(o.getBrokerSymbol());
             }
         });
@@ -244,7 +254,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
     private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
-        String mapKey = orderInfo.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
+        String mapKey = openOrderMapping.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip,String ex,Op op) {
