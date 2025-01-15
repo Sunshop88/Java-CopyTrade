@@ -702,6 +702,7 @@ public class FollowTestSpeedController {
         }
         log.info("删除的服务器名称为: {}", followTestServerVO.getServerName());
         followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName()));
+        followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, followTestServerVO.getServerName()));
         followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName()));
 
         //查询IsDefaultServer为0的数据
