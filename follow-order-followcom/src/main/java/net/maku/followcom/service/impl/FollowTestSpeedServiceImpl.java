@@ -129,7 +129,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
         // 创建一个固定大小的线程池
-//        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
+        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
 
 //        FollowTestServerQuery query = new FollowTestServerQuery();
 //        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
@@ -206,15 +206,15 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
             }
         }
 
-//        // 关闭线程池并等待所有任务完成
-//        executorService.shutdown();
-//        try {
-//            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
-//                executorService.shutdownNow();
-//            }
-//        } catch (InterruptedException e) {
-//            executorService.shutdownNow();
-//        }
+        // 关闭线程池并等待所有任务完成
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+        }
 
         return true; // 返回 true 表示所有任务提交成功
     }

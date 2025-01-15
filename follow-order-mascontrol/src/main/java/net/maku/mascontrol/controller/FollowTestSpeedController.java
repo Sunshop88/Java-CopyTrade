@@ -741,8 +741,6 @@ public class FollowTestSpeedController {
             if (count > 0){
                 return Result.error("该服务器节点账号数量不为0，无法删除");
             }
-            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
-//        }
         //删掉redis中该服务器的数据
         FollowTestServerQuery query = new FollowTestServerQuery();
         query.setServerName(vo.getServerName());
@@ -773,7 +771,6 @@ public class FollowTestSpeedController {
                         }))
                         .orElse(null);
                 log.info("fastestNode:{}" + fastestNode);
-                System.out.println("fastestNode:"+fastestNode);
                 if (fastestNode != null) {
                     // 修改 fastestNode 中 isDefaultServer 为 0
                     fastestNode.setIsDefaultServer(0);
