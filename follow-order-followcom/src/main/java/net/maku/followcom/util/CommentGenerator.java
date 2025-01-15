@@ -1,13 +1,15 @@
 package net.maku.followcom.util;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class CommentGenerator {
 
-    // 定义随机生成字符的集合
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final String NUMBERS = "0123456789";
-    private static final String SYMBOLS = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+    private static final String SYMBOLS = "!@#$%^&*()-_=+[]{}|;:',.<>?/";
 
     /**
      * 根据固定注释、注释类型和位数生成注释
@@ -22,23 +24,69 @@ public class CommentGenerator {
             return "";
         }
 
-        // 随机生成器
         SecureRandom random = new SecureRandom();
         StringBuilder randomPart = new StringBuilder();
 
-        // 根据注释类型生成随机字符
-        String characterPool = getCharacterPoolByType(commentType);
-        if (characterPool.isEmpty()) {
-            throw new IllegalArgumentException("无效的注释类型：" + commentType);
+        if (commentType == 2) {
+            randomPart.append(generateComplexRandomPart(digits, random));
+        } else {
+            String characterPool = getCharacterPoolByType(commentType);
+            if (characterPool.isEmpty()) {
+                throw new IllegalArgumentException("无效的注释类型：" + commentType);
+            }
+
+            for (int i = 0; i < digits; i++) {
+                int index = random.nextInt(characterPool.length());
+                randomPart.append(characterPool.charAt(index));
+            }
         }
 
-        for (int i = 0; i < digits; i++) {
-            int index = random.nextInt(characterPool.length());
-            randomPart.append(characterPool.charAt(index));
+        return fixedComment + randomPart;
+    }
+
+    /**
+     * 生成复杂的随机部分，满足注释类型为2时的规则。
+     *
+     * @param digits 位数
+     * @param random 随机生成器
+     * @return 符合要求的随机字符串
+     */
+    private static String generateComplexRandomPart(int digits, SecureRandom random) {
+        List<Character> result = new ArrayList<>();
+
+        if (digits == 2) {
+            result.add(randomCharFromPool(ALPHABET, random));
+            result.add(randomCharFromPool(NUMBERS, random));
+        } else if (digits >= 3) {
+            result.add(randomCharFromPool(ALPHABET, random));
+            result.add(randomCharFromPool(NUMBERS, random));
+            result.add(randomCharFromPool(SYMBOLS, random));
+
+            for (int i = 3; i < digits; i++) {
+                String combinedPool = ALPHABET + NUMBERS + SYMBOLS;
+                result.add(randomCharFromPool(combinedPool, random));
+            }
         }
 
-        // 组合生成的注释
-        return fixedComment  + randomPart;
+        Collections.shuffle(result, random);
+        StringBuilder resultBuilder = new StringBuilder();
+        for (char c : result) {
+            resultBuilder.append(c);
+        }
+
+        return resultBuilder.toString();
+    }
+
+    /**
+     * 从字符池中随机选取一个字符。
+     *
+     * @param pool   字符池
+     * @param random 随机生成器
+     * @return 随机字符
+     */
+    private static char randomCharFromPool(String pool, SecureRandom random) {
+        int index = random.nextInt(pool.length());
+        return pool.charAt(index);
     }
 
     /**
