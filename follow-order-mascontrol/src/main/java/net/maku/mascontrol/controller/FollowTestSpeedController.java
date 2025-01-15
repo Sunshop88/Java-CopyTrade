@@ -702,6 +702,15 @@ public class FollowTestSpeedController {
         }
         log.info("删除的服务器名称为: {}", followTestServerVO.getServerName());
         followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, followTestServerVO.getServerName()));
+        String serverName = followTestServerVO.getServerName();
+        // 检查是否存在指定名称的记录
+        boolean exists = followPlatformService.exists(new LambdaQueryWrapper<FollowPlatformEntity>()
+                .eq(FollowPlatformEntity::getServer, serverName));
+        if (exists) {
+            // 如果存在，则执行删除操作
+            followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getServer, serverName));
+        }
         followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName()));
 
         //查询IsDefaultServer为0的数据
@@ -713,9 +722,9 @@ public class FollowTestSpeedController {
                 .collect(Collectors.toList());
         for (FollowTestDetailVO entity : defaultServerNodes) {
             Integer vpsId = entity.getVpsId();
-            String serverName = entity.getServerName();
+            String serverNames = entity.getServerName();
                 // 删除键名
-                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverNames);
         }
 
         return Result.ok("删除成功");
@@ -732,8 +741,6 @@ public class FollowTestSpeedController {
             if (count > 0){
                 return Result.error("该服务器节点账号数量不为0，无法删除");
             }
-            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
-//        }
         //删掉redis中该服务器的数据
         FollowTestServerQuery query = new FollowTestServerQuery();
         query.setServerName(vo.getServerName());
@@ -764,7 +771,6 @@ public class FollowTestSpeedController {
                         }))
                         .orElse(null);
                 log.info("fastestNode:{}" + fastestNode);
-                System.out.println("fastestNode:"+fastestNode);
                 if (fastestNode != null) {
                     // 修改 fastestNode 中 isDefaultServer 为 0
                     fastestNode.setIsDefaultServer(0);
