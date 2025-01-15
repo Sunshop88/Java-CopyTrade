@@ -29,6 +29,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
+import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
@@ -63,7 +64,7 @@ public class TraderRepairManageWebSocket {
     private ScheduledFuture<?> scheduledFuture;
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
-
+    private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
 
 
     @OnOpen
@@ -127,10 +128,36 @@ public class TraderRepairManageWebSocket {
                 masterRepairVO.setMasterPlatform(trader.getPlatform());
                 //查询信号源下跟单的漏单信息
                 List<OrderRepairInfoVO> orderRepairInfoVOList = Collections.synchronizedList(new ArrayList<>());
-                Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
-                Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
-                Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());
-                slaveNum.updateAndGet(v -> v + salvenum);
+            //    Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
+             //  Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
+              //  Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());
+                Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
+                if(objectObjectMap!=null){
+                    objectObjectMap.values().forEach(obj->{
+                        JSONObject jsonObject = JSONObject.parseObject(obj.toString());
+                        Collection<Object> values = jsonObject.values();
+                        values.forEach(vs->{
+                                OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                                orderRepairInfoVOList.add(infoVO);
+                        });
+                       
+                    });
+                }
+
+                Map<Object, Object> closeMap = redisCache.hGetStrAll(Constant.REPAIR_CLOSE+trader.getAccount());
+                if(closeMap!=null){
+                    closeMap.values().forEach(obj->{
+                        JSONObject jsonObject = JSONObject.parseObject(obj.toString());
+                        Collection<Object> values = jsonObject.values();
+                        values.forEach(vs->{
+                            OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                            orderRepairInfoVOList.add(infoVO);
+                        });
+
+                    });
+                }
+
+                slaveNum.updateAndGet(v -> v + orderRepairInfoVOList.size());
                 log.info(trader.getAccount()+"漏单"+orderRepairInfoVOList.size());
                 if (!orderRepairInfoVOList.isEmpty()){
                     //排序
