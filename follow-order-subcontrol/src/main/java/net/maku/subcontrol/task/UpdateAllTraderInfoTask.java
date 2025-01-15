@@ -2,6 +2,9 @@ package net.maku.subcontrol.task;
 
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
+import cn.hutool.crypto.symmetric.AES;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -47,6 +50,9 @@ public class UpdateAllTraderInfoTask implements Runnable {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
     private final Integer flag;
+
+    private static final String MT4_KEY = "FOLLOWERSHIP4KEY";   // mt4AES加密秘钥
+
     public UpdateAllTraderInfoTask(Integer flag) {
         this.traderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
         this.leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
@@ -99,9 +105,14 @@ public class UpdateAllTraderInfoTask implements Runnable {
     }
 
     private void handleReconnectException(FollowTraderEntity trader, Exception e,AbstractApiTrader abstractApiTrader) {
+        // mt4解密
+        String mt4Password = trader.getPassword();
+        AES aes = new AES(Mode.ECB, Padding.ZeroPadding, MT4_KEY.getBytes());
+        String password = aes.decryptStr(mt4Password);
+
         log.error("[MT4{}:{}-{}-{}-{}-{}] 需要重连的异常：{}",
                 trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者",
-                trader.getId(), trader.getAccount(), trader.getServerName(), trader.getPlatform(), trader.getPassword(), e.getMessage());
+                trader.getId(), trader.getAccount(), trader.getServerName(), trader.getPlatform(), password, e.getMessage());
 
         traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate()
                 .set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue())
@@ -130,8 +141,13 @@ public class UpdateAllTraderInfoTask implements Runnable {
 
     private void reconnectWithNewNode(FollowTraderEntity trader, String serverNode,AbstractApiTrader abstractApiTrader) {
         try {
+            // mt4解密
+            String mt4Password = trader.getPassword();
+            AES aes = new AES(Mode.ECB, Padding.ZeroPadding, MT4_KEY.getBytes());
+            String password = aes.decryptStr(mt4Password);
+
             String[] split = serverNode.split(":");
-            QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), split[0], Integer.parseInt(split[1]));
+            QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), password, split[0], Integer.parseInt(split[1]));
             reconnect(trader, quoteClient,abstractApiTrader);
         } catch (Exception e) {
             if (e.getMessage().contains("Invalid account")) {
@@ -153,7 +169,12 @@ public class UpdateAllTraderInfoTask implements Runnable {
         for (FollowBrokeServerEntity server : serverEntityList) {
             QuoteClient quoteClient = null;
             try {
-                quoteClient = new QuoteClient(Integer.valueOf(trader.getAccount()), trader.getPassword(), server.getServerNode(), Integer.parseInt(server.getServerPort()));
+                // mt4解密
+                String mt4Password = trader.getPassword();
+                AES aes = new AES(Mode.ECB, Padding.ZeroPadding, MT4_KEY.getBytes());
+                String password = aes.decryptStr(mt4Password);
+
+                quoteClient = new QuoteClient(Integer.valueOf(trader.getAccount()), password, server.getServerNode(), Integer.parseInt(server.getServerPort()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

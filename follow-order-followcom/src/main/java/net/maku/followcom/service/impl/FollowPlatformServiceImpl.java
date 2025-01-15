@@ -2,6 +2,9 @@ package net.maku.followcom.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
+import cn.hutool.crypto.symmetric.AES;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -47,6 +50,9 @@ import java.util.List;
 public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao, FollowPlatformEntity> implements FollowPlatformService {
     private final TransService transService;
     private final RedisCache redisCache;
+
+    private static final String MT4_KEY = "FOLLOWERSHIP4KEY";   // mt4AES加密秘钥
+
     @Override
     public PageResult<FollowPlatformVO> page(FollowPlatformQuery query) {
         IPage<FollowPlatformEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -134,9 +140,14 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
             }
             if (ObjectUtil.isNotEmpty(serverNode)){
                 try {
+                    // mt4解密
+                    String mt4Password = trader.getPassword();
+                    AES aes = new AES(Mode.ECB, Padding.ZeroPadding, MT4_KEY.getBytes());
+                    String password = aes.decryptStr(mt4Password);
+
                     //处理节点格式
                     String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), password,  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
                     return quoteClient;
                 }catch (Exception e1){

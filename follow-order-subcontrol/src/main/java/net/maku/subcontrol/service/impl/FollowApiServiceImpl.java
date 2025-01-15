@@ -4,6 +4,8 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -20,10 +22,7 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.DateUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.Result;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.common.utils.*;
 import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.*;
@@ -68,6 +67,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowVpsService followVps;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
+
+    private static final String MT4_KEY = "FOLLOWERSHIP4KEY";   // mt4AES加密秘钥
 
     /**
      * 喊单账号保存
@@ -309,6 +310,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertSource(SourceInsertVO vo) {
+        // MT4密码AES加密
+        String password = vo.getPassword();
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, MT4_KEY, password, null));
+
         //参数转换，转成主表数据
         FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -331,6 +336,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateSource(SourceUpdateVO vo) {
+        // MT4密码AES加密
+        String password = vo.getPassword();
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, MT4_KEY, password, null));
+
         SourceEntity source = sourceService.getEntityById(vo.getId());
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
 
@@ -363,6 +372,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertFollow(FollowInsertVO vo) {
+        // MT4密码AES加密
+        String password = vo.getPassword();
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, MT4_KEY, password, null));
+
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -388,6 +401,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateFollow(FollowUpdateVO vo) {
+        // MT4密码AES加密
+        String password = vo.getPassword();
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, MT4_KEY, password, null));
+
         //查询从表
         FollowEntity followEntity = followService.getEntityById(vo.getId());
         //查询主表
