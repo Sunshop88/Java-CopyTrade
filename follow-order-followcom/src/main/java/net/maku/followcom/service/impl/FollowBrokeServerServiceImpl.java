@@ -19,6 +19,7 @@ import net.maku.followcom.vo.FollowBrokeServerExcelVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -102,7 +103,14 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
 
     @Override
     public List<FollowBrokeServerEntity> listByServerName(List<String> name) {
-        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getCreateTime));
+        if (name == null || name.isEmpty()) {
+            // 如果 name 列表为空，直接返回空列表
+            return Collections.emptyList();
+        } else {
+            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                    .in(FollowBrokeServerEntity::getServerName, name)
+                    .orderByAsc(FollowBrokeServerEntity::getCreateTime));
+        }
     }
 
     @Override

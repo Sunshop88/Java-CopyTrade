@@ -306,8 +306,9 @@ public class FollowSlaveController {
         List<String> servers = request.getServers();
         FollowVpsEntity vpsEntity = request.getVpsEntity();
         Integer testId = request.getTestId();
+        LocalDateTime measureTime = request.getMeasureTime();
             // 批量调用服务进行测速
-        boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId);
+        boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
         if (isSuccess) {
             return Result.ok();
         } else {

@@ -39,7 +39,7 @@ public class SpeedTestTask {
     @Autowired
     private FollowTestDetailService followTestDetailService;
     @Autowired
-    private  FollowSpeedSettingService followSpeedSettingService;
+    private FollowSpeedSettingService followSpeedSettingService;
     @Autowired
     private FollowTraderService followTraderService;
     @Autowired
@@ -49,7 +49,7 @@ public class SpeedTestTask {
     @Autowired
     private CopierApiTradersAdmin copierApiTradersAdmin;
 
-    @Scheduled(cron = "0 0 0 ? * SAT")
+    @Scheduled(cron = "0 0 14 ? * SAT")
     //    @Scheduled(cron = "*/60 * * * * ?")//测试
     public void weeklySpeedTest() throws IOException {
         log.info("开始执行每周测速任务...");
@@ -62,13 +62,15 @@ public class SpeedTestTask {
                     //                    .filter(Objects::nonNull)  // 再次过滤掉可能的 null 值
                     .collect(Collectors.toList());
             //查看是哪个ip
-            String ip = FollowConstant.LOCAL_HOST;
+            String ip = "192.168.31.40";
+//            String ip = FollowConstant.LOCAL_HOST;
             FollowVpsEntity vpsEntity = followVpsService.getVps(ip);
 
             // 调用现有测速逻辑
             FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
             overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
-            overallResult.setDoTime(new Date());
+//            overallResult.setDoTime(new Date());
+            overallResult.setDoTime(LocalDateTime.now());
             overallResult.setVersion(0);
             overallResult.setDeleted(0);
             overallResult.setCreator(SecurityUser.getUserId());
@@ -79,41 +81,46 @@ public class SpeedTestTask {
 
             FollowSpeedSettingEntity settingEntity = followSpeedSettingService.getById(1);
 
-            boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, overallResult.getId());
+            boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, overallResult.getId(),overallResult.getDoTime());
             if (isSuccess) {
                 overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+                if (settingEntity.getDefaultServerNode() == 0) {
 
-                List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
-                        new LambdaQueryWrapper<FollowTestDetailEntity>()
-                                .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
-                );
-                // 获取所有唯一的 VPS 名称
-                List<String> vpsNames = allEntities.stream()
-                        .map(FollowTestDetailEntity::getVpsName)
-                        .distinct()
-                        .collect(Collectors.toList());
-
-                vpsNames.forEach(vpsName -> {
-                    // 获取当前 VPS 名称下的所有服务器名称
-                    List<String> serverNames = allEntities.stream()
-                            .filter(entity -> vpsName.equals(entity.getVpsName()))
-                            .map(FollowTestDetailEntity::getServerName)
+                    List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
+                            new LambdaQueryWrapper<FollowTestDetailEntity>()
+                                    .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
+                    );
+                    // 获取所有唯一的 VPS 名称
+                    List<String> vpsNames = allEntities.stream()
+                            .map(FollowTestDetailEntity::getVpsName)
                             .distinct()
                             .collect(Collectors.toList());
-                    serverNames.forEach(serverName -> {
-                        // 查找当前 VPS 名称和服务器名称下的最小延迟
-                        FollowTestDetailEntity minLatencyEntity = allEntities.stream()
-                                .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-                                .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
-                                .orElse(null);
 
-                        if (ObjectUtil.isNotEmpty(minLatencyEntity) && settingEntity.getDefaultServerNode() == 0) {
-                            //查询vps名称所对应的id
-                            Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName)).getId();
-                            redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
-                        }
+                    vpsNames.forEach(vpsName -> {
+                        // 获取当前 VPS 名称下的所有服务器名称
+                        List<String> serverNames = allEntities.stream()
+                                .filter(entity -> vpsName.equals(entity.getVpsName()))
+                                .map(FollowTestDetailEntity::getServerName)
+                                .distinct()
+                                .collect(Collectors.toList());
+                        serverNames.forEach(serverName -> {
+                            // 查找当前 VPS 名称和服务器名称下的最小延迟
+                            FollowTestDetailEntity minLatencyEntity = allEntities.stream()
+                                    .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
+                                    .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+                                    .orElse(null);
+
+                            if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+                                //将最快的节点后面加上isDefaultServerNode =0
+                                minLatencyEntity.setIsDefaultServer(0);
+                                followTestDetailService.updateById(minLatencyEntity);
+                                //查询vps名称所对应的id
+                                Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getName, vpsName).eq(FollowVpsEntity::getDeleted, 0)).getId();
+                                redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
+                            }
+                        });
                     });
-                });
+                }
             } else {
                 // 删除当前vps相关的数据
                 followTestDetailService.deleteByTestId(overallResult.getId());
@@ -125,7 +132,7 @@ public class SpeedTestTask {
             followTestSpeedService.update(overallResult);
             log.info("每周测速任务执行完成...");
 
-            if (settingEntity.getDefaultServerNodeLogin() == 0){
+            if (settingEntity.getDefaultServerNodeLogin() == 0) {
                 LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
                 wrapper.eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue());
                 List<FollowTraderEntity> list = followTraderService.list(wrapper);
@@ -145,9 +152,9 @@ public class SpeedTestTask {
     }
 
     private Boolean reconnect(String traderId) {
-        Boolean result=false;
+        Boolean result = false;
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-        if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+        if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
             leaderApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -159,9 +166,9 @@ public class SpeedTestTask {
             } else {
                 log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
-                result=true;
+                result = true;
             }
-        }else {
+        } else {
             copierApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
@@ -173,7 +180,7 @@ public class SpeedTestTask {
             } else {
                 log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
-                result=true;
+                result = true;
             }
         }
 

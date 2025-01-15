@@ -29,7 +29,7 @@ public class FollowTestSpeedVO implements Serializable {
 	@Schema(description = "测速时间")
 	@NotNull(message = "测速时间不能为空")
 	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
-	private Date doTime;
+	private LocalDateTime doTime;
 
 	@Schema(description = "测试状态0-失败 1-进行中 2-成功")
 	@NotNull(message = "测试状态不能为空")
