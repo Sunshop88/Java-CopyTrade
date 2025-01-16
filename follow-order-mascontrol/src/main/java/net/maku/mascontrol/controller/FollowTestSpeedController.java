@@ -734,59 +734,102 @@ public class FollowTestSpeedController {
     @Operation(summary = "删除服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<String> deleteServerNode(@RequestBody FollowTestServerVO vo) {
-        for (String serverNode : vo.getServerNodeList()) {
-            long count = followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>()
-                    .eq(FollowTraderEntity::getLoginNode, serverNode)
-                    .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
-            if (count > 0){
-                return Result.error("该服务器节点账号数量不为0，无法删除");
+        if (vo.getServerNodeList().isEmpty()){
+            //删掉redis中该服务器的数据
+            FollowTestServerQuery query = new FollowTestServerQuery();
+            query.setServerName(vo.getServerName());
+            List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
+
+            //判断该服务器名称的账号数量是否为0
+            String accountCount = followTraderService.getAccountCount(vo.getServerName());
+            if (Integer.parseInt(accountCount) > 0) {
+                return Result.error("该服务器账号数量不为0，无法删除");
             }
-        //删掉redis中该服务器的数据
-        FollowTestServerQuery query = new FollowTestServerQuery();
-        query.setServerName(vo.getServerName());
-        List<FollowTestDetailVO> newlist = followTestDetailService.selectServer(query);   //查询IsDefaultServer为0的数据
-        List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
-                .filter(vos -> {
-                    Integer isDefaultServer = vos.getIsDefaultServer();
-                    return isDefaultServer != null && isDefaultServer == 0;
-                })
-                .collect(Collectors.toList());
+            log.info("删除的服务器名称为: {}", vo.getServerName());
+            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
+            String serverName = vo.getServerName();
+            // 检查是否存在指定名称的记录
+            boolean exists = followPlatformService.exists(new LambdaQueryWrapper<FollowPlatformEntity>()
+                    .eq(FollowPlatformEntity::getServer, serverName));
+            if (exists) {
+                // 如果存在，则执行删除操作
+                followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
+                        .eq(FollowPlatformEntity::getServer, serverName));
+            }
+            followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, vo.getServerName()));
 
-        for (FollowTestDetailVO entity : defaultServerNodes) {
-            Integer vpsId = entity.getVpsId();
-            String serverName = entity.getServerName();
-            String node = (String)redisUtil.hGet(Constant.VPS_NODE_SPEED + vpsId, serverName);
-            log.info("node:"+node);
-            if (serverNode.equals(node) && node != null){
+            //查询IsDefaultServer为0的数据
+            List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                    .filter(vos -> {
+                        Integer isDefaultServer = vos.getIsDefaultServer();
+                        return isDefaultServer != null && isDefaultServer == 0;
+                    })
+                    .collect(Collectors.toList());
+            for (FollowTestDetailVO entity : defaultServerNodes) {
+                Integer vpsId = entity.getVpsId();
+                String serverNames = entity.getServerName();
                 // 删除键名
-                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
-                // 找到速度最快的非默认服务器节点
+                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverNames);
+            }
 
-                FollowTestDetailVO fastestNode = newlist.stream()
-                        .filter(s -> s.getServerNode() != null && !s.getServerNode().equals(serverNode))
-                        .filter(s -> s.getSpeed() != null && s.getSpeed() > 0)
-                        .min(Comparator.comparingInt(s -> {
-                            Integer speed = s.getSpeed();
-                            return speed != null ? speed : Integer.MAX_VALUE; // 防止空指针异常
-                        }))
-                        .orElse(null);
-                log.info("fastestNode:{}" + fastestNode);
-                if (fastestNode != null) {
-                    // 修改 fastestNode 中 isDefaultServer 为 0
-                    fastestNode.setIsDefaultServer(0);
-                    // 更新数据库
-                    followTestDetailService.update(fastestNode);
-                    // 更新 Redis 中的节点为最快的节点
-                    redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, fastestNode.getServerName(), fastestNode.getServerNode());}
+            return Result.ok("删除成功");
+        }else {
+            for (String serverNode : vo.getServerNodeList()) {
+                long count = followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>()
+                        .eq(FollowTraderEntity::getLoginNode, serverNode)
+                        .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+                if (count > 0) {
+                    return Result.error("该服务器节点账号数量不为0，无法删除");
+                }
+                //删掉redis中该服务器的数据
+                FollowTestServerQuery query = new FollowTestServerQuery();
+                query.setServerName(vo.getServerName());
+                List<FollowTestDetailVO> newlist = followTestDetailService.selectServer(query);   //查询IsDefaultServer为0的数据
+                List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
+                        .filter(vos -> {
+                            Integer isDefaultServer = vos.getIsDefaultServer();
+                            return isDefaultServer != null && isDefaultServer == 0;
+                        })
+                        .collect(Collectors.toList());
+
+                for (FollowTestDetailVO entity : defaultServerNodes) {
+                    Integer vpsId = entity.getVpsId();
+                    String serverName = entity.getServerName();
+                    String node = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + vpsId, serverName);
+                    log.info("node:" + node);
+                    if (serverNode.equals(node) && node != null) {
+                        // 删除键名
+                        redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
+                        // 找到速度最快的非默认服务器节点
+
+                        FollowTestDetailVO fastestNode = newlist.stream()
+                                .filter(s -> s.getServerNode() != null && !s.getServerNode().equals(serverNode))
+                                .filter(s -> s.getSpeed() != null && s.getSpeed() > 0)
+                                .filter(s -> s.getVpsId().equals(vpsId))
+                                .min(Comparator.comparingInt(s -> {
+                                    Integer speed = s.getSpeed();
+                                    return speed != null ? speed : Integer.MAX_VALUE; // 防止空指针异常
+                                }))
+                                .orElse(null);
+                        log.info("fastestNode:{}" + fastestNode);
+                        if (fastestNode != null) {
+                            // 修改 fastestNode 中 isDefaultServer 为 0
+                            fastestNode.setIsDefaultServer(0);
+                            // 更新数据库
+                            followTestDetailService.update(fastestNode);
+                            // 更新 Redis 中的节点为最快的节点
+                            redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, fastestNode.getServerName(), fastestNode.getServerNode());
+                        }
 //                } else {
 //                    log.warn("未找到有效的最快节点");
 //                    continue;
 //                }
+                    }
+                }
+                followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
             }
+            return Result.ok("删除成功");
         }
-            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
-        }
-        return Result.ok("删除成功");
     }
 
     @GetMapping("pageSetting")
