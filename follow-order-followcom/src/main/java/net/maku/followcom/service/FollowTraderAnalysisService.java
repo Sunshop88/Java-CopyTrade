@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.SymbolAnalysisQuery;
@@ -38,4 +39,6 @@ public interface FollowTraderAnalysisService extends BaseService<FollowTraderAna
     List<SymbolChartVO> getSymbolChart();
 
     List<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo);
+
+    List<FollowPlatformEntity> searchPlatform(String brokerName);
 }

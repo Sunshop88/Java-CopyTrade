@@ -1,6 +1,7 @@
 package net.maku.followcom.dao;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.SymbolAnalysisQuery;
@@ -106,4 +107,16 @@ public interface FollowTraderAnalysisDao extends BaseDao<FollowTraderAnalysisEnt
             "</script>",
     })
     List<DashboardAccountDataVO> getAccountDataPage(@Param("query") DashboardAccountQuery query);
+    @Select({
+            " <script>",
+            "SELECT platform as server,broker_name as brokerName FROM follow_trader_analysis  f LEFT JOIN follow_platform p on f.platform_id=p.id ",
+            " <where>",
+            "<if test='brokerName != null and   brokerName.trim() != \"\" '>",
+            " AND  p.broker_name LIKE CONCAT('%',#{brokerName},'%')",
+            "</if>",
+            "</where>",
+            "GROUP BY platform,broker_name",
+            "</script>",
+    })
+    List<FollowPlatformEntity> searchPlatform(String brokerName);
 }
