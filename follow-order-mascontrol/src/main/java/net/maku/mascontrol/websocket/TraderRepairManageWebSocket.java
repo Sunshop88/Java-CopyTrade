@@ -127,11 +127,11 @@ public class TraderRepairManageWebSocket {
                 masterRepairVO.setMasterAccount(Integer.valueOf(trader.getAccount()));
                 masterRepairVO.setMasterPlatform(trader.getPlatform());
                 //查询信号源下跟单的漏单信息
-                List<OrderRepairInfoVO> orderRepairInfoVOList = Collections.synchronizedList(new ArrayList<>());
-            //    Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
-             //  Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
-              //  Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());
-                Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
+                List<OrderRepairInfoVO> orderRepairInfoVOList = Collections.synchronizedList(new ArrayList<>());/*
+             Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
+              Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
+              Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());*/
+              Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
                 if(objectObjectMap!=null){
                     objectObjectMap.values().forEach(obj->{
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
@@ -157,7 +157,8 @@ public class TraderRepairManageWebSocket {
                     });
                 }
 
-                slaveNum.updateAndGet(v -> v + orderRepairInfoVOList.size());
+               // slaveNum.updateAndGet(v -> v + salvenum);
+                slaveNum.updateAndGet(v -> v + objectObjectMap.size());
                 log.info(trader.getAccount()+"漏单"+orderRepairInfoVOList.size());
                 if (!orderRepairInfoVOList.isEmpty()){
                     //排序
