@@ -1597,8 +1597,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public String getAccountCount(String serverName) {
         long count = this.count(new LambdaQueryWrapper<FollowTraderEntity>()
-                .eq(FollowTraderEntity::getPlatform, serverName)
-                .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+                .eq(FollowTraderEntity::getPlatform, serverName));
         return String.valueOf(count);
     }
 
