@@ -1,10 +1,15 @@
 package net.maku.framework.common.cache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Component;
 
@@ -97,10 +102,16 @@ public class RedisCache {
         return hashOperations.entries(key);
     }
 
-    public Map<Object, Object> hGetStrAll(String key) {
+ public Map<Object, Object> hGetStrAll(String key) {
         redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
         redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+         ObjectMapper objectMapper = new ObjectMapper();
+         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+         objectMapper.registerModule(new JavaTimeModule());
+         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+       redisTemplate.setHashKeySerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+       redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         return entries;
     }
 

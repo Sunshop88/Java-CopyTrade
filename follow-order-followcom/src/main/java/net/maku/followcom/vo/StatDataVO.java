@@ -45,4 +45,16 @@ public class StatDataVO {
      * 跟单数量数量
      */
     private Integer followNum;
+    /**
+     * 持仓的 vps数量
+     * **/
+    private Integer vpsActiveNum;
+    /**
+     * 持仓的 信号源数量
+     * **/
+    private Integer sourceActiveNum;
+    /**
+     * 持仓的 跟单源数量
+     * **/
+    private Integer followActiveNum;
 }

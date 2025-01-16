@@ -79,7 +79,7 @@ public class DashboardServiceImpl implements DashboardService {
         }
         if(ObjectUtil.isNotEmpty(vo.getPlatform())){
             List<String> platforms = JSONArray.parseArray(vo.getPlatform(), String.class);
-            wrapper.in(ObjectUtil.isNotEmpty(platforms), FollowTraderAnalysisEntity::getSourcePlatform, platforms);
+            wrapper.in(ObjectUtil.isNotEmpty(platforms), FollowTraderAnalysisEntity::getPlatform, platforms);
         }
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getAccount()), FollowTraderAnalysisEntity::getAccount, vo.getAccount());
 
