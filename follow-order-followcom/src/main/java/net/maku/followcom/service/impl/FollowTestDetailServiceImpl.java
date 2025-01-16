@@ -437,9 +437,8 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
                 dataRow[index++] = vpsSpeeds.get(vpsName);
             }
-log.warn("dataRows：" + dataRow[3]);
+
             dataRows.add(dataRow);
-            log.warn("dataRow：" + Arrays.toString(dataRow));
         }
 
         // 排序
@@ -568,17 +567,20 @@ log.warn("dataRows：" + dataRow[3]);
         result.add(header.toArray(new String[0]));
 
         // 暂存每个 key 对应的速度数据
-        Map<String, Map<String, Double>> speedMap = new HashMap<>();
+        Map<String, Map<String, String>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
-            String key = detail.getServerNode();
+            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
             String vpsName = detail.getVpsName();
             Integer speed = detail.getSpeed();
+            Integer isDefault = detail.getIsDefaultServer();
+
             if (speed != null) {
-                double speedValue = speed.doubleValue();
+//                double speedValue = speed.doubleValue();
+                String speedValue = speed + "__" + isDefault;
                 speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
             } else {
                 // 处理 speed 为 null 的情况，例如记录日志或使用默认值
-                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
+                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 + "__" + isDefault); // 使用默认值 0.0
             }
         }
 
@@ -614,11 +616,10 @@ log.warn("dataRows：" + dataRow[3]);
             }
 
             // 填充速度数据
-            Map<String, Double> vpsSpeeds = speedMap.get(serverNode);
+            Map<String, String> vpsSpeeds = speedMap.get(serverNode);
             int index = 2;
             for (String vpsName : uniqueVpsNames) {
-                Double speed = vpsSpeeds != null ? vpsSpeeds.get(vpsName) : null;
-                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+                dataRow[index++] =  vpsSpeeds.get(vpsName);
             }
             dataRows.add(dataRow);
         }
