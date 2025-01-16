@@ -115,7 +115,7 @@ public class TraderRepairManageWebSocket {
             List<MasterRepairVO> masterRepairVOList=new ArrayList<>(List.of());
             List<FollowTraderEntity> list ;
             if (masterAccount!=0){
-                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
+                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).like(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }else{
                 list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }
@@ -131,6 +131,9 @@ public class TraderRepairManageWebSocket {
              Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
               Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
               Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());*/
+                if (slaveAccount!=0) {
+
+                }
               Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
                 if(objectObjectMap!=null){
                     objectObjectMap.values().forEach(obj->{
@@ -138,7 +141,14 @@ public class TraderRepairManageWebSocket {
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                            if (slaveAccount!=0) {
+                                if( infoVO.getSlaveAccount().contains("slaveAccount")){
+                                    orderRepairInfoVOList.add(infoVO);
+                                }
+                            }else{
                                 orderRepairInfoVOList.add(infoVO);
+                            }
+
                         });
                        
                     });
@@ -151,7 +161,14 @@ public class TraderRepairManageWebSocket {
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
-                            orderRepairInfoVOList.add(infoVO);
+                            if (slaveAccount!=0) {
+                                if( infoVO.getSlaveAccount().contains("slaveAccount")){
+                                    orderRepairInfoVOList.add(infoVO);
+                                }
+                            }else{
+                                orderRepairInfoVOList.add(infoVO);
+                            }
+
                         });
 
                     });
