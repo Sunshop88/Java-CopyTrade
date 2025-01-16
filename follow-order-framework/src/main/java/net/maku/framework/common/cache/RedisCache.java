@@ -111,7 +111,7 @@ public class RedisCache {
          objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
          objectMapper.registerModule(new JavaTimeModule());
          objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-     redisTemplate.setHashKeySerializer(RedisSerializer.string());
+        redisTemplate.setHashKeySerializer(RedisSerializer.string());
        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         return entries;
     }

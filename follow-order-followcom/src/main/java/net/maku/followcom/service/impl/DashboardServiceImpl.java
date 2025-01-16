@@ -86,6 +86,21 @@ public class DashboardServiceImpl implements DashboardService {
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getSourceAccount()), FollowTraderAnalysisEntity::getSourceAccount, vo.getSourceAccount());
 
         wrapper.eq(ObjectUtil.isNotEmpty(vo.getType()), FollowTraderAnalysisEntity::getType, vo.getType());
+        if(ObjectUtil.isNotEmpty(vo.getOrder())){
+            if(vo.getOrder().equals("position")){
+                wrapper.orderBy(true,vo.getAsc(),FollowTraderAnalysisEntity::getPosition);
+            }
+            if(vo.getOrder().equals("lots")){
+                wrapper.orderBy(true,vo.getAsc(),FollowTraderAnalysisEntity::getLots);
+            }
+            if(vo.getOrder().equals("num")){
+                wrapper.orderBy(true,vo.getAsc(),FollowTraderAnalysisEntity::getNum);
+            }
+            if(vo.getOrder().equals("profit")){
+                wrapper.orderBy(true,vo.getAsc(),FollowTraderAnalysisEntity::getProfit);
+            }
+
+        }
         return    followTraderAnalysisService.list(wrapper);
 
     }
