@@ -765,6 +765,7 @@ public class FollowTestSpeedController {
                 FollowTestDetailVO fastestNode = newlist.stream()
                         .filter(s -> s.getServerNode() != null && !s.getServerNode().equals(serverNode))
                         .filter(s -> s.getSpeed() != null && s.getSpeed() > 0)
+                        .filter(s -> s.getVpsId().equals(vpsId))
                         .min(Comparator.comparingInt(s -> {
                             Integer speed = s.getSpeed();
                             return speed != null ? speed : Integer.MAX_VALUE; // 防止空指针异常
