@@ -196,7 +196,7 @@ public class DashboardServiceImpl implements DashboardService {
                Collection<Object> values = stringObjectMap.values();
                values.forEach(o->{
                    FollowTraderAnalysisEntity analysis = JSONObject.parseObject(o.toString(), FollowTraderAnalysisEntity.class);
-                   Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount());
+                   Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId());
                    if(i==null){
                        RankVO rankVO = rankMap.get(analysis.getAccount());
                        if(rankVO==null){
