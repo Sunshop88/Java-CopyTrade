@@ -133,6 +133,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 //订阅
                 quoteClient.Subscribe(cachedCopierOrderInfo.getSlaveSymbol());
             }
+            ip=quoteClient.Host+":"+quoteClient.Port;
             double bid =0;
             double ask =0;
             int loopTimes=1;
@@ -156,7 +157,6 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             } else {
                 order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), ask, Integer.MAX_VALUE);
             }
-            ip=quoteClient.Host+":"+quoteClient.Port;
             long end = System.currentTimeMillis();
             log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
             LocalDateTime endTime = LocalDateTime.now();

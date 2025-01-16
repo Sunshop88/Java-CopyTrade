@@ -20,7 +20,7 @@ public class CommentGenerator {
      * @return 生成的注释
      */
     public static String generateComment(String fixedComment, Integer commentType, Integer digits) {
-        if (fixedComment == null || commentType == null || digits == null || digits <= 0) {
+        if (commentType == null || digits == null || digits <= 0) {
             return "";
         }
 
@@ -53,8 +53,9 @@ public class CommentGenerator {
      */
     private static String generateComplexRandomPart(int digits, SecureRandom random) {
         List<Character> result = new ArrayList<>();
-
-        if (digits == 2) {
+        if (digits == 1) {
+            result.add(randomCharFromPool(ALPHABET, random));
+        }else if (digits == 2) {
             result.add(randomCharFromPool(ALPHABET, random));
             result.add(randomCharFromPool(NUMBERS, random));
         } else if (digits >= 3) {

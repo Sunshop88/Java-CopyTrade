@@ -7,10 +7,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.service.FollowApiService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
@@ -87,9 +84,27 @@ public class FollowApiController {
         return  Result.ok(followApiService.orderCloseAll(vo)) ;
     }
 
+    @PostMapping("/orderCloseProfit")
+    @Operation(summary = "平仓盈利")
+    public Result<Boolean> orderCloseProfit(@RequestBody @Valid OrderCloseAllVO vo) {
+        return  Result.ok(followApiService.orderCloseProfit(vo)) ;
+    }
+
+    @PostMapping("/orderCloseLoss")
+    @Operation(summary = "平仓亏损")
+    public Result<Boolean> orderCloseLoss(@RequestBody @Valid OrderCloseAllVO vo) {
+        return  Result.ok(followApiService.orderCloseLoss(vo)) ;
+    }
+
     @PostMapping("/changepassword")
     @Operation(summary = "修改密码")
     public Result<Boolean> changePassword(@RequestBody @Valid ChangePasswordVO vo) {
         return  Result.ok(followApiService.changePassword(vo)) ;
+    }
+
+    @GetMapping("/symbolParams")
+    @Operation(summary = "品种规格")
+    public Result<ExternalSysmbolSpecificationVO> symbolParams(@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType) {
+        return  Result.ok(followApiService.symbolParams(accountId,accountType)) ;
     }
 }

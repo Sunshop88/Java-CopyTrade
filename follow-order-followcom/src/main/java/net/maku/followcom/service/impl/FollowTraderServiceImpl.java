@@ -491,7 +491,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //判断是否全平,全平走这里逻辑，处理完成退出
         if (vo.getIsCloseAll() == TraderRepairEnum.CLOSE.getType()) {
             //查找mt4订单
-            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            List<Order> openedOrders ;
+            if (ObjectUtil.isNotEmpty(vo.getProfitOrLoss())){
+                if (vo.getProfitOrLoss().equals(ProfitOrLossEnum.Profit.getValue())){
+                    openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Profit>0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                }else {
+                    openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order ->  order.Profit<0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                }
+            }else {
+                openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            }
             if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
                 openedOrders.forEach(order -> {
                     ThreadPoolUtils.execute(() -> {
@@ -843,6 +852,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
         followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                 .isNull(FollowOrderDetailEntity::getClosePriceSlip);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {

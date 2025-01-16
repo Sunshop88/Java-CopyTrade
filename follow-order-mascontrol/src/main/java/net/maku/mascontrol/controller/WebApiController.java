@@ -20,10 +20,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import javax.validation.Valid;
@@ -128,6 +125,20 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.ORDERCLOSEALL, vo);
     }
 
+    @PostMapping("/orderCloseProfit")
+    @Operation(summary = "平仓盈利")
+    public Result<String> orderCloseProfit(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERCLOSEPROFIT, vo);
+    }
+
+    @PostMapping("/orderCloseLoss")
+    @Operation(summary = "平仓亏损")
+    public Result<String> orderCloseLoss(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.ORDERCLOSELOSS, vo);
+    }
+
     @PostMapping("/changepassword")
     @Operation(summary = "修改密码")
     public Result<String> changePassword(@RequestBody @Valid ChangePasswordVO vo, HttpServletRequest req) {
@@ -135,6 +146,14 @@ public class WebApiController {
         String host = getServerIp(vo.getClientId());
         return sendRequest(req, host, FollowConstant.CHANGEPASSWORD, vo);
     }
+
+    @GetMapping("/symbolParams")
+    @Operation(summary = "品种规格")
+    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+        String host = getServerIp(clientId);
+        return  sendRequest(req, host, FollowConstant.CHANGEPASSWORD, accountId,accountType);
+    }
+
 
     /**
      * 根据vpsId查询vpsip

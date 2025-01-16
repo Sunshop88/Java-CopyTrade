@@ -55,6 +55,10 @@ public class FollowOrderSendCloseVO implements Serializable {
 
     @Schema(description = "手数")
     private double size;
+
     @Schema(description = "mt4全平1全平0或者空不是")
     private Integer isCloseAll;
+
+    @Schema(description = "mt4全平 0-盈利 1-亏损")
+    private Integer profitOrLoss;
 }

@@ -4,9 +4,10 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
@@ -15,21 +16,16 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.DateUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.Result;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.common.utils.*;
 import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.*;
-import online.mtapi.mt4.Exception.ConnectException;
-import online.mtapi.mt4.Exception.InvalidSymbolException;
-import online.mtapi.mt4.Exception.TimeoutException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,7 +181,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(vo.getPassword());
+            followTraderVo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -309,6 +305,9 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertSource(SourceInsertVO vo) {
+        // MT4密码AES加密
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
+
         //参数转换，转成主表数据
         FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -331,6 +330,9 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateSource(SourceUpdateVO vo) {
+        // MT4密码AES加密
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
+
         SourceEntity source = sourceService.getEntityById(vo.getId());
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
 
@@ -363,6 +365,9 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertFollow(FollowInsertVO vo) {
+        // MT4密码AES加密
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
+
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
         //根据平台id查询平台
@@ -388,6 +393,9 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateFollow(FollowUpdateVO vo) {
+        // MT4密码AES加密
+        vo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
+
         //查询从表
         FollowEntity followEntity = followService.getEntityById(vo.getId());
         //查询主表
@@ -402,7 +410,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
-        followUpdateSalveVo.setPassword(pwd);
+        followUpdateSalveVo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, pwd, null));
         // 判断主表如果保存失败，则返回false
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {
@@ -570,7 +578,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             //如果修改登录密码触发
             if (!vo.getInvestor()){
-                followTraderVO.setPassword(vo.getPassword());
+                followTraderVO.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
                 followTraderService.updateById(followTraderVO);
                 if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                     reconnect(followTraderVO.getId().toString());
@@ -579,11 +587,11 @@ public class FollowApiServiceImpl implements FollowApiService {
                 }
                 if(type==0){
                     source = sourceService.getEntityById(a.getId());
-                    source.setPassword(vo.getPassword());
+                    source.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
                     sourceService.edit(source);
                 }else{
                     //修改从数据库
-                    followEntity.setPassword(vo.getPassword());
+                    followEntity.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null));
                     followService.edit(followEntity);
                 }
 
@@ -592,6 +600,103 @@ public class FollowApiServiceImpl implements FollowApiService {
         });
 
         return true;
+    }
+
+    @Override
+    public Boolean orderCloseProfit(OrderCloseAllVO vo) {
+        List<AccountModelVO> account = vo.getAccount();
+        account.forEach(a->{
+            //0=喊单，1=跟单
+            Integer type = a.getType();
+            Long user=null;
+            Integer serverId=null;
+            if(type==0){
+                SourceEntity     source = sourceService.getEntityById(a.getId());
+                user=source.getUser();
+                serverId=source.getClientId();
+            }else{
+                //查询从表
+                FollowEntity   followEntity = followService.getEntityById(a.getId());
+                user=followEntity.getUser();
+                serverId=followEntity.getClientId();
+            }
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+            followOrderSendCloseVO.setFlag(1);
+            followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());
+            followOrderSendCloseVO.setTraderId(followTraderVO.getId());
+            followOrderSendCloseVO.setProfitOrLoss(ProfitOrLossEnum.Profit.getValue());
+            localOrderClose(followOrderSendCloseVO,followTraderVO);
+        });
+        return  true;
+    }
+
+    @Override
+    public Boolean orderCloseLoss(OrderCloseAllVO vo) {
+        List<AccountModelVO> account = vo.getAccount();
+        account.forEach(a->{
+            //0=喊单，1=跟单
+            Integer type = a.getType();
+            Long user=null;
+            Integer serverId=null;
+            if(type==0){
+                SourceEntity     source = sourceService.getEntityById(a.getId());
+                user=source.getUser();
+                serverId=source.getClientId();
+            }else{
+                //查询从表
+                FollowEntity   followEntity = followService.getEntityById(a.getId());
+                user=followEntity.getUser();
+                serverId=followEntity.getClientId();
+            }
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+            followOrderSendCloseVO.setFlag(1);
+            followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());
+            followOrderSendCloseVO.setTraderId(followTraderVO.getId());
+            followOrderSendCloseVO.setProfitOrLoss(ProfitOrLossEnum.Loss.getValue());
+            localOrderClose(followOrderSendCloseVO,followTraderVO);
+        });
+        return  true;
+    }
+
+    @Override
+    public ExternalSysmbolSpecificationVO symbolParams(Long accountId, Integer accountType) {
+        //0=喊单，1=跟单
+        Long user=null;
+        Integer serverId=null;
+        if(accountType==0){
+            SourceEntity     source = sourceService.getEntityById(accountId);
+            user=source.getUser();
+            serverId=source.getClientId();
+        }else{
+            //查询从表
+            FollowEntity   followEntity = followService.getEntityById(accountId);
+            user=followEntity.getUser();
+            serverId=followEntity.getClientId();
+        }
+        FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne = followSysmbolSpecificationService.getOne(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, user));
+        if (ObjectUtil.isEmpty(sysmbolSpecificationServiceOne)){
+            return null;
+        }
+        return convertExternal(sysmbolSpecificationServiceOne);
+    }
+
+    private ExternalSysmbolSpecificationVO convertExternal(FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne) {
+        ExternalSysmbolSpecificationVO externalSysmbolSpecificationVO = new ExternalSysmbolSpecificationVO();
+        externalSysmbolSpecificationVO.setContractSize(sysmbolSpecificationServiceOne.getContractSize());
+        externalSysmbolSpecificationVO.setDigits(sysmbolSpecificationServiceOne.getDigits());
+        externalSysmbolSpecificationVO.setSymbol(sysmbolSpecificationServiceOne.getSymbol());
+        externalSysmbolSpecificationVO.setLotMax(sysmbolSpecificationServiceOne.getMaxLot());
+        externalSysmbolSpecificationVO.setLotMin(sysmbolSpecificationServiceOne.getMinLot());
+        externalSysmbolSpecificationVO.setLotStep(sysmbolSpecificationServiceOne.getLotStep());
+        externalSysmbolSpecificationVO.setStopsLevel(sysmbolSpecificationServiceOne.getStopsLevel());
+        externalSysmbolSpecificationVO.setMarginCurrency(sysmbolSpecificationServiceOne.getMarginCurrency());
+        externalSysmbolSpecificationVO.setSwapLong(sysmbolSpecificationServiceOne.getSwapLong());
+        externalSysmbolSpecificationVO.setSwapShort(sysmbolSpecificationServiceOne.getSwapShort());
+        //默认0
+        externalSysmbolSpecificationVO.setSwapType(0);
+        return externalSysmbolSpecificationVO;
     }
 
     private Boolean localOrderClose(FollowOrderSendCloseVO vo, FollowTraderEntity followTraderVO){
@@ -614,7 +719,16 @@ public class FollowApiServiceImpl implements FollowApiService {
         //判断是否全平,全平走这里逻辑，处理完成退出
         if (vo.getIsCloseAll() == TraderRepairEnum.CLOSE.getType()) {
             //查找mt4订单
-            List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            List<Order> openedOrders ;
+            if (ObjectUtil.isNotEmpty(vo.getProfitOrLoss())){
+                if (vo.getProfitOrLoss().equals(ProfitOrLossEnum.Profit.getValue())){
+                    openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Profit>0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                }else {
+                    openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order ->  order.Profit<0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                }
+            }else {
+                openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+            }
             CountDownLatch countDownLatch = new CountDownLatch(openedOrders.size());
             for (int i = 0; i < openedOrders.size(); i++) {
                 Order order = openedOrders.get(i);
@@ -760,6 +874,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
         followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                 .isNull(FollowOrderDetailEntity::getClosePriceSlip);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
@@ -863,7 +978,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
-                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
             }
         }catch (RuntimeException e){
@@ -883,7 +998,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }
 

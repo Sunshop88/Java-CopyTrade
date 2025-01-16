@@ -18,6 +18,7 @@ import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
@@ -99,7 +100,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
-                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), AesUtils.decryptStr(leader.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -143,7 +144,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
-                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), AesUtils.decryptStr( leader.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -165,7 +166,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
                 String serverNode;
                 //优先查看平台默认节点
-                if (redisUtil.hVals(VPS_NODE_SPEED+leader.getServerId()).contains(leader.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform()))){
+                if (redisUtil.hKeys(VPS_NODE_SPEED+leader.getServerId()).contains(leader.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform()))){
                     serverNode = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform());
                 } else {
                     FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));

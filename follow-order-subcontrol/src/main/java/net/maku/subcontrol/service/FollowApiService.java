@@ -41,4 +41,10 @@ public interface FollowApiService {
     Boolean orderCloseAll( OrderCloseAllVO vo);
 
     Boolean changePassword( ChangePasswordVO vo);
+
+    Boolean orderCloseProfit(OrderCloseAllVO vo);
+
+    Boolean orderCloseLoss(OrderCloseAllVO vo);
+
+    ExternalSysmbolSpecificationVO symbolParams(Long accountId, Integer accountType);
 }
