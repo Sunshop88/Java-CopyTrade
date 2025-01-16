@@ -117,9 +117,11 @@ public class WebDashboardSymbolSocket {
             JSONObject json=new JSONObject();
             //仪表盘-头部统计
             json.put("statData",statData);
-
+            Map<String, Integer> map =new HashMap<>();
             details.forEach(o->{
                 SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
+
+
                 if(chartVO==null){
                     chartVO = new SymbolChartVO();
                     chartVO.setSymbol(o.getSymbol());
@@ -129,36 +131,39 @@ public class WebDashboardSymbolSocket {
                 if(symbolAnalysisDetails==null){
                     symbolAnalysisDetails=new ArrayList<>();
                 }
-               BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
-                BigDecimal   position = chartVO.getPosition()  == null ? BigDecimal.ZERO :chartVO.getPosition();
-                BigDecimal   profit = chartVO.getProfit()  == null ? BigDecimal.ZERO :chartVO.getProfit();
-                BigDecimal   num=chartVO.getNum() == null ? BigDecimal.ZERO :chartVO.getNum();
-                BigDecimal  buyNum = chartVO.getBuyNum() == null ?  BigDecimal.ZERO : chartVO.getBuyNum();
-                BigDecimal buyLots = chartVO.getBuyLots() == null ?  BigDecimal.ZERO : chartVO.getBuyLots();
-                BigDecimal buyProfit = chartVO.getBuyProfit() == null ?  BigDecimal.ZERO : chartVO.getBuyProfit();
-                BigDecimal sellNum = chartVO.getSellNum() == null ?  BigDecimal.ZERO : chartVO.getSellNum();
-                BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
-                BigDecimal sellProfit = chartVO.getSellProfit() == null ?  BigDecimal.ZERO : chartVO.getSellProfit();
-                  lots = o.getLots() == null ?lots :o.getLots().add(lots);
-                   profit = o.getProfit()  == null ? profit :profit.add(o.getProfit());
-                   num=o.getNum() == null ? num :num.add(o.getNum());
-                  buyNum = o.getBuyNum() == null ?  buyNum :buyNum.add(o.getBuyNum());
-                 buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
-                 buyProfit = o.getBuyProfit() == null ? buyProfit: buyProfit.add(o.getBuyProfit());
-                 sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
-                 sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
-                 sellProfit = o.getSellProfit() == null ?  sellProfit : sellProfit.add(o.getSellProfit());
-                position = o.getPosition() == null ?  position : position.add(o.getPosition());
-                chartVO.setLots(lots);
-                chartVO.setProfit(profit);
-                chartVO.setNum(num);
-                chartVO.setBuyNum(buyNum);
-                chartVO.setBuyLots(buyLots);
-                chartVO.setBuyProfit(buyProfit);
-                chartVO.setSellNum(sellNum);
-                chartVO.setSellLots(sellLots);
-                chartVO.setSellProfit(sellProfit);
-                chartVO.setPosition(position);
+                Integer i = map.get(o.getSymbol() + "_" + o.getAccount()+"_"+o.getPlatformId());
+                if(i==null){
+                   BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
+                    BigDecimal   position = chartVO.getPosition()  == null ? BigDecimal.ZERO :chartVO.getPosition();
+                    BigDecimal   profit = chartVO.getProfit()  == null ? BigDecimal.ZERO :chartVO.getProfit();
+                    BigDecimal   num=chartVO.getNum() == null ? BigDecimal.ZERO :chartVO.getNum();
+                    BigDecimal  buyNum = chartVO.getBuyNum() == null ?  BigDecimal.ZERO : chartVO.getBuyNum();
+                    BigDecimal buyLots = chartVO.getBuyLots() == null ?  BigDecimal.ZERO : chartVO.getBuyLots();
+                    BigDecimal buyProfit = chartVO.getBuyProfit() == null ?  BigDecimal.ZERO : chartVO.getBuyProfit();
+                    BigDecimal sellNum = chartVO.getSellNum() == null ?  BigDecimal.ZERO : chartVO.getSellNum();
+                    BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
+                    BigDecimal sellProfit = chartVO.getSellProfit() == null ?  BigDecimal.ZERO : chartVO.getSellProfit();
+                      lots = o.getLots() == null ?lots :o.getLots().add(lots);
+                       profit = o.getProfit()  == null ? profit :profit.add(o.getProfit());
+                       num=o.getNum() == null ? num :num.add(o.getNum());
+                      buyNum = o.getBuyNum() == null ?  buyNum :buyNum.add(o.getBuyNum());
+                     buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
+                     buyProfit = o.getBuyProfit() == null ? buyProfit: buyProfit.add(o.getBuyProfit());
+                     sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
+                     sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
+                     sellProfit = o.getSellProfit() == null ?  sellProfit : sellProfit.add(o.getSellProfit());
+                    position = o.getPosition() == null ?  position : position.add(o.getPosition());
+                    chartVO.setLots(lots);
+                    chartVO.setProfit(profit);
+                    chartVO.setNum(num);
+                    chartVO.setBuyNum(buyNum);
+                    chartVO.setBuyLots(buyLots);
+                    chartVO.setBuyProfit(buyProfit);
+                    chartVO.setSellNum(sellNum);
+                    chartVO.setSellLots(sellLots);
+                    chartVO.setSellProfit(sellProfit);
+                    chartVO.setPosition(position);
+                }
                 symbolAnalysisDetails.add(o);
                 chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
                 symbolAnalysisMap.put(o.getSymbol(),chartVO);
