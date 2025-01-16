@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.SymbolAnalysisQuery;
@@ -101,5 +102,10 @@ public class FollowTraderAnalysisServiceImpl extends BaseServiceImpl<FollowTrade
     @Override
     public List<DashboardAccountDataVO> getAccountDataPage( DashboardAccountQuery vo) {
         return baseMapper.getAccountDataPage(vo);
+    }
+
+    @Override
+    public List<FollowPlatformEntity> searchPlatform(String brokerName) {
+        return baseMapper.searchPlatform(brokerName);
     }
 }
