@@ -18,7 +18,6 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisCache;
@@ -100,11 +99,9 @@ public class UpdateAllTraderInfoTask implements Runnable {
     }
 
     private void handleReconnectException(FollowTraderEntity trader, Exception e,AbstractApiTrader abstractApiTrader) {
-        // mt4解密
-        String password = AesUtils.decryptStr(trader.getPassword());
         log.error("[MT4{}:{}-{}-{}-{}-{}] 需要重连的异常：{}",
                 trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者",
-                trader.getId(), trader.getAccount(), trader.getServerName(), trader.getPlatform(), password, e.getMessage());
+                trader.getId(), trader.getAccount(), trader.getServerName(), trader.getPlatform(), trader.getPassword(), e.getMessage());
 
         traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate()
                 .set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue())
@@ -134,7 +131,7 @@ public class UpdateAllTraderInfoTask implements Runnable {
     private void reconnectWithNewNode(FollowTraderEntity trader, String serverNode,AbstractApiTrader abstractApiTrader) {
         try {
             String[] split = serverNode.split(":");
-            QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()), split[0], Integer.parseInt(split[1]));
+            QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), split[0], Integer.parseInt(split[1]));
             reconnect(trader, quoteClient,abstractApiTrader);
         } catch (Exception e) {
             if (e.getMessage().contains("Invalid account")) {
@@ -156,7 +153,7 @@ public class UpdateAllTraderInfoTask implements Runnable {
         for (FollowBrokeServerEntity server : serverEntityList) {
             QuoteClient quoteClient = null;
             try {
-                quoteClient = new QuoteClient(Integer.valueOf(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()), server.getServerNode(), Integer.parseInt(server.getServerPort()));
+                quoteClient = new QuoteClient(Integer.valueOf(trader.getAccount()), trader.getPassword(), server.getServerNode(), Integer.parseInt(server.getServerPort()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

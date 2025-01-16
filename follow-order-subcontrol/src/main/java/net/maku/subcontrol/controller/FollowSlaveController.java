@@ -2,8 +2,6 @@ package net.maku.subcontrol.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.Mode;
-import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +14,6 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -109,7 +106,7 @@ public class FollowSlaveController {
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, AesUtils.aesEncryptHex(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY, vo.getPassword(), null), null));
+            followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -346,7 +343,7 @@ public class FollowSlaveController {
                 log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }
 

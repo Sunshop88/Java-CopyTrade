@@ -147,12 +147,12 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.CHANGEPASSWORD, vo);
     }
 
-    @GetMapping("/symbolParams")
-    @Operation(summary = "品种规格")
-    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
-        String host = getServerIp(clientId);
-        return  sendRequest(req, host, FollowConstant.CHANGEPASSWORD, accountId,accountType);
-    }
+//    @GetMapping("/symbolParams")
+//    @Operation(summary = "品种规格")
+//    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+//        String host = getServerIp(clientId);
+//        return  sendRequest(req, host, FollowConstant.CHANGEPASSWORD, accountId,accountType);
+//    }
 
 
     /**

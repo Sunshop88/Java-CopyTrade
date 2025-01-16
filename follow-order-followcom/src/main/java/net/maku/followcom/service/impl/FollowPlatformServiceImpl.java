@@ -12,7 +12,6 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
@@ -139,7 +138,7 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
                 try {
                     //处理节点格式
                     String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()),  split[0], Integer.valueOf(split[1]));
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
                     return quoteClient;
                 }catch (Exception e1){

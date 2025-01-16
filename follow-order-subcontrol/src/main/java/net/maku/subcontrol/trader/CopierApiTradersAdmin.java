@@ -17,7 +17,6 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
@@ -39,7 +38,6 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static net.maku.framework.common.constant.Constant.VPS_NODE_SPEED;
 import static online.mtapi.mt4.Op.Buy;
 import static online.mtapi.mt4.Op.Sell;
 
@@ -94,7 +92,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
                     } else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), AesUtils.decryptStr(slave.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -138,7 +136,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(copier);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
                     } else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), AesUtils.decryptStr(copier.getPassword()) , copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                         if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
                             setTraderOrder(copierApiTrader);
@@ -213,7 +211,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
                 String serverNode;
                 //优先查看平台默认节点
-                if (redisUtil.hKeys(VPS_NODE_SPEED+copier.getServerId()).contains(copier.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + copier.getServerId(), copier.getPlatform()))){
+                if (redisUtil.hKeys(Constant.VPS_NODE_SPEED+copier.getServerId()).contains(copier.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + copier.getServerId(), copier.getPlatform()))){
                     serverNode = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + copier.getServerId(), copier.getPlatform());
                 }  else {
                     FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, copier.getPlatform()));
