@@ -263,7 +263,7 @@ public class FollowTestSpeedController {
                                 .eq(FollowVpsEntity::getName, vpsName)
                                 .eq(FollowVpsEntity::getDeleted, 0)
                                 .last("LIMIT 1")).getId();
-                        redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
+                        redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
                     }
                 });
             });
@@ -538,7 +538,7 @@ public class FollowTestSpeedController {
             String serverName = entity.getServerName();
             String serverNode = entity.getServerNode();
 
-            redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, serverName, serverNode, 0);
+            redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, serverName, serverNode);
         }
 
         List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(new FollowTestServerQuery());
@@ -590,7 +590,7 @@ public class FollowTestSpeedController {
 
             if (value != null) {
                 // 使用新键名设置相同的值
-                redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, newServerName, value, 0);
+                redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, newServerName, value);
                 // 删除旧键名
                 redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, oldServerName);
             }
@@ -777,7 +777,7 @@ public class FollowTestSpeedController {
                     // 更新数据库
                     followTestDetailService.update(fastestNode);
                     // 更新 Redis 中的节点为最快的节点
-                    redisUtil.hset(Constant.VPS_NODE_SPEED + vpsId, fastestNode.getServerName(), fastestNode.getServerNode(),0);}
+                    redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, fastestNode.getServerName(), fastestNode.getServerNode());}
 //                } else {
 //                    log.warn("未找到有效的最快节点");
 //                    continue;
@@ -819,7 +819,7 @@ public class FollowTestSpeedController {
     @PostMapping("redis")
     @Operation(summary = "redis测试")
     public Result<String> redis(@RequestBody FollowTestDetailVO vo){
-        redisUtil.hset(Constant.VPS_NODE_SPEED + vo.getVpsId(), vo.getServerName(), vo.getServerNode(), 0);
+        redisUtil.hSet(Constant.VPS_NODE_SPEED + vo.getVpsId(), vo.getServerName(), vo.getServerNode());
         return Result.ok("redis测试成功");
     }
 }
