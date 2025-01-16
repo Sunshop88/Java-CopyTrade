@@ -82,10 +82,10 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         //订阅
                         trader.quoteClient.Subscribe(o.getBrokerSymbol());
                     }
+                    symbolList.add(o.getBrokerSymbol());
                 } catch (Exception e) {
                     log.info("品种异常,不可下单{}+++++++账号{}" , o.getBrokerSymbol(),copier.getId());
                 }
-                symbolList.add(o.getBrokerSymbol());
             }
         });
         if (ObjectUtil.isNotEmpty(collectCopy)){
