@@ -756,7 +756,7 @@ public class FollowTestSpeedController {
             Integer vpsId = entity.getVpsId();
             String serverName = entity.getServerName();
             String node = (String)redisUtil.hGet(Constant.VPS_NODE_SPEED + vpsId, serverName);
-//            System.out.println("node:"+node);
+            log.info("node:"+node);
             if (serverNode.equals(node) && node != null){
                 // 删除键名
                 redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverName);
