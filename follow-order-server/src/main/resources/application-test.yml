@@ -34,9 +34,9 @@ spring:
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://39.99.136.49:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://66.112.212.130:3306/cpoier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: xizcJWmXFkB5f4fm
+          password: 7a6d5cbcdcdc8c85
   mqtt:
     host: tcp://localhost:1883
     username: maku

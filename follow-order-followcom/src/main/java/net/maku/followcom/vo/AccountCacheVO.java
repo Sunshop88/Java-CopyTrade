@@ -19,8 +19,8 @@ public class AccountCacheVO {
     @JsonProperty("Key")
     private String key;
     //  id+user
-    @JsonProperty("group")
-    private String Group;
+    @JsonProperty("Group")
+    private String group;
     //  SOURCE喊单 FOLLOW跟单
     @JsonProperty("Type")
     private String type;
@@ -41,7 +41,7 @@ public class AccountCacheVO {
     private String platformName;
     //  平台
     @JsonProperty("User")
-    private String user;
+    private Integer user;
     //余额
     @JsonProperty(value = "Balance")
     private BigDecimal balance;

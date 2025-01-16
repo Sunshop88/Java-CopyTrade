@@ -10,9 +10,9 @@ spring:
         #timeout: 6000ms  # 连接超时时长（毫秒）
       redis2:
         database: 3
-        host: 98.142.143.187
+        host: 66.112.212.130
         port: 6379
-        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+        password: kU7c7E2rhbRA
 
   kafka:
     bootstrap-servers: 127.0.0.1:9092
@@ -48,9 +48,9 @@ spring:
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://98.142.143.187:3306/copier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://66.112.212.130:3306/copier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
-          password: 7b358d806f6f444d
+          password: 7a6d5cbcdcdc8c85
   mqtt:
     host: tcp://localhost:1883
     username: maku

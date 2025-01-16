@@ -30,9 +30,9 @@ public class RedisUtil {
     @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
 
-//    @Autowired
-//    @Qualifier("redisTemplate2")
-//    private RedisTemplate<String, Object> redisTemplate2;
+    @Autowired
+    @Qualifier("redisTemplate2")
+    private RedisTemplate<String, Object> redisTemplate2;
 
     /**
      * 指定缓存失效时间
@@ -921,18 +921,18 @@ public class RedisUtil {
      * @param value 值
      * @return true成功 false失败
      */
-//    public boolean setSlaveRedis(String key, Object value) {
-//        try {
-//            redisTemplate2.setValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-//            redisTemplate2.afterPropertiesSet();
-//            redisTemplate2.opsForValue().set(key, value);
-//            return true;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return false;
-//        }
-//
-//    }
+    public boolean setSlaveRedis(String key, Object value) {
+        try {
+            redisTemplate2.setValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+            redisTemplate2.afterPropertiesSet();
+            redisTemplate2.opsForValue().set(key, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+    }
 
 //4	ZINCRBY key increment member
 //    有序集合中对指定成员的分数加上增量 increment

@@ -82,6 +82,11 @@ public class FollowConstant {
     public static String FOLLOW_INSERT = "/api/follow/insert";
     public static String FOLLOW_UPDATE = "/api/follow/update";
     public static String FOLLOW_DEL = "/api/follow/delete";
+    public static String ORDERHISTORY = "/api/orderCloseList";
+    public static String ORDERSEND = "/api/orderSend";
+    public static String ORDERCLOSE = "/api/orderclose";
+    public static String ORDERCLOSEALL = "/api/orderCloseAll";
+    public static String CHANGEPASSWORD = "/api/changepassword";
 
 
 }

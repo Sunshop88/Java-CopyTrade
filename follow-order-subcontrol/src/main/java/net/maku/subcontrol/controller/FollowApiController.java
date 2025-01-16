@@ -21,8 +21,9 @@ public class FollowApiController {
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
-    public Result<Boolean> insertSource(@RequestBody @Valid SourceInsertVO vo) {
-        return followApiService.insertSource(vo) ? Result.ok() : Result.error();
+    public Result<Integer> insertSource(@RequestBody @Valid SourceInsertVO vo) {
+        Integer id = followApiService.insertSource(vo);
+        return id!=null ? Result.ok(id) : Result.error();
     }
 
     @PostMapping("/source/update")
@@ -41,9 +42,10 @@ public class FollowApiController {
 
     @PostMapping("/follow/insert")
     @Operation(summary = "跟单添加")
-    public Result<String> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
+    public Result<Integer> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
+        Integer id = followApiService.insertFollow(vo);
+        return id!=null ? Result.ok(id) : Result.error();
 
-        return followApiService.insertFollow(vo) ? Result.ok() : Result.error();
     }
 
     @PostMapping("/follow/update")
@@ -60,11 +62,34 @@ public class FollowApiController {
         return followApiService.delFollow(vo) ? Result.ok() : Result.error();
     }
 
-    @PostMapping("/active/list")
+    @PostMapping("/orderCloseList")
     @Operation(summary = "查询平仓订单")
-    public Result<String> activeList(@RequestBody @Valid SourceDelVo vo) {
+    public Result<OrderClosePageVO> orderCloseList(@RequestBody @Valid OrderHistoryVO vo) {
 
-        return followApiService.delFollow(vo) ? Result.ok() : Result.error();
+        return  Result.ok(followApiService.orderCloseList(vo)) ;
     }
 
+    @PostMapping("/orderSend")
+    @Operation(summary = "开仓")
+    public Result<Boolean> orderSend(@RequestBody @Valid OrderSendVO vo) {
+
+        return  Result.ok(followApiService.orderSend(vo)) ;
+    }
+
+    @PostMapping("/orderclose")
+    @Operation(summary = "平仓")
+    public Result<Boolean> orderClose(@RequestBody @Valid OrderCloseVO vo) {
+        return  Result.ok(followApiService.orderClose(vo)) ;
+    }
+    @PostMapping("/orderCloseAll")
+    @Operation(summary = "平仓")
+    public Result<Boolean> orderCloseAll(@RequestBody @Valid OrderCloseAllVO vo) {
+        return  Result.ok(followApiService.orderCloseAll(vo)) ;
+    }
+
+    @PostMapping("/changepassword")
+    @Operation(summary = "修改密码")
+    public Result<Boolean> changePassword(@RequestBody @Valid ChangePasswordVO vo) {
+        return  Result.ok(followApiService.changePassword(vo)) ;
+    }
 }

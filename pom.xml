@@ -323,6 +323,13 @@
                 <profile.name>test</profile.name>
             </properties>
         </profile>
+        <!-- test -->
+        <profile>
+            <id>test-pt</id>
+            <properties>
+                <profile.name>test-pt</profile.name>
+            </properties>
+        </profile>
         <!-- uat -->
         <profile>
             <id>uat</id>

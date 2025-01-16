@@ -136,10 +136,10 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             case PendingFill:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 ThreadPoolUtils.getExecutor().execute(()->{
-                        double equity = 0.0;
-                        try {
-                            equity = abstractApiTrader.quoteClient.AccountEquity();
-                        } catch (Exception e) {
+                    double equity = 0.0;
+                    try {
+                        equity = abstractApiTrader.quoteClient.AccountEquity();
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                     EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, equity, currency, LocalDateTime.now());

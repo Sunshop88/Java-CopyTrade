@@ -111,7 +111,7 @@ public class FollowSlaveController {
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(followVarietyService.getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
@@ -186,7 +186,7 @@ public class FollowSlaveController {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
-                vo.setTemplateId(followVarietyService.getLatestTemplateId());
+                vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
             followTraderService.updateById(followTraderEntity);
