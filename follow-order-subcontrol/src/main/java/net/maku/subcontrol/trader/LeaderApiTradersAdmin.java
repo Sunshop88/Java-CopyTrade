@@ -165,7 +165,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
                 String serverNode;
                 //优先查看平台默认节点
-                if (redisUtil.hVals(VPS_NODE_SPEED+leader.getServerId()).contains(leader.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform()))){
+                if (redisUtil.hKeys(VPS_NODE_SPEED+leader.getServerId()).contains(leader.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform()))){
                     serverNode = (String) redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform());
                 } else {
                     FollowPlatformEntity followPlatformServiceOne = followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, leader.getPlatform()));
