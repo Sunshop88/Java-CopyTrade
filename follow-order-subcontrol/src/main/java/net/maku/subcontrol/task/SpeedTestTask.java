@@ -81,7 +81,7 @@ public class SpeedTestTask {
 
             FollowSpeedSettingEntity settingEntity = followSpeedSettingService.getById(1);
 
-            boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, overallResult.getId(),overallResult.getDoTime());
+            boolean isSuccess = followTestSpeedService.measureTask(servers, vpsEntity, overallResult.getId(),overallResult.getDoTime());
             if (isSuccess) {
                 overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
                 if (settingEntity.getDefaultServerNode() == 0) {

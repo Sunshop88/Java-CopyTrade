@@ -39,4 +39,5 @@ public interface FollowTestSpeedService extends BaseService<FollowTestSpeedEntit
 
     boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime);
 
+    boolean measureTask(List<String> servers, FollowVpsEntity vpsEntity, Integer id, LocalDateTime doTime);
 }
