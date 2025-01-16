@@ -376,12 +376,13 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             //获取账号数量
 //            dataRow[2] = followTraderService.getAccountCount(serverName);
             dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName) : "0";
+            log.warn("账号数量：" + accountCountMap.get(serverName));
 
             //非默认节点账号数量
             //查询该severName默认节点
             String defaultServerNode = defaultServerNodeMap.get(serverName) != null ? defaultServerNodeMap.get(serverName) : "null";
 
-            dataRow[3] = followTraderService.getDefaultAccountCount(serverName, defaultServerNode);
+//            dataRow[3] = followTraderService.getDefaultAccountCount(serverName, defaultServerNode);
             Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
             Integer defaultAccountCount = defaultAccountCountMap.get(serverName.concat(defaultServerNode)) != null ? defaultAccountCountMap.get(serverName.concat(defaultServerNode)) : 0;
             dataRow[4] = String.valueOf(Math.max(serverNodeCount - defaultAccountCount, 0));
@@ -436,74 +437,75 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
                 dataRow[index++] = vpsSpeeds.get(vpsName);
             }
-
+log.warn("dataRows：" + dataRow[3]);
             dataRows.add(dataRow);
+            log.warn("dataRow：" + Arrays.toString(dataRow));
         }
 
-        // 排序
-        String order = query.getOrder();
-        boolean isAsc = query.isAsc();
-        if ("prop3".equals(order)) {
-            // 账号数量排序
-            dataRows.sort((row1, row2) -> {
-                // 如果 row1 或 row2 为 null，直接返回比较结果
-                if (row1 == null && row2 == null) return 0;
-                if (row1 == null) return -1;
-                if (row2 == null) return 1;
-                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
-                int value1 = Integer.parseInt(row1[3]);
-                int value2 = Integer.parseInt(row2[3]);
-//                return isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
-                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
-                if (comparisonResult != 0) {
-                    return comparisonResult;
-                }
-                // 服务器名称排序
-                return compareStrings(row1[1], row2[1]);
-            });
-        } else if ("prop4".equals(order)) {
-            // 非默认节点账号数量排序
-            dataRows.sort((row1, row2) -> {
-                // 如果 row1 或 row2 为 null，直接返回比较结果
-                if (row1 == null && row2 == null) return 0;
-                if (row1 == null) return -1;
-                if (row2 == null) return 1;
-                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
-                int value1 = Integer.parseInt(row1[4]);
-                int value2 = Integer.parseInt(row2[4]);
-//                return Integer.compare(value2, value1); // 倒序：value2 排在前面
-                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
-                if (comparisonResult != 0) {
-                    return comparisonResult;
-                }
-                // 服务器名称排序
-                return compareStrings(row1[1], row2[1]);
-            });
-        } else if ("prop1".equals(order)) {
-            // 服务器名称排序
-            dataRows.sort(new Comparator<String[]>() {
-                @Override
-                public int compare(String[] row1, String[] row2) {
-                    // 如果 row1 或 row2 为 null，直接返回比较结果
-                    if (row1 == null && row2 == null) return 0;
-                    if (row1 == null) return -1;
-                    if (row2 == null) return 1;
-                    return isAsc ? compareStrings(row1[1], row2[1]) : compareStrings(row2[1], row1[1]);
-                }
-            });
-        } else {
-            // 券商名称排序
-            dataRows.sort(new Comparator<String[]>() {
-                @Override
-                public int compare(String[] row1, String[] row2) {
-                    // 如果 row1 或 row2 为 null，直接返回比较结果
-                    if (row1 == null && row2 == null) return 0;
-                    if (row1 == null) return -1;
-                    if (row2 == null) return 1;
-                    return isAsc ? compareStrings(row1[0], row2[0]) : compareStrings(row2[0], row1[0]);
-                }
-            });
-        }
+//        // 排序
+//        String order = query.getOrder();
+//        boolean isAsc = query.isAsc();
+//        if ("prop3".equals(order)) {
+//            // 账号数量排序
+//            dataRows.sort((row1, row2) -> {
+//                // 如果 row1 或 row2 为 null，直接返回比较结果
+//                if (row1 == null && row2 == null) return 0;
+//                if (row1 == null) return -1;
+//                if (row2 == null) return 1;
+//                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+//                int value1 = Integer.parseInt(row1[3]);
+//                int value2 = Integer.parseInt(row2[3]);
+////                return isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
+//                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
+//                if (comparisonResult != 0) {
+//                    return comparisonResult;
+//                }
+//                // 服务器名称排序
+//                return compareStrings(row1[1], row2[1]);
+//            });
+//        } else if ("prop4".equals(order)) {
+//            // 非默认节点账号数量排序
+//            dataRows.sort((row1, row2) -> {
+//                // 如果 row1 或 row2 为 null，直接返回比较结果
+//                if (row1 == null && row2 == null) return 0;
+//                if (row1 == null) return -1;
+//                if (row2 == null) return 1;
+//                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+//                int value1 = Integer.parseInt(row1[4]);
+//                int value2 = Integer.parseInt(row2[4]);
+////                return Integer.compare(value2, value1); // 倒序：value2 排在前面
+//                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
+//                if (comparisonResult != 0) {
+//                    return comparisonResult;
+//                }
+//                // 服务器名称排序
+//                return compareStrings(row1[1], row2[1]);
+//            });
+//        } else if ("prop1".equals(order)) {
+//            // 服务器名称排序
+//            dataRows.sort(new Comparator<String[]>() {
+//                @Override
+//                public int compare(String[] row1, String[] row2) {
+//                    // 如果 row1 或 row2 为 null，直接返回比较结果
+//                    if (row1 == null && row2 == null) return 0;
+//                    if (row1 == null) return -1;
+//                    if (row2 == null) return 1;
+//                    return isAsc ? compareStrings(row1[1], row2[1]) : compareStrings(row2[1], row1[1]);
+//                }
+//            });
+//        } else {
+//            // 券商名称排序
+//            dataRows.sort(new Comparator<String[]>() {
+//                @Override
+//                public int compare(String[] row1, String[] row2) {
+//                    // 如果 row1 或 row2 为 null，直接返回比较结果
+//                    if (row1 == null && row2 == null) return 0;
+//                    if (row1 == null) return -1;
+//                    if (row2 == null) return 1;
+//                    return isAsc ? compareStrings(row1[0], row2[0]) : compareStrings(row2[0], row1[0]);
+//                }
+//            });
+//        }
 
         // 计算分页的开始和结束索引
         int page = query.getPage();

@@ -128,4 +128,8 @@ public interface Constant {
      *
      */
     String STATISTICS_SYMBOL_INFO="statistics:symbol:info";
+   //补单的
+    public static final String     REPAIR_SEND="repair:send:";
+    //平仓的
+    public static final String     REPAIR_CLOSE="repair:close:";
 }
