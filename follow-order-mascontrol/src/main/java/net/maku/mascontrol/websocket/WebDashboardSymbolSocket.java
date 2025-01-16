@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * Author:  zsd
@@ -194,6 +195,54 @@ public class WebDashboardSymbolSocket {
             });*/
             Collection<SymbolChartVO> symbolAnalysis = symbolAnalysisMap.values();
             //仪表盘-头寸监控-统计
+            if(ObjectUtil.isNotEmpty(analysisVO.getOrder())){
+                if(analysisVO.getOrder().equals("position")){
+                    if(analysisVO.getAsc()){
+                        symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                            return o1.getPosition().compareTo(o2.getPosition());
+                        }).toList();
+                    }else{
+                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o2.getPosition().compareTo(o1.getPosition());
+                        }).toList();
+                    }
+                }
+                if(analysisVO.getOrder().equals("lots")){
+                    if(analysisVO.getAsc()){
+                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o1.getLots().compareTo(o2.getLots());
+                        }).toList();
+                    }else{
+                        symbolAnalysis =  symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o2.getLots().compareTo(o1.getLots());
+                        }).toList();
+                    }
+                }
+                if(analysisVO.getOrder().equals("num")){
+                    if(analysisVO.getAsc()){
+                        symbolAnalysis =   symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o1.getNum().compareTo(o2.getNum());
+                        }).toList();
+                    }else{
+                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o2.getNum().compareTo(o1.getNum());
+                        }).toList();
+                    }
+                }
+                if(analysisVO.getOrder().equals("profit")){
+                    if(analysisVO.getAsc()){
+                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o1.getProfit().compareTo(o2.getProfit());
+                        }).toList();
+                    }else{
+                        symbolAnalysis =symbolAnalysis.stream().sorted((o1,o2)->{
+                            return    o2.getProfit().compareTo(o1.getProfit());
+                        }).toList();
+                    }
+                }
+
+            }
+
             json.put("symbolAnalysis",symbolAnalysis);
             //仪表盘-头寸监控-统计明细
           //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);

@@ -196,9 +196,10 @@ public class DashboardServiceImpl implements DashboardService {
                Collection<Object> values = stringObjectMap.values();
                values.forEach(o->{
                    FollowTraderAnalysisEntity analysis = JSONObject.parseObject(o.toString(), FollowTraderAnalysisEntity.class);
-                   Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId());
+
+                   Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatform());
                    if(i==null){
-                       RankVO rankVO = rankMap.get(analysis.getAccount());
+                       RankVO rankVO = rankMap.get(analysis.getAccount()+"_"+analysis.getPlatform());
                        if(rankVO==null){
                            rankVO=new RankVO();
                            rankVO.setAccount(analysis.getAccount());
@@ -218,7 +219,7 @@ public class DashboardServiceImpl implements DashboardService {
                            rankVO.setProfit(profit);
                            rankVO.setFreeMargin(analysis.getFreeMargin());
                        }
-                       rankMap.put(analysis.getAccount(),rankVO);
+                       rankMap.put(analysis.getAccount()+"_"+analysis.getPlatform(),rankVO);
                        map.put(analysis.getSymbol() + "_" + analysis.getAccount(),1);
                    }
 
