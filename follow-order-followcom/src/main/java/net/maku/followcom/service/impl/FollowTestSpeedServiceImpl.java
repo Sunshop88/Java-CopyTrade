@@ -239,13 +239,14 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 List<FollowTestDetailVO> detailVOList = vo.stream()
                         .filter(detail -> detail.getServerName().equals(serverNode.getServerName()) && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
                         .collect(Collectors.toList());
-                //拿时间最新的一条数据
+                // 拿时间最新的一条数据
                 FollowTestDetailVO detailVO = detailVOList.stream()
                         .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
                         .orElse(null);
+
                 // 提交测速任务到线程池
-//                executorService.submit(() -> {
                 int retryCount = 0; // 重试次数
+                Integer speed = null; // 初始化速度为 null
 
                 while (retryCount < 2) {
                     try {
@@ -268,27 +269,28 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                         long endTime = System.currentTimeMillis(); // 记录结束时间
                         long duration = endTime - startTime; // 计算测速时长
 
-                        // 保存测速结果
-                        FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                        newEntity.setServerName(serverNode.getServerName());
-                        newEntity.setServerId(serverNode.getId());
-                        newEntity.setPlatformType("MT4");
-                        newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                        newEntity.setVpsName(vpsEntity.getName());
-                        newEntity.setVpsId(vpsEntity.getId());
-                        newEntity.setSpeed((int) duration);
-                        newEntity.setTestId(testId);
-                        newEntity.setUpdateTime(measureTime);
-                        newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-                        newEntity.setIsDefaultServer(1);
-                        followTestDetailService.save(newEntity);
+                        speed = (int) duration; // 设置速度
                         break; // 测试成功，跳出重试循环
                     } catch (Exception e) {
                         log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
                         break; // 出现异常时跳出重试循环
                     }
                 }
-//                });
+
+                // 保存测速结果，即使速度为 null
+                FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                newEntity.setServerName(serverNode.getServerName());
+                newEntity.setServerId(serverNode.getId());
+                newEntity.setPlatformType("MT4");
+                newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                newEntity.setVpsName(vpsEntity.getName());
+                newEntity.setVpsId(vpsEntity.getId());
+                newEntity.setSpeed(speed); // 设置速度，可能为 null
+                newEntity.setTestId(testId);
+                newEntity.setUpdateTime(measureTime);
+                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                newEntity.setIsDefaultServer(1);
+                followTestDetailService.save(newEntity);
             }
         }
 
