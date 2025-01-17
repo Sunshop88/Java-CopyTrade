@@ -104,7 +104,13 @@ public class TraderAccountSlaveWebSocket {
     private void sendPeriodicMessage(String page ,String limit,String traderId,String number) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
-        listFollow.forEach(o->followRedisTraderVOS.add((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId())));
+        listFollow.forEach(o->{
+            FollowRedisTraderVO followRedisTraderVO =new FollowRedisTraderVO();
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
+                followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+            }
+            followRedisTraderVOS.add(followRedisTraderVO);
+        });
         pushMessage(page,limit,traderId,number,JsonUtils.toJsonString(followRedisTraderVOS));
     }
 

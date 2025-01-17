@@ -271,8 +271,10 @@ public class FollowTraderController {
             }else if (conCodeEnum == ConCodeEnum.AGAIN){
                 //重复提交
                 leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-                quoteClient = leaderApiTrader.quoteClient;
-            } else {
+                if (ObjectUtil.isNotEmpty(leaderApiTrader)) {
+                    quoteClient = leaderApiTrader.quoteClient;
+                }
+            }else {
                 return Result.error("账号无法登录");
             }
         } else {
@@ -376,7 +378,9 @@ public class FollowTraderController {
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
                     abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-                    quoteClient = abstractApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(abstractApiTrader)) {
+                        quoteClient = abstractApiTrader.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = abstractApiTrader.quoteClient;
@@ -392,8 +396,10 @@ public class FollowTraderController {
                     copierApiTrader1.setTrader(followTraderVO);
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
-                    abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-                    quoteClient = abstractApiTrader.quoteClient;
+                    CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    if (ObjectUtil.isNotEmpty(copierApiTrader1)){
+                        quoteClient = copierApiTrader1.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = abstractApiTrader.quoteClient;
@@ -525,15 +531,15 @@ public class FollowTraderController {
         }else {
             copierApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-            if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
+            if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
                 log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else if (conCodeEnum == ConCodeEnum.AGAIN){
                 log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-            }else {
+            }  else {
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
                 log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
                 result=true;

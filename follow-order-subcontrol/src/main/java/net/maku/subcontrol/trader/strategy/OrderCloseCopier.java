@@ -135,8 +135,10 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     copier=copierApiTrader1.getTrader();
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
-                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
-                    quoteClient = copierApiTrader1.quoteClient;
+                    CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
+                    if (ObjectUtil.isNotEmpty(copierApiTrader1)) {
+                        quoteClient = copierApiTrader1.quoteClient;
+                    }
                 }else {
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
                 }

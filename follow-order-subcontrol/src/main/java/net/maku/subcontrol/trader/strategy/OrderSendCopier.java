@@ -151,9 +151,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         copierApiTrader1.setTrader(followTraderEntity);
                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
                         //重复提交
-                        CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        quoteClient = copierApiTrader1.quoteClient;
-                    }else {
+                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                        if (ObjectUtil.isNotEmpty(copierApiTrader1)){
+                            quoteClient = copierApiTrader1.quoteClient;
+                        }
+                    } else {
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }

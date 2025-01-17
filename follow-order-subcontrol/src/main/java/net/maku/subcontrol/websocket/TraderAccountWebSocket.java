@@ -79,7 +79,15 @@ public class TraderAccountWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,number), 0, 1, TimeUnit.SECONDS);
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() ->{
+            try {
+                sendPeriodicMessage(page, limit,number);
+            } catch (Exception e) {
+                log.info("WebSocket建立连接异常" + e);
+                throw new RuntimeException();
+            }
+        }, 0, 2, TimeUnit.SECONDS);
+
     }
 
     private void stopPeriodicTask() {
@@ -92,7 +100,13 @@ public class TraderAccountWebSocket {
     private void sendPeriodicMessage(String page ,String limit,String number) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
-        listFollow.forEach(o->followRedisTraderVOS.add((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId())));
+        listFollow.forEach(o->{
+            FollowRedisTraderVO followRedisTraderVO =new FollowRedisTraderVO();
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
+                followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+            }
+            followRedisTraderVOS.add(followRedisTraderVO);
+        });
         pushMessage(page,limit,number,JsonUtils.toJsonString(followRedisTraderVOS));
     }
 
