@@ -734,7 +734,7 @@ public class FollowTestSpeedController {
     @Operation(summary = "删除服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<String> deleteServerNode(@RequestBody FollowTestServerVO vo) {
-        if (vo.getServerNodeList().isEmpty()){
+        if (vo.getServerNodeList().isEmpty() || (vo.getServerNodeList().size() == 1 && "null".equals(vo.getServerNodeList().get(0)))){
             //删掉redis中该服务器的数据
             FollowTestServerQuery query = new FollowTestServerQuery();
             query.setServerName(vo.getServerName());

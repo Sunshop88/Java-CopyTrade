@@ -654,7 +654,7 @@ public class FollowTraderController {
     @PostMapping("reconnectionServer")
     @Operation(summary = "重连服务器账号")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<Map<String, Boolean>> reconnectionServer(@ParameterObject FollowPlatformQuery query) {
+    public Result<Map<String, Boolean>> reconnectionServer(@RequestBody FollowPlatformQuery query) {
         // 查询serverName中的所有信息
         List<FollowTraderEntity> list = followTraderService.listByServerName(query.getServer());
         log.info("查询到serverName为{}的账号数为{}", query.getServer(), list.size());
