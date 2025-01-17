@@ -700,7 +700,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
                     .collect(Collectors.toMap(
                             FollowTestDetailVO::getServerName,
-                            FollowTestDetailVO::getServerUpdateTime,
+                            FollowTestDetailVO::getUpdateTime,
                             (existing, replacement) -> existing.isBefore(replacement) ? replacement : existing // 选择最新的更新时间
                     ));
 
