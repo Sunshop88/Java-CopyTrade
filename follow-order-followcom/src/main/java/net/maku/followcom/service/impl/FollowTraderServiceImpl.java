@@ -290,6 +290,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         vo.setBrokeName(followPlatform.getBrokerName());
         vo.setIpAddr(followTraderEntity.getIpAddr());
         vo.setServerName(followTraderEntity.getServerName());
+        vo.setServer(followTraderEntity.getPlatform());
 
         double pr = 1;
         if (contract != 0) {
@@ -852,6 +853,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
         followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                 .isNull(FollowOrderDetailEntity::getClosePriceSlip);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
