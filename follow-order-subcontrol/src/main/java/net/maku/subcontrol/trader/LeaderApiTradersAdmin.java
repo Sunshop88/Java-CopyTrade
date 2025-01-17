@@ -97,7 +97,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
-                    } else {
+                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
+                    }else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
@@ -137,10 +139,12 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
+                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();

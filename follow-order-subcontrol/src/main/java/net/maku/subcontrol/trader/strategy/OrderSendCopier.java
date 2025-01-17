@@ -149,7 +149,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader1.setTrader(followTraderEntity);
-                    } else {
+                    } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        //重复提交
+                        CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                        quoteClient = copierApiTrader1.quoteClient;
+                    }else {
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }
@@ -296,7 +300,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                     copierApiTrader1.setTrader(followTraderEntity);
-                } else {
+                } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                    quoteClient = copierApiTrader1.quoteClient;
+                }else {
                     throw new RuntimeException("登录异常" + trader.getTrader().getId());
                 }
             }

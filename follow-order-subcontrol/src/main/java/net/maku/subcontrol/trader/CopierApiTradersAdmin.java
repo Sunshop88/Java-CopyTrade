@@ -83,10 +83,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
-                        slave.setStatus(TraderStatusEnum.ERROR.getValue());
+                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {                        slave.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
+                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("跟单者:[{}-{}-{}]启动重复", slave.getId(), slave.getAccount(), slave.getServerName());
                     } else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
@@ -131,7 +132,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         copier.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(copier);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
-                    } else {
+                    } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("跟单者:[{}-{}-{}]启动重复", copier.getId(), copier.getAccount(), copier.getServerName());
+                    }else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                         if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
