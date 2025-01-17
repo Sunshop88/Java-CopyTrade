@@ -331,7 +331,9 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
                                         //重复提交
                                         leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
-                                        quoteClient = leaderApiTrader.quoteClient;
+                                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                                            quoteClient = leaderApiTrader.quoteClient;
+                                        }
                                     }else {
                                         log.error("登录异常");
                                     }

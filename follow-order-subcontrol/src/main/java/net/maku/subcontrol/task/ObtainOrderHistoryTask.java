@@ -72,7 +72,9 @@ public class ObtainOrderHistoryTask {
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
                     leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString());
-                    quoteClient = leaderApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        quoteClient = leaderApiTrader.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = leaderApiTrader.quoteClient;
@@ -91,7 +93,9 @@ public class ObtainOrderHistoryTask {
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
                     copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString());
-                    quoteClient = copierApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                        quoteClient = copierApiTrader.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = copierApiTrader.quoteClient;

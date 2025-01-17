@@ -93,7 +93,9 @@ public class UpdateAllTraderInfoTask implements Runnable {
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
                     abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(trader.getId().toString());
-                    quoteClient = abstractApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(abstractApiTrader)){
+                        quoteClient = abstractApiTrader.quoteClient;
+                    }
                 }
             }
             freshTimeWhenConnected(quoteClient, trader.getId());

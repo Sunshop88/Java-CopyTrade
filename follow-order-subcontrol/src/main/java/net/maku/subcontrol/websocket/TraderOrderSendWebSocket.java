@@ -88,7 +88,7 @@ public class TraderOrderSendWebSocket {
             sessionPool.put(traderId+symbol, sessionSet);
             log.info("订阅该品种{}+++{}",symbol,traderId);
             FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(traderId));
-            QuoteClient quoteClient;
+            QuoteClient quoteClient = null;
             LeaderApiTrader leaderApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
                     || !leaderApiTrader.quoteClient.Connected()) {
@@ -101,7 +101,9 @@ public class TraderOrderSendWebSocket {
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     //重复提交
                     leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    quoteClient = leaderApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        quoteClient = leaderApiTrader.quoteClient;
+                    }
                 } else {
                     quoteClient = null;
                 }
