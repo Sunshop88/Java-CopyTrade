@@ -108,7 +108,7 @@ public class TraderRepairManageWebSocket {
         //总漏单数量
         AtomicReference<Integer> total= new AtomicReference<>(0);
         //漏单VPS
-        repairDataVo.setVpsNum(followVpsEntityList.size());
+        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count()).intValue());
         //漏单信号源
         AtomicReference<Integer> masterNum= new AtomicReference<>(0);
         //漏单跟单账号
@@ -210,8 +210,8 @@ public class TraderRepairManageWebSocket {
             //总数
             total.updateAndGet(v -> v + num.get());
         });
-        repairDataVo.setMasterNum(masterNum.get());
-        repairDataVo.setSlaveNum(slaveNum.get());
+        repairDataVo.setMasterNum(Long.valueOf(followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType,TraderTypeEnum.MASTER_REAL.getType()))).intValue());
+        repairDataVo.setSlaveNum(Long.valueOf(followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType,TraderTypeEnum.SLAVE_REAL.getType()))).intValue());
         repairDataVo.setPageData(repairVpsVOList);
         repairDataVo.setTotal(total.get());
         pushMessage(JsonUtils.toJsonString(repairDataVo));
