@@ -10,7 +10,7 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
 import net.maku.followcom.vo.OrderCacheVO;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.subcontrol.config.RabbitMQProducer;
+//import net.maku.subcontrol.config.RabbitMQProducer;
 import net.maku.subcontrol.entity.Account;
 import net.maku.subcontrol.entity.MessagePayload;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
@@ -40,13 +40,13 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
 
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
-    protected RabbitMQProducer producer;
+//    protected RabbitMQProducer producer;
 
     public OrderUpdateHandler() {
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-        this.producer=SpringContextUtils.getBean(RabbitMQProducer.class);
+//        this.producer=SpringContextUtils.getBean(RabbitMQProducer.class);
     }
 
     /**

@@ -292,6 +292,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 copier4ApiTraderConcurrentHashMap.put(String.valueOf(copier.getId()), copierApiTrader);
                 traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
                 traderUpdateEn.setStatusExtra("启动成功");
+                traderUpdateEn.setLoginNode(serverNode+":"+serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {

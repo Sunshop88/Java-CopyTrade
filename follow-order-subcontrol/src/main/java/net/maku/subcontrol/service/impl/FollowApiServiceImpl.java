@@ -866,6 +866,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         LambdaQueryWrapper<FollowOrderDetailEntity> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
         followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getTraderId, traderId)
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
+                .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                 .isNull(FollowOrderDetailEntity::getClosePriceSlip);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
@@ -889,8 +890,6 @@ public class FollowApiServiceImpl implements FollowApiService {
                 //如果非forex 都是 100
                 hd = new BigDecimal("100");
             }
-            long seconds = DateUtil.between(DateUtil.date(o.getResponseCloseTime()), DateUtil.date(o.getRequestCloseTime()), DateUnit.MS);
-            o.setCloseTimeDifference((int) seconds);
             o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
             followOrderDetailService.updateById(o);
         });
@@ -962,13 +961,13 @@ public class FollowApiServiceImpl implements FollowApiService {
             leaderApiTradersAdmin.removeTrader(traderId);
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
             if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
                 log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
+                LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                 log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
             }
@@ -982,13 +981,13 @@ public class FollowApiServiceImpl implements FollowApiService {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             copierApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
             if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
                 log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 throw new ServerException("重连失败");
             } else {
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
                 log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }

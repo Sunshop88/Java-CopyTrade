@@ -66,8 +66,8 @@ public class AbstractOperation {
         startBatchSender();
     }
 
-    protected String comment(FollowTraderSubscribeEntity followTraderSubscribeEntity) {
-        return CommentGenerator.generateComment(followTraderSubscribeEntity.getFixedComment(),followTraderSubscribeEntity.getCommentType(),followTraderSubscribeEntity.getDigits());
+    protected String comment(FollowTraderSubscribeEntity followTraderSubscribeEntity,EaOrderInfo orderInfo,Integer serverId) {
+        return CommentGenerator.generateComment(followTraderSubscribeEntity.getFixedComment(),followTraderSubscribeEntity.getCommentType(),followTraderSubscribeEntity.getDigits(),orderInfo,serverId);
     }
 
     protected Op op(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier) {

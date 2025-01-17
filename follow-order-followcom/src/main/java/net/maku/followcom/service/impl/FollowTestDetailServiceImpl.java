@@ -441,6 +441,93 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRows.add(dataRow);
         }
 
+        String order = query.getOrder();
+        boolean isAsc = query.isAsc();
+        if ("prop3".equals(order)) {
+            // 账号数量排序
+            dataRows.sort((row1, row2) -> {
+                // 如果 row1 或 row2 为 null，直接返回比较结果
+                if (row1 == null && row2 == null) return 0;
+                if (row1 == null) return -1;
+                if (row2 == null) return 1;
+                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+                int value1 = Integer.parseInt(row1[3]);
+                int value2 = Integer.parseInt(row2[3]);
+                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                // 服务器名称排序
+                comparisonResult = compareStrings(row1[1], row2[1]);
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                // 服务器节点排序
+                return compareStrings(row1[5], row2[5]);
+            });
+        } else if ("prop4".equals(order)) {
+            // 非默认节点账号数量排序
+            dataRows.sort((row1, row2) -> {
+                // 如果 row1 或 row2 为 null，直接返回比较结果
+                if (row1 == null && row2 == null) return 0;
+                if (row1 == null) return -1;
+                if (row2 == null) return 1;
+                // 转换值为整数做排序，否则会以字符串形式排序导数值致乱序
+                int value1 = Integer.parseInt(row1[4]);
+                int value2 = Integer.parseInt(row2[4]);
+                int comparisonResult = isAsc ? Integer.compare(value1, value2) : Integer.compare(value2, value1); // 倒序：value2 排在前面
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                // 服务器名称排序
+                comparisonResult = compareStrings(row1[1], row2[1]);
+                if (comparisonResult != 0) {
+                    return comparisonResult;
+                }
+                // 服务器节点排序
+                return compareStrings(row1[5], row2[5]);
+            });
+        } else if ("prop1".equals(order)) {
+            // 服务器名称排序
+            dataRows.sort(new Comparator<String[]>() {
+                @Override
+                public int compare(String[] row1, String[] row2) {
+                    // 如果 row1 或 row2 为 null，直接返回比较结果
+                    if (row1 == null && row2 == null) return 0;
+                    if (row1 == null) return -1;
+                    if (row2 == null) return 1;
+                    int comparisonResult = compareStrings(row1[1], row2[1]);
+                    if (comparisonResult != 0) {
+                        return comparisonResult;
+                    }
+                    // 服务器节点排序
+                    return compareStrings(row1[5], row2[5]);
+                }
+            });
+        } else {
+            // 券商名称排序
+            dataRows.sort(new Comparator<String[]>() {
+                @Override
+                public int compare(String[] row1, String[] row2) {
+                    // 如果 row1 或 row2 为 null，直接返回比较结果
+                    if (row1 == null && row2 == null) return 0;
+                    if (row1 == null) return -1;
+                    if (row2 == null) return 1;
+                    int comparisonResult = compareStrings(row1[0], row2[0]);
+                    if (comparisonResult != 0) {
+                        return comparisonResult;
+                    }
+                    // 服务器名称排序
+                    comparisonResult = compareStrings(row1[1], row2[1]);
+                    if (comparisonResult != 0) {
+                        return comparisonResult;
+                    }
+                    // 服务器节点排序
+                    return compareStrings(row1[5], row2[5]);
+                }
+            });
+        }
+        /**
         // 排序
         String order = query.getOrder();
         boolean isAsc = query.isAsc();
@@ -505,6 +592,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 }
             });
         }
+        */
 
         // 计算分页的开始和结束索引
         int page = query.getPage();
@@ -604,27 +692,18 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRow[0] = serverNode;
 
             // 获取最新的更新时间（假设每条记录的时间不同）
-//            FollowTestDetailVO latestDetail = detailVOList.stream()
-//                    .filter(detail -> Optional.ofNullable(detail.getServerNode()).orElse("").equals(serverNode))
-//                    .max(Comparator.comparing(
-//                            FollowTestDetailVO::getServerUpdateTime,
-//                            Comparator.nullsLast(Comparator.naturalOrder())
-//                    ))
-//                    .orElse(null);
+//            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
+//                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
+//                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
 
             Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
                     .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
+                    .collect(Collectors.toMap(
+                            FollowTestDetailVO::getServerName,
+                            FollowTestDetailVO::getServerUpdateTime,
+                            (existing, replacement) -> existing.isBefore(replacement) ? replacement : existing // 选择最新的更新时间
+                    ));
 
-
-//            System.out.println(latestDetail);
-//            if (latestDetail != null) {
-//                // 更新测速时间格式化
-//                LocalDateTime serverUpdateTime = latestDetail.getUpdateTime();
-//                dataRow[1] = serverUpdateTime != null ? DateUtil.format(serverUpdateTime, "yyyy-MM-dd HH:mm:ss") : null;
-//            } else {
-//                dataRow[1] = "null"; // 或者设置为其他默认值
-//            }
             LocalDateTime localDateTime = updateTimeMap.get(query.getServerName()) != null ? updateTimeMap.get(query.getServerName()) : null;
             dataRow[1] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
@@ -645,6 +724,15 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             }
             dataRows.add(dataRow);
         }
+
+        boolean isAsc = query.isAsc();
+        dataRows.sort((row1, row2) -> {
+            // 如果 row1 或 row2 为 null，直接返回比较结果
+            if (row1 == null && row2 == null) return 0;
+            if (row1 == null) return -1;
+            if (row2 == null) return 1;
+            return !isAsc ? compareStrings(row1[0], row2[0]) : compareStrings(row2[0], row1[0]);
+        });
         // 计算分页的开始和结束索引
         int page = query.getPage();
         int limit = query.getLimit();

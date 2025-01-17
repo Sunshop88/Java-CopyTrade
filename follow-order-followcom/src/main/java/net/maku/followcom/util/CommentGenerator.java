@@ -1,5 +1,8 @@
 package net.maku.followcom.util;
 
+import cn.hutool.core.util.ObjectUtil;
+import net.maku.followcom.pojo.EaOrderInfo;
+
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,9 +22,9 @@ public class CommentGenerator {
      * @param digits       位数
      * @return 生成的注释
      */
-    public static String generateComment(String fixedComment, Integer commentType, Integer digits) {
-        if (commentType == null || digits == null || digits <= 0) {
-            return "";
+    public static String generateComment(String fixedComment, Integer commentType, Integer digits, EaOrderInfo orderInfo,Integer serverId) {
+        if (ObjectUtil.isEmpty(fixedComment)&&digits == 0) {
+            return "#"+serverId+"#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
         }
 
         SecureRandom random = new SecureRandom();
