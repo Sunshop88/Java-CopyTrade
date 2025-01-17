@@ -108,7 +108,7 @@ public class TraderRepairManageWebSocket {
         //总漏单数量
         AtomicReference<Integer> total= new AtomicReference<>(0);
         //漏单VPS
-        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count()).intValue());
+        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()))).intValue());
         //漏单信号源
         AtomicReference<Integer> masterNum= new AtomicReference<>(0);
         //漏单跟单账号
