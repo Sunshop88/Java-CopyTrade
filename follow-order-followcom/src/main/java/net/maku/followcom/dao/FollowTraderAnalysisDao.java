@@ -119,4 +119,17 @@ public interface FollowTraderAnalysisDao extends BaseDao<FollowTraderAnalysisEnt
             "</script>",
     })
     List<FollowPlatformEntity> searchPlatform(String brokerName);
+
+    @Select({
+            " <script>",
+            "SELECT broker_name as brokerName FROM follow_trader_analysis  f LEFT JOIN follow_platform p on f.platform_id=p.id ",
+            " <where>",
+            "<if test='brokerName != null and   brokerName.trim() != \"\" '>",
+            " AND  p.broker_name LIKE CONCAT('%',#{brokerName},'%')",
+            "</if>",
+            "</where>",
+            "GROUP BY broker_name",
+            "</script>",
+    })
+    List<FollowPlatformEntity> searchBrokerName(String brokerName);
 }

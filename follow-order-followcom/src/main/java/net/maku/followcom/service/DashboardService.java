@@ -34,4 +34,6 @@ public interface DashboardService {
     List<SymbolChartVO> getSymbolChart();
 
     List<FollowPlatformEntity> searchPlatform(String platform);
+
+    List<FollowPlatformEntity> searchBrokerName(String brokerName);
 }

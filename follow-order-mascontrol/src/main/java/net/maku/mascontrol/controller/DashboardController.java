@@ -115,4 +115,14 @@ public class DashboardController {
         return Result.ok(dashboardService.searchPlatform(brokerName));
     }
 
+    /***
+     * 仪表盘-劵商搜索
+     * **/
+    @GetMapping("/searchBrokerName")
+    @Operation(summary = "仪表盘-劵商搜索")
+    public Result<List<FollowPlatformEntity>> searchBrokerName(String brokerName) {
+
+        return Result.ok(dashboardService.searchBrokerName(brokerName));
+    }
+
 }

@@ -27,4 +27,17 @@ public class RepairDataVo implements Serializable {
 
     //漏单跟单账号
     private Integer slaveNum;
+
+    /**
+     * 漏单的 vps数量
+     * **/
+    private Integer vpsActiveNum;
+    /**
+     * 漏单的 信号源数量
+     * **/
+    private Integer sourceActiveNum;
+    /**
+     * 漏单的 跟单源数量
+     * **/
+    private Integer followActiveNum;
 }

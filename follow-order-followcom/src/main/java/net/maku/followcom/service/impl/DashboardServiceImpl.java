@@ -330,4 +330,10 @@ public class DashboardServiceImpl implements DashboardService {
         List<FollowPlatformEntity> list =followTraderAnalysisService.searchPlatform(brokerName);
         return list;
     }
+
+    @Override
+    public List<FollowPlatformEntity> searchBrokerName(String brokerName) {
+        List<FollowPlatformEntity> list =followTraderAnalysisService.searchBrokerName(brokerName);
+        return list;
+    }
 }

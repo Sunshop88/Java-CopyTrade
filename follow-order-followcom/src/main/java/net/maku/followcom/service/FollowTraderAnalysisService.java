@@ -41,4 +41,6 @@ public interface FollowTraderAnalysisService extends BaseService<FollowTraderAna
     List<DashboardAccountDataVO> getAccountDataPage(DashboardAccountQuery vo);
 
     List<FollowPlatformEntity> searchPlatform(String brokerName);
+
+    List<FollowPlatformEntity> searchBrokerName(String brokerName);
 }

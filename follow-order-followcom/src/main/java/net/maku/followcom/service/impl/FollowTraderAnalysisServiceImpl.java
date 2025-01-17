@@ -108,4 +108,9 @@ public class FollowTraderAnalysisServiceImpl extends BaseServiceImpl<FollowTrade
     public List<FollowPlatformEntity> searchPlatform(String brokerName) {
         return baseMapper.searchPlatform(brokerName);
     }
+
+    @Override
+    public List<FollowPlatformEntity> searchBrokerName(String brokerName) {
+        return baseMapper.searchBrokerName(brokerName);
+    }
 }

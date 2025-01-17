@@ -52,7 +52,7 @@ public class TraderRepairManageWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderRepairManageWebSocket.class);
     private Session session;
-    private Integer vpsId;
+    private String vpsId;
     private Integer masterAccount;
     private Integer slaveAccount;
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
@@ -68,7 +68,7 @@ public class TraderRepairManageWebSocket {
 
 
     @OnOpen
-    public void onOpen(Session session,@PathParam(value = "vpsId") Integer vpsId,@PathParam(value = "masterAccount") Integer masterAccount,@PathParam(value = "slaveAccount") Integer slaveAccount) {
+    public void onOpen(Session session,@PathParam(value = "vpsId") String vpsId,@PathParam(value = "masterAccount") Integer masterAccount,@PathParam(value = "slaveAccount") Integer slaveAccount) {
         try {
             this.session = session;
             this.vpsId = vpsId;
@@ -94,8 +94,13 @@ public class TraderRepairManageWebSocket {
 
     public void sendPeriodicMessage() {
         List<FollowVpsEntity> followVpsEntityList;
-        if (vpsId!=0){
-            followVpsEntityList= Collections.singletonList(followVpsService.getById(vpsId));
+        if (!vpsId.equals("0")){
+            String[] split = vpsId.split("-");
+            List<Integer> list=new ArrayList<>();
+            for (int i = 0; i < split.length; i++) {
+                list.add(Integer.valueOf(split[i]));
+            }
+            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list));
         }else {
             followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
         }
@@ -122,6 +127,11 @@ public class TraderRepairManageWebSocket {
             //遍历账号信息
             //vps 漏单数量
             AtomicReference<Integer> num= new AtomicReference<>(0);
+
+            Map<Integer,Integer> vpsNumMap=new HashMap<>();
+
+            Map<String,Integer> followActiveMap=new HashMap<>();
+
             list.forEach(trader->{
                 MasterRepairVO masterRepairVO = MasterRepairVO.builder().build();
                 masterRepairVO.setMasterAccount(Integer.valueOf(trader.getAccount()));
@@ -139,7 +149,8 @@ public class TraderRepairManageWebSocket {
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
-
+                                   vpsNumMap.put(trader.getServerId(),1);
+                                   followActiveMap.put(infoVO.getSlaveAccount(),1);
                             if (slaveAccount!=0) {
                                 if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
@@ -160,6 +171,8 @@ public class TraderRepairManageWebSocket {
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                            vpsNumMap.put(trader.getServerId(),1);
+                            followActiveMap.put(infoVO.getSlaveAccount(),1);
                             if (slaveAccount!=0) {
                                 if( infoVO.getSlaveAccount().contains("slaveAccount")){
                                     orderRepairInfoVOList.add(infoVO);
@@ -188,6 +201,9 @@ public class TraderRepairManageWebSocket {
                     masterNum.updateAndGet(v -> v + 1);
                 }
             });
+            repairDataVo.setFollowActiveNum(followActiveMap.keySet().size());
+            repairDataVo.setVpsActiveNum(vpsNumMap.keySet().size());
+            repairDataVo.setSourceActiveNum(list.size());
             repairVpsVO.setPageData(masterRepairVOList);
             repairVpsVO.setRepairNum(num.get());
             repairVpsVOList.add(repairVpsVO);
