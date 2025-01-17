@@ -566,21 +566,34 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 将表头转换为数组并作为固定的第一行加入结果中
         result.add(header.toArray(new String[0]));
 
-        // 暂存每个 key 对应的速度数据
-        Map<String, Map<String, String>> speedMap = new HashMap<>();
+//        // 暂存每个 key 对应的速度数据
+//        Map<String, Map<String, String>> speedMap = new HashMap<>();
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String key = detail.getServerNode();
+//            String vpsName = detail.getVpsName();
+//            Integer speed = detail.getSpeed();
+//            Integer isDefault = detail.getIsDefaultServer();
+//
+//            if (speed != null) {
+////                double speedValue = speed.doubleValue();
+//                String speedValue = speed + "__" + isDefault;
+//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
+//            } else {
+//                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
+//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 + "__" + isDefault); // 使用默认值 0.0
+//            }
+//        }
+        Map<String, Map<String, Double>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
             String key = detail.getServerNode();
             String vpsName = detail.getVpsName();
             Integer speed = detail.getSpeed();
-            Integer isDefault = detail.getIsDefaultServer();
-
             if (speed != null) {
-//                double speedValue = speed.doubleValue();
-                String speedValue = speed + "__" + isDefault;
+                double speedValue = speed.doubleValue();
                 speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
             } else {
                 // 处理 speed 为 null 的情况，例如记录日志或使用默认值
-                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 + "__" + isDefault); // 使用默认值 0.0
+                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
             }
         }
 
@@ -615,15 +628,23 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             LocalDateTime localDateTime = updateTimeMap.get(query.getServerName()) != null ? updateTimeMap.get(query.getServerName()) : null;
             dataRow[1] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
-            // 填充速度数据
-            Map<String, String> vpsSpeeds = speedMap.get(serverNode);
+//            // 填充速度数据
+//            Map<String, String> vpsSpeeds = speedMap.get(serverNode);
+//            int index = 2;
+//            for (String vpsName : uniqueVpsNames) {
+//                dataRow[index++] =  vpsSpeeds.get(vpsName);
+//            }
+//            dataRows.add(dataRow);
+//        }
+
+            Map<String, Double> vpsSpeeds = speedMap.get(serverNode);
             int index = 2;
             for (String vpsName : uniqueVpsNames) {
-                dataRow[index++] =  vpsSpeeds.get(vpsName);
+                Double speed = vpsSpeeds != null ? vpsSpeeds.get(vpsName) : null;
+                dataRow[index++] = (speed != null) ? speed.toString() : "null";
             }
             dataRows.add(dataRow);
         }
-
         // 计算分页的开始和结束索引
         int page = query.getPage();
         int limit = query.getLimit();
