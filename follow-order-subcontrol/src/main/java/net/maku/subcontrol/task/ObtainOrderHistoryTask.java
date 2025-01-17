@@ -69,6 +69,10 @@ public class ObtainOrderHistoryTask {
                     quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;
                     leaderApiTrader= leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString());
                     leaderApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(u.getId().toString());
+                    quoteClient = leaderApiTrader.quoteClient;
                 }
             } else {
                 quoteClient = leaderApiTrader.quoteClient;
@@ -84,6 +88,10 @@ public class ObtainOrderHistoryTask {
                     quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString()).quoteClient;
                     copierApiTrader= copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString());
                     copierApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(u.getId().toString());
+                    quoteClient = copierApiTrader.quoteClient;
                 }
             } else {
                 quoteClient = copierApiTrader.quoteClient;
