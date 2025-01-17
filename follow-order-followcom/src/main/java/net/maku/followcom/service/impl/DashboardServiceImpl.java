@@ -159,16 +159,21 @@ public class DashboardServiceImpl implements DashboardService {
     public StatDataVO getStatData() {
         StatDataVO statData=followTraderAnalysisService.getStatData();
         //
-        BigDecimal lots=BigDecimal.ZERO;
-       BigDecimal num=BigDecimal.ZERO;
-        BigDecimal profit=BigDecimal.ZERO;
+
         List<SymbolChartVO> list = getSymbolChart();
+        BigDecimal lots=BigDecimal.ZERO;
+        BigDecimal num=BigDecimal.ZERO;
+        BigDecimal profit=BigDecimal.ZERO;
         for (int i = 0; i < list.size(); i++) {
             SymbolChartVO chartVO = list.get(i);
             lots= lots.add(chartVO.getLots());
             num= num.add(chartVO.getNum());
             profit= profit.add(chartVO.getProfit());
+
         }
+        statData.setLots(lots);
+        statData.setNum(num);
+        statData.setProfit(profit);
         return statData;
     }
 
@@ -196,7 +201,9 @@ public class DashboardServiceImpl implements DashboardService {
                Collection<Object> values = stringObjectMap.values();
                values.forEach(o->{
                    FollowTraderAnalysisEntity analysis = JSONObject.parseObject(o.toString(), FollowTraderAnalysisEntity.class);
-
+                  /*  if(analysis.getAccount().equals("400792")){
+                        System.out.println("aaa");
+                    }*/
                    Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatform());
                    if(i==null){
                        RankVO rankVO = rankMap.get(analysis.getAccount()+"_"+analysis.getPlatform());
@@ -270,7 +277,6 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public List<SymbolChartVO> getSymbolChart() {
      //   return followTraderAnalysisService.getSymbolChart();
-
         Map<Object, Object> stringObjectMap = redisCache.hGetStrAll(Constant.STATISTICS_SYMBOL_INFO);
         Map<String, Integer> map =new HashMap<>();
         Map<String, SymbolChartVO> symbolMap =new HashMap<>();
@@ -280,6 +286,7 @@ public class DashboardServiceImpl implements DashboardService {
                 Integer i = map.get(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId());
                 if(i==null){
                     SymbolChartVO vo = symbolMap.get(analysis.getSymbol());
+
                     if(vo==null){
                         vo=new SymbolChartVO();
                         vo.setBuyLots(analysis.getBuyLots());
@@ -313,6 +320,7 @@ public class DashboardServiceImpl implements DashboardService {
                         vo.setNum(num);
                         BigDecimal profit = vo.getProfit().add(analysis.getProfit());
                         vo.setProfit(profit);
+
                     }
                     vo.setSymbol(analysis.getSymbol());
                     map.put(analysis.getSymbol() + "_" + analysis.getAccount()+"_"+analysis.getPlatformId(),1);

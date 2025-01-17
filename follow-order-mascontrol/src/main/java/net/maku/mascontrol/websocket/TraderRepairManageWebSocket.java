@@ -114,6 +114,9 @@ public class TraderRepairManageWebSocket {
         //漏单跟单账号
         AtomicReference<Integer> slaveNum= new AtomicReference<>(0);
         List<RepairVpsVO> repairVpsVOList = new ArrayList<>(List.of());
+        Map<Integer,Integer> vpsNumMap=new HashMap<>();
+
+        Map<String,Integer> followActiveMap=new HashMap<>();
         followVpsEntityList.forEach(o->{
             RepairVpsVO repairVpsVO= RepairVpsVO.builder().build();
             repairVpsVO.setVpsName(o.getName());
@@ -128,9 +131,7 @@ public class TraderRepairManageWebSocket {
             //vps 漏单数量
             AtomicReference<Integer> num= new AtomicReference<>(0);
 
-            Map<Integer,Integer> vpsNumMap=new HashMap<>();
 
-            Map<String,Integer> followActiveMap=new HashMap<>();
 
             list.forEach(trader->{
                 MasterRepairVO masterRepairVO = MasterRepairVO.builder().build();
@@ -150,7 +151,7 @@ public class TraderRepairManageWebSocket {
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
                                    vpsNumMap.put(trader.getServerId(),1);
-                                   followActiveMap.put(infoVO.getSlaveAccount(),1);
+                                   followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                             if (slaveAccount!=0) {
                                 if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
@@ -201,15 +202,16 @@ public class TraderRepairManageWebSocket {
                     masterNum.updateAndGet(v -> v + 1);
                 }
             });
-            repairDataVo.setFollowActiveNum(followActiveMap.keySet().size());
-            repairDataVo.setVpsActiveNum(vpsNumMap.keySet().size());
-            repairDataVo.setSourceActiveNum(list.size());
+
             repairVpsVO.setPageData(masterRepairVOList);
             repairVpsVO.setRepairNum(num.get());
             repairVpsVOList.add(repairVpsVO);
             //总数
             total.updateAndGet(v -> v + num.get());
         });
+        repairDataVo.setFollowActiveNum(followActiveMap.keySet().size());
+        repairDataVo.setVpsActiveNum(vpsNumMap.keySet().size());
+        repairDataVo.setSourceActiveNum(masterNum.get());
         repairDataVo.setMasterNum(Long.valueOf(followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType,TraderTypeEnum.MASTER_REAL.getType()))).intValue());
         repairDataVo.setSlaveNum(Long.valueOf(followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType,TraderTypeEnum.SLAVE_REAL.getType()))).intValue());
         repairDataVo.setPageData(repairVpsVOList);

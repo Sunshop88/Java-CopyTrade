@@ -121,8 +121,6 @@ public class WebDashboardSymbolSocket {
             Map<String, Integer> map =new HashMap<>();
             details.forEach(o->{
                 SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
-
-
                 if(chartVO==null){
                     chartVO = new SymbolChartVO();
                     chartVO.setSymbol(o.getSymbol());
@@ -132,6 +130,7 @@ public class WebDashboardSymbolSocket {
                 if(symbolAnalysisDetails==null){
                     symbolAnalysisDetails=new ArrayList<>();
                 }
+
                 Integer i = map.get(o.getSymbol() + "_" + o.getAccount()+"_"+o.getPlatformId());
                 if(i==null){
                    BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
@@ -164,6 +163,7 @@ public class WebDashboardSymbolSocket {
                     chartVO.setSellLots(sellLots);
                     chartVO.setSellProfit(sellProfit);
                     chartVO.setPosition(position);
+                    map.put(o.getSymbol() + "_" + o.getAccount()+"_"+o.getPlatformId(),1);
                 }
                 symbolAnalysisDetails.add(o);
                 chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
