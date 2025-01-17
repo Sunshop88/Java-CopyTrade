@@ -217,7 +217,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
             }
         }else {
-            log.info("重复提交");
+            log.info("重复提交"+leader.getId());
             return ConCodeEnum.AGAIN;
         }
         return conCodeEnum;

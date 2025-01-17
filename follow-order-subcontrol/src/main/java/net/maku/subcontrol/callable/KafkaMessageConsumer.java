@@ -166,6 +166,7 @@ public class KafkaMessageConsumer {
 
     private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price,String ipaddr) {
         //保存平仓信息
+        followOrderDetailEntity.setCloseTimeDifference((int)order.sendTimeDifference);
         followOrderDetailEntity.setRequestCloseTime(startTime);
         followOrderDetailEntity.setResponseCloseTime(endTime);
         followOrderDetailEntity.setCloseTime(order.CloseTime);
@@ -195,8 +196,6 @@ public class KafkaMessageConsumer {
             //如果非forex 都是 100
             hd = new BigDecimal("100");
         }
-        long seconds = DateUtil.between(DateUtil.date(followOrderDetailEntity.getResponseCloseTime()), DateUtil.date(followOrderDetailEntity.getRequestCloseTime()), DateUnit.MS);
-        followOrderDetailEntity.setCloseTimeDifference((int) seconds);
         followOrderDetailEntity.setClosePriceSlip(followOrderDetailEntity.getClosePrice().subtract(followOrderDetailEntity.getRequestClosePrice()).multiply(hd).abs());
         followOrderDetailService.updateById(followOrderDetailEntity);
     }
@@ -230,6 +229,7 @@ public class KafkaMessageConsumer {
         FollowPlatformEntity platForm = followPlatformService.getPlatFormById(trader.getPlatformId().toString());
         log.info("记录详情"+trader.getId()+"订单"+order.Ticket);
         FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
+        followOrderDetailEntity.setOpenTimeDifference((int)order.sendTimeDifference);
         followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(price));
         followOrderDetailEntity.setTraderId(trader.getId());
         followOrderDetailEntity.setAccount(trader.getAccount());
@@ -309,8 +309,6 @@ public class KafkaMessageConsumer {
                     //如果非forex 都是 100
                     hd = new BigDecimal("100");
                 }
-                long seconds = DateUtil.between(DateUtil.date(o.getResponseOpenTime()), DateUtil.date(o.getRequestOpenTime()), DateUnit.MS);
-                o.setOpenTimeDifference((int) seconds);
                 o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
