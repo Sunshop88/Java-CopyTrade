@@ -93,7 +93,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
@@ -137,7 +137,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !leader.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
                         leader.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
@@ -217,7 +217,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
             }
         }else {
-            log.info("重复提交");
+            log.info("重复提交"+leader.getId());
             return ConCodeEnum.AGAIN;
         }
         return conCodeEnum;

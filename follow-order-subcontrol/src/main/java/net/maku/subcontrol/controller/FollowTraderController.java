@@ -498,7 +498,7 @@ public class FollowTraderController {
             leaderApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+            if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
                 log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
@@ -512,7 +512,7 @@ public class FollowTraderController {
             copierApiTradersAdmin.removeTrader(traderId);
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-            if (conCodeEnum != ConCodeEnum.SUCCESS && !followTraderEntity.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+            if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                 followTraderService.updateById(followTraderEntity);
                 log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());

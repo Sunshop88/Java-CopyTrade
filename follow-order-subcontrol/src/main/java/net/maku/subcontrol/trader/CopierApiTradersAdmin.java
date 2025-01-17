@@ -83,7 +83,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                         slave.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
@@ -127,7 +127,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(copier);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !copier.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
                         copier.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(copier);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
