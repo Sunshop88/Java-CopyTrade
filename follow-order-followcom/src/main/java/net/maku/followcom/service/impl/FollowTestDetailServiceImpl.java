@@ -569,7 +569,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 暂存每个 key 对应的速度数据
         Map<String, Map<String, String>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
-            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
+            String key = detail.getServerNode();
             String vpsName = detail.getVpsName();
             Integer speed = detail.getSpeed();
             Integer isDefault = detail.getIsDefaultServer();
@@ -591,29 +591,29 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRow[0] = serverNode;
 
             // 获取最新的更新时间（假设每条记录的时间不同）
-            FollowTestDetailVO latestDetail = detailVOList.stream()
-                    .filter(detail -> Optional.ofNullable(detail.getServerNode()).orElse("").equals(serverNode))
-                    .max(Comparator.comparing(
-                            FollowTestDetailVO::getServerUpdateTime,
-                            Comparator.nullsLast(Comparator.naturalOrder())
-                    ))
-                    .orElse(null);
 //            FollowTestDetailVO latestDetail = detailVOList.stream()
-//                    .filter(detail -> detail.getServerNode().equals(serverNode))
+//                    .filter(detail -> Optional.ofNullable(detail.getServerNode()).orElse("").equals(serverNode))
 //                    .max(Comparator.comparing(
 //                            FollowTestDetailVO::getServerUpdateTime,
 //                            Comparator.nullsLast(Comparator.naturalOrder())
 //                    ))
 //                    .orElse(null);
 
-            System.out.println(latestDetail);
-            if (latestDetail != null) {
-                // 更新测速时间格式化
-                LocalDateTime serverUpdateTime = latestDetail.getUpdateTime();
-                dataRow[1] = serverUpdateTime != null ? DateUtil.format(serverUpdateTime, "yyyy-MM-dd HH:mm:ss") : null;
-            } else {
-                dataRow[1] = "null"; // 或者设置为其他默认值
-            }
+            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
+                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
+                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
+
+
+//            System.out.println(latestDetail);
+//            if (latestDetail != null) {
+//                // 更新测速时间格式化
+//                LocalDateTime serverUpdateTime = latestDetail.getUpdateTime();
+//                dataRow[1] = serverUpdateTime != null ? DateUtil.format(serverUpdateTime, "yyyy-MM-dd HH:mm:ss") : null;
+//            } else {
+//                dataRow[1] = "null"; // 或者设置为其他默认值
+//            }
+            LocalDateTime localDateTime = updateTimeMap.get(query.getServerName()) != null ? updateTimeMap.get(query.getServerName()) : null;
+            dataRow[1] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
             // 填充速度数据
             Map<String, String> vpsSpeeds = speedMap.get(serverNode);
