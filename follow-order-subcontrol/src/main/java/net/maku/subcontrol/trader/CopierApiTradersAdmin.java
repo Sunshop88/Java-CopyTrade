@@ -3,8 +3,6 @@ package net.maku.subcontrol.trader;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.cld.message.pubsub.kafka.IKafkaProducer;
-import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,16 +18,14 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.task.UpdateAllTraderInfoTask;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
-import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -280,8 +276,13 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
 
     private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport){
         try {
+            //查看是否已存在copierApiTrader
+            if (ObjectUtil.isNotEmpty(copier4ApiTraderConcurrentHashMap.get(String.valueOf(copier.getId())))){
+                log.info("重复登录"+copier.getId());
+                return ConCodeEnum.AGAIN;
+            }
             CopierApiTrader copierApiTrader = new CopierApiTrader(copier,serverNode, Integer.valueOf(serverport));
-            CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore);
+            CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore,redissonLockUtil);
             FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
             CopierApiTradersAdmin.ConnectionResult result = submit.get();
             FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
@@ -318,10 +319,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
 
         //信号量就是简单的获取一个就减少一个，多次获取会获取到多个。线程互斥的可重入性在此不适用。
         private final Semaphore semaphore;
-
-        ConnectionTask(CopierApiTrader copierApiTrader, Semaphore semaphore) {
+        private final RedissonLockUtil redissonLockUtil;
+        ConnectionTask(CopierApiTrader copierApiTrader, Semaphore semaphore, RedissonLockUtil redissonLockUtil) {
             this.copierApiTrader = copierApiTrader;
             this.semaphore = semaphore;
+            this.redissonLockUtil = redissonLockUtil;
         }
 
         @Override
@@ -331,7 +333,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             try {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
-                this.copierApiTrader.connect2Broker();
+                if (redissonLockUtil.tryLockForShortTime("call"+leader.getId(),0,30,TimeUnit.SECONDS)) {
+                    this.copierApiTrader.connect2Broker();
+                }else {
+                    log.info("执行call异常"+leader.getId());
+                }
             } catch (Exception e) {
                 log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 if (e.getMessage().contains("Invalid account")){
@@ -342,6 +348,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             } finally {
                 if (aq) {
                     semaphore.release();
+                }
+                if (redissonLockUtil.isLockedByCurrentThread("call" + leader.getId())) {
+                    redissonLockUtil.unlock("call" + leader.getId());
                 }
             }
             log.info("[MT4跟单者{}-{}-{}]连接服务器成功", leader.getId(), leader.getAccount(), leader.getServerName());
