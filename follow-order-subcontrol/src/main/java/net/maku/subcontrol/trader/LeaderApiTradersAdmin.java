@@ -163,6 +163,10 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     log.info("启动校验异常" + leader.getId());
                     return ConCodeEnum.EXCEPTION;
                 }
+                if (ObjectUtil.isNotEmpty(this.leader4ApiTraderConcurrentHashMap.get(leader.getId().toString()))) {
+                    log.info("登录数据存在" + leader.getId());
+                    return ConCodeEnum.EXCEPTION;
+                }
                 String serverNode;
                 //优先查看平台默认节点
                 if (redisUtil.hKeys(VPS_NODE_SPEED+leader.getServerId()).contains(leader.getPlatform())&&ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.VPS_NODE_SPEED + leader.getServerId(), leader.getPlatform()))){
@@ -225,37 +229,46 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     }
         private ConCodeEnum connectTrader(FollowTraderEntity leader,ConCodeEnum conCodeEnum,String serverNode,Integer serverport) {
             try {
-            LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
-            ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
-            FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
-            ConnectionResult result = submit.get();
-            FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
-            traderUpdateEn.setId(leader.getId());
-            // 判断连接结果是否成功
-            if (result.code == ConCodeEnum.SUCCESS) {
-                leaderApiTrader.setTrader(leader);
-                leader4ApiTraderConcurrentHashMap.put(String.valueOf(leader.getId()), leaderApiTrader);
-                traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
-                traderUpdateEn.setStatusExtra("启动成功");
-                traderUpdateEn.setLoginNode(serverNode+":"+serverport);
-                followTraderService.updateById(traderUpdateEn);
-                conCodeEnum = ConCodeEnum.SUCCESS;
-            }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
-                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
-                traderUpdateEn.setStatusExtra("账户密码错误");
-                followTraderService.updateById(traderUpdateEn);
-                conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
-            }else {
-                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
-                traderUpdateEn.setStatusExtra("经纪商异常");
-                followTraderService.updateById(traderUpdateEn);
-                conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+                if (redissonLockUtil.tryLockForShortTime("connectTrader"+leader.getId(),0,30,TimeUnit.SECONDS)){
+                    LeaderApiTrader leaderApiTrader = new LeaderApiTrader(leader, serverNode, Integer.valueOf(serverport));
+                    ConnectionTask connectionTask = new ConnectionTask(leaderApiTrader, this.semaphore);
+                    FutureTask<ConnectionResult> submit = (FutureTask<ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
+                    ConnectionResult result = submit.get();
+                    FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
+                    traderUpdateEn.setId(leader.getId());
+                    // 判断连接结果是否成功
+                    if (result.code == ConCodeEnum.SUCCESS) {
+                        leaderApiTrader.setTrader(leader);
+                        leader4ApiTraderConcurrentHashMap.put(String.valueOf(leader.getId()), leaderApiTrader);
+                        traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
+                        traderUpdateEn.setStatusExtra("启动成功");
+                        traderUpdateEn.setLoginNode(serverNode+":"+serverport);
+                        followTraderService.updateById(traderUpdateEn);
+                        conCodeEnum = ConCodeEnum.SUCCESS;
+                    }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
+                        traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                        traderUpdateEn.setStatusExtra("账户密码错误");
+                        followTraderService.updateById(traderUpdateEn);
+                        conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
+                    }else {
+                        traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                        traderUpdateEn.setStatusExtra("经纪商异常");
+                        followTraderService.updateById(traderUpdateEn);
+                        conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
+                    }
+                }else {
+                    log.info("创建重复"+leader.getId());
+                    conCodeEnum = ConCodeEnum.AGAIN;
+                }
+            } catch (InterruptedException | ExecutionException | IOException e) {
+                log.info("连接异常"+e);
+            }finally {
+                if (redissonLockUtil.isLockedByCurrentThread("connectTrader" + leader.getId())) {
+                    redissonLockUtil.unlock("connectTrader" + leader.getId());
+                }
             }
-        } catch (InterruptedException | ExecutionException | IOException e) {
-            log.info("连接异常"+e);
+            return conCodeEnum;
         }
-        return conCodeEnum;
-    }
 
 
     /**

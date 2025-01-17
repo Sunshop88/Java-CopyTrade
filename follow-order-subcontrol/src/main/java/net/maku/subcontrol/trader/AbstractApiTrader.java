@@ -183,7 +183,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     }
 
     public void updateTraderInfo() {
-        adjust(trader);
+//        adjust(trader);
         log.info("更新信息++++++{}",trader.getAccount());
         try {
             boolean connected = quoteClient.Connected();
