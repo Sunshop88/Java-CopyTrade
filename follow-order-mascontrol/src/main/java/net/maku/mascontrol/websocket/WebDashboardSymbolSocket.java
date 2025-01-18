@@ -1,5 +1,6 @@
 package net.maku.mascontrol.websocket;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -70,7 +71,7 @@ public class WebDashboardSymbolSocket {
         List<FollowTraderAnalysisEntity> details = dashboardService.getSymbolAnalysisDetails(analysisVO);
         // Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
         //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
-        Collection<SymbolChartVO> symbolChart = new ArrayList<>();
+        List<SymbolChartVO> symbolChart = new ArrayList<>();
         // List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
         //仪表盘-盈利排行榜
         List<RankVO> ranking = new ArrayList<>();
@@ -150,80 +151,87 @@ public class WebDashboardSymbolSocket {
 
         }
         JSONObject json = new JSONObject();
+        if (ObjectUtil.isNotEmpty(analysisVO.getOrder())) {
+            Map<String, Integer> map = new HashMap<>();
+            Map<Long, Integer> vpsMapNum = new HashMap<>();
+            statData.setNum(BigDecimal.ZERO);
+            statData.setLots(BigDecimal.ZERO);
+            statData.setFollowActiveNum(0);
+            statData.setProfit(BigDecimal.ZERO);
+            statData.setSourceActiveNum(0);
+            statData.setVpsActiveNum(0);
+            details.forEach(o -> {
+                SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
+                if (chartVO == null) {
+                    chartVO = new SymbolChartVO();
+                    chartVO.setSymbol(o.getSymbol());
 
-        Map<String, Integer> map = new HashMap<>();
-        Map<Long, Integer> vpsMapNum = new HashMap<>();
-        statData.setNum(BigDecimal.ZERO);
-        statData.setLots(BigDecimal.ZERO);
-        statData.setFollowActiveNum(0);
-        statData.setProfit(BigDecimal.ZERO);
-        statData.setSourceActiveNum(0);
-        statData.setVpsActiveNum(0);
-        details.forEach(o -> {
-            SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
-            if (chartVO == null) {
-                chartVO = new SymbolChartVO();
-                chartVO.setSymbol(o.getSymbol());
-
-            }
-            List<FollowTraderAnalysisEntity> symbolAnalysisDetails = chartVO.getSymbolAnalysisDetails();
-            if (symbolAnalysisDetails == null) {
-                symbolAnalysisDetails = new ArrayList<>();
-            }
-            vpsMapNum.put(o.getVpsId(), 1);
-            statData.setVpsActiveNum(vpsMapNum.keySet().size());
-            Integer i = map.get(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId());
-            if (i == null) {
-                BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO : chartVO.getLots();
-                BigDecimal position = chartVO.getPosition() == null ? BigDecimal.ZERO : chartVO.getPosition();
-                BigDecimal profit = chartVO.getProfit() == null ? BigDecimal.ZERO : chartVO.getProfit();
-                BigDecimal num = chartVO.getNum() == null ? BigDecimal.ZERO : chartVO.getNum();
-                BigDecimal buyNum = chartVO.getBuyNum() == null ? BigDecimal.ZERO : chartVO.getBuyNum();
-                BigDecimal buyLots = chartVO.getBuyLots() == null ? BigDecimal.ZERO : chartVO.getBuyLots();
-                BigDecimal buyProfit = chartVO.getBuyProfit() == null ? BigDecimal.ZERO : chartVO.getBuyProfit();
-                BigDecimal sellNum = chartVO.getSellNum() == null ? BigDecimal.ZERO : chartVO.getSellNum();
-                BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
-                BigDecimal sellProfit = chartVO.getSellProfit() == null ? BigDecimal.ZERO : chartVO.getSellProfit();
-                lots = o.getLots() == null ? lots : o.getLots().add(lots);
-                profit = o.getProfit() == null ? profit : profit.add(o.getProfit());
-                num = o.getNum() == null ? num : num.add(o.getNum());
-                buyNum = o.getBuyNum() == null ? buyNum : buyNum.add(o.getBuyNum());
-                buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
-                buyProfit = o.getBuyProfit() == null ? buyProfit : buyProfit.add(o.getBuyProfit());
-                sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
-                sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
-                sellProfit = o.getSellProfit() == null ? sellProfit : sellProfit.add(o.getSellProfit());
-                position = o.getPosition() == null ? position : position.add(o.getPosition());
-                chartVO.setLots(lots);
-                chartVO.setProfit(profit);
-                chartVO.setNum(num);
-                chartVO.setBuyNum(buyNum);
-                chartVO.setBuyLots(buyLots);
-                chartVO.setBuyProfit(buyProfit);
-                chartVO.setSellNum(sellNum);
-                chartVO.setSellLots(sellLots);
-                chartVO.setSellProfit(sellProfit);
-                chartVO.setPosition(position);
-                map.put(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId(), 1);
-                //总订单数
-                statData.setNum(chartVO.getNum() != null ? statData.getNum().add(chartVO.getNum()) : statData.getNum());
-                //持仓手数
-                statData.setLots(chartVO.getLots() != null ? statData.getLots().add(chartVO.getLots()) : statData.getLots());
-                statData.setProfit(chartVO.getProfit() != null ? statData.getProfit().add(chartVO.getProfit()) : statData.getProfit());
-                //持仓账号数量
-                if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
-                    statData.setSourceActiveNum(statData.getSourceActiveNum() + 1);
-                } else {
-                    statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
                 }
+                List<FollowTraderAnalysisEntity> symbolAnalysisDetails = chartVO.getSymbolAnalysisDetails();
+                if (symbolAnalysisDetails == null) {
+                    symbolAnalysisDetails = new ArrayList<>();
+                }
+                vpsMapNum.put(o.getVpsId(), 1);
+                statData.setVpsActiveNum(vpsMapNum.keySet().size());
+                Integer i = map.get(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId());
+                if (i == null) {
+                    BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO : chartVO.getLots();
+                    BigDecimal position = chartVO.getPosition() == null ? BigDecimal.ZERO : chartVO.getPosition();
+                    BigDecimal profit = chartVO.getProfit() == null ? BigDecimal.ZERO : chartVO.getProfit();
+                    BigDecimal num = chartVO.getNum() == null ? BigDecimal.ZERO : chartVO.getNum();
+                    BigDecimal buyNum = chartVO.getBuyNum() == null ? BigDecimal.ZERO : chartVO.getBuyNum();
+                    BigDecimal buyLots = chartVO.getBuyLots() == null ? BigDecimal.ZERO : chartVO.getBuyLots();
+                    BigDecimal buyProfit = chartVO.getBuyProfit() == null ? BigDecimal.ZERO : chartVO.getBuyProfit();
+                    BigDecimal sellNum = chartVO.getSellNum() == null ? BigDecimal.ZERO : chartVO.getSellNum();
+                    BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
+                    BigDecimal sellProfit = chartVO.getSellProfit() == null ? BigDecimal.ZERO : chartVO.getSellProfit();
+                    lots = o.getLots() == null ? lots : o.getLots().add(lots);
+                    profit = o.getProfit() == null ? profit : profit.add(o.getProfit());
+                    num = o.getNum() == null ? num : num.add(o.getNum());
+                    buyNum = o.getBuyNum() == null ? buyNum : buyNum.add(o.getBuyNum());
+                    buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
+                    buyProfit = o.getBuyProfit() == null ? buyProfit : buyProfit.add(o.getBuyProfit());
+                    sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
+                    sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
+                    sellProfit = o.getSellProfit() == null ? sellProfit : sellProfit.add(o.getSellProfit());
+                    position = o.getPosition() == null ? position : position.add(o.getPosition());
+                    chartVO.setLots(lots);
+                    chartVO.setProfit(profit);
+                    chartVO.setNum(num);
+                    chartVO.setBuyNum(buyNum);
+                    chartVO.setBuyLots(buyLots);
+                    chartVO.setBuyProfit(buyProfit);
+                    chartVO.setSellNum(sellNum);
+                    chartVO.setSellLots(sellLots);
+                    chartVO.setSellProfit(sellProfit);
+                    chartVO.setPosition(position);
+                    map.put(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId(), 1);
+                    //总订单数
+                    statData.setNum(chartVO.getNum() != null ? statData.getNum().add(chartVO.getNum()) : statData.getNum());
+                    //持仓手数
+                    statData.setLots(chartVO.getLots() != null ? statData.getLots().add(chartVO.getLots()) : statData.getLots());
+                    statData.setProfit(chartVO.getProfit() != null ? statData.getProfit().add(chartVO.getProfit()) : statData.getProfit());
+                    //持仓账号数量
+                    if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
+                        statData.setSourceActiveNum(statData.getSourceActiveNum() + 1);
+                    } else {
+                        statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
+                    }
 
 
-            }
-            symbolAnalysisDetails.add(o);
-            chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
-            symbolAnalysisMap.put(o.getSymbol(), chartVO);
+                }
+                symbolAnalysisDetails.add(o);
+                chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
+                symbolAnalysisMap.put(o.getSymbol(), chartVO);
+            });
+
+        }
+        symbolAnalysisMap.values().forEach(o -> {
+            SymbolChartVO symbolChartVO = new SymbolChartVO();
+            BeanUtil.copyProperties(o, symbolChartVO);
+            symbolChartVO.setSymbolAnalysisDetails(null);
+            symbolChart.add(symbolChartVO);
         });
-        symbolChart = symbolAnalysisMap.values();
         //仪表盘-头部统计
         json.put("statData", statData);
          /*   symbolAnalysis.forEach(o->{
