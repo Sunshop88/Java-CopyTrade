@@ -131,7 +131,7 @@ public class WebDashboardSymbolSocket {
                         //持仓手数
                         statData.setLots(a.getLots() != null ? statData.getLots().add(BigDecimal.valueOf(a.getLots())) : statData.getLots());
                         //持仓账号数量
-                        followMapNum.put(a.getAccount(), 0);
+                        followMapNum.put(a.getAccount() + a.getServer(), 0);
                         statData.setFollowActiveNum(followMapNum.keySet().size());
                         statData.setProfit(a.getProfit() != null ? statData.getProfit().add(a.getProfit()) : statData.getProfit());
                         accountMap.put(a.getAccount() + "_" + a.getServer(), 1);
@@ -219,10 +219,10 @@ public class WebDashboardSymbolSocket {
                     statData.setProfit(o.getProfit() != null ? statData.getProfit().add(o.getProfit()) : statData.getProfit());
                     //持仓账号数量
                     if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
-                        sourceMapNum.put(o.getAccount(), 1);
+                        sourceMapNum.put(o.getAccount() + o.getPlatform(), 1);
                         statData.setSourceActiveNum(sourceMapNum.keySet().size());
                     } else {
-                        followMapNum.put(o.getAccount(), 0);
+                        followMapNum.put(o.getAccount() + o.getPlatform(), 0);
                         statData.setFollowActiveNum(followMapNum.keySet().size());
                     }
 
