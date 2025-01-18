@@ -3,22 +3,15 @@ package net.maku.mascontrol.websocket;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.aliyun.core.utils.StringUtils;
 import jakarta.websocket.*;
-import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.convert.FollowTraderAnalysisConvert;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.service.DashboardService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
-import net.maku.framework.common.cache.RedisCache;
-import net.maku.framework.common.query.Query;
-import net.maku.framework.common.utils.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -29,7 +22,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 /**
  * Author:  zsd
@@ -42,15 +34,16 @@ import java.util.stream.Stream;
 public class WebDashboardSymbolSocket {
 
 
-    private final DashboardService dashboardService= SpringContextUtils.getBean(DashboardService.class);
+    private final DashboardService dashboardService = SpringContextUtils.getBean(DashboardService.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    private Map<String,ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
+    private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
+
     // 当客户端连接时调用
 /*    @OnOpen
     public void onOpen(Session session, @PathParam("rankOrder") String rankOrder, @PathParam("rankAsc") Boolean rankAsc, @PathParam("brokerName") String brokerName,
                        @PathParam("accountOrder") String accountOrder, @PathParam("accountPage") Integer accountPage,@PathParam("accountAsc") Boolean accountAsc) throws IOException  {*/
-        @OnOpen
-        public void onOpen(Session session) throws IOException  {
+    @OnOpen
+    public void onOpen(Session session) throws IOException {
     /*      String id = session.getId();
       //开启定时任务
         ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -65,110 +58,174 @@ public class WebDashboardSymbolSocket {
         this.scheduledFutureMap.put(id,scheduledFuture);*/
     }
 
-        private JSONObject send(String rankOrder,  Boolean rankAsc,  String brokerName,
-                                 String accountOrder,  Integer accountPage, Boolean accountAsc,Integer accountLimit,String server,String vpsName,String account,String sourceAccount,TraderAnalysisVO analysisVO){
-            //仪表盘-头部统计
-            StatDataVO statData = dashboardService.getStatData();
-            //仪表盘-头寸监控-统计
-          //  List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
-            Map<String,SymbolChartVO> symbolAnalysisMap = new HashMap<>();
-            //List<SymbolChartVO> symbolAnalysis=new ArrayList<>();
-            //仪表盘-头寸监控-统计明细
-            List<FollowTraderAnalysisEntity> details = dashboardService.getSymbolAnalysisDetails(analysisVO);
-           // Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
-            //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
-            List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
-            //仪表盘-盈利排行榜
-            List<RankVO> ranking =null;
-            if(ObjectUtil.isNotEmpty(rankOrder)){
-                Query query=new Query();
-                query.setAsc(rankAsc);
-                query.setOrder(rankOrder);
-                query.setLimit(10);
-                ranking = dashboardService.getRanking(query);
+    private JSONObject send(String rankOrder, Boolean rankAsc, String brokerName,
+                            String accountOrder, Integer accountPage, Boolean accountAsc, Integer accountLimit, String server, String vpsName, String account, String sourceAccount, TraderAnalysisVO analysisVO) {
+        //仪表盘-头部统计
+        StatDataVO statData = dashboardService.getStatData();
+        //仪表盘-头寸监控-统计
+        //  List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
+        Map<String, SymbolChartVO> symbolAnalysisMap = new HashMap<>();
+        //List<SymbolChartVO> symbolAnalysis=new ArrayList<>();
+        //仪表盘-头寸监控-统计明细
+        List<FollowTraderAnalysisEntity> details = dashboardService.getSymbolAnalysisDetails(analysisVO);
+        // Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
+        //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
+        Collection<SymbolChartVO> symbolChart = new ArrayList<>();
+        // List<SymbolChartVO> symbolChart = dashboardService.getSymbolChart();
+        //仪表盘-盈利排行榜
+        List<RankVO> ranking = new ArrayList<>();
+       /* if (ObjectUtil.isNotEmpty(rankOrder)) {
+            Query query = new Query();
+            query.setAsc(rankAsc);
+            query.setOrder(rankOrder);
+            query.setLimit(10);
+            ranking = dashboardService.getRanking(query);
+        }*/
+
+        //账号数据
+        List<DashboardAccountDataVO> accountDataPage = null;
+        if (ObjectUtil.isNotEmpty(accountPage)) {
+            DashboardAccountQuery vo = new DashboardAccountQuery();
+            if (accountLimit == null) {
+                vo.setLimit(50);
+            } else {
+                vo.setLimit(accountLimit);
+            }
+            vo.setAccount(account);
+            vo.setPage(accountPage);
+            vo.setAsc(accountAsc);
+            if (ObjectUtil.isNotEmpty(brokerName)) {
+                List<String> brokers = JSONArray.parseArray(brokerName, String.class);
+                String brokerstr = String.join(",", brokers);
+                vo.setBrokerName(brokerstr);
+            }
+            if (ObjectUtil.isNotEmpty(server)) {
+                List<String> servers = JSONArray.parseArray(server, String.class);
+                String serversstr = String.join(",", servers);
+                vo.setServer(serversstr);
+            }
+            vo.setOrder(accountOrder);
+            vo.setAccount(account);
+            vo.setSourceAccount(sourceAccount);
+            accountDataPage = dashboardService.getAccountDataPage(vo);
+            //遍历账号数据修改仪表盘统计数据
+            Map<String, Integer> accountMap = new HashMap<>();
+            //总订单数
+            statData.setNum(BigDecimal.ZERO);
+            //持仓手数
+            statData.setLots(BigDecimal.ZERO);
+            //持仓账号数量
+            statData.setFollowActiveNum(0);
+            statData.setSourceNum(0);
+            statData.setProfit(BigDecimal.ZERO);
+            if (ObjectUtil.isNotEmpty(accountDataPage)) {
+                List<RankVO> rank = new ArrayList<>();
+                accountDataPage.forEach(a -> {
+                    Integer i = accountMap.get(a.getAccount() + "_" + a.getServer());
+                    if (i == null) {
+                        //总订单数
+                        statData.setNum(a.getOrderNum() != null ? statData.getNum().add(BigDecimal.valueOf(a.getOrderNum())) : statData.getNum());
+                        //持仓手数
+                        statData.setLots(a.getLots() != null ? statData.getLots().add(BigDecimal.valueOf(a.getLots())) : statData.getLots());
+                        //持仓账号数量
+                        statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
+                        statData.setProfit(a.getProfit() != null ? statData.getProfit().add(a.getProfit()) : statData.getProfit());
+                        accountMap.put(a.getAccount() + "_" + a.getServer(), 1);
+                        //排行榜
+                        RankVO rankVO = new RankVO();
+                        rankVO.setAccount(a.getAccount());
+                        rankVO.setPlatform(a.getServer());
+                        rankVO.setLots(BigDecimal.valueOf(a.getLots() != null ? a.getLots() : 0));
+                        rankVO.setNum(BigDecimal.valueOf(a.getOrderNum() != null ? a.getOrderNum() : 0));
+                        rankVO.setProfit(a.getProfit());
+                        rankVO.setFreeMargin(a.getMarginProportion());
+                        rank.add(rankVO);
+                    }
+                });
+                if (ObjectUtil.isNotEmpty(rankOrder)) {
+                    ranking = getRank(rankOrder, rankAsc, rank);
+                }
             }
 
-            //账号数据
-            List<DashboardAccountDataVO> accountDataPage =null;
-            if(ObjectUtil.isNotEmpty(accountPage)) {
-                DashboardAccountQuery vo = new DashboardAccountQuery();
-                if(accountLimit==null){
-                    vo.setLimit(50);
-                }else{
-                    vo.setLimit(accountLimit);
-                }
-                vo.setAccount(account);
-                vo.setPage(accountPage);
-                vo.setAsc(accountAsc);
-                if (ObjectUtil.isNotEmpty(brokerName)) {
-                    List<String> brokers = JSONArray.parseArray(brokerName, String.class);
-                    String brokerstr = String.join(",", brokers);
-                    vo.setBrokerName(brokerstr);
-                }
-                if (ObjectUtil.isNotEmpty(server)) {
-                    List<String> servers = JSONArray.parseArray(server, String.class);
-                    String serversstr = String.join(",", servers);
-                    vo.setServer(serversstr);
-                }
-                vo.setOrder(accountOrder);
-                vo.setAccount(account);
-                vo.setSourceAccount(sourceAccount);
-                accountDataPage = dashboardService.getAccountDataPage(vo);
+
+        }
+        JSONObject json = new JSONObject();
+
+        Map<String, Integer> map = new HashMap<>();
+        Map<Long, Integer> vpsMapNum = new HashMap<>();
+        statData.setNum(BigDecimal.ZERO);
+        statData.setLots(BigDecimal.ZERO);
+        statData.setFollowActiveNum(0);
+        statData.setProfit(BigDecimal.ZERO);
+        statData.setSourceActiveNum(0);
+        statData.setVpsActiveNum(0);
+        details.forEach(o -> {
+            SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
+            if (chartVO == null) {
+                chartVO = new SymbolChartVO();
+                chartVO.setSymbol(o.getSymbol());
+
             }
-            JSONObject json=new JSONObject();
-            //仪表盘-头部统计
-            json.put("statData",statData);
-            Map<String, Integer> map =new HashMap<>();
-            details.forEach(o->{
-                SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
-                if(chartVO==null){
-                    chartVO = new SymbolChartVO();
-                    chartVO.setSymbol(o.getSymbol());
+            List<FollowTraderAnalysisEntity> symbolAnalysisDetails = chartVO.getSymbolAnalysisDetails();
+            if (symbolAnalysisDetails == null) {
+                symbolAnalysisDetails = new ArrayList<>();
+            }
+            vpsMapNum.put(o.getVpsId(), 1);
+            statData.setVpsActiveNum(vpsMapNum.keySet().size());
+            Integer i = map.get(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId());
+            if (i == null) {
+                BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO : chartVO.getLots();
+                BigDecimal position = chartVO.getPosition() == null ? BigDecimal.ZERO : chartVO.getPosition();
+                BigDecimal profit = chartVO.getProfit() == null ? BigDecimal.ZERO : chartVO.getProfit();
+                BigDecimal num = chartVO.getNum() == null ? BigDecimal.ZERO : chartVO.getNum();
+                BigDecimal buyNum = chartVO.getBuyNum() == null ? BigDecimal.ZERO : chartVO.getBuyNum();
+                BigDecimal buyLots = chartVO.getBuyLots() == null ? BigDecimal.ZERO : chartVO.getBuyLots();
+                BigDecimal buyProfit = chartVO.getBuyProfit() == null ? BigDecimal.ZERO : chartVO.getBuyProfit();
+                BigDecimal sellNum = chartVO.getSellNum() == null ? BigDecimal.ZERO : chartVO.getSellNum();
+                BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
+                BigDecimal sellProfit = chartVO.getSellProfit() == null ? BigDecimal.ZERO : chartVO.getSellProfit();
+                lots = o.getLots() == null ? lots : o.getLots().add(lots);
+                profit = o.getProfit() == null ? profit : profit.add(o.getProfit());
+                num = o.getNum() == null ? num : num.add(o.getNum());
+                buyNum = o.getBuyNum() == null ? buyNum : buyNum.add(o.getBuyNum());
+                buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
+                buyProfit = o.getBuyProfit() == null ? buyProfit : buyProfit.add(o.getBuyProfit());
+                sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
+                sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
+                sellProfit = o.getSellProfit() == null ? sellProfit : sellProfit.add(o.getSellProfit());
+                position = o.getPosition() == null ? position : position.add(o.getPosition());
+                chartVO.setLots(lots);
+                chartVO.setProfit(profit);
+                chartVO.setNum(num);
+                chartVO.setBuyNum(buyNum);
+                chartVO.setBuyLots(buyLots);
+                chartVO.setBuyProfit(buyProfit);
+                chartVO.setSellNum(sellNum);
+                chartVO.setSellLots(sellLots);
+                chartVO.setSellProfit(sellProfit);
+                chartVO.setPosition(position);
+                map.put(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId(), 1);
+                //总订单数
+                statData.setNum(chartVO.getNum() != null ? statData.getNum().add(chartVO.getNum()) : statData.getNum());
+                //持仓手数
+                statData.setLots(chartVO.getLots() != null ? statData.getLots().add(chartVO.getLots()) : statData.getLots());
+                statData.setProfit(chartVO.getProfit() != null ? statData.getProfit().add(chartVO.getProfit()) : statData.getProfit());
+                //持仓账号数量
+                if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
+                    statData.setSourceActiveNum(statData.getSourceActiveNum() + 1);
+                } else {
+                    statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
+                }
 
-                }
-                List<FollowTraderAnalysisEntity> symbolAnalysisDetails = chartVO.getSymbolAnalysisDetails();
-                if(symbolAnalysisDetails==null){
-                    symbolAnalysisDetails=new ArrayList<>();
-                }
 
-                Integer i = map.get(o.getSymbol() + "_" + o.getAccount()+"_"+o.getPlatformId());
-                if(i==null){
-                   BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO :chartVO.getLots();
-                    BigDecimal   position = chartVO.getPosition()  == null ? BigDecimal.ZERO :chartVO.getPosition();
-                    BigDecimal   profit = chartVO.getProfit()  == null ? BigDecimal.ZERO :chartVO.getProfit();
-                    BigDecimal   num=chartVO.getNum() == null ? BigDecimal.ZERO :chartVO.getNum();
-                    BigDecimal  buyNum = chartVO.getBuyNum() == null ?  BigDecimal.ZERO : chartVO.getBuyNum();
-                    BigDecimal buyLots = chartVO.getBuyLots() == null ?  BigDecimal.ZERO : chartVO.getBuyLots();
-                    BigDecimal buyProfit = chartVO.getBuyProfit() == null ?  BigDecimal.ZERO : chartVO.getBuyProfit();
-                    BigDecimal sellNum = chartVO.getSellNum() == null ?  BigDecimal.ZERO : chartVO.getSellNum();
-                    BigDecimal sellLots = chartVO.getSellLots() == null ? BigDecimal.ZERO : chartVO.getSellLots();
-                    BigDecimal sellProfit = chartVO.getSellProfit() == null ?  BigDecimal.ZERO : chartVO.getSellProfit();
-                      lots = o.getLots() == null ?lots :o.getLots().add(lots);
-                       profit = o.getProfit()  == null ? profit :profit.add(o.getProfit());
-                       num=o.getNum() == null ? num :num.add(o.getNum());
-                      buyNum = o.getBuyNum() == null ?  buyNum :buyNum.add(o.getBuyNum());
-                     buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
-                     buyProfit = o.getBuyProfit() == null ? buyProfit: buyProfit.add(o.getBuyProfit());
-                     sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
-                     sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
-                     sellProfit = o.getSellProfit() == null ?  sellProfit : sellProfit.add(o.getSellProfit());
-                    position = o.getPosition() == null ?  position : position.add(o.getPosition());
-                    chartVO.setLots(lots);
-                    chartVO.setProfit(profit);
-                    chartVO.setNum(num);
-                    chartVO.setBuyNum(buyNum);
-                    chartVO.setBuyLots(buyLots);
-                    chartVO.setBuyProfit(buyProfit);
-                    chartVO.setSellNum(sellNum);
-                    chartVO.setSellLots(sellLots);
-                    chartVO.setSellProfit(sellProfit);
-                    chartVO.setPosition(position);
-                    map.put(o.getSymbol() + "_" + o.getAccount()+"_"+o.getPlatformId(),1);
-                }
-                symbolAnalysisDetails.add(o);
-                chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
-                symbolAnalysisMap.put(o.getSymbol(),chartVO);
-            });
+            }
+            symbolAnalysisDetails.add(o);
+            chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
+            symbolAnalysisMap.put(o.getSymbol(), chartVO);
+        });
+        symbolChart = symbolAnalysisMap.values();
+        //仪表盘-头部统计
+        json.put("statData", statData);
          /*   symbolAnalysis.forEach(o->{
                 List<FollowTraderAnalysisEntity> followTraderAnalysisEntities = symbolAnalysisMapDetails.get(o.getSymbol());
                 List<FollowTraderAnalysisEntity> sourceSymbolDetails=new ArrayList<>();
@@ -193,67 +250,111 @@ public class WebDashboardSymbolSocket {
                // o.setSourceSymbolDetails(sourceSymbolDetails);
               //  o.setSymbolMap(symbolMap);
             });*/
-            Collection<SymbolChartVO> symbolAnalysis = symbolAnalysisMap.values();
-            //仪表盘-头寸监控-统计
-            if(ObjectUtil.isNotEmpty(analysisVO.getOrder())){
-                if(analysisVO.getOrder().equals("position")){
-                    if(analysisVO.getAsc()){
-                        symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
-                            return o1.getPosition().compareTo(o2.getPosition());
-                        }).toList();
-                    }else{
-                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o2.getPosition().compareTo(o1.getPosition());
-                        }).toList();
-                    }
+        Collection<SymbolChartVO> symbolAnalysis = symbolAnalysisMap.values();
+        //仪表盘-头寸监控-统计
+        if (ObjectUtil.isNotEmpty(analysisVO.getOrder())) {
+            if (analysisVO.getOrder().equals("position")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getPosition().compareTo(o2.getPosition());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getPosition().compareTo(o1.getPosition());
+                    }).toList();
                 }
-                if(analysisVO.getOrder().equals("lots")){
-                    if(analysisVO.getAsc()){
-                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o1.getLots().compareTo(o2.getLots());
-                        }).toList();
-                    }else{
-                        symbolAnalysis =  symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o2.getLots().compareTo(o1.getLots());
-                        }).toList();
-                    }
+            }
+            if (analysisVO.getOrder().equals("lots")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getLots().compareTo(o2.getLots());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getLots().compareTo(o1.getLots());
+                    }).toList();
                 }
-                if(analysisVO.getOrder().equals("num")){
-                    if(analysisVO.getAsc()){
-                        symbolAnalysis =   symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o1.getNum().compareTo(o2.getNum());
-                        }).toList();
-                    }else{
-                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o2.getNum().compareTo(o1.getNum());
-                        }).toList();
-                    }
+            }
+            if (analysisVO.getOrder().equals("num")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getNum().compareTo(o2.getNum());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getNum().compareTo(o1.getNum());
+                    }).toList();
                 }
-                if(analysisVO.getOrder().equals("profit")){
-                    if(analysisVO.getAsc()){
-                        symbolAnalysis = symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o1.getProfit().compareTo(o2.getProfit());
-                        }).toList();
-                    }else{
-                        symbolAnalysis =symbolAnalysis.stream().sorted((o1,o2)->{
-                            return    o2.getProfit().compareTo(o1.getProfit());
-                        }).toList();
-                    }
+            }
+            if (analysisVO.getOrder().equals("profit")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getProfit().compareTo(o2.getProfit());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getProfit().compareTo(o1.getProfit());
+                    }).toList();
                 }
-
             }
 
-            json.put("symbolAnalysis",symbolAnalysis);
-            //仪表盘-头寸监控-统计明细
-          //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
-            //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
-            json.put("symbolChart",symbolChart);
-            ///仪表盘-盈利排行榜
-            json.put("ranking",ranking);
-            //账号数据
-            json.put("accountDataPage",accountDataPage);
-            return  json;
+        }
 
+        json.put("symbolAnalysis", symbolAnalysis);
+        //仪表盘-头寸监控-统计明细
+        //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
+        //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
+        json.put("symbolChart", symbolChart);
+        ///仪表盘-盈利排行榜
+        json.put("ranking", ranking);
+        //账号数据
+        json.put("accountDataPage", accountDataPage);
+        return json;
+
+    }
+
+    private static List<RankVO> getRank(String rankOrder, Boolean rankAsc, List<RankVO> ranking) {
+        Integer limit = 10;
+        List<RankVO> list = new ArrayList<>();
+        if (rankOrder.equals("profit")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getProfit().compareTo(o2.getProfit());
+                } else {
+                    return o2.getProfit().compareTo(o1.getProfit());
+                }
+
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("lots")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getLots().compareTo(o2.getLots());
+                } else {
+                    return o2.getLots().compareTo(o1.getLots());
+                }
+
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("num")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getNum().compareTo(o2.getNum());
+                } else {
+                    return o2.getNum().compareTo(o1.getNum());
+                }
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("freeMargin")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getFreeMargin().compareTo(o2.getFreeMargin());
+                } else {
+                    return o2.getFreeMargin().compareTo(o1.getFreeMargin());
+                }
+            }).limit(limit).toList();
+        }
+        return list;
     }
 
     // 当接收到客户端的消息时调用
@@ -265,7 +366,7 @@ public class WebDashboardSymbolSocket {
             String rankOrder = jsonObject.getString("rankOrder");
             Boolean rankAsc = jsonObject.getBoolean("rankAsc");
             String brokerName = jsonObject.getString("brokerName");
-           //账号监控数据
+            //账号监控数据
             String accountOrder = jsonObject.getString("accountOrder");
             Integer accountPage = jsonObject.getInteger("accountPage");
             Integer accountLimit = jsonObject.getInteger("accountLimit");
@@ -285,7 +386,7 @@ public class WebDashboardSymbolSocket {
             Integer ttype = jsonObject.getInteger("ttype");
             String torder = jsonObject.getString("torder");
             Boolean tasc = jsonObject.getBoolean("tasc");
-            TraderAnalysisVO vo=new TraderAnalysisVO();
+            TraderAnalysisVO vo = new TraderAnalysisVO();
             vo.setSymbol(tsymbol);
             vo.setAccount(taccount);
             vo.setVpsId(tvpsId);
@@ -296,20 +397,20 @@ public class WebDashboardSymbolSocket {
             vo.setOrder(torder);
             vo.setAsc(tasc);
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
-            if(st!=null){
+            if (st != null) {
                 st.cancel(true);
             }
-            ScheduledFuture    scheduledFuture= scheduledExecutorService.scheduleAtFixedRate(() -> {
+            ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc,accountLimit,server,vpsName,account,sourceAccount,vo);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     e.printStackTrace();
-                    log.error("推送异常:{}",e.getMessage());
+                    log.error("推送异常:{}", e.getMessage());
 
                 }
             }, 0, 1, TimeUnit.SECONDS);
-            scheduledFutureMap.put(id,scheduledFuture);
+            scheduledFutureMap.put(id, scheduledFuture);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new ServerException(e.getMessage());
@@ -326,12 +427,12 @@ public class WebDashboardSymbolSocket {
             if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
                 scheduledFuture.cancel(true);
             }
-            if(session!=null && session.getBasicRemote()!=null) {
+            if (session != null && session.getBasicRemote() != null) {
                 session.close();
             }
 
         } catch (IOException e) {
-            log.error("关闭链接异常{}",e.getMessage());
+            log.error("关闭链接异常{}", e.getMessage());
             throw new RuntimeException(e);
         }
 
