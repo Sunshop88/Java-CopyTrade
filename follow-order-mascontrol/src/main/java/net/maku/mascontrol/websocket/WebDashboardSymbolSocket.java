@@ -224,14 +224,14 @@ public class WebDashboardSymbolSocket {
                 chartVO.setSymbolAnalysisDetails(symbolAnalysisDetails);
                 symbolAnalysisMap.put(o.getSymbol(), chartVO);
             });
-
+            symbolAnalysisMap.values().forEach(o -> {
+                SymbolChartVO symbolChartVO = new SymbolChartVO();
+                BeanUtil.copyProperties(o, symbolChartVO);
+                symbolChartVO.setSymbolAnalysisDetails(null);
+                symbolChart.add(symbolChartVO);
+            });
         }
-        symbolAnalysisMap.values().forEach(o -> {
-            SymbolChartVO symbolChartVO = new SymbolChartVO();
-            BeanUtil.copyProperties(o, symbolChartVO);
-            symbolChartVO.setSymbolAnalysisDetails(null);
-            symbolChart.add(symbolChartVO);
-        });
+
         //仪表盘-头部统计
         json.put("statData", statData);
          /*   symbolAnalysis.forEach(o->{
