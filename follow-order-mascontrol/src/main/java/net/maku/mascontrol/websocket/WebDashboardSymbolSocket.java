@@ -120,6 +120,7 @@ public class WebDashboardSymbolSocket {
             statData.setVpsActiveNum(0);
             statData.setSourceActiveNum(0);
             statData.setProfit(BigDecimal.ZERO);
+            Map<String, Integer> followMapNum = new HashMap<>();
             if (ObjectUtil.isNotEmpty(accountDataPage)) {
                 List<RankVO> rank = new ArrayList<>();
                 accountDataPage.forEach(a -> {
@@ -130,7 +131,8 @@ public class WebDashboardSymbolSocket {
                         //持仓手数
                         statData.setLots(a.getLots() != null ? statData.getLots().add(BigDecimal.valueOf(a.getLots())) : statData.getLots());
                         //持仓账号数量
-                        statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
+                        followMapNum.put(a.getAccount(), 0);
+                        statData.setFollowActiveNum(followMapNum.keySet().size());
                         statData.setProfit(a.getProfit() != null ? statData.getProfit().add(a.getProfit()) : statData.getProfit());
                         accountMap.put(a.getAccount() + "_" + a.getServer(), 1);
                         //排行榜
