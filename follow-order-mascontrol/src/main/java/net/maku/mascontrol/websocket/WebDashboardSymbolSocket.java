@@ -155,6 +155,8 @@ public class WebDashboardSymbolSocket {
         if (ObjectUtil.isNotEmpty(analysisVO.getOrder())) {
             Map<String, Integer> map = new HashMap<>();
             Map<Long, Integer> vpsMapNum = new HashMap<>();
+            Map<String, Integer> sourceMapNum = new HashMap<>();
+            Map<String, Integer> followMapNum = new HashMap<>();
             statData.setNum(BigDecimal.ZERO);
             statData.setLots(BigDecimal.ZERO);
             statData.setFollowActiveNum(0);
@@ -215,9 +217,11 @@ public class WebDashboardSymbolSocket {
                     statData.setProfit(o.getProfit() != null ? statData.getProfit().add(o.getProfit()) : statData.getProfit());
                     //持仓账号数量
                     if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
-                        statData.setSourceActiveNum(statData.getSourceActiveNum() + 1);
+                        sourceMapNum.put(o.getAccount(), 1);
+                        statData.setSourceActiveNum(sourceMapNum.keySet().size());
                     } else {
-                        statData.setFollowActiveNum(statData.getFollowActiveNum() + 1);
+                        followMapNum.put(o.getAccount(), 0);
+                        statData.setFollowActiveNum(followMapNum.keySet().size());
                     }
 
 
