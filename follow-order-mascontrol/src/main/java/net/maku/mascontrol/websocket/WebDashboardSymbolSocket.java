@@ -117,7 +117,8 @@ public class WebDashboardSymbolSocket {
             statData.setLots(BigDecimal.ZERO);
             //持仓账号数量
             statData.setFollowActiveNum(0);
-            statData.setSourceNum(0);
+            statData.setVpsActiveNum(0);
+            statData.setSourceActiveNum(0);
             statData.setProfit(BigDecimal.ZERO);
             if (ObjectUtil.isNotEmpty(accountDataPage)) {
                 List<RankVO> rank = new ArrayList<>();
@@ -160,6 +161,7 @@ public class WebDashboardSymbolSocket {
             statData.setProfit(BigDecimal.ZERO);
             statData.setSourceActiveNum(0);
             statData.setVpsActiveNum(0);
+
             details.forEach(o -> {
                 SymbolChartVO chartVO = symbolAnalysisMap.get(o.getSymbol());
                 if (chartVO == null) {
@@ -207,10 +209,10 @@ public class WebDashboardSymbolSocket {
                     chartVO.setPosition(position);
                     map.put(o.getSymbol() + "_" + o.getAccount() + "_" + o.getPlatformId(), 1);
                     //总订单数
-                    statData.setNum(chartVO.getNum() != null ? statData.getNum().add(chartVO.getNum()) : statData.getNum());
+                    statData.setNum(o.getNum() != null ? statData.getNum().add(o.getNum()) : statData.getNum());
                     //持仓手数
-                    statData.setLots(chartVO.getLots() != null ? statData.getLots().add(chartVO.getLots()) : statData.getLots());
-                    statData.setProfit(chartVO.getProfit() != null ? statData.getProfit().add(chartVO.getProfit()) : statData.getProfit());
+                    statData.setLots(o.getLots() != null ? statData.getLots().add(o.getLots()) : statData.getLots());
+                    statData.setProfit(o.getProfit() != null ? statData.getProfit().add(o.getProfit()) : statData.getProfit());
                     //持仓账号数量
                     if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
                         statData.setSourceActiveNum(statData.getSourceActiveNum() + 1);
