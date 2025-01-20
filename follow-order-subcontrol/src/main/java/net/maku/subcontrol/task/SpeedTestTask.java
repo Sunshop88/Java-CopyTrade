@@ -109,7 +109,7 @@ public class SpeedTestTask {
                             // 查找当前 VPS 名称和服务器名称下的最小延迟
                             FollowTestDetailEntity minLatencyEntity = allEntities.stream()
                                     .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-                                    .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+                                    .min(Comparator.comparingLong(entity -> entity.getSpeed() != null ? entity.getSpeed() : Long.MAX_VALUE))
                                     .orElse(null);
 
                             if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
