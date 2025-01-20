@@ -371,7 +371,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             throw new ServerException("暂无可用服务器商");
         }
         SourceEntity source = sourceService.getEntityById(vo.getSourceId());
-        FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getClientId()).one();
+        FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).eq(FollowTraderEntity::getServerId, vo.getClientId()).one();
         followAddSalveVo.setPlatform(platform.getServer());
         followAddSalveVo.setTraderId(one.getId());
         //判断主表如果保存失败，则返回false
@@ -516,17 +516,20 @@ public class FollowApiServiceImpl implements FollowApiService {
             Integer type = a.getType();
             Long user=null;
             Integer serverId=null;
+            Integer platformId=null;
             if(type==0){
                 SourceEntity     source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
+                 platformId = source.getPlatformId();
             }else{
                 //查询从表
                 FollowEntity   followEntity = followService.getEntityById(a.getId());
                 user=followEntity.getUser();
                 serverId=followEntity.getClientId();
+                platformId = followEntity.getPlatformId();
             }
-            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
             FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
             followOrderSendCloseVO.setFlag(1);
             followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());
@@ -547,19 +550,22 @@ public class FollowApiServiceImpl implements FollowApiService {
             Integer serverId=null;
             SourceEntity source =null;
             FollowEntity followEntity=null;
+            Integer platformId=null;
             if(type==0){
                  source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
+                platformId = source.getPlatformId();
             }else{
                 //查询从表
                 followEntity = followService.getEntityById(a.getId());
                 user=followEntity.getUser();
                 serverId=followEntity.getClientId();
+                platformId = followEntity.getPlatformId();
             }
 
             QuoteClient quoteClient = null;
-            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
             quoteClient=getQuoteClient(followTraderVO.getId(),followTraderVO,quoteClient);
             try {
                 quoteClient.ChangePassword(vo.getPassword(), vo.getInvestor());
@@ -602,17 +608,20 @@ public class FollowApiServiceImpl implements FollowApiService {
             Integer type = a.getType();
             Long user=null;
             Integer serverId=null;
+            Integer platformId=null;
             if(type==0){
                 SourceEntity     source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
+                platformId = source.getPlatformId();
             }else{
                 //查询从表
                 FollowEntity   followEntity = followService.getEntityById(a.getId());
                 user=followEntity.getUser();
                 serverId=followEntity.getClientId();
+                platformId = followEntity.getPlatformId();
             }
-            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
             FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
             followOrderSendCloseVO.setFlag(1);
             followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());
@@ -631,17 +640,20 @@ public class FollowApiServiceImpl implements FollowApiService {
             Integer type = a.getType();
             Long user=null;
             Integer serverId=null;
+            Integer platformId=null;
             if(type==0){
                 SourceEntity     source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
+                platformId = source.getPlatformId();
             }else{
                 //查询从表
                 FollowEntity   followEntity = followService.getEntityById(a.getId());
                 user=followEntity.getUser();
                 serverId=followEntity.getClientId();
+                platformId = followEntity.getPlatformId();
             }
-            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+            FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
             FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
             followOrderSendCloseVO.setFlag(1);
             followOrderSendCloseVO.setIsCloseAll(TraderRepairEnum.CLOSE.getType());

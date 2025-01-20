@@ -143,7 +143,7 @@ public class TraderRepairManageWebSocket {
               Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
               Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());*/
 
-              Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
+              Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount()+":"+trader.getServerId());
                 if(objectObjectMap!=null){
                     objectObjectMap.values().forEach(obj->{
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
