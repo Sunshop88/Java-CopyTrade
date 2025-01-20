@@ -685,6 +685,17 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             }
         }
 
+        Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
+                .filter(item -> item.getServerName() != null && item.getUpdateTime() != null)
+                .collect(Collectors.toMap(
+                        FollowTestDetailVO::getServerName,
+                        FollowTestDetailVO::getUpdateTime,
+                        (existing, replacement) -> {
+                            if (existing == null) return replacement;
+                            if (replacement == null) return existing;
+                            return existing.isBefore(replacement) ? replacement : existing;
+                        }
+                ));
         // 构建唯一服务器节点的数据行
         List<String[]> dataRows = new ArrayList<>();
         for (String serverNode : speedMap.keySet()) {
@@ -696,13 +707,13 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 //                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
 //                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
 
-            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-                    .collect(Collectors.toMap(
-                            FollowTestDetailVO::getServerName,
-                            FollowTestDetailVO::getUpdateTime,
-                            (existing, replacement) -> existing.isBefore(replacement) ? replacement : existing // 选择最新的更新时间
-                    ));
+//            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
+//                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
+//                    .collect(Collectors.toMap(
+//                            FollowTestDetailVO::getServerName,
+//                            FollowTestDetailVO::getUpdateTime,
+//                            (existing, replacement) -> existing.isBefore(replacement) ? replacement : existing // 选择最新的更新时间
+//                    ));
 
             LocalDateTime localDateTime = updateTimeMap.get(query.getServerName()) != null ? updateTimeMap.get(query.getServerName()) : null;
             dataRow[1] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
