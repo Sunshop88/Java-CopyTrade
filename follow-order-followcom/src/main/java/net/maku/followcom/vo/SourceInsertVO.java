@@ -18,6 +18,10 @@ import java.io.Serializable;
 public class SourceInsertVO implements Serializable {
     @Serial
     private static final long serialVersionUID = 3774316922670977306L;
+    //id
+    @JsonProperty("Id")
+    @NotNull(message = "id")
+    private Integer id;
     //vps服务器id
     @JsonProperty("ClientId")
     @NotNull(message = "vps服务器不能为空")

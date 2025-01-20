@@ -23,6 +23,9 @@ import java.math.BigDecimal;
 public class FollowInsertVO implements Serializable {
     @Serial
     private static final long serialVersionUID = -4978328594296263454L;
+    @JsonProperty("Id")
+    @NotNull(message = "id")
+    private Integer id;
     //客户端Id
     @JsonProperty(value = "ClientId")
     private Integer clientId;

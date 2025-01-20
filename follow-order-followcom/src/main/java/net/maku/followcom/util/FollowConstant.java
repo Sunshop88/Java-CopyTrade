@@ -31,7 +31,7 @@ public class FollowConstant {
             String publicIP = in.readLine().trim();
             in.close();
 
-            LOCAL_HOST = publicIP;
+            LOCAL_HOST = "39.101.133.150";
 //            LOCAL_HOST = InetAddress.getLocalHost().getHostAddress();
 
         } catch (Exception e) {

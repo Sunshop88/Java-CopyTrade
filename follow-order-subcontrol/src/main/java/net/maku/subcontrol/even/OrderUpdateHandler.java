@@ -47,7 +47,7 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
         this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
-//        this.producer=SpringContextUtils.getBean(RabbitMQProducer.class);
+        this.producer=SpringContextUtils.getBean(RabbitMQProducer.class);
     }
 
     /**

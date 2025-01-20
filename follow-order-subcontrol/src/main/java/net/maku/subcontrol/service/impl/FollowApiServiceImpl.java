@@ -1,12 +1,9 @@
 package net.maku.subcontrol.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
@@ -21,15 +18,10 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.DateUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.*;
-import online.mtapi.mt4.Exception.ConnectException;
-import online.mtapi.mt4.Exception.InvalidSymbolException;
-import online.mtapi.mt4.Exception.TimeoutException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +67,8 @@ public class FollowApiServiceImpl implements FollowApiService {
      * @return false保存失败true保存成功
      */
     @Override
-    public Boolean save(FollowTraderVO vo) {
+    public Long save(FollowTraderVO vo) {
+        Long id;
         //默认模板最新的模板id
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
@@ -88,8 +81,9 @@ public class FollowApiServiceImpl implements FollowApiService {
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
-                return false;
+                return null;
             }
+            id=followTraderVO.getId();
             LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
             leaderApiTrader1.startTrade();
             ThreadPoolUtils.execute(() -> {
@@ -106,7 +100,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 throw new ServerException(e.getMessage());
             }
         }
-        return true;
+        return id;
     }
 
     @Override
@@ -162,7 +156,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     }
 
     @Override
-    public Boolean addSlave(FollowAddSalveVo vo) {
+    public Long addSlave(FollowAddSalveVo vo) {
+        Long id=0L;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity)||!followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
@@ -200,8 +195,9 @@ public class FollowApiServiceImpl implements FollowApiService {
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
-                return false;
+                return id;
             }
+            id=followTraderVO.getId();
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTradersAdmin.pushRedisData(followTraderVO,copierApiTrader.quoteClient);
@@ -250,7 +246,7 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         }
 
-        return true;
+        return id;
     }
 
     @Override
@@ -318,11 +314,12 @@ public class FollowApiServiceImpl implements FollowApiService {
         }
         followTrader.setPlatform(platform.getServer());
         //判断主表如果保存失败，则返回false
-        Boolean result = save(followTrader);
-        if (!result) {
+        Long result = save(followTrader);
+        if (ObjectUtil.isEmpty(result)) {
             return null;
         }
         //保存从表数据
+        vo.setId(result.intValue());
         Integer id = sourceService.add(vo);
         return id;
 
@@ -375,11 +372,12 @@ public class FollowApiServiceImpl implements FollowApiService {
         followAddSalveVo.setPlatform(platform.getServer());
         followAddSalveVo.setTraderId(one.getId());
         //判断主表如果保存失败，则返回false
-        Boolean result = addSlave(followAddSalveVo);
-        if (!result) {
+        Long result = addSlave(followAddSalveVo);
+        if (ObjectUtil.isEmpty(result)) {
             return null;
         }
         //处理副表数据
+        vo.setId(result.intValue());
         Integer id = followService.add(vo);
         return id;
     }

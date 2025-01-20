@@ -1,18 +1,17 @@
 package net.maku.subcontrol.service;
 
 
-import jakarta.validation.Valid;
 import net.maku.followcom.vo.*;
 
 import java.util.List;
 
 public interface FollowApiService {
     //喊单账号添加
-    Boolean save(FollowTraderVO vo);
+    Long save(FollowTraderVO vo);
 
     void delete(List<Long> idList);
 
-    Boolean addSlave(FollowAddSalveVo vo);
+    Long addSlave(FollowAddSalveVo vo);
 
     Boolean updateSlave(FollowUpdateSalveVo vo);
 
