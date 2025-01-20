@@ -171,11 +171,12 @@ public class TraderRepairManageWebSocket {
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
+                            System.out.println(vs.toString());
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
                             vpsNumMap.put(trader.getServerId(),1);
                             followActiveMap.put(infoVO.getSlaveAccount(),1);
                             if (slaveAccount!=0) {
-                                if( infoVO.getSlaveAccount().contains("slaveAccount")){
+                                if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
                                 }
                             }else{
