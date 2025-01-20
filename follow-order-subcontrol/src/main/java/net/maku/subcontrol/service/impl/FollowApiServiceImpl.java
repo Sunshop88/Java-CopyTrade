@@ -482,17 +482,20 @@ public class FollowApiServiceImpl implements FollowApiService {
                 Integer type = a.getType();
                 Long user=null;
                 Integer serverId=null;
+                Integer platformId=null;
                 if(type==0){
                     SourceEntity     source = sourceService.getEntityById(a.getId());
                     user=source.getUser();
                     serverId=source.getClientId();
+                    platformId = source.getPlatformId();
                 }else{
                     //查询从表
                     FollowEntity   followEntity = followService.getEntityById(a.getId());
                     user=followEntity.getUser();
                     serverId=followEntity.getClientId();
+                    platformId = followEntity.getPlatformId();
                 }
-                FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getServerId,serverId).one();
+                FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
                 FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
                 followOrderSendCloseVO.setFlag(0);
                 followOrderSendCloseVO.setTraderId(followTraderVO.getId());
