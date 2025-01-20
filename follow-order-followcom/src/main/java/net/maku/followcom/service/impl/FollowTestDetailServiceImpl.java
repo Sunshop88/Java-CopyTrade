@@ -496,7 +496,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     if (row1 == null && row2 == null) return 0;
                     if (row1 == null) return -1;
                     if (row2 == null) return 1;
-                    int comparisonResult = compareStrings(row1[1], row2[1]);
+                    int comparisonResult = isAsc ? compareStrings(row1[1], row2[1]) : compareStrings(row2[1], row1[1]);
                     if (comparisonResult != 0) {
                         return comparisonResult;
                     }
