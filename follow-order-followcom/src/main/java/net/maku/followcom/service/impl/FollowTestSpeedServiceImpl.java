@@ -194,7 +194,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             if (detailVO == null) {
                                 log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
                                 newEntity.setServerUpdateTime(null);
-                                newEntity.setIsDefaultServer(1); // 或者根据业务需求设置其他默认值
+                                newEntity.setIsDefaultServer(1);
                             } else {
                                 newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
                                 newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
@@ -292,8 +292,14 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 newEntity.setSpeed(speed); // 设置速度，可能为 null
                 newEntity.setTestId(testId);
                 newEntity.setUpdateTime(measureTime);
-                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+//                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
                 newEntity.setIsDefaultServer(1);
+                if (detailVO == null) {
+                    log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                    newEntity.setServerUpdateTime(null);
+                } else {
+                    newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                }
                 followTestDetailService.save(newEntity);
             }
         }
