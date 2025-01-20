@@ -21,7 +21,6 @@ import java.util.Objects;
 public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     AbstractApiTrader copier4ApiTrader;
     protected FollowOrderHistoryService followOrderHistoryService;
-
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
 
@@ -36,14 +35,14 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
         try {
             //发送websocket消息标识
-//            if (Objects.requireNonNull(orderUpdateEventArgs.Action) == UpdateAction.PositionClose) {
-//                Order x = orderUpdateEventArgs.Order;
-//                log.info("跟单发送平仓mq" + leader.getId());
-//                ThreadPoolUtils.getExecutor().execute(()-> {
-//                    //发送平仓MQ
-//                    producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
-//                });
-//            }
+            if (Objects.requireNonNull(orderUpdateEventArgs.Action) == UpdateAction.PositionClose) {
+                Order x = orderUpdateEventArgs.Order;
+                log.info("跟单发送平仓mq" + leader.getId());
+                ThreadPoolUtils.getExecutor().execute(()-> {
+                    //发送平仓MQ
+                    producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
+                });
+            }
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }

@@ -29,10 +29,10 @@ public class RedisUtil {
     @Autowired
     @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
-//
-//    @Autowired
-//    @Qualifier("redisTemplate2")
-//    private RedisTemplate<String, Object> redisTemplate2;
+
+    @Autowired
+    @Qualifier("redisTemplate2")
+    private RedisTemplate<String, Object> redisTemplate2;
 
     /**
      * 指定缓存失效时间
@@ -922,16 +922,15 @@ public class RedisUtil {
      * @return true成功 false失败
      */
     public boolean setSlaveRedis(String key, Object value) {
-//        try {
-//            redisTemplate2.setValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-//            redisTemplate2.afterPropertiesSet();
-//            redisTemplate2.opsForValue().set(key, value);
-//            return true;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return false;
-//        }
-        return false;
+        try {
+            redisTemplate2.setValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+            redisTemplate2.afterPropertiesSet();
+            redisTemplate2.opsForValue().set(key, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
 //4	ZINCRBY key increment member
