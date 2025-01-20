@@ -71,6 +71,8 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     orderSendCopier.operate(copierApiTrader,eaOrderInfo,1);
                 });
+            }else {
+                throw new ServerException("请开启补仓开关");
             }
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowClose().equals(CloseOrOpenEnum.OPEN.getValue())) {
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
