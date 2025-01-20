@@ -191,10 +191,14 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             newEntity.setSpeed((int) duration);
                             newEntity.setTestId(testId);
                             newEntity.setUpdateTime(measureTime);
-//                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
-//                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer());
-                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                            if (detailVO == null) {
+                                log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                                newEntity.setServerUpdateTime(null);
+                                newEntity.setIsDefaultServer(1); // 或者根据业务需求设置其他默认值
+                            } else {
+                                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                                newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                            }
                             followTestDetailService.save(newEntity);
                             break; // 测试成功，跳出重试循环
                         } catch (Exception e) {

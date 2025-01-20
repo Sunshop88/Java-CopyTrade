@@ -3,6 +3,7 @@ package net.maku.subcontrol.task;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTestSpeedConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
@@ -65,6 +66,7 @@ public class SpeedTestTask {
 //            String ip = "192.168.31.40";
             String ip = FollowConstant.LOCAL_HOST;
             FollowVpsEntity vpsEntity = followVpsService.getVps(ip);
+            log.warn( "当前内容为：" +vpsEntity);
 
             // 调用现有测速逻辑
             FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
@@ -147,6 +149,19 @@ public class SpeedTestTask {
             }
 
         } catch (Exception e) {
+            //查询最新的测速记录，上面followTestSpeedService.saveTestSpeed(overallResult);新增的数据
+            FollowTestSpeedEntity latestRecord = followTestSpeedService.getOne(
+                    new LambdaQueryWrapper<FollowTestSpeedEntity>()
+                            .orderByDesc(FollowTestSpeedEntity::getId)
+                            .last("limit 1")
+            );
+            if (ObjectUtil.isNotEmpty(latestRecord)) {
+                latestRecord.setStatus(VpsSpendEnum.FAILURE.getType());
+                //转成VO
+                FollowTestSpeedVO followTestSpeedVO = FollowTestSpeedConvert.INSTANCE.convert(latestRecord);
+                followTestSpeedService.update(followTestSpeedVO);
+            }
+
             log.error("每周测速任务执行异常: ", e);
         }
     }

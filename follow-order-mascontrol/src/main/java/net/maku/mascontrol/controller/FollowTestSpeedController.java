@@ -188,6 +188,7 @@ public class FollowTestSpeedController {
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
                 startRequest.setMeasureTime(overallResult.getDoTime());
+                log.info("测试时间"+overallResult.getDoTime());
 
 //                // 将对象序列化为 JSON
 //                String jsonBody = objectMapper.writeValueAsString(startRequest);
@@ -441,6 +442,16 @@ public class FollowTestSpeedController {
                 followTestDetailService.save(followTestDetail);
             }
 
+            //删除券商表中的数据
+            LambdaQueryWrapper<FollowBrokeServerEntity> queryWrapper = new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                    .eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName())
+                    .eq(FollowBrokeServerEntity::getServerNode, null)
+                    .eq(FollowBrokeServerEntity::getServerPort, null);
+            long count = followBrokeServerService.count(queryWrapper);
+            if (count > 0) {
+                followBrokeServerService.remove(queryWrapper);
+            }
+
             return Result.ok("添加成功");
         } catch (Exception e) {
             log.error("添加服务器节点失败", e);
@@ -605,7 +616,10 @@ public class FollowTestSpeedController {
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
 //        overallResult.setDoTime(new Date());
-        overallResult.setDoTime(LocalDateTime.now());
+//        overallResult.setDoTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        log.warn("current time: {}", now);  // 打印当前时间
+        overallResult.setDoTime(now);
         overallResult.setVersion(0);
         overallResult.setDeleted(0);
         overallResult.setCreator(SecurityUser.getUserId());
@@ -616,6 +630,8 @@ public class FollowTestSpeedController {
         List<String> servers = request.getServers();
         //查询vps
         List<String> vps = followVpsService.listByVps().stream().map(FollowVpsVO::getName).collect(Collectors.toList());
+
+log.warn("time:{}", overallResult.getDoTime());
 
         extracted(req, vps, servers, overallResult);
         return Result.ok();
@@ -827,6 +843,9 @@ public class FollowTestSpeedController {
                     }
                 }
                 followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+                //切分serverNode节点
+                String[] serverNodeArray = serverNode.split(":");
+                followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
             }
             return Result.ok("删除成功");
         }
