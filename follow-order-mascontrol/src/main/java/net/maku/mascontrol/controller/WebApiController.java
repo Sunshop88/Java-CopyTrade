@@ -16,15 +16,16 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import javax.validation.Valid;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Map;
+
+import static net.maku.followcom.util.RestUtil.getHeader;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -147,12 +148,15 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.CHANGEPASSWORD, vo);
     }
 
-//    @GetMapping("/symbolParams")
-//    @Operation(summary = "品种规格")
-//    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
-//        String host = getServerIp(clientId);
-//        return  sendRequest(req, host, FollowConstant.CHANGEPASSWORD, accountId,accountType);
-//    }
+    @GetMapping("/symbolParams")
+    @Operation(summary = "品种规格")
+    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+        String host = getServerIp(clientId);
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("accountId",accountId);
+        map.put("accountType",accountType);
+        return  sendRequestByGet(req, host, FollowConstant.SYMBOLPARAMS, map);
+    }
 
 
     /**
@@ -164,7 +168,7 @@ public class WebApiController {
        // return  "39.101.133.150";
     }
     /**
-     * 远程调用方法封装
+     * 远程调用方法封装 POST
      */
     private static <T> Result<String> sendRequest(HttpServletRequest req, String host, String uri, T t) {
         //远程调用
@@ -193,5 +197,26 @@ public class WebApiController {
         }
         return Result.ok(body.getString("data"));
     }
+
+    /**
+     * 远程调用方法封装 GET
+     */
+    private static <T> Result<String> sendRequestByGet(HttpServletRequest req, String host, String uri, Map<String,Object> t) {
+        //远程调用
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.fluentPutAll(t);
+        JSONObject body = RestUtil.request(url, HttpMethod.GET, headers, jsonObject, null, JSONObject.class).getBody();
+        log.info("远程调用响应:{}", body);
+        if (body != null && !body.getString("code").equals("0")) {
+            String msg = body.getString("msg");
+            log.error("远程调用异常: {}", body.get("msg"));
+            return    Result.error("远程调用异常: " + body.get("msg"));
+        }
+        return Result.ok(body.getString("data"));
+    }
+
 
 }

@@ -89,6 +89,7 @@ public class FollowConstant {
     public static String CHANGEPASSWORD = "/api/changepassword";
     public static String ORDERCLOSEPROFIT = "/api/orderCloseProfit";
     public static String ORDERCLOSELOSS = "/api/orderCloseLoss";
+    public static String SYMBOLPARAMS = "/api/symbolParams";
 
 
     /**

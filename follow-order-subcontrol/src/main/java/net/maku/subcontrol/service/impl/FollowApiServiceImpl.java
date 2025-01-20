@@ -672,17 +672,21 @@ public class FollowApiServiceImpl implements FollowApiService {
         //0=喊单，1=跟单
         Long user=null;
         Integer serverId=null;
+        Integer platformId=null;
         if(accountType==0){
             SourceEntity     source = sourceService.getEntityById(accountId);
             user=source.getUser();
             serverId=source.getClientId();
+            platformId = source.getPlatformId();
         }else{
             //查询从表
             FollowEntity   followEntity = followService.getEntityById(accountId);
             user=followEntity.getUser();
             serverId=followEntity.getClientId();
+            platformId = followEntity.getPlatformId();
         }
-        FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne = followSysmbolSpecificationService.getOne(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, user));
+        FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
+        FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne = followSysmbolSpecificationService.getOne(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, followTraderVO.getId()));
         if (ObjectUtil.isEmpty(sysmbolSpecificationServiceOne)){
             return null;
         }
