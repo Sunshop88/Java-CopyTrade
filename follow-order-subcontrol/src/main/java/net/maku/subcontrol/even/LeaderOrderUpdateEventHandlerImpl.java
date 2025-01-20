@@ -328,7 +328,13 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                         quoteClient=leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString()).quoteClient;
                                         LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
                                         leaderApiTrader1.startTrade();
-                                    } else {
+                                    } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                                        //重复提交
+                                        leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
+                                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                                            quoteClient = leaderApiTrader.quoteClient;
+                                        }
+                                    }else {
                                         log.error("登录异常");
                                     }
                                 } catch (Exception e) {

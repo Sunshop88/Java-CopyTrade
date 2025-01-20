@@ -143,7 +143,7 @@ public class TraderRepairManageWebSocket {
               Map<String, Map<Object, Object>> closeMap = redisUtil.getKeysByThreeConditions("follow:repair:close:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
               Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());*/
 
-              Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount());
+              Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount()+":"+trader.getServerId());
                 if(objectObjectMap!=null){
                     objectObjectMap.values().forEach(obj->{
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
@@ -171,11 +171,12 @@ public class TraderRepairManageWebSocket {
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
+                            System.out.println(vs.toString());
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
                             vpsNumMap.put(trader.getServerId(),1);
                             followActiveMap.put(infoVO.getSlaveAccount(),1);
                             if (slaveAccount!=0) {
-                                if( infoVO.getSlaveAccount().contains("slaveAccount")){
+                                if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
                                 }
                             }else{

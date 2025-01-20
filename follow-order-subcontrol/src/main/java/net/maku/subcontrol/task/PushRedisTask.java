@@ -246,6 +246,12 @@ public class PushRedisTask {
                     quoteClient =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
                     LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     leaderApiTrader1.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        quoteClient = leaderApiTrader.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = abstractApiTrader.quoteClient;
@@ -259,6 +265,12 @@ public class PushRedisTask {
                     quoteClient =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     copierApiTrader1.setTrader(followTraderVO);
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    if (ObjectUtil.isNotEmpty(copierApiTrader1)){
+                        quoteClient = copierApiTrader1.quoteClient;
+                    }
                 }
             } else {
                 quoteClient = abstractApiTrader.quoteClient;

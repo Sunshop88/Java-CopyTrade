@@ -33,6 +33,7 @@ import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -118,16 +119,11 @@ public class TraderOrderActiveWebSocket {
                         LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         leaderApiTrader1.startTrade();
                     }else  if (conCodeEnum == ConCodeEnum.AGAIN){
-                        long startTime = System.currentTimeMillis(); // 记录开始时间
-                        while (ObjectUtil.isEmpty(leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId))){
-                            if (System.currentTimeMillis() - startTime > 5000) {
-                                throw new Exception("等待超时：超过 5 秒未获取到指定的 accountId 对应的 Leader4ApiTrader");
-                            }
-                            Thread.sleep(100);
-                        }
                         //重复提交
                         abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
-                        quoteClient = abstractApiTrader.quoteClient;
+                        if (ObjectUtil.isNotEmpty(abstractApiTrader)){
+                            quoteClient = abstractApiTrader.quoteClient;
+                        }
                     }
                 } else {
                     quoteClient = abstractApiTrader.quoteClient;
@@ -144,16 +140,10 @@ public class TraderOrderActiveWebSocket {
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader.startTrade();
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        //重复提交
-                        long startTime = System.currentTimeMillis(); // 记录开始时间
-                        while (ObjectUtil.isEmpty(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId))){
-                            if (System.currentTimeMillis() - startTime > 5000) {
-                                throw new Exception("等待超时：超过 5 秒未获取到指定的 accountId 对应的 Leader4ApiTrader");
-                            }
-                            Thread.sleep(100);
-                        }
                         abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
-                        quoteClient = abstractApiTrader.quoteClient;
+                        if (ObjectUtil.isNotEmpty(abstractApiTrader)){
+                            quoteClient = abstractApiTrader.quoteClient;
+                        }
                     }
                 } else {
                     quoteClient = abstractApiTrader.quoteClient;

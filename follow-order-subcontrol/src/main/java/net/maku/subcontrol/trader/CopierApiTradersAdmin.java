@@ -3,8 +3,6 @@ package net.maku.subcontrol.trader;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.cld.message.pubsub.kafka.IKafkaProducer;
-import com.cld.message.pubsub.kafka.properties.Ks;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,16 +18,14 @@ import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.task.UpdateAllTraderInfoTask;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
-import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -87,10 +83,12 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                         slave.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
+                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("跟单者:[{}-{}-{}]启动重复", slave.getId(), slave.getAccount(), slave.getServerName());
                     } else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
@@ -131,11 +129,13 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 try {
                     ConCodeEnum conCodeEnum = addTrader(copier);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(copier.getId().toString());
-                    if (conCodeEnum != ConCodeEnum.SUCCESS && !copier.getStatus().equals(TraderStatusEnum.ERROR.getValue())) {
+                    if (conCodeEnum != ConCodeEnum.SUCCESS &&conCodeEnum != ConCodeEnum.AGAIN) {
                         copier.setStatus(TraderStatusEnum.ERROR.getValue());
                         followTraderService.updateById(copier);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
-                    } else {
+                    } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("跟单者:[{}-{}-{}]启动重复", copier.getId(), copier.getAccount(), copier.getServerName());
+                    }else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                         if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
@@ -284,41 +284,37 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
 
     private ConCodeEnum connectTrader(FollowTraderEntity copier,ConCodeEnum conCodeEnum,String serverNode,Integer serverport){
         try {
-            if (redissonLockUtil.tryLockForShortTime("connectTrader"+copier.getId(),0,30,TimeUnit.SECONDS)) {
-                CopierApiTrader copierApiTrader = new CopierApiTrader(copier, serverNode, Integer.valueOf(serverport));
-                CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore);
-                FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
-                CopierApiTradersAdmin.ConnectionResult result = submit.get();
-                FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
-                traderUpdateEn.setId(copier.getId());
-                // 判断连接结果是否成功
-                if (result.code == ConCodeEnum.SUCCESS) {
-                    copierApiTrader.setTrader(copier);
-                    copier4ApiTraderConcurrentHashMap.put(String.valueOf(copier.getId()), copierApiTrader);
-                    traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
-                    traderUpdateEn.setStatusExtra("启动成功");
-                    traderUpdateEn.setLoginNode(serverNode + ":" + serverport);
-                    followTraderService.updateById(traderUpdateEn);
-                    conCodeEnum = ConCodeEnum.SUCCESS;
-                } else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
-                    traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
-                    traderUpdateEn.setStatusExtra("账户密码错误");
-                    conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
-                } else {
-                    traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
-                    traderUpdateEn.setStatusExtra("经纪商异常");
-                    conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
-                }
+            //查看是否已存在copierApiTrader
+            if (ObjectUtil.isNotEmpty(copier4ApiTraderConcurrentHashMap.get(String.valueOf(copier.getId())))){
+                log.info("重复登录"+copier.getId());
+                return ConCodeEnum.AGAIN;
+            }
+            CopierApiTrader copierApiTrader = new CopierApiTrader(copier,serverNode, Integer.valueOf(serverport));
+            CopierApiTradersAdmin.ConnectionTask connectionTask = new CopierApiTradersAdmin.ConnectionTask(copierApiTrader, this.semaphore,redissonLockUtil);
+            FutureTask<CopierApiTradersAdmin.ConnectionResult> submit = (FutureTask<CopierApiTradersAdmin.ConnectionResult>) ThreadPoolUtils.getExecutor().submit(connectionTask);
+            CopierApiTradersAdmin.ConnectionResult result = submit.get();
+            FollowTraderEntity traderUpdateEn = new FollowTraderEntity();
+            traderUpdateEn.setId(copier.getId());
+            // 判断连接结果是否成功
+            if (result.code == ConCodeEnum.SUCCESS) {
+                copierApiTrader.setTrader(copier);
+                copier4ApiTraderConcurrentHashMap.put(String.valueOf(copier.getId()), copierApiTrader);
+                traderUpdateEn.setStatus(TraderStatusEnum.NORMAL.getValue());
+                traderUpdateEn.setStatusExtra("启动成功");
+                traderUpdateEn.setLoginNode(serverNode + ":" + serverport);
+                followTraderService.updateById(traderUpdateEn);
+                conCodeEnum = ConCodeEnum.SUCCESS;
+            }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
+                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                traderUpdateEn.setStatusExtra("账户密码错误");
+                conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
             }else {
-                log.info("创建重复"+copier.getId());
-                conCodeEnum = ConCodeEnum.AGAIN;
+                traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
+                traderUpdateEn.setStatusExtra("经纪商异常");
+                conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
         } catch (InterruptedException | ExecutionException | IOException e) {
             log.info("连接异常"+e);
-        }finally {
-            if (redissonLockUtil.isLockedByCurrentThread("connectTrader" + copier.getId())) {
-                redissonLockUtil.unlock("connectTrader" + copier.getId());
-            }
         }
         return conCodeEnum;
     }
@@ -332,10 +328,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
 
         //信号量就是简单的获取一个就减少一个，多次获取会获取到多个。线程互斥的可重入性在此不适用。
         private final Semaphore semaphore;
-
-        ConnectionTask(CopierApiTrader copierApiTrader, Semaphore semaphore) {
+        private final RedissonLockUtil redissonLockUtil;
+        ConnectionTask(CopierApiTrader copierApiTrader, Semaphore semaphore, RedissonLockUtil redissonLockUtil) {
             this.copierApiTrader = copierApiTrader;
             this.semaphore = semaphore;
+            this.redissonLockUtil = redissonLockUtil;
         }
 
         @Override
@@ -345,7 +342,11 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             try {
                 semaphore.acquire();
                 aq = Boolean.TRUE;
-                this.copierApiTrader.connect2Broker();
+                if (redissonLockUtil.tryLockForShortTime("call"+leader.getId(),0,30,TimeUnit.SECONDS)) {
+                    this.copierApiTrader.connect2Broker();
+                }else {
+                    log.info("执行call异常"+leader.getId());
+                }
             } catch (Exception e) {
                 log.error("[MT4跟单者{}-{}-{}]连接服务器失败，失败原因：[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), e.getClass().getSimpleName() + e.getMessage());
                 if (e.getMessage().contains("Invalid account")){
@@ -356,6 +357,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             } finally {
                 if (aq) {
                     semaphore.release();
+                }
+                if (redissonLockUtil.isLockedByCurrentThread("call" + leader.getId())) {
+                    redissonLockUtil.unlock("call" + leader.getId());
                 }
             }
             log.info("[MT4跟单者{}-{}-{}]连接服务器成功", leader.getId(), leader.getAccount(), leader.getServerName());
