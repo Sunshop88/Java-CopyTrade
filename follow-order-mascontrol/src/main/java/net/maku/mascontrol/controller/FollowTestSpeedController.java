@@ -445,8 +445,8 @@ public class FollowTestSpeedController {
             //删除券商表中的数据
             LambdaQueryWrapper<FollowBrokeServerEntity> queryWrapper = new LambdaQueryWrapper<FollowBrokeServerEntity>()
                     .eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName())
-                    .eq(FollowBrokeServerEntity::getServerNode, null)
-                    .eq(FollowBrokeServerEntity::getServerPort, null);
+                    .isNull(FollowBrokeServerEntity::getServerNode)
+                    .isNull(FollowBrokeServerEntity::getServerPort);
             long count = followBrokeServerService.count(queryWrapper);
             if (count > 0) {
                 followBrokeServerService.remove(queryWrapper);
@@ -750,46 +750,6 @@ log.warn("time:{}", overallResult.getDoTime());
     @Operation(summary = "删除服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<String> deleteServerNode(@RequestBody FollowTestServerVO vo) {
-        if (vo.getServerNodeList().isEmpty() || (vo.getServerNodeList().size() == 1 && "null".equals(vo.getServerNodeList().get(0)))){
-            //删掉redis中该服务器的数据
-            FollowTestServerQuery query = new FollowTestServerQuery();
-            query.setServerName(vo.getServerName());
-            List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
-
-            //判断该服务器名称的账号数量是否为0
-            String accountCount = followTraderService.getAccountCount(vo.getServerName());
-            if (Integer.parseInt(accountCount) > 0) {
-                return Result.error("该服务器账号数量不为0，无法删除");
-            }
-            log.info("删除的服务器名称为: {}", vo.getServerName());
-            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
-            String serverName = vo.getServerName();
-            // 检查是否存在指定名称的记录
-            boolean exists = followPlatformService.exists(new LambdaQueryWrapper<FollowPlatformEntity>()
-                    .eq(FollowPlatformEntity::getServer, serverName));
-            if (exists) {
-                // 如果存在，则执行删除操作
-                followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
-                        .eq(FollowPlatformEntity::getServer, serverName));
-            }
-            followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, vo.getServerName()));
-
-            //查询IsDefaultServer为0的数据
-            List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
-                    .filter(vos -> {
-                        Integer isDefaultServer = vos.getIsDefaultServer();
-                        return isDefaultServer != null && isDefaultServer == 0;
-                    })
-                    .collect(Collectors.toList());
-            for (FollowTestDetailVO entity : defaultServerNodes) {
-                Integer vpsId = entity.getVpsId();
-                String serverNames = entity.getServerName();
-                // 删除键名
-                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverNames);
-            }
-
-            return Result.ok("删除成功");
-        }else {
             for (String serverNode : vo.getServerNodeList()) {
                 long count = followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>()
                         .eq(FollowTraderEntity::getLoginNode, serverNode)
@@ -841,14 +801,14 @@ log.warn("time:{}", overallResult.getDoTime());
 //                    continue;
 //                }
                     }
+                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+                    //切分serverNode节点
+                    String[] serverNodeArray = serverNode.split(":");
+                    followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
                 }
-                followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
-                //切分serverNode节点
-                String[] serverNodeArray = serverNode.split(":");
-                followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
             }
             return Result.ok("删除成功");
-        }
+
     }
 
     @GetMapping("pageSetting")
