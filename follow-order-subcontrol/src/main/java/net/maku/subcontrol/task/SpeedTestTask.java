@@ -3,6 +3,7 @@ package net.maku.subcontrol.task;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTestSpeedConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
@@ -65,6 +66,7 @@ public class SpeedTestTask {
 //            String ip = "192.168.31.40";
             String ip = FollowConstant.LOCAL_HOST;
             FollowVpsEntity vpsEntity = followVpsService.getVps(ip);
+            log.warn( "当前内容为：" +vpsEntity);
 
             // 调用现有测速逻辑
             FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
@@ -107,7 +109,7 @@ public class SpeedTestTask {
                             // 查找当前 VPS 名称和服务器名称下的最小延迟
                             FollowTestDetailEntity minLatencyEntity = allEntities.stream()
                                     .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-                                    .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+                                    .min(Comparator.comparingLong(entity -> entity.getSpeed() != null ? entity.getSpeed() : Long.MAX_VALUE))
                                     .orElse(null);
 
                             if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
@@ -147,47 +149,63 @@ public class SpeedTestTask {
             }
 
         } catch (Exception e) {
+            //查询最新的测速记录，上面followTestSpeedService.saveTestSpeed(overallResult);新增的数据
+            FollowTestSpeedEntity latestRecord = followTestSpeedService.getOne(
+                    new LambdaQueryWrapper<FollowTestSpeedEntity>()
+                            .orderByDesc(FollowTestSpeedEntity::getId)
+                            .last("limit 1")
+            );
+            if (ObjectUtil.isNotEmpty(latestRecord)) {
+                latestRecord.setStatus(VpsSpendEnum.FAILURE.getType());
+                //转成VO
+                FollowTestSpeedVO followTestSpeedVO = FollowTestSpeedConvert.INSTANCE.convert(latestRecord);
+                followTestSpeedService.update(followTestSpeedVO);
+            }
+
             log.error("每周测速任务执行异常: ", e);
         }
     }
 
     private Boolean reconnect(String traderId) {
-        Boolean result = false;
-        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-        if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
-            leaderApiTradersAdmin.removeTrader(traderId);
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
-                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
-                followTraderService.updateById(followTraderEntity);
-                log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-                throw new ServerException("重连失败");
-            }  else if (conCodeEnum == ConCodeEnum.AGAIN){
-                log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-            } else {
-                LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
-                leaderApiTrader.startTrade();
-                result = true;
+        Boolean result=false;
+        try {
+            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                leaderApiTradersAdmin.removeTrader(traderId);
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+                if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
+                    followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                    followTraderService.updateById(followTraderEntity);
+                    log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                    throw new ServerException("重连失败");
+                }  else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                } else {
+                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                    leaderApiTrader.startTrade();
+                    result=true;
+                }
+            }else {
+                copierApiTradersAdmin.removeTrader(traderId);
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
+                if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
+                    followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                    followTraderService.updateById(followTraderEntity);
+                    log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                    throw new ServerException("重连失败");
+                } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
+                }  else {
+                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                    copierApiTrader.startTrade();
+                    result=true;
+                }
             }
-        } else {
-            copierApiTradersAdmin.removeTrader(traderId);
-            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-            if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
-                followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
-                followTraderService.updateById(followTraderEntity);
-                log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-                throw new ServerException("重连失败");
-            } else if (conCodeEnum == ConCodeEnum.AGAIN){
-                log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
-            }  else {
-                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
-                copierApiTrader.startTrade();
-                result = true;
-            }
+        }catch (Exception e){
+            result=false;
         }
-
         return result;
     }
 }

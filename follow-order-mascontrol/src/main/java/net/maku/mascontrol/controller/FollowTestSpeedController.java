@@ -188,6 +188,7 @@ public class FollowTestSpeedController {
                 startRequest.setVpsEntity(vpsEntity);
                 startRequest.setTestId(overallResult.getId());
                 startRequest.setMeasureTime(overallResult.getDoTime());
+                log.info("测试时间"+overallResult.getDoTime());
 
 //                // 将对象序列化为 JSON
 //                String jsonBody = objectMapper.writeValueAsString(startRequest);
@@ -441,6 +442,16 @@ public class FollowTestSpeedController {
                 followTestDetailService.save(followTestDetail);
             }
 
+            //删除券商表中的数据
+            LambdaQueryWrapper<FollowBrokeServerEntity> queryWrapper = new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                    .eq(FollowBrokeServerEntity::getServerName, followTestServerVO.getServerName())
+                    .isNull(FollowBrokeServerEntity::getServerNode)
+                    .isNull(FollowBrokeServerEntity::getServerPort);
+            long count = followBrokeServerService.count(queryWrapper);
+            if (count > 0) {
+                followBrokeServerService.remove(queryWrapper);
+            }
+
             return Result.ok("添加成功");
         } catch (Exception e) {
             log.error("添加服务器节点失败", e);
@@ -605,7 +616,10 @@ public class FollowTestSpeedController {
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
 //        overallResult.setDoTime(new Date());
-        overallResult.setDoTime(LocalDateTime.now());
+//        overallResult.setDoTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        log.warn("current time: {}", now);  // 打印当前时间
+        overallResult.setDoTime(now);
         overallResult.setVersion(0);
         overallResult.setDeleted(0);
         overallResult.setCreator(SecurityUser.getUserId());
@@ -616,6 +630,8 @@ public class FollowTestSpeedController {
         List<String> servers = request.getServers();
         //查询vps
         List<String> vps = followVpsService.listByVps().stream().map(FollowVpsVO::getName).collect(Collectors.toList());
+
+log.warn("time:{}", overallResult.getDoTime());
 
         extracted(req, vps, servers, overallResult);
         return Result.ok();
@@ -734,46 +750,6 @@ public class FollowTestSpeedController {
     @Operation(summary = "删除服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<String> deleteServerNode(@RequestBody FollowTestServerVO vo) {
-        if (vo.getServerNodeList().isEmpty() || (vo.getServerNodeList().size() == 1 && "null".equals(vo.getServerNodeList().get(0)))){
-            //删掉redis中该服务器的数据
-            FollowTestServerQuery query = new FollowTestServerQuery();
-            query.setServerName(vo.getServerName());
-            List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
-
-            //判断该服务器名称的账号数量是否为0
-            String accountCount = followTraderService.getAccountCount(vo.getServerName());
-            if (Integer.parseInt(accountCount) > 0) {
-                return Result.error("该服务器账号数量不为0，无法删除");
-            }
-            log.info("删除的服务器名称为: {}", vo.getServerName());
-            followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
-            String serverName = vo.getServerName();
-            // 检查是否存在指定名称的记录
-            boolean exists = followPlatformService.exists(new LambdaQueryWrapper<FollowPlatformEntity>()
-                    .eq(FollowPlatformEntity::getServer, serverName));
-            if (exists) {
-                // 如果存在，则执行删除操作
-                followPlatformService.remove(new LambdaQueryWrapper<FollowPlatformEntity>()
-                        .eq(FollowPlatformEntity::getServer, serverName));
-            }
-            followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, vo.getServerName()));
-
-            //查询IsDefaultServer为0的数据
-            List<FollowTestDetailVO> defaultServerNodes = newlist.stream()
-                    .filter(vos -> {
-                        Integer isDefaultServer = vos.getIsDefaultServer();
-                        return isDefaultServer != null && isDefaultServer == 0;
-                    })
-                    .collect(Collectors.toList());
-            for (FollowTestDetailVO entity : defaultServerNodes) {
-                Integer vpsId = entity.getVpsId();
-                String serverNames = entity.getServerName();
-                // 删除键名
-                redisUtil.hDel(Constant.VPS_NODE_SPEED + vpsId, serverNames);
-            }
-
-            return Result.ok("删除成功");
-        }else {
             for (String serverNode : vo.getServerNodeList()) {
                 long count = followTraderService.count(new LambdaQueryWrapper<FollowTraderEntity>()
                         .eq(FollowTraderEntity::getLoginNode, serverNode)
@@ -825,11 +801,14 @@ public class FollowTestSpeedController {
 //                    continue;
 //                }
                     }
+                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+                    //切分serverNode节点
+                    String[] serverNodeArray = serverNode.split(":");
+                    followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
                 }
-                followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
             }
             return Result.ok("删除成功");
-        }
+
     }
 
     @GetMapping("pageSetting")
