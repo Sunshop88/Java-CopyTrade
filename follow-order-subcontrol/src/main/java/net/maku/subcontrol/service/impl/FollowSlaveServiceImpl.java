@@ -66,7 +66,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (!existsInActive) {
                         sendRepairToExtract.add(repairComment);
-                        redisUtil.hDel(key,repairObj);
+                        redisUtil.hDel(key,repairObj.toString());
                     }
                 }
                 sendRepairToExtract.stream().toList().forEach(o->{
@@ -88,7 +88,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (existsInActive) {
                         closeRepairToExtract.add(repairComment);
-                        redisUtil.hDel(key,repairObj);
+                        redisUtil.hDel(key,repairObj.toString());
                     }
                 }
                 closeRepairToExtract.stream().toList().forEach(o->{
@@ -119,6 +119,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString()))){
                             EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                             orderSendCopier.operate(copierApiTrader,objects,1);
+                            redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                         }else {
                             throw new ServerException("暂无订单需处理");
                         }

@@ -67,7 +67,10 @@ public class PushRedisTask {
     @Scheduled(cron = "0/5 * * * * ?")
     public void execute(){
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
-        pushCache(one.getId());
+        if(one!=null){
+            pushCache(one.getId());
+        }
+
     }
     /**
      * 推送redis缓存
