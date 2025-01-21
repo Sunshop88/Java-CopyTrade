@@ -1689,7 +1689,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         // 将跟单关系存储到Redis
         String key = Constant.FOLLOW_RELATION_KEY + callerId;
-        return redisUtil.sSet(key, followerId) > 0;
+        String follower = Constant.FOLLOW_RELATION_KEY + followerId;
+        return redisUtil.sSet(key, follower) > 0;
     }
 
     /**
