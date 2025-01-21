@@ -24,6 +24,7 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
@@ -80,6 +81,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final CacheManager cacheManager;
+    private final RedisUtil redisUtil;
 
 
     @Autowired
@@ -1653,6 +1655,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
+    public void getFollowRelation(FollowTraderEntity followTraderEntity, String account, String platform) {
+        FollowPlatformEntity followPlatform= followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform));
+        if (ObjectUtil.isNotEmpty(followPlatform)){
+            addFollowRelation(Constant.FOLLOW_RELATION_KEY+followTraderEntity.getAccount()+"#"+followTraderEntity.getPlatformId(),account+"#"+followPlatform.getId());
+        }else {
+            throw new ServerException("平台异常");
+        }
+    }
+
+    @Override
     public List<FollowTraderEntity> listByServerName(String name) {
         //根据名称查询列表信息
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = Wrappers.lambdaQuery();
@@ -1663,4 +1675,77 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return baseMapper.selectList(queryWrapper);
     }
 
+    /**
+     * 添加跟单关系
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 是否添加成功
+     */
+    public boolean addFollowRelation(String callerId, String followerId) {
+        // 检查是否会形成环
+        if (checkCycle(callerId, followerId)) {
+            throw new ServerException("存在循环跟单,请检查");
+        }
+
+        // 将跟单关系存储到Redis
+        String key = Constant.FOLLOW_RELATION_KEY + callerId;
+        return redisUtil.sSet(key, followerId) > 0;
+    }
+
+    /**
+     * 检查添加新的跟单关系是否会形成环
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 是否会形成环
+     */
+    private boolean checkCycle(String callerId, String followerId) {
+        Set<String> visited = new HashSet<>();
+        return dfs(followerId, callerId, visited);
+    }
+
+    /**
+     * 深度优先搜索检测环
+     * @param current 当前节点
+     * @param target 目标节点(原始喊单者)
+     * @param visited 已访问节点集合
+     * @return 是否存在环
+     */
+    private boolean dfs(String current, String target, Set<String> visited) {
+        // 如果当前节点已经是目标节点，说明形成了环
+        if (current.equals(target)) {
+            return true;
+        }
+
+        // 将当前节点标记为已访问
+        visited.add(current);
+
+        // 获取当前节点的所有跟单关系
+        String key = Constant.FOLLOW_RELATION_KEY + current;
+        Set<Object> followers = redisUtil.sGet(key);
+
+        if (followers != null) {
+            // 遍历所有跟单关系
+            for (Object follower : followers) {
+                String followerId = follower.toString();
+                if (!visited.contains(followerId)) {
+                    if (dfs(followerId, target, visited)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 移除跟单关系
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 移除的数量
+     */
+    public long removeFollowRelation(String callerId, String followerId) {
+        String key = Constant.FOLLOW_RELATION_KEY + callerId;
+        return redisUtil.setRemove(key, followerId);
+    }
 }

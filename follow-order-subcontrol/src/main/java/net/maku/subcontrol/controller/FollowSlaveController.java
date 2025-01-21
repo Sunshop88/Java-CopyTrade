@@ -92,18 +92,19 @@ public class FollowSlaveController {
                     throw new ServerException("请输入正确跟单参数");
                 }
             }
+            followTraderService.getFollowRelation(followTraderEntity,vo.getAccount(),vo.getPlatform());
             //查看是否存在循环跟单情况
-            List<FollowTraderSubscribeEntity> traderSubscribeEntity = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
-            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)) {
-                //同平台 同账号判断
-                traderSubscribeEntity.forEach(o -> {
-                    FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
-                    FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
-                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
-                        throw new ServerException("存在循环跟单,请检查");
-                    }
-                });
-            }
+//            List<FollowTraderSubscribeEntity> traderSubscribeEntity = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
+//            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)) {
+//                //同平台 同账号判断
+//                traderSubscribeEntity.forEach(o -> {
+//                    FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
+//                    FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
+//                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
+//                        throw new ServerException("存在循环跟单,请检查");
+//                    }
+//                });
+//            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
             followTraderVo.setPassword(vo.getPassword());
