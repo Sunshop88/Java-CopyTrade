@@ -142,6 +142,11 @@ public class SysUserController {
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     public Result<String> password(@RequestBody @Valid SysUserPasswordVO vo) {
+        // 确认密码是否一致
+        if (!vo.getNewPassword().equals(vo.getConfirmPassword())) {
+            return Result.error("新密码和确认密码不一致");
+        }
+
         // 原密码不正确
         UserDetail user = SecurityUser.getUser();
         if (!passwordEncoder.matches(vo.getPassword(), user.getPassword())) {
