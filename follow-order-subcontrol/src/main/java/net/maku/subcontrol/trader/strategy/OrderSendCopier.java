@@ -150,6 +150,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader1.setTrader(followTraderEntity);
                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                        log.info("OrderSend重复提交"+trader.getTrader().getId());
                         //重复提交
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         if (ObjectUtil.isNotEmpty(copierApiTrader1)){
@@ -178,8 +179,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                                Thread.sleep(50);
                            }
                        }
-                       bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                       asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                       bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)&&ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                       asksub =ObjectUtil.isNotEmpty(quoteEventArgs)&&ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Ask:0;
                        log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
                        // 执行订单发送
@@ -303,6 +304,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                     copierApiTrader1.setTrader(followTraderEntity);
                 } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    log.info("OrderSend重复提交"+trader.getTrader().getId());
                     //重复提交
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                     quoteClient = copierApiTrader1.quoteClient;
@@ -329,8 +331,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                             Thread.sleep(50);
                         }
                     }
-                    bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                    asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                    bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)&&ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
+                    asksub =ObjectUtil.isNotEmpty(quoteEventArgs)&&ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Ask:0;
                     log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
                     // 执行订单发送
