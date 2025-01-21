@@ -152,6 +152,9 @@ public class SysUserController {
         // 修改密码
         sysUserService.updatePassword(user.getId(), passwordEncoder.encode(vo.getNewPassword()));
 
+        // 使所有旧Token失效
+        sysUserTokenService.expireToken(user.getId());
+
         // 生成 accessToken
         SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
 
