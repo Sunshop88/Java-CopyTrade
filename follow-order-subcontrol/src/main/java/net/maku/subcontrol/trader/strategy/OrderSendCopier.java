@@ -11,8 +11,11 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -39,6 +42,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class OrderSendCopier extends AbstractOperation implements IOperationStrategy {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
+    private final RedisCache redisCache;
 
 
     @Override
@@ -188,6 +192,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
                 asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Ask:0;
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
+                Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
+                if(ObjectUtil.isNotEmpty(o1)){
+                    BigDecimal max = new BigDecimal(o1.toString());
+                    BigDecimal slaveLots = openOrderMapping.getSlaveLots();
+                    if (slaveLots.compareTo(max)>0) {
+                        throw new ServerException("超过最大手数限制");
+                    }
+                }
 
                 // 执行订单发送
                 double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
