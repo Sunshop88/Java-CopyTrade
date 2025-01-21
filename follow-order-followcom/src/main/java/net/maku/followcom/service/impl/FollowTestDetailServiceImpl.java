@@ -150,123 +150,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
      * @param query
      * @return
      */
-//    public PageResult<String[]> pageServer(FollowTestServerQuery query) {
-//        List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
-//        System.out.println(detailVOList.size());
-//        // 用于最终结果的列表
-//        List<String[]> result = new ArrayList<>();
-//
-//        Set<String> uniqueVpsNames = new LinkedHashSet<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String vpsName = detail.getVpsName();
-//            if (vpsName != null) {
-//                uniqueVpsNames.add(vpsName);
-//            }
-//        }
-//
-//        // 表头处理
-//        List<String> header = new ArrayList<>();
-//        header.add("券商名称");
-//        header.add("服务器名称");
-//        header.add("账号数量");
-//        header.add("非默认节点账号数量");
-//        header.add("平台类型");
-//        header.add("更新时间");
-//        header.add("服务器节点");
-//        header.addAll(uniqueVpsNames);
-//        result.add(header.toArray(new String[0]));  // 将表头加入结果中
-//
-//        // 暂存每个 key 对应的速度数据
-//        Map<String, Map<String, Double>> speedMap = new HashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
-//            String vpsName = detail.getVpsName();
-//            Integer speed = detail.getSpeed();
-//
-//            if (speed != null) {
-//                double speedValue = speed.doubleValue();
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
-//            } else {
-//                // 处理 speed 为 null 的情况
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
-//            }
-//        }
-//
-//        // Step 1: 按照 brokerName 分组
-//        Map<String, List<FollowTestDetailVO>> brokerGroups = new HashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String brokerName = followPlatformService.getbrokerName(detail.getServerName());
-//            brokerGroups.computeIfAbsent(brokerName, k -> new ArrayList<>()).add(detail);
-//        }
-//
-//        // Step 2: 对每个 brokerGroup 按照 serverName 排序
-//        List<String[]> dataRows = new ArrayList<>();
-//        for (String brokerName : brokerGroups.keySet()) {
-//            // 获取当前 brokerName 下的所有 serverName 对应的数据
-//            List<FollowTestDetailVO> serverList = brokerGroups.get(brokerName);
-//
-//            // 对该 brokerName 下的数据按 serverName 排序
-//            serverList.sort(Comparator.comparing(FollowTestDetailVO::getServerName));
-//
-//            // Step 3: 生成每行数据
-//            for (FollowTestDetailVO detail : serverList) {
-//                String serverName = detail.getServerName();
-//                String platformType = detail.getPlatformType();
-//                String serverNode = detail.getServerNode();
-//
-//                // 构建数据行
-//                String[] dataRow = new String[7 + uniqueVpsNames.size()];
-//                dataRow[0] = brokerName; // 券商名称
-//                dataRow[1] = serverName; // 服务器名称
-//                dataRow[2] = followTraderService.getAccountCount(serverName); // 账号数量
-//
-//                // 获取非默认节点账号数量
-//                String defaultServerNode = serverList.stream()
-//                        .filter(d -> serverName.equals(d.getServerName())
-//                                && d.getIsDefaultServer() != null
-//                                && d.getIsDefaultServer() == 0)
-//                        .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-//                        .map(FollowTestDetailVO::getServerNode)
-//                        .findFirst()
-//                        .orElse("null"); // 默认值为 null
-//                dataRow[3] = followTraderService.getDefaultAccountCount(serverName, defaultServerNode);
-//
-//                dataRow[4] = platformType; // 平台类型
-//                dataRow[5] = String.valueOf(serverList.stream()
-//                        .filter(d -> serverName.equals(d.getServerName())
-//                                && d.getIsDefaultServer() != null
-//                                && d.getIsDefaultServer() == 0)
-//                        .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-//                        .map(FollowTestDetailVO::getServerUpdateTime)
-//                        .findFirst()
-//                        .orElse(null)); // 更新时间
-//
-//                dataRow[6] = serverNode; // 服务器节点
-//
-//                // 填充 VPS 名称的速度数据
-//                int index = 7;
-//                for (String vpsName : uniqueVpsNames) {
-//                    Double speed = speedMap.get(serverName + "_" + platformType + "_" + serverNode).get(vpsName);
-//                    dataRow[index++] = (speed != null) ? speed.toString() : "null";
-//                }
-//
-//                dataRows.add(dataRow); // 将生成的行加入结果
-//            }
-//        }
-//
-//        // 计算分页的开始和结束索引
-//        int page = query.getPage();
-//        int limit = query.getLimit();
-//        int start = (page - 1) * limit;
-//        int end = Math.min(start + limit, dataRows.size());
-//        List<String[]> paginatedDataRows = dataRows.subList(start, end);
-//
-//        result.addAll(paginatedDataRows);
-//
-//        // 返回分页结果
-//        PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
-//        return pageResult;
-//    }
     public PageResult<String[]> pageServer(FollowTestServerQuery query) {
         List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
         Map<String, FollowTestDetailVO> map = detailVOList.stream()
@@ -276,7 +159,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                         detail -> detail,                       // 保留每个 ServerName 的第一条数据
                         (existing, replacement) -> existing));
 
-// 将 map 的值转回列表
+        // 将 map 的值转回列表
         List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
@@ -324,14 +207,8 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 将每个字段对应的数据全量获取，通过map赋值
 //        //severName默认节点
         Map<String, String> defaultServerNodeMap = new HashMap<>();
-//        if (ObjectUtil.isNotEmpty(collect)){
-//            defaultServerNodeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName , FollowTestDetailVO::getServerNode,(existing, replacement) -> existing));
-//        }
 //        //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
-//        if (ObjectUtil.isNotEmpty(collect)){
-//            serverUpdateTimeMap = collect.stream().collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime,(existing, replacement) -> existing));
-//        }
         if (ObjectUtil.isNotEmpty(collect)) {
             // 确保每个元素的关键字段不为 null
 //            for (FollowTestDetailVO item : collect) {
@@ -409,49 +286,9 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             LocalDateTime localDateTime = serverUpdateTimeMap.get(serverName) != null ? serverUpdateTimeMap.get(serverName) : null;
             dataRow[6] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
-//            //非默认节点账号数量
-//            //查询该severName默认节点
-//            String defaultServerNode = detailVOList.stream()
-//                    .filter(detailVO -> serverName.equals(detailVO.getServerName())
-//                            && detailVO.getIsDefaultServer() != null
-//                            && detailVO.getIsDefaultServer() == 0)
-//                    .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-//                    .map(FollowTestDetailVO::getServerNode)
-//                    .findFirst() // 获取最新的一条数据
-//                    .orElse("null"); // 如果没有符合条件的记录，返回 null
-//
-////            dataRow[3] = followTraderService.getDefaultAccountCount(serverName,defaultServerNode);
-//            Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
-//            Integer defaultAccountCount = defaultAccountCountMap.get(serverName.concat(defaultServerNode)) != null ? defaultAccountCountMap.get(serverName.concat(defaultServerNode)) : 0;
-//            dataRow[4] = String.valueOf(Math.max(serverNodeCount - defaultAccountCount, 0));
-//            //服务器节点
-//            dataRow[5] = serverNode;
-//            //更新时间
-//            LocalDateTime localDateTime = null;
-//
-//            if (detailVOList != null && !detailVOList.isEmpty()) {
-//                localDateTime = detailVOList.stream()
-//                        .filter(detailVO -> Objects.equals(serverName, detailVO.getServerName())
-//                                && detailVO.getIsDefaultServer() != null
-//                                && detailVO.getIsDefaultServer() == 0)
-//                        .filter(detailVO -> detailVO.getCreateTime() != null && detailVO.getServerUpdateTime() != null)
-//                        .sorted(Comparator.comparing(FollowTestDetailVO::getCreateTime).reversed())
-//                        .map(FollowTestDetailVO::getServerUpdateTime)
-//                        .findFirst()
-//                        .orElse(null);
-//            }
-//
-//            dataRow[6] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : "null";
             //vps名称
             int index = 7;
             for (String vpsName : uniqueVpsNames) {
-                //因为String speedValue = speed + "__" + isDefault;所以要截取判断
-//                if (vpsName.contains(serverName) && vpsName.contains(serverNode)) {
-//                    String speedValue = vpsName.split("__")[1];
-//                    Double speed = vpsSpeeds.get(vpsName);
-//                    dataRow[index++] = (speed != null) ? speed.toString() : "null";
-//                }
-
                 dataRow[index++] = vpsSpeeds.get(vpsName);
             }
 
@@ -653,12 +490,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
         Set<String> uniqueVpsNames = new LinkedHashSet<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String vpsName = detail.getVpsName();
-//            if (vpsName != null) {
-//                uniqueVpsNames.add(vpsName);
-//            }
-//        }
         followVpsServiceImpl.list().stream()
                 .filter(vps -> vps.getName() != null
                         && vps.getDeleted() == 0
@@ -671,23 +502,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         // 将表头转换为数组并作为固定的第一行加入结果中
         result.add(header.toArray(new String[0]));
 
-//        // 暂存每个 key 对应的速度数据
-//        Map<String, Map<String, String>> speedMap = new HashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String key = detail.getServerNode();
-//            String vpsName = detail.getVpsName();
-//            Integer speed = detail.getSpeed();
-//            Integer isDefault = detail.getIsDefaultServer();
-//
-//            if (speed != null) {
-////                double speedValue = speed.doubleValue();
-//                String speedValue = speed + "__" + isDefault;
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
-//            } else {
-//                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 + "__" + isDefault); // 使用默认值 0.0
-//            }
-//        }
+        // 暂存每个 key 对应的速度数据
         Map<String, Map<String, Double>> speedMap = new HashMap<>();
         for (FollowTestDetailVO detail : detailVOList) {
             String key = detail.getServerNode();
@@ -722,10 +537,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             // 获取最新的更新时间（假设每条记录的时间不同）
 //            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
 //                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-//                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
-
-//            Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
-//                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
 //                    .collect(Collectors.toMap(
 //                            FollowTestDetailVO::getServerName,
 //                            FollowTestDetailVO::getUpdateTime,
@@ -735,7 +546,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             LocalDateTime localDateTime = updateTimeMap.get(query.getServerName()) != null ? updateTimeMap.get(query.getServerName()) : null;
             dataRow[1] = localDateTime != null ? DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss") : null;
 
-//            // 填充速度数据
+            // 填充速度数据
 //            Map<String, String> vpsSpeeds = speedMap.get(serverNode);
 //            int index = 2;
 //            for (String vpsName : uniqueVpsNames) {
@@ -772,67 +583,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
     }
-
-
-//    @Override
-//    public PageResult<String[]> pageServerNode(FollowTestServerQuery query) {
-//        List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
-//
-//        // 用于最终结果的列表
-//        List<String[]> result = new ArrayList<>();
-//        Set<String> uniqueVpsNames = new LinkedHashSet<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            uniqueVpsNames.add(detail.getVpsName());
-//        }
-//        List<String> header = new ArrayList<>();
-//        header.add("服务器节点");
-//        header.add("更新测速时间");
-//        header.addAll(uniqueVpsNames);
-//        // 将表头转换为数组并作为固定的第一行加入结果中
-//        result.add(header.toArray(new String[0]));
-//
-//        // 暂存每个 key 对应的速度数据
-//        Map<String, Map<String, Double>> speedMap = new HashMap<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String key = detail.getServerNode();
-//            String vpsName = detail.getVpsName();
-//            Integer speed = detail.getSpeed();
-//            if (speed != null) {
-//                double speedValue = speed.doubleValue();
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
-//            } else {
-//                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
-//                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0); // 使用默认值 0.0
-//            }
-//        }
-//
-//        List<String[]> dataRows = new ArrayList<>();
-//        for (FollowTestDetailVO detail : detailVOList) {
-//            String[] dataRow = new String[2 + uniqueVpsNames.size()];
-//            String serverNode = detail.getServerNode();
-//            dataRow[0] = serverNode;
-//            dataRow[1] = String.valueOf(detail.getServerUpdateTime());
-//            // 填充速度数据
-//            Map<String, Double> vpsSpeeds = speedMap.get(serverNode);
-//            int index = 2;
-//            for (String vpsName : uniqueVpsNames) {
-//                Double speed = vpsSpeeds != null ? vpsSpeeds.get(vpsName) : null;
-//                dataRow[index++] = (speed != null) ? speed.toString() : "null";
-//            }
-//            dataRows.add(dataRow);
-//        }
-//        // 计算分页的开始和结束索引
-//        int page = query.getPage();
-//        int limit = query.getLimit();
-//        int start = (page - 1) * limit;
-//        int end = Math.min(start + limit, dataRows.size());
-//        List<String[]> paginatedDataRows = dataRows.subList(start, end);
-//        result.addAll(paginatedDataRows);
-//
-//
-//        PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
-//        return pageResult;
-//    }
 
     @Override
     public List<FollowTestDetailVO> selectServer(FollowTestServerQuery query) {
