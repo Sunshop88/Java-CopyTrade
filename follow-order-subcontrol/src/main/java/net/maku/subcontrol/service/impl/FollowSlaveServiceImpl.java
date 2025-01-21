@@ -58,13 +58,15 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
                 //下单
-                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount());
+                 String key=  Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
+                Map<Object,Object> sendRepair=redisUtil.hGetAll(key);
                 List<Object> sendRepairToExtract = new ArrayList<>();
                 for (Object repairObj : sendRepair.keySet()) {
                     EaOrderInfo repairComment = (EaOrderInfo) sendRepair.get(repairObj);
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (!existsInActive) {
                         sendRepairToExtract.add(repairComment);
+                        redisUtil.hDel(key,repairObj);
                     }
                 }
                 sendRepairToExtract.stream().toList().forEach(o->{
@@ -78,14 +80,15 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
                 List<Object> closeRepairToExtract = new ArrayList<>();
-                Map<Object,Object> closeRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE+ FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount());
-
+                 String key=Constant.FOLLOW_REPAIR_CLOSE+ FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
+                Map<Object,Object> closeRepair=redisUtil.hGetAll(key);
                 for (Object repairObj : closeRepair.keySet()) {
 
                     EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (existsInActive) {
                         closeRepairToExtract.add(repairComment);
+                        redisUtil.hDel(key,repairObj);
                     }
                 }
                 closeRepairToExtract.stream().toList().forEach(o->{
