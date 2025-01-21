@@ -135,4 +135,6 @@ public interface Constant {
 
     public static final String     SYSTEM_PARAM_LOTS_MAX="system:params";
     public static final String     LOTS_MAX="max_lots";
+
+    String FOLLOW_RELATION_KEY = "follow:relation:";
 }
