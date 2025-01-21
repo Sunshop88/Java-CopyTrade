@@ -1658,7 +1658,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public void getFollowRelation(FollowTraderEntity followTraderEntity, String account, String platform) {
         FollowPlatformEntity followPlatform= followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform));
         if (ObjectUtil.isNotEmpty(followPlatform)){
-            addFollowRelation(Constant.FOLLOW_RELATION_KEY+followTraderEntity.getAccount()+"#"+followTraderEntity.getPlatformId(),account+"#"+followPlatform.getId());
+            addFollowRelation(followTraderEntity.getAccount()+"#"+followTraderEntity.getPlatformId(),account+"#"+followPlatform.getId());
         }else {
             throw new ServerException("平台异常");
         }
