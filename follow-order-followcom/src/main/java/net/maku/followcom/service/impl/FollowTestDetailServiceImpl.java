@@ -69,35 +69,52 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         result.add(header.toArray(new String[0]));
 
         // 暂存每个 key 对应的速度数据
-        Map<String, Map<String, Double>> speedMap = new HashMap<>();
+        Map<String, Map<String, String>> speedMap = new HashMap<>();
+//        for (FollowTestDetailVO detail : detailVOList) {
+//            String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
+//            String vpsName = detail.getVpsName();
+//            double speed = detail.getSpeed();
+//            speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speed);
+//        }
         for (FollowTestDetailVO detail : detailVOList) {
             String key = detail.getServerName() + "_" + detail.getPlatformType() + "_" + detail.getServerNode();
             String vpsName = detail.getVpsName();
-            double speed = detail.getSpeed();
-            speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speed);
+            Integer speed = detail.getSpeed();
+
+            if (speed != null) {
+//                double speedValue = speed.doubleValue();
+                String speedValue = speed + "";
+                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, speedValue);
+            } else {
+                // 处理 speed 为 null 的情况，例如记录日志或使用默认值
+                speedMap.computeIfAbsent(key, k -> new HashMap<>()).put(vpsName, 0.0 + ""); // 使用默认值 0.0
+            }
         }
 
         List<String[]> dataRows = new ArrayList<>();
-        List<Map.Entry<String, Map<String, Double>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
+        List<Map.Entry<String, Map<String, String>>> sortedEntries = new ArrayList<>(speedMap.entrySet());
         sortedEntries.sort(Comparator.comparing(e -> e.getKey().split("_")[0])); // 按服务器名称排序
 
-        for (Map.Entry<String, Map<String, Double>> entry : sortedEntries) {
+        for (Map.Entry<String, Map<String, String>> entry : sortedEntries) {
             String key = entry.getKey();
             String[] keyParts = key.split("_");
             String serverName = keyParts[0];
             String platformType = keyParts[1];
             String serverNode = keyParts[2];
 
-            Map<String, Double> vpsSpeeds = entry.getValue();
+            Map<String, String> vpsSpeeds = entry.getValue();
             String[] dataRow = new String[3 + uniqueVpsNames.size()];
             dataRow[0] = serverName;
             dataRow[1] = platformType;
             dataRow[2] = serverNode;
 
             int index = 3;
+//            for (String vpsName : uniqueVpsNames) {
+//                Double speed = vpsSpeeds.get(vpsName);
+//                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+//            }
             for (String vpsName : uniqueVpsNames) {
-                Double speed = vpsSpeeds.get(vpsName);
-                dataRow[index++] = (speed != null) ? speed.toString() : "null";
+                dataRow[index++] = vpsSpeeds.get(vpsName);
             }
 
             dataRows.add(dataRow);
