@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowVpsUserEntity;
-import net.maku.followcom.enums.VpsSpendEnum;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -18,19 +17,14 @@ import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.framework.security.cache.TokenStoreCache;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.framework.security.user.UserDetail;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.entity.SysUserEntity;
 import net.maku.system.query.SysUserQuery;
-import net.maku.system.service.SysPostService;
-import net.maku.system.service.SysUserPostService;
-import net.maku.system.service.SysUserRoleService;
-import net.maku.system.service.SysUserService;
-import net.maku.system.vo.SysUserAvatarVO;
-import net.maku.system.vo.SysUserBaseVO;
-import net.maku.system.vo.SysUserPasswordVO;
-import net.maku.system.vo.SysUserVO;
+import net.maku.system.service.*;
+import net.maku.system.vo.*;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,6 +52,8 @@ public class SysUserController {
     private final PasswordEncoder passwordEncoder;
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
+    private final SysUserTokenService sysUserTokenService;
+    private final TokenStoreCache tokenStoreCache;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('sys:user:page')")
@@ -141,7 +137,7 @@ public class SysUserController {
     @PutMapping("password")
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    public Result<String> password(@RequestBody @Valid SysUserPasswordVO vo) {
+    public Result<SysUserTokenVO> password(@RequestBody @Valid SysUserPasswordVO vo) {
         // 确认密码是否一致
         if (!vo.getNewPassword().equals(vo.getConfirmPassword())) {
             return Result.error("新密码和确认密码不一致");
@@ -156,7 +152,13 @@ public class SysUserController {
         // 修改密码
         sysUserService.updatePassword(user.getId(), passwordEncoder.encode(vo.getNewPassword()));
 
-        return Result.ok();
+        // 生成 accessToken
+        SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
+
+        // 保存用户信息到缓存
+        tokenStoreCache.saveUser(userTokenVO.getAccessToken(), user);
+
+        return Result.ok(userTokenVO);
     }
 
     @PostMapping
