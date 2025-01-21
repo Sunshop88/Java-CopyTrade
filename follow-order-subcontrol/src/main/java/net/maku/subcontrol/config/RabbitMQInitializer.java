@@ -36,15 +36,15 @@ public class RabbitMQInitializer {
         try {
             rabbitAdmin.getRabbitTemplate().execute(channel -> {
                 channel.exchangeDeclarePassive(RabbitMQConfig.EXCHANGE_NAME);
-                log.info("Exchange already exists: " + RabbitMQConfig.EXCHANGE_NAME);
+                log.info("Fanout Exchange already exists: " + RabbitMQConfig.EXCHANGE_NAME);
                 return null;
             });
         } catch (Exception e) {
-            log.info("Exchange does not exist, creating: " + RabbitMQConfig.EXCHANGE_NAME);
+            log.info("Fanout Exchange does not exist, creating: " + RabbitMQConfig.EXCHANGE_NAME);
             rabbitAdmin.declareExchange(rabbitMQConfig.myExchange());
         }
 
-        log.info("Binding queue and exchange...");
+        log.info("Binding queue and fanout exchange...");
         rabbitAdmin.declareBinding(rabbitMQConfig.binding(rabbitMQConfig.myQueue(), rabbitMQConfig.myExchange()));
     }
 }
