@@ -13,7 +13,11 @@ spring:
         host: 66.112.212.130
         port: 6379
         password: kU7c7E2rhbRA
-
+  rabbitmq:
+    host: 39.101.132.253
+    port: 5672
+    username: user2
+    password: user2123
   kafka:
     bootstrap-servers: 127.0.0.1:9092
     consumer:
