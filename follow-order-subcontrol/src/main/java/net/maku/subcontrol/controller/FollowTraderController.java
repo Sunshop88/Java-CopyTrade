@@ -40,6 +40,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -257,6 +258,16 @@ public class FollowTraderController {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             return Result.error("开始手数不能大于结束手数");
         }
+        //检查最大手数
+        Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
+        if(ObjectUtil.isNotEmpty(o1)){
+            BigDecimal max = new BigDecimal(o1.toString());
+            if (vo.getEndSize().compareTo(max)>0) {
+                return Result.error("结束手数不能大于最大手数");
+            }
+        }
+
+
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
      //   ||  followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())

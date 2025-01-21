@@ -132,4 +132,7 @@ public interface Constant {
     public static final String     REPAIR_SEND="repair:send:";
     //平仓的
     public static final String     REPAIR_CLOSE="repair:close:";
+
+    public static final String     SYSTEM_PARAM_LOTS_MAX="system:params";
+    public static final String     LOTS_MAX="max_lots";
 }
