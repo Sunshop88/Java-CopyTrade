@@ -195,10 +195,10 @@ public class WebDashboardSymbolSocket {
                     profit = o.getProfit() == null ? profit : profit.add(o.getProfit());
                     num = o.getNum() == null ? num : num.add(o.getNum());
                     buyNum = o.getBuyNum() == null ? buyNum : buyNum.add(o.getBuyNum());
-                    buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(buyLots);
+                    buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(o.getBuyLots());
                     buyProfit = o.getBuyProfit() == null ? buyProfit : buyProfit.add(o.getBuyProfit());
                     sellNum = o.getSellNum() == null ? sellNum : sellNum.add(o.getSellNum());
-                    sellLots = o.getSellLots() == null ? sellLots : sellLots.add(sellLots);
+                    sellLots = o.getSellLots() == null ? sellLots : sellLots.add(o.getSellLots());
                     sellProfit = o.getSellProfit() == null ? sellProfit : sellProfit.add(o.getSellProfit());
                     position = o.getPosition() == null ? position : position.add(o.getPosition());
                     chartVO.setLots(lots);
