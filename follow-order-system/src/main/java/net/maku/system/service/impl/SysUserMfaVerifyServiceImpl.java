@@ -70,24 +70,34 @@ public class SysUserMfaVerifyServiceImpl extends ServiceImpl<SysUserMfaVerifyDao
 
     @Override
     public Result<Integer> mfaVerify(MfaVerifyDto mfaVerifyDto) {
-        String username = mfaVerifyDto.getUsername();
         Integer isMfaVerified = mfaVerifyDto.getIsMfaVerified();
+        if (isMfaVerified != 0 && isMfaVerified != 1) {
+            return Result.error(-1, "isVerified必须为0或1");
+        }
+        if (isMfaVerified == 0 && mfaVerifyDto.getSecretKey() == null) {
+            return Result.error(-2, "用户第一次认证秘钥必传");
+        }
+        Integer code = mfaVerifyDto.getCode();
+        if (code >= 1000000) {
+            return Result.error(-3, "MFA验证码不能大于6位数");
+        }
+        String username = mfaVerifyDto.getUsername();
         String secretKey = "";
 
         // 已认证，则从数据库获取秘钥；未认证，则取前端传过来的秘钥
         if (isMfaVerified == 1) {
             secretKey = sysUserMfaVerifyDao.getSecretKey(username);
             if (secretKey == null) {
-                return Result.error(-1,"用户未认证");
+                return Result.error(-1, "用户未认证");
             }
-        }else {
+        } else {
             secretKey = mfaVerifyDto.getSecretKey();
         }
 
         // 验证验证码是否匹配
         boolean mfaFlag = GoogleGeneratorUtil.checkCode(secretKey, mfaVerifyDto.getCode());
         if (!mfaFlag) {
-            return Result.error(-2,"MFA验证失败");
+            return Result.error(-2, "MFA验证失败");
         }
 
         // 第一次认证秘钥入库
@@ -116,8 +126,8 @@ public class SysUserMfaVerifyServiceImpl extends ServiceImpl<SysUserMfaVerifyDao
         Integer isMfaVerifiedEdit = vo.getIsMfaVerified();
         String username = vo.getUsername();
         Integer isMfaVerified = sysUserMfaVerifyDao.getMfaVerifyByUsername(username);
-        if (isMfaVerifiedEdit != null && isMfaVerifiedEdit.equals(MfaVerifyEnum.CERTIFIED.getType())){
-            if (isMfaVerified != null && !isMfaVerified.equals(MfaVerifyEnum.CERTIFIED.getType())){
+        if (isMfaVerifiedEdit != null && isMfaVerifiedEdit.equals(MfaVerifyEnum.CERTIFIED.getType())) {
+            if (isMfaVerified != null && !isMfaVerified.equals(MfaVerifyEnum.CERTIFIED.getType())) {
                 throw new RuntimeException("操作失败，用户未通过MFA认证，不能修改为已认证状态");
             }
             if (isMfaVerified == null) {
