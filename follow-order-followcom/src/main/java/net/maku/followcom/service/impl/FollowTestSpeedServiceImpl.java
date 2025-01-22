@@ -153,73 +153,99 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                         .collect(Collectors.toList());
                 //拿时间最新的一条数据
                 FollowTestDetailVO detailVO = detailVOList.stream()
-                            .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
-                            .orElse(null);
+                        .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
+                        .orElse(null);
                 // 提交测速任务到线程池
 //                executorService.submit(() -> {
-                    int retryCount = 0; // 重试次数
+//                    int retryCount = 0; // 重试次数
+//
+//                    while (retryCount < 2) {
+//                        try {
+//                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+//                            long startTime = System.currentTimeMillis(); // 记录起始时间
+//                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+//
+//                            long timeout = 5000; // 设置超时时间
+//                            try {
+//                                future.get(timeout, TimeUnit.MILLISECONDS);
+//                            } catch (TimeoutException e) {
+//                                retryCount++; // 增加重试次数
+//                                if (retryCount == 2) {
+//                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+//                                    break; // 超过最大重试次数后跳出循环
+//                                }
+//                                continue; // 如果超时，则重试
+//                            }
+//
+//                            long endTime = System.currentTimeMillis(); // 记录结束时间
+//                            long duration = endTime - startTime; // 计算测速时长
 
-                    while (retryCount < 2) {
+                // 提交测速任务到线程池
+                int retryCount = 0; // 重试次数
+                Integer speed = null; // 初始化速度为 null
+
+                while (retryCount < 2) {
+                    try {
+                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                        long startTime = System.currentTimeMillis(); // 记录起始时间
+                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+
+                        long timeout = 5000; // 设置超时时间
                         try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                            long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-
-                            long timeout = 5000; // 设置超时时间
-                            try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
-                            } catch (TimeoutException e) {
-                                retryCount++; // 增加重试次数
-                                if (retryCount == 2) {
-                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
-                                    break; // 超过最大重试次数后跳出循环
-                                }
-                                continue; // 如果超时，则重试
+                            future.get(timeout, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+                            retryCount++; // 增加重试次数
+                            if (retryCount == 2) {
+                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+                                break; // 超过最大重试次数后跳出循环
                             }
-
-                            long endTime = System.currentTimeMillis(); // 记录结束时间
-                            long duration = endTime - startTime; // 计算测速时长
-
-                            // 保存测速结果
-                            FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                            newEntity.setServerName(serverNode.getServerName());
-                            newEntity.setServerId(serverNode.getId());
-                            newEntity.setPlatformType("MT4");
-                            newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                            newEntity.setVpsName(vpsEntity.getName());
-                            newEntity.setVpsId(vpsEntity.getId());
-                            newEntity.setSpeed((int) duration);
-                            newEntity.setTestId(testId);
-                            newEntity.setUpdateTime(measureTime);
-                            if (detailVO == null) {
-                                log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                                newEntity.setServerUpdateTime(null);
-                                newEntity.setIsDefaultServer(1);
-                            } else {
-                                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-                                newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
-                            }
-                            followTestDetailService.save(newEntity);
-                            break; // 测试成功，跳出重试循环
-                        } catch (Exception e) {
-                            log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
-                            break; // 出现异常时跳出重试循环
+                            continue; // 如果超时，则重试
                         }
-                    }
-//                });
-            }
-        }
 
-        // 关闭线程池并等待所有任务完成
-        executorService.shutdown();
-        try {
-            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+                        long endTime = System.currentTimeMillis(); // 记录结束时间
+                        long duration = endTime - startTime; // 计算测速时长
+
+                        speed = (int) duration; // 设置速度
+                        break; // 测试成功，跳出重试循环
+                    } catch (Exception e) {
+                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+                        break; // 出现异常时跳出重试循环
+                    }
+                }
+
+                // 保存测速结果
+                FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                newEntity.setServerName(serverNode.getServerName());
+                newEntity.setServerId(serverNode.getId());
+                newEntity.setPlatformType("MT4");
+                newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                newEntity.setVpsName(vpsEntity.getName());
+                newEntity.setVpsId(vpsEntity.getId());
+                newEntity.setSpeed(speed);
+                newEntity.setTestId(testId);
+                newEntity.setUpdateTime(measureTime);
+                if (detailVO == null) {
+                    log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                    newEntity.setServerUpdateTime(null);
+                    newEntity.setIsDefaultServer(1);
+                } else {
+                    newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                    newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                }
+                followTestDetailService.save(newEntity);
+            }
+//                });
+
+            // 关闭线程池并等待所有任务完成
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
                 executorService.shutdownNow();
             }
-        } catch (InterruptedException e) {
-            executorService.shutdownNow();
         }
-
         return true; // 返回 true 表示所有任务提交成功
     }
 
