@@ -20,7 +20,7 @@ public class SourceInsertVO implements Serializable {
     private static final long serialVersionUID = 3774316922670977306L;
     //id
     @JsonProperty("Id")
-    @NotNull(message = "id")
+   // @NotNull(message = "id")
     private Integer id;
     //vps服务器id
     @JsonProperty("ClientId")

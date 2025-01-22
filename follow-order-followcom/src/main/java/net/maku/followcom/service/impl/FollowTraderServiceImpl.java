@@ -172,7 +172,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         if (ObjectUtil.isEmpty(followVpsEntity)) {
-            throw new ServerException("请先添加VPS");
+            throw new ServerException("请先添加VPS:"+vo.getServerIp());
         }
         entity.setTemplateId(vo.getTemplateId());
         entity.setPlatformId(followPlatform.getId().intValue());
