@@ -187,7 +187,6 @@ public class TraderRepairManageWebSocket {
 
                     });
                 }
-
                // slaveNum.updateAndGet(v -> v + salvenum);
                 slaveNum.updateAndGet(v -> v + objectObjectMap.size());
                 log.info(trader.getAccount()+"漏单"+orderRepairInfoVOList.size());

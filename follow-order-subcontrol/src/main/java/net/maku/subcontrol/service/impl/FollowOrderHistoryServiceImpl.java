@@ -1,5 +1,6 @@
 package net.maku.subcontrol.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,7 +9,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderDetailConvert;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.query.FollowOrderDetailQuery;
+import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.vo.FollowOrderDetailVO;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -45,10 +51,15 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHistoryDao, FollowOrderHistoryEntity> implements FollowOrderHistoryService {
     private final TransService transService;
+    private final FollowOrderDetailService followOrderDetailService;
 
     @Override
     public PageResult<FollowOrderHistoryVO> page(FollowOrderHistoryQuery query) {
-        IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+       IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+   //     修改查询订单详情表
+//        /*FollowOrderDetailQuery detailQuery=new FollowOrderDetailQuery();
+//        BeanUtil.copyProperties(query,detailQuery);
+//        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(detailQuery);*/
 
         return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
