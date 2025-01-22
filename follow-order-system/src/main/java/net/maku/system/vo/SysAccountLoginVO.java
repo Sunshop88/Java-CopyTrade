@@ -3,7 +3,6 @@ package net.maku.system.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import lombok.NonNull;
 
 import java.io.Serializable;
 
@@ -31,15 +30,4 @@ public class SysAccountLoginVO implements Serializable {
 
     @Schema(description = "验证码")
     private String captcha;
-
-    @Schema(description = "秘钥(第一次认证需把秘钥传过来)")
-    private String secretKey;
-
-    @NonNull
-    @Schema(description = "MFA验证码")
-    private Integer code;
-
-    @NonNull
-    @Schema(description = "用户MFA是否已认证（1：已认证；0：未认证）")
-    private Integer isMfaVerified;
 }

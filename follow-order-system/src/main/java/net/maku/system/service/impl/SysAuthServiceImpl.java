@@ -7,19 +7,16 @@ import lombok.AllArgsConstructor;
 import net.maku.api.module.system.SmsApi;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.Result;
 import net.maku.framework.security.cache.TokenStoreCache;
 import net.maku.framework.security.crypto.Sm2Util;
 import net.maku.framework.security.mobile.MobileAuthenticationToken;
 import net.maku.framework.security.third.ThirdAuthenticationToken;
 import net.maku.framework.security.third.ThirdLogin;
 import net.maku.framework.security.user.UserDetail;
-import net.maku.system.dto.MfaVerifyDto;
 import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.LoginOperationEnum;
 import net.maku.system.service.*;
 import net.maku.system.vo.*;
-import org.springframework.beans.BeanUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -41,7 +38,6 @@ public class SysAuthServiceImpl implements SysAuthService {
     private final SysLogLoginService sysLogLoginService;
     private final SysUserService sysUserService;
     private final SysUserTokenService sysUserTokenService;
-    private final SysUserMfaVerifyService mfaVerifyService;
     private final SmsApi smsApi;
 
     @Override
@@ -71,18 +67,6 @@ public class SysAuthServiceImpl implements SysAuthService {
                     new UsernamePasswordAuthenticationToken(login.getUsername(), Sm2Util.decrypt(login.getPassword())));
         } catch (BadCredentialsException e) {
             throw new ServerException("用户名或密码错误");
-        }
-
-        // MFA验证码验证
-        MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
-        BeanUtils.copyProperties(login, mfaVerifyDto);
-        Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
-        if (result == null) {
-            throw new ServerException("mfa认证失败");
-        }
-        Integer mfaCode = result.getCode();
-        if (mfaCode != 1) {
-            throw new ServerException(result.getMsg());
         }
 
         // 用户信息

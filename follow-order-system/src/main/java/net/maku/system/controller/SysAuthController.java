@@ -10,7 +10,6 @@ import net.maku.framework.security.utils.TokenUtils;
 import net.maku.system.service.SysAuthService;
 import net.maku.system.service.SysCaptchaService;
 import net.maku.system.vo.*;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
