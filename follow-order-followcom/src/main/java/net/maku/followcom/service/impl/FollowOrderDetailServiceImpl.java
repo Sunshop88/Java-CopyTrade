@@ -199,9 +199,10 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         entity.setIpAddr(u.getIpAddr());
         entity.setServerName(u.getServerName());
         entity.setRateMargin(order.RateMargin);
-        entity.setMagical(order.Ticket);
+       // entity.setMagical(order.Ticket);
         entity.setComment(order.Comment);
         entity.setIsExternal(1);
+     //   entity.setPlacedType(order.p);
         // entity.setBrokeName(u.get);
          //  entity.setSourceUser(u.getAccount());
         entity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
