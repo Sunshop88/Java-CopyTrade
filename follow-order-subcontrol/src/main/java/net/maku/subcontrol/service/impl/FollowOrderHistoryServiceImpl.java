@@ -55,13 +55,14 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
 
     @Override
     public PageResult<FollowOrderHistoryVO> page(FollowOrderHistoryQuery query) {
-       IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+      // IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
    //     修改查询订单详情表
-//        /*FollowOrderDetailQuery detailQuery=new FollowOrderDetailQuery();
-//        BeanUtil.copyProperties(query,detailQuery);
-//        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(detailQuery);*/
+       FollowOrderDetailQuery detailQuery=new FollowOrderDetailQuery();
+        detailQuery.setIsHistory(true);
+        BeanUtil.copyProperties(query,detailQuery);
+        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(detailQuery);
 
-        return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+        return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertDetailList(page.getList()), page.getTotal());
     }
 
     private LambdaQueryWrapper<FollowOrderHistoryEntity> getWrapper(FollowOrderHistoryQuery query) {

@@ -29,4 +29,6 @@ public class FollowOrderDetailQuery extends Query {
     private String endTime;
 
     private Integer type;
+
+    private Boolean isHistory;
 }

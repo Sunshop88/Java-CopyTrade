@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -57,6 +58,27 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
 
     private LambdaQueryWrapper<FollowOrderDetailEntity> getWrapper(FollowOrderDetailQuery query){
         LambdaQueryWrapper<FollowOrderDetailEntity> wrapper = Wrappers.lambdaQuery();
+        if (ObjectUtil.isNotEmpty(query.getTraderId())) {
+            wrapper.eq(FollowOrderDetailEntity::getTraderId, query.getTraderId());
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        // 解析字符串为 LocalDateTime
+        LocalDateTime startTime =null;
+        if (ObjectUtil.isNotEmpty(query.getStartTime())) {
+            startTime = LocalDateTime.parse(query.getStartTime(), formatter);
+        }
+        LocalDateTime endTime =null;
+        if (ObjectUtil.isNotEmpty(query.getEndTime())) {
+            endTime =  LocalDateTime.parse(query.getEndTime(), formatter);
+        }
+
+
+        wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()), FollowOrderDetailEntity::getCloseTime, startTime);
+        wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()), FollowOrderDetailEntity::getCloseTime, endTime);
+        wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderDetailEntity::getType, query.getType());
+        if(query.getIsHistory()){
+            wrapper.isNotNull(FollowOrderDetailEntity::getCloseTime);
+        }
 
         return wrapper;
     }
@@ -174,14 +196,14 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         // entity.setPlacedType(order);
         //   entity.setBrokeName();
         entity.setPlatform(u.getPlatform());
-      //  entity.setIpAddr(u.getIpAddr());
-        //entity.setServerName(u.getServerName());
+        entity.setIpAddr(u.getIpAddr());
+        entity.setServerName(u.getServerName());
         entity.setRateMargin(order.RateMargin);
         entity.setMagical(order.Ticket);
-        entity.setRemark(order.Comment);
+        entity.setComment(order.Comment);
         entity.setIsExternal(1);
         // entity.setBrokeName(u.get);
-        //    entity.setSourceUser(account);
+         //  entity.setSourceUser(u.getAccount());
         entity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
 
         return entity;

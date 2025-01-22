@@ -1,9 +1,14 @@
 package net.maku.subcontrol.convert;
 
+import net.maku.followcom.entity.FollowOrderDetailEntity;
+import net.maku.followcom.vo.FollowOrderDetailVO;
+import net.maku.framework.common.utils.PageResult;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.vo.FollowOrderHistoryExcelVO;
 import net.maku.subcontrol.vo.FollowOrderHistoryVO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -23,6 +28,11 @@ public interface FollowOrderHistoryConvert {
     FollowOrderHistoryVO convert(FollowOrderHistoryEntity entity);
 
     List<FollowOrderHistoryVO> convertList(List<FollowOrderHistoryEntity> list);
+    @Mappings({//喊单账号
+            @Mapping(source = "magical", target = "magic"),
+            @Mapping(source = "remark", target = "comment")
+    })
+    List<FollowOrderHistoryVO> convertDetailList(List<FollowOrderDetailVO> list);
 
     List<FollowOrderHistoryEntity> convertList2(List<FollowOrderHistoryVO> list);
 
