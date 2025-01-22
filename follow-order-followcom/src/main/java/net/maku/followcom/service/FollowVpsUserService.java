@@ -28,4 +28,6 @@ public interface FollowVpsUserService extends BaseService<FollowVpsUserEntity> {
 
 
     void export();
+
+    List<String> getVpsListByUserId(Long userId);
 }

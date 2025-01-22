@@ -267,7 +267,7 @@ public class FollowTraderController {
         if(ObjectUtil.isNotEmpty(o1)){
             BigDecimal max = new BigDecimal(o1.toString());
             if (vo.getEndSize().compareTo(max)>0) {
-                return Result.error("下单手数以超出上限");
+                return Result.error("下单手数已超出上限");
             }
         }
 
