@@ -29,7 +29,7 @@ public class RabbitMQConfig {
     @Bean
     public FanoutExchange myExchange() {
         // 定义交换机
-        return new FanoutExchange(EXCHANGE_NAME, true, false);
+        return new FanoutExchange(EXCHANGE_NAME, false, false);
     }
 
     @Bean
