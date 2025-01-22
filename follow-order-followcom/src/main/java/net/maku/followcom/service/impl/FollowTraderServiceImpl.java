@@ -1680,7 +1680,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(o.getId());
             List<FollowSendAccountEntity> followSendAccountEntityList= new ArrayList<>();
             subscribeOrder.forEach(sub->{
-                followSendAccountEntityList.add(FollowSendAccountEntity.builder().id(sub.getSlaveId()).account(sub.getSlaveAccount()).build());
+                followSendAccountEntityList.add(FollowSendAccountEntity.builder().id(sub.getSlaveId()).masterId(sub.getMasterId()).account(sub.getSlaveAccount()).build());
             });
             followSendAccountListVO.setFollowSendAccountEntityList(followSendAccountEntityList);
             listVOArrayList.add(followSendAccountListVO);

@@ -12,4 +12,7 @@ public class FollowSendAccountEntity {
     @Schema(description = "MT4账号")
     private String account;
 
+    @Schema(description = "喊单Id")
+    private Long masterId;
+
 }
