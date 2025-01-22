@@ -96,8 +96,6 @@ public class FollowAddSalveVo  implements Serializable {
     private String fixedComment;
 
     @Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
-    @Min(value = 0, message = "注释类型参数不合法")
-    @Max(value = 2, message = "注释类型参数不合法")
     private Integer commentType;
 
     @Schema(description = "位数")
