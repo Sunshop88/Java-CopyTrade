@@ -46,62 +46,62 @@ public class RequestFilter implements Filter {
             }
         }
 
-        // 获取 userId
-        Long userId = SecurityUser.getUserId();
-        if (userId == 10000) {
-            filterChain.doFilter(servletRequest, servletResponse);
-            return;
-        }
-        if (userId == null) {
-            servletResponse.setContentType("application/json");
-            servletResponse.setCharacterEncoding("UTF-8");
-            ServletOutputStream out = servletResponse.getOutputStream();
-            String jsonString = JSON.toJSONString(Result.error("未授权"));
-            out.write(jsonString.getBytes());
-            out.flush();
-            return;
-        }
-
-        // 根据 userId 查询 vps
-        List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
-        if (vpsList == null || vpsList.isEmpty()) {
-            servletResponse.setContentType("application/json");
-            servletResponse.setCharacterEncoding("UTF-8");
-            ServletOutputStream out = servletResponse.getOutputStream();
-            String jsonString = JSON.toJSONString(Result.error("无权限访问"));
-            out.write(jsonString.getBytes());
-            out.flush();
-            return;
-        }
-
-        // 检查 URl 是否以允许的 IP 地址开头
-        boolean isAllowed = false;
-        for (String vps : vpsList) {
-            // 根据名称查询 IP 地址
-            Optional<FollowVpsEntity> vpsEntityOptional = followVpsService.list().stream()
-                    .filter(vpsEntity -> vpsEntity.getName().equals(vps))
-                    .findFirst();
-
-            if (vpsEntityOptional.isPresent()) {
-                String ip = vpsEntityOptional.get().getIpAddress();
-                if (url.startsWith("http://" + ip + ":9001/subcontrol/follow")) {
-                    isAllowed = true;
-                    break;
-                }
-            }
-        }
-
-        if (isAllowed) {
-            filterChain.doFilter(servletRequest, servletResponse);
-        } else {
-            servletResponse.setContentType("application/json");
-            servletResponse.setCharacterEncoding("UTF-8");
-            ServletOutputStream out = servletResponse.getOutputStream();
-            String jsonString = JSON.toJSONString(Result.error("无权限访问"));
-            out.write(jsonString.getBytes());
-            out.flush();
-            return;
-        }
+//        // 获取 userId
+//        Long userId = SecurityUser.getUserId();
+//        if (userId == 10000) {
+//            filterChain.doFilter(servletRequest, servletResponse);
+//            return;
+//        }
+//        if (userId == null) {
+//            servletResponse.setContentType("application/json");
+//            servletResponse.setCharacterEncoding("UTF-8");
+//            ServletOutputStream out = servletResponse.getOutputStream();
+//            String jsonString = JSON.toJSONString(Result.error("未授权"));
+//            out.write(jsonString.getBytes());
+//            out.flush();
+//            return;
+//        }
+//
+//        // 根据 userId 查询 vps
+//        List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
+//        if (vpsList == null || vpsList.isEmpty()) {
+//            servletResponse.setContentType("application/json");
+//            servletResponse.setCharacterEncoding("UTF-8");
+//            ServletOutputStream out = servletResponse.getOutputStream();
+//            String jsonString = JSON.toJSONString(Result.error("无权限访问"));
+//            out.write(jsonString.getBytes());
+//            out.flush();
+//            return;
+//        }
+//
+//        // 检查 URl 是否以允许的 IP 地址开头
+//        boolean isAllowed = false;
+//        for (String vps : vpsList) {
+//            // 根据名称查询 IP 地址
+//            Optional<FollowVpsEntity> vpsEntityOptional = followVpsService.list().stream()
+//                    .filter(vpsEntity -> vpsEntity.getName().equals(vps))
+//                    .findFirst();
+//
+//            if (vpsEntityOptional.isPresent()) {
+//                String ip = vpsEntityOptional.get().getIpAddress();
+//                if (url.startsWith("http://" + ip + ":9001/subcontrol/follow")) {
+//                    isAllowed = true;
+//                    break;
+//                }
+//            }
+//        }
+//
+//        if (isAllowed) {
+//            filterChain.doFilter(servletRequest, servletResponse);
+//        } else {
+//            servletResponse.setContentType("application/json");
+//            servletResponse.setCharacterEncoding("UTF-8");
+//            ServletOutputStream out = servletResponse.getOutputStream();
+//            String jsonString = JSON.toJSONString(Result.error("无权限访问"));
+//            out.write(jsonString.getBytes());
+//            out.flush();
+//            return;
+//        }
 
         filterChain.doFilter(servletRequest, servletResponse);
     }
