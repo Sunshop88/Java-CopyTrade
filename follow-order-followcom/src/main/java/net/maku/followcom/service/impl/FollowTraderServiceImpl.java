@@ -1665,6 +1665,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
+    public void removeRelation(FollowTraderEntity o, String account, Integer platformId) {
+        removeFollowRelation(account+"#"+platformId,o.getAccount()+"#"+o.getPlatformId());
+    }
+
+    @Override
     public List<FollowTraderEntity> listByServerName(String name) {
         //根据名称查询列表信息
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = Wrappers.lambdaQuery();
