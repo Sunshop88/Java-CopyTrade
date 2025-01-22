@@ -155,6 +155,15 @@ public class SysUserController {
         // 使所有旧Token失效
         sysUserTokenService.expireToken(user.getId());
 
+        //遍历redis里redisCache.set(key, user, securityProperties.getAccessTokenExpire())，然后删除id相同的
+        List<String> keyList = tokenStoreCache.getUserKeyList();
+        for (String key : keyList) {
+            String userId = key.split(":")[1];
+            if (userId.equals(String.valueOf(user.getId()))) {
+                tokenStoreCache.deleteUser(key);
+            }
+        }
+
         // 生成 accessToken
         SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
 

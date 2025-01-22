@@ -16,6 +16,7 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -71,7 +72,7 @@ public class FollowTraderController {
     private final FollowVpsService followVpsService;
     private final CacheManager cacheManager;
     private final SpeedTestTask speedTestTask;
-
+    private final RedisUtil redisUtil;
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -190,6 +191,8 @@ public class FollowTraderController {
                 if (cache != null) {
                     cache.evict(cacheKey); // 移除指定缓存条目
                 }
+                FollowTraderEntity followById = followTraderService.getFollowById(o1.getMasterId());
+                followTraderService.removeRelation(o,o1.getMasterAccount(),followById.getPlatformId());
             });
         });
 
@@ -203,6 +206,7 @@ public class FollowTraderController {
 
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
+//        redisUtil.setRemove(Constant.FOLLOW_RELATION_KEY+)
         return Result.ok();
     }
 
