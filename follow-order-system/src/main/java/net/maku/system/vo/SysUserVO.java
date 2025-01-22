@@ -101,4 +101,7 @@ public class SysUserVO implements Serializable, TransPojo {
 
     @Schema(description = "上次登录IP")
     private String ip;
+
+    @Schema(description = "用户MFA是否已认证（1：已认证；0：未认证）")
+    private Integer isMfaVerified;
 }
