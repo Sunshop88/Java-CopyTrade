@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import lombok.AllArgsConstructor;
 import net.maku.api.module.system.SmsApi;
+import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.Result;
@@ -14,6 +15,7 @@ import net.maku.framework.security.mobile.MobileAuthenticationToken;
 import net.maku.framework.security.third.ThirdAuthenticationToken;
 import net.maku.framework.security.third.ThirdLogin;
 import net.maku.framework.security.user.UserDetail;
+import net.maku.system.dto.MfaDto;
 import net.maku.system.dto.MfaVerifyDto;
 import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.LoginOperationEnum;
@@ -25,6 +27,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 /**
  * 权限认证服务
@@ -74,15 +78,20 @@ public class SysAuthServiceImpl implements SysAuthService {
         }
 
         // MFA验证码验证
-        MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
-        BeanUtils.copyProperties(login, mfaVerifyDto);
-        Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
-        if (result == null) {
-            throw new ServerException("mfa认证失败");
-        }
-        Integer mfaCode = result.getCode();
-        if (mfaCode != 1) {
-            throw new ServerException(result.getMsg());
+        MfaDto mfaDto = new MfaDto();
+        BeanUtils.copyProperties(login, mfaDto);
+        MfaVo mfaVo = mfaVerifyService.mfaVerifyShow(mfaDto);
+        if (mfaVo != null && Objects.equals(mfaVo.getIsMfaVerified(), MfaVerifyEnum.CERTIFIED.getType())) {
+            MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
+            BeanUtils.copyProperties(login, mfaVerifyDto);
+            Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
+            if (result == null) {
+                throw new ServerException("mfa认证失败");
+            }
+            Integer mfaCode = result.getCode();
+            if (mfaCode != 1) {
+                throw new ServerException(result.getMsg());
+            }
         }
 
         // 用户信息
