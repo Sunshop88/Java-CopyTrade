@@ -22,7 +22,6 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.framework.security.user.UserDetail;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.entity.SysUserEntity;
-import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.query.SysUserQuery;
 import net.maku.system.service.*;
 import net.maku.system.vo.*;
@@ -34,7 +33,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 
 /**
@@ -57,28 +55,11 @@ public class SysUserController {
     private final FollowVpsUserService followVpsUserService;
     private final SysUserTokenService sysUserTokenService;
     private final TokenStoreCache tokenStoreCache;
-    private final SysUserMfaVerifyService mfaVerifyService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('sys:user:page')")
     public Result<PageResult<SysUserVO>> page(@ParameterObject @Valid SysUserQuery query) {
         PageResult<SysUserVO> page = sysUserService.page(query);
-
-        // 获取用户认证
-        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
-        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
-        // 存入认证状态
-        List<SysUserVO> sysUserVOList = page.getList();
-        for (SysUserVO sysUserVO : sysUserVOList) {
-            SysUserMfaVerifyEntity sysUserMfaVerifyEntity = mfaVerifyMap.get(sysUserVO.getUsername());
-            if (sysUserMfaVerifyEntity != null) {
-                Integer isMfaVerified = sysUserMfaVerifyEntity.getIsMfaVerified();
-                sysUserVO.setIsMfaVerified((isMfaVerified != null && isMfaVerified == 1) ? isMfaVerified : 0);
-            }else {
-                sysUserVO.setIsMfaVerified(0);
-            }
-        }
-        page.setList(sysUserVOList);
 
         return Result.ok(page);
     }
@@ -232,9 +213,6 @@ public class SysUserController {
         }
 
         sysUserService.update(vo);
-
-        // 修改mfa认证
-        mfaVerifyService.editMfaVerify(vo);
 
         return Result.ok();
     }
