@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -155,10 +156,14 @@ public class SysUserController {
         // 使所有旧Token失效
         sysUserTokenService.expireToken(user.getId());
 
-        //遍历redis里redisCache.set(key, user, securityProperties.getAccessTokenExpire())，然后删除id相同的
+
         List<String> keyList = tokenStoreCache.getUserKeyList();
         for (String key : keyList) {
-            String userId = key.split(":")[1];
+//            String userId = key.split(":")[1];
+            // 获取用户 ID
+//            long userId = ((Map<String, Object>)jsonData[1]).get("id");
+            UserDetail userDetail = (UserDetail) redisCache.get(key);
+            Long userId = userDetail.getId();
             if (userId.equals(String.valueOf(user.getId()))) {
                 tokenStoreCache.deleteUser(key);
             }
