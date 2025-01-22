@@ -138,7 +138,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
     @Override
     public PageResult<FollowOrderSlipPointVO> listFollowOrderSlipPoint(FollowOrderSpliListQuery query) {
         Page<?> pageRequest = new Page<>(query.getPage(), query.getLimit());
-     //   query.setServer(FollowConstant.LOCAL_HOST);
+        query.setServer(FollowConstant.LOCAL_HOST);
         Page<FollowOrderSlipPointVO> page = followOrderDetailDao.getFollowOrderDetailStats(pageRequest,query);
         return new PageResult<>(page.getRecords(), page.getTotal());
     }

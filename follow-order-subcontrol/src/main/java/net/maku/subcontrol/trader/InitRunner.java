@@ -145,7 +145,7 @@ public class InitRunner implements ApplicationRunner {
             FollowTraderEntity master = followTraderService.getFollowById(o.getMasterId());
             // 将跟单关系存储到Redis
             String key = Constant.FOLLOW_RELATION_KEY + o.getMasterAccount()+"#"+master.getPlatformId();
-            String followerId = Constant.FOLLOW_RELATION_KEY + o.getSlaveAccount()+"#"+slave.getPlatformId();;
+            String followerId =o.getSlaveAccount()+"#"+slave.getPlatformId();;
             redisUtil.sSet(key, followerId);
         });
 

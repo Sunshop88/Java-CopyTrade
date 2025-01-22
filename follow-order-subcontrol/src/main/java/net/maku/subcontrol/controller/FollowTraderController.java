@@ -271,46 +271,72 @@ public class FollowTraderController {
             }
         }
 
-
+        QuoteClient quoteClient = null;
+        AbstractApiTrader abstractApiTrader = null;
         //检查vps是否正常
         FollowVpsEntity followVpsEntity = followVpsService.getById(followTraderVO.getServerId());
-     //   ||  followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue())
         if (  followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
             throw new ServerException("VPS服务异常，请检查");
         }
 
-        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
-                .get(vo.getTraderId().toString());
-        QuoteClient quoteClient = null;
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+           abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+                    .get(vo.getTraderId().toString());
 
-        if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
-                || !leaderApiTrader.quoteClient.Connected()) {
-            leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
-            if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
-                LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-                leaderApiTrader1.startTrade();
-            }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                //重复提交
-                leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
-                if (ObjectUtil.isNotEmpty(leaderApiTrader)) {
-                    quoteClient = leaderApiTrader.quoteClient;
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                    || !abstractApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
+                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    leaderApiTrader1.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+                    if (ObjectUtil.isNotEmpty(abstractApiTrader)) {
+                        quoteClient = abstractApiTrader.quoteClient;
+                    }
+                }else {
+                    return Result.error("账号无法登录");
                 }
-            }else {
-                return Result.error("账号无法登录");
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
             }
-        } else {
-            quoteClient = leaderApiTrader.quoteClient;
+        }else {
+            abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap()
+                    .get(vo.getTraderId().toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                    || !abstractApiTrader.quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(vo.getTraderId().toString());
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
+                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    copierApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    //重复提交
+                    abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
+                    if (ObjectUtil.isNotEmpty(abstractApiTrader)) {
+                        quoteClient = abstractApiTrader.quoteClient;
+                    }
+                }else {
+                    return Result.error("账号无法登录");
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+
         }
 
+
         // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(leaderApiTrader.getTrader().getTemplateId());
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(abstractApiTrader.getTrader().getTemplateId());
         Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(vo.getSymbol())).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
-        String symbol1 = getSymbol(leaderApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
+        String symbol1 = getSymbol(abstractApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
         vo.setSymbol(symbol1);
         log.info("标准合约大小{}", contract);
         try {
@@ -606,7 +632,7 @@ public class FollowTraderController {
         }
     }
 
-    private String getSymbol(AbstractApiTrader leaderApiTrader,QuoteClient quoteClient,Long traderId, String symbol) {
+    private String getSymbol(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient,Long traderId, String symbol) {
 
         //查询平台信息
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
@@ -625,7 +651,7 @@ public class FollowTraderController {
                     //查看品种规格
                     if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))) {
                         //获取报价
-                        eventArgs= getEventArgs(leaderApiTrader,quoteClient,o.getBrokerSymbol());
+                        eventArgs= getEventArgs(abstractApiTrader,quoteClient,o.getBrokerSymbol());
                         if (ObjectUtil.isNotEmpty(eventArgs)){
                             return o.getBrokerSymbol();
                         }
@@ -636,12 +662,12 @@ public class FollowTraderController {
         return symbol;
     }
 
-    private QuoteEventArgs getEventArgs(AbstractApiTrader leaderApiTrader,QuoteClient quoteClient,String symbol){
+    private QuoteEventArgs getEventArgs(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient,String symbol){
         QuoteEventArgs eventArgs = null;
         try {
-            if (ObjectUtil.isEmpty(leaderApiTrader.quoteClient.GetQuote(symbol))){
+            if (ObjectUtil.isEmpty(abstractApiTrader.quoteClient.GetQuote(symbol))){
                 //订阅
-                leaderApiTrader.quoteClient.Subscribe(symbol);
+                abstractApiTrader.quoteClient.Subscribe(symbol);
             }
             while (eventArgs==null && quoteClient.Connected()) {
                 try {
@@ -651,7 +677,7 @@ public class FollowTraderController {
                 }
                 eventArgs=quoteClient.GetQuote(symbol);
             }
-            eventArgs = leaderApiTrader.quoteClient.GetQuote(symbol);
+            eventArgs = abstractApiTrader.quoteClient.GetQuote(symbol);
             return eventArgs;
         }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
             log.info("获取报价失败,品种不正确,请先配置品种");
