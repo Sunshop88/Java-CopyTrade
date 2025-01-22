@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 用户vps可查看列表
@@ -87,6 +88,17 @@ public class FollowVpsUserServiceImpl extends BaseServiceImpl<FollowVpsUserDao, 
     List<FollowVpsUserExcelVO> excelList = FollowVpsUserConvert.INSTANCE.convertExcelList(list());
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowVpsUserExcelVO.class, "用户vps可查看列表", null, excelList);
+    }
+
+    @Override
+    public List<String> getVpsListByUserId(Long userId) {
+        LambdaQueryWrapper<FollowVpsUserEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(FollowVpsUserEntity::getUserId, userId);
+        List<FollowVpsUserEntity> vpsUserEntities = baseMapper.selectList(wrapper);
+        // 提取 vpsName 列表
+        return vpsUserEntities.stream()
+                .map(FollowVpsUserEntity::getVpsName)
+                .collect(Collectors.toList());
     }
 
 }
