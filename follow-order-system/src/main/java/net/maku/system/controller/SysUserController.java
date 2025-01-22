@@ -164,7 +164,7 @@ public class SysUserController {
 //            long userId = ((Map<String, Object>)jsonData[1]).get("id");
             UserDetail userDetail = (UserDetail) redisCache.get(key);
             Long userId = userDetail.getId();
-            if (userId.equals(String.valueOf(user.getId()))) {
+            if (userId.equals(user.getId())) {
                 tokenStoreCache.deleteUser(key);
             }
         }
