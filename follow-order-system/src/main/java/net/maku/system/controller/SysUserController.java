@@ -165,17 +165,20 @@ public class SysUserController {
             UserDetail userDetail = (UserDetail) redisCache.get(key);
             Long userId = userDetail.getId();
             if (userId.equals(user.getId())) {
-                tokenStoreCache.deleteUser(key);
+                //sys:token:d9bf996b62b441ef98b630dad169455b
+                String accessToken = key.split(":")[2];
+                tokenStoreCache.deleteUser(accessToken);
             }
         }
+        return Result.ok();
 
-        // 生成 accessToken
-        SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
-
-        // 保存用户信息到缓存
-        tokenStoreCache.saveUser(userTokenVO.getAccessToken(), user);
-
-        return Result.ok(userTokenVO);
+//        // 生成 accessToken
+//        SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
+//
+//        // 保存用户信息到缓存
+//        tokenStoreCache.saveUser(userTokenVO.getAccessToken(), user);
+//
+//        return Result.ok(userTokenVO);
     }
 
     @PostMapping
