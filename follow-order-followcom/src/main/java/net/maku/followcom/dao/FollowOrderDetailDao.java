@@ -3,6 +3,7 @@ package net.maku.followcom.dao;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
@@ -40,7 +41,8 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "count(1) AS symbolNum " +
             "FROM follow_order_detail " +
             "<where>" +
-            " AND order_no is not null" +
+            " order_no is not null" +
+            " AND send_no is not null" +
             "<if test='query.serverId != null '> and trader_id IN ( SELECT id FROM follow_trader WHERE  server_id=#{query.serverId}) </if> \n" +
             "<if test='query.traderIdList != null and query.traderIdList.size > 0'> AND trader_id in \n" +
             "  <foreach collection='query.traderIdList' item='item' open='(' separator=',' close=')'>\n" +
