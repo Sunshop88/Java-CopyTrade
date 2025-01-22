@@ -48,6 +48,10 @@ public class RequestFilter implements Filter {
 
         // 获取 userId
         Long userId = SecurityUser.getUserId();
+        if (userId == 10000) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
         if (userId == null) {
             servletResponse.setContentType("application/json");
             servletResponse.setCharacterEncoding("UTF-8");
