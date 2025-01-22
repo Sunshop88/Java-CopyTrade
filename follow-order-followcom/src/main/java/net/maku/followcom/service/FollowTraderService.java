@@ -100,4 +100,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     void getFollowRelation(FollowTraderEntity followTraderEntity, String account, String platform);
 
     void removeRelation(FollowTraderEntity o, String account, Integer platformId);
+
+    List<FollowSendAccountListVO> accountPage();
 }

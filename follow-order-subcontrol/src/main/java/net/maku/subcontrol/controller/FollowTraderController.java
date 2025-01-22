@@ -27,6 +27,7 @@ import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.subcontrol.task.ObtainOrderHistoryTask;
 import net.maku.subcontrol.task.SpeedTestTask;
 import net.maku.subcontrol.trader.*;
+import net.maku.followcom.vo.FollowSendAccountListVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
@@ -206,7 +207,6 @@ public class FollowTraderController {
 
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
-//        redisUtil.setRemove(Constant.FOLLOW_RELATION_KEY+)
         return Result.ok();
     }
 
@@ -757,4 +757,13 @@ public class FollowTraderController {
         obtainOrderHistoryTask.update(traderEntity,newList);
         return Result.ok("同步成功");
     }
+
+    @GetMapping("sendAccountList")
+    @Operation(summary = "下单账号列表")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<List<FollowSendAccountListVO>> sendAccountList() {
+        List<FollowSendAccountListVO> page = followTraderService.accountPage();
+        return Result.ok(page);
+    }
+
 }

@@ -1670,6 +1670,25 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
+    public List<FollowSendAccountListVO> accountPage() {
+        List<FollowSendAccountListVO> listVOArrayList = new ArrayList<>();
+        List<FollowTraderEntity> list = this.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST).eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()));
+        list.forEach(o->{
+            FollowSendAccountListVO followSendAccountListVO = new FollowSendAccountListVO();
+            followSendAccountListVO.setId(o.getId());
+            followSendAccountListVO.setAccount(o.getAccount());
+            List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(o.getId());
+            List<FollowSendAccountEntity> followSendAccountEntityList= new ArrayList<>();
+            subscribeOrder.forEach(sub->{
+                followSendAccountEntityList.add(FollowSendAccountEntity.builder().id(sub.getSlaveId()).account(sub.getSlaveAccount()).build());
+            });
+            followSendAccountListVO.setFollowSendAccountEntityList(followSendAccountEntityList);
+            listVOArrayList.add(followSendAccountListVO);
+        });
+        return listVOArrayList;
+    }
+
+    @Override
     public List<FollowTraderEntity> listByServerName(String name) {
         //根据名称查询列表信息
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = Wrappers.lambdaQuery();
