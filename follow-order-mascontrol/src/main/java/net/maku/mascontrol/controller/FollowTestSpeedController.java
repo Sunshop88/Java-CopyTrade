@@ -701,6 +701,32 @@ public class FollowTestSpeedController {
         update(overallResult);
     }
 
+    @PostMapping("reconnectionServer")
+    @Operation(summary = "重新连接服务器账号")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<String> reconnectionServer(@RequestBody FollowTestServerVO followTestServerVO,HttpServletRequest req) {
+
+        followTestServerVO.getVpsNameList().forEach(vps -> {
+            Optional<FollowVpsEntity> vpsEntityOptional = followVpsService.list().stream()
+                    .filter(vpsEntity -> vpsEntity.getName().equals(vps) && vpsEntity.getDeleted() == 0)
+                    .findFirst();
+            if (vpsEntityOptional.isPresent()) {
+                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntityOptional, FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION);
+                String serverName = followTestServerVO.getServerName();
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+                HttpEntity<String> entity = new HttpEntity<>(serverName, headers);
+                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+                log.info("测速请求:" + response.getBody());
+
+                if (!response.getBody().getString("msg").equals("success")) {
+                    log.error("测速失败ip: " + vpsEntityOptional);
+                }
+
+            }
+        });
+        return Result.ok();
+    }
 
     @DeleteMapping("deleteServer")
     @Operation(summary = "删除服务器")
