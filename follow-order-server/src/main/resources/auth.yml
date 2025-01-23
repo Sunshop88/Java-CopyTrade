@@ -2,3 +2,5 @@
 auth:
   ignore_urls:
     - /api/**
+    - /sys/auth/mfaVerifyShow
+    - /sys/params/**

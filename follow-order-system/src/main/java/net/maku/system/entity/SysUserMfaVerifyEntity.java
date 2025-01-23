@@ -39,6 +39,9 @@ public class SysUserMfaVerifyEntity extends Model<SysUserMfaVerifyEntity> {
     @Schema(description = "秘钥")
     private String secretKey;
 
+    @Schema(description = "二维码")
+    private String qrCode;
+
     @Schema(description = "是否MFA认证(1：已认证；0：未认证)")
     private Integer isMfaVerified;
 
