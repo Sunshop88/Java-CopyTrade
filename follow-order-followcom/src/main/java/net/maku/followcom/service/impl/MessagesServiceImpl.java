@@ -165,6 +165,11 @@ public class MessagesServiceImpl implements MessagesService {
     }
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
         ThreadPoolUtils.getExecutor().execute(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+              log.error("漏单通知异常{}",e);
+            }
             Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
             List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
             if (ObjectUtil.isNotEmpty(o1)) {
