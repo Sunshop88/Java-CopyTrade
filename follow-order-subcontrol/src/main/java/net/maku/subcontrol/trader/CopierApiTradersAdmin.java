@@ -24,6 +24,7 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
+import online.mtapi.mt4.OrderClient;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;

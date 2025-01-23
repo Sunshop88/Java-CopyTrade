@@ -110,31 +110,6 @@ public class KafkaMessageConsumer {
                         .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                         .eq(FollowSubscribeOrderEntity::getSlaveId, followTraderEntity.getId())
                         .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
-                //插入历史订单
-                FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
-                historyEntity.setTraderId(followTraderEntity.getId());
-                historyEntity.setAccount(followTraderEntity.getAccount());
-                historyEntity.setOrderNo(order.Ticket);
-                historyEntity.setType(order.Type.getValue());
-                historyEntity.setOpenTime(order.OpenTime);
-                historyEntity.setCloseTime(order.CloseTime);
-                historyEntity.setSize(BigDecimal.valueOf(order.Lots));
-                historyEntity.setSymbol(order.Symbol);
-                historyEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
-                historyEntity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
-                //止损
-                historyEntity.setProfit(orderResultEvent.getCopierProfit());
-                historyEntity.setComment(order.Comment);
-                historyEntity.setSwap(BigDecimal.valueOf(order.Swap));
-                historyEntity.setMagic(order.MagicNumber);
-                historyEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
-                historyEntity.setSymbol(order.Symbol);
-                historyEntity.setSl(BigDecimal.valueOf(order.StopLoss));
-                historyEntity.setCreateTime(LocalDateTime.now());
-                historyEntity.setVersion(0);
-                historyEntity.setPlacedType(0);
-                historyEntity.setCommission(BigDecimal.valueOf(order.Commission));
-                followOrderHistoryService.customBatchSaveOrUpdate(Arrays.asList(historyEntity));
                 //生成日志
                 FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
                 followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
@@ -151,7 +126,7 @@ public class KafkaMessageConsumer {
                 followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
                 followTraderLogService.save(followTraderLogEntity);
                 //详情
-                FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
+                FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getOpenTime,order.OpenTime).eq(FollowOrderDetailEntity::getOpenTime,order.OpenTime).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
                 if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                     log.info("记录详情"+detailServiceOne.getTraderId()+"订单"+detailServiceOne.getOrderNo());
                     updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice(),orderResultEvent.getIpAddress());

@@ -75,31 +75,6 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             //生成记录
             FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, trader);
             followSubscribeOrderService.save(openOrderMapping);
-            //插入历史订单
-            FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
-            historyEntity.setTraderId(trader.getId());
-            historyEntity.setAccount(trader.getAccount());
-            historyEntity.setOrderNo(orderInfo.getTicket());
-            historyEntity.setType(orderInfo.getType());
-            historyEntity.setOpenTime(orderInfo.getOpenTime());
-            historyEntity.setCloseTime(orderInfo.getCloseTime());
-            historyEntity.setSize(BigDecimal.valueOf(orderInfo.getLots()));
-            historyEntity.setSymbol(orderInfo.getSymbol());
-            historyEntity.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
-            historyEntity.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
-            //止损
-            BigDecimal copierProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add( orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
-            historyEntity.setProfit(copierProfit);
-            historyEntity.setComment(orderInfo.getComment());
-            historyEntity.setSwap(orderInfo.getSwap());
-            historyEntity.setMagic((int) orderInfo.getMagic());
-            historyEntity.setTp(BigDecimal.valueOf(orderInfo.getTp()));
-            historyEntity.setSl(BigDecimal.valueOf(orderInfo.getSl()));
-            historyEntity.setCreateTime(LocalDateTime.now());
-            historyEntity.setVersion(0);
-            historyEntity.setPlacedType(0);
-            historyEntity.setCommission(orderInfo.getCommission());
-            followOrderHistoryService.customBatchSaveOrUpdate(Arrays.asList(historyEntity));
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());
