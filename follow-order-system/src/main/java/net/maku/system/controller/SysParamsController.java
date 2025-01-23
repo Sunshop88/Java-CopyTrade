@@ -80,10 +80,10 @@ public class SysParamsController {
         return Result.ok();
     }
 
-    @Operation(summary = "是否开启MFA认证")
+    @Operation(summary = "是否开启MFA认证（1：是）")
     @GetMapping(value = "/isMfaVerify")
-    public Result<Integer> isVerify(String paramKey) {
-//        sysParamsService
+    public Result<Integer> isVerify(@RequestParam String paramKey) {
+        Integer result = sysParamsService.isVerify(paramKey);
         return Result.ok(1);
     }
 }

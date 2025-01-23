@@ -2,6 +2,7 @@ package net.maku.system.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
@@ -141,6 +142,21 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
         String value = getString(paramKey);
 
         return JsonUtils.parseObject(value, valueType);
+    }
+
+    @Override
+    public Integer isVerify(String paramKey) {
+        QueryWrapper<SysParamsEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("param_key", "LOGIN_MFA");
+        List<SysParamsEntity> sysParamsList = this.list(wrapper);
+        if (!sysParamsList.isEmpty()) {
+            SysParamsEntity sysParamsEntity = sysParamsList.getFirst();
+            if (sysParamsEntity != null) {
+                return sysParamsEntity.getParamType();
+            }
+        }
+
+        return 0;
     }
 
 }
