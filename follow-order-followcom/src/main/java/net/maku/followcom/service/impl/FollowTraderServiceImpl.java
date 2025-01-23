@@ -615,7 +615,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
                             try {
                                 //判断是否存在指定数据
-                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
@@ -639,7 +639,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         int finalI = i;
                         try {
                             //判断是否存在指定数据
-                            updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                            updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -669,7 +669,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             try {
                                 int finalI = i;
                                 CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
-                                    updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                    updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                                     //进行平仓滑点分析
                                     updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
                                 }, ThreadPoolUtils.getExecutor());
@@ -707,7 +707,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                             try {
                                 int finalI = i;
-                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                                 //进行平仓滑点分析
                                 updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
 
