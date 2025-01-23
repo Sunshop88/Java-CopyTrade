@@ -76,9 +76,8 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         wrapper.gt(ObjectUtil.isNotEmpty(query.getStartTime()), FollowOrderDetailEntity::getCloseTime, startTime);
         wrapper.lt(ObjectUtil.isNotEmpty(query.getEndTime()), FollowOrderDetailEntity::getCloseTime, endTime);
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderDetailEntity::getType, query.getType());
-        if(query.getIsHistory()){
-            wrapper.isNotNull(FollowOrderDetailEntity::getCloseTime);
-        }
+        wrapper.isNotNull(query.getIsHistory()!=null && query.getIsHistory(),FollowOrderDetailEntity::getCloseTime);
+
 
         return wrapper;
     }
