@@ -1,6 +1,7 @@
 package net.maku.subcontrol.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import net.maku.followcom.enums.TraderRepairEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
@@ -120,6 +122,14 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                             orderSendCopier.operate(copierApiTrader,objects,1);
                             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
+                            //删除漏单redis记录
+                            Object o1 = redisUtil.hGet(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount());
+                            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                            if (o1!=null && o1.toString().trim().length()>0){
+                                repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                            }
+                            repairInfoVOS.remove(repairSendVO.getOrderNo());
+                            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount(),JSONObject.toJSONString(repairInfoVOS));
                         }else {
                             throw new ServerException("暂无订单需处理");
                         }
@@ -143,6 +153,14 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                                 String mapKey = copierApiTrader.getTrader().getId() + "#" + copierApiTrader.getTrader().getAccount();
                                 if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(objects.getTicket())))){
                                     redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
+                                    //删除漏单redis记录
+                                    Object o1 = redisUtil.hGet(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount());
+                                    Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                                    if (o1!=null && o1.toString().trim().length()>0){
+                                        repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                                    }
+                                    repairInfoVOS.remove(repairSendVO.getOrderNo());
+                                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount(),JSONObject.toJSONString(repairInfoVOS));
                                 }
                             });
                         } else {

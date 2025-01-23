@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.followcom.vo.FollowTraderVO;
+import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
@@ -23,7 +25,9 @@ import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -66,6 +70,15 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             messagesService.isRepairClose(orderInfo,follow,master);
             //删除跟单redis记录
             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
+           //删除漏单redis记录
+            Object o1 = redisUtil.hGet(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+            Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
+            if (o1!=null && o1.toString().trim().length()>0){
+                repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+            }
+            repairInfoVOS.remove(orderInfo.getTicket());
+            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+
         });
 
         ThreadPoolUtils.getExecutor().execute(()->{
