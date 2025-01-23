@@ -10,24 +10,20 @@ import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
-import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
-import net.maku.subcontrol.service.MessagesService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
-import net.maku.subcontrol.vo.FixTemplateVO;
 import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -67,14 +63,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
             //发送漏单通知
             FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
-            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                    vpsName(follow.getServerName())
-                    .source(o.getMasterAccount())
-                    .sourceRemarks(master.getRemark())
-                    .follow(follow.getAccount())
-                    .symbol(orderInfo.getSymbol())
-                    .type(Constant.NOTICE_MESSAGE_SELL).build();
-            messagesService.send(vo);
+            messagesService.isRepairClose(orderInfo,follow,master);
             //删除跟单redis记录
             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
         });
@@ -95,4 +84,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             followTraderLogService.save(followTraderLogEntity);
         });
     }
+
+
+
 }

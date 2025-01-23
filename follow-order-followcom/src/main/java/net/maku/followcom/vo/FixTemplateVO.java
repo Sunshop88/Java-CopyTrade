@@ -1,4 +1,4 @@
-package net.maku.subcontrol.vo;
+package net.maku.followcom.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

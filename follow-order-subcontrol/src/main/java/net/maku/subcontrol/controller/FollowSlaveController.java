@@ -72,6 +72,7 @@ public class FollowSlaveController {
     private final FollowPlatformService followPlatformService;
     private final CacheManager cacheManager;
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
+    private final MessagesService messagesService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -162,6 +163,9 @@ public class FollowSlaveController {
                         Arrays.stream(orders).toList().forEach(order -> {
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), followTraderEntity);
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
+                            //发送漏单通知
+                            FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                            messagesService.isRepairSend(eaOrderInfo,convert,master);
                         });
                     }
                 }

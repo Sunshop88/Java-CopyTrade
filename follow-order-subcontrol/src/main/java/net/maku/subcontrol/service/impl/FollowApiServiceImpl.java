@@ -68,6 +68,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowVpsService followVps;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
+    private final MessagesService messagesService;
 
     /**
      * 喊单账号保存
@@ -236,6 +237,9 @@ public class FollowApiServiceImpl implements FollowApiService {
                         Arrays.stream(orders).toList().forEach(order->{
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),followTraderEntity);
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+vo.getAccount()+"#"+followTraderEntity.getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
+                            //发送漏单通知
+                            FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                            messagesService.isRepairSend(eaOrderInfo,convert,master);
                         });
                     }
                 }
