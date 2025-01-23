@@ -801,11 +801,12 @@ public class FollowTestSpeedController {
 //                    continue;
 //                }
                     }
-                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+                }
+                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode).eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
                     //切分serverNode节点
                     String[] serverNodeArray = serverNode.split(":");
                     followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
-                }
+
             }
             return Result.ok("删除成功");
 
