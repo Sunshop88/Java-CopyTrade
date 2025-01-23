@@ -30,8 +30,8 @@ public class MissingOrdersNoticeTask {
     private final MessagesService messagesService;
     private final RedisCache redisCache;
 
-   //@Scheduled(cron = "0 0/10 * * * ?")
-    @Scheduled(cron = "* * * * * ?")
+   @Scheduled(cron = "0 0/10 * * * ?")
+    //@Scheduled(cron = "* * * * * ?")
     public void notice() {
         Set<String> sendKeys = redisCache.keys(Constant.REPAIR_SEND + "*");
         Set<String> closeKeys  = redisCache.keys(Constant.REPAIR_CLOSE + "*");
