@@ -84,7 +84,7 @@ public class RequestFilter implements Filter {
 
             if (vpsEntityOptional.isPresent()) {
                 String ip = vpsEntityOptional.get().getIpAddress();
-                if (url.startsWith("http://" + ip + ":9001/subcontrol/follow")) {
+                if (url.startsWith("http://" + ip + ":9001/subcontrol/follow") || url.startsWith("http://" + ip + ":9001/subcontrol/trader")) {
                     isAllowed = true;
                     break;
                 }
