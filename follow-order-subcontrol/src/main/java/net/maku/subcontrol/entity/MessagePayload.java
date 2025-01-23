@@ -9,6 +9,9 @@ public class MessagePayload {
     @JsonProperty("Account")
     private Account account;
 
+    @JsonProperty("Type")
+    private int type=1;
+
     @JsonProperty("User")
     private long user;
 

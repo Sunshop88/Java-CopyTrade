@@ -1,8 +1,11 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.json.JSONUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
@@ -40,7 +43,12 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info("跟单发送平仓mq" + leader.getId());
                 ThreadPoolUtils.getExecutor().execute(()-> {
                     //发送平仓MQ
-                    producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
+                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                    try {
+                        producer.sendMessage(mapper.writeValueAsString(getMessagePayload(x)));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                 });
             }
         } catch (IllegalStateException e) {
