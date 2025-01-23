@@ -79,4 +79,10 @@ public class SysParamsController {
 
         return Result.ok();
     }
+
+    @Operation(summary = "是否开启MFA认证")
+    @PostMapping(value = "/isMfaVerify")
+    public Result<Integer> isVerify() {
+        return Result.ok(1);
+    }
 }
