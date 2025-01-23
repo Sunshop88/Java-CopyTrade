@@ -166,7 +166,7 @@ public class MessagesServiceImpl implements MessagesService {
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
         ThreadPoolUtils.getExecutor().execute(() -> {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
               log.error("漏单通知异常{}",e);
             }
