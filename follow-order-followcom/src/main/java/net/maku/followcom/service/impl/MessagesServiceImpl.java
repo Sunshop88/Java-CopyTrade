@@ -110,7 +110,7 @@ public class MessagesServiceImpl implements MessagesService {
     public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
         ThreadPoolUtils.getExecutor().execute(() -> {
             //写入到redis中
-            Object repairStr = redisCache.hGet(Constant.REPAIR_CLOSE  + master.getAccount() + ":" + master.getId(), follow.getAccount());
+            Object repairStr = redisCache.hGetStr(Constant.REPAIR_CLOSE  + master.getAccount() + ":" + master.getId(), follow.getAccount());
             Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
             if (repairStr != null && repairStr.toString().trim().length() > 0) {
                 repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
@@ -174,7 +174,7 @@ public class MessagesServiceImpl implements MessagesService {
             //确定为漏单
             if (!existsInActive) {
                 //写入到redis中
-                Object repairStr = redisCache.hGet(Constant.REPAIR_SEND+ master.getAccount() + ":" + master.getId(), follow.getAccount());
+                Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND+ master.getAccount() + ":" + master.getId(), follow.getAccount());
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
                 if (repairStr != null && repairStr.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);

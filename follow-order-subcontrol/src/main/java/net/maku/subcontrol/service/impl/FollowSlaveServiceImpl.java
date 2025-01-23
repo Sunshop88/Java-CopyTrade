@@ -123,7 +123,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             orderSendCopier.operate(copierApiTrader,objects,1);
                             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                             //删除漏单redis记录
-                            Object o1 = redisUtil.hGet(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount());
+                            Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount());
                             Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
                             if (o1!=null && o1.toString().trim().length()>0){
                                 repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
@@ -154,7 +154,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                                 if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(objects.getTicket())))){
                                     redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
                                     //删除漏单redis记录
-                                    Object o1 = redisUtil.hGet(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount());
+                                    Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount());
                                     Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
                                     if (o1!=null && o1.toString().trim().length()>0){
                                         repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);

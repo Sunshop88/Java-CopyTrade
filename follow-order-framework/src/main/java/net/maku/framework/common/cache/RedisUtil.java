@@ -260,6 +260,17 @@ public class RedisUtil {
         return redisTemplate.opsForHash().get(key, item);
     }
 
+    public Object hGetStr(String key, String item) {
+        redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        Object o = redisTemplate.opsForHash().get(key, item);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        return o;
+    }
+
     /**
      * HashGet 获获取所有给定字段的值
      * HMGET key field1 [field2]
