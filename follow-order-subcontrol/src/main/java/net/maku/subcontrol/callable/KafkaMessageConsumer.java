@@ -126,7 +126,7 @@ public class KafkaMessageConsumer {
                 followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
                 followTraderLogService.save(followTraderLogEntity);
                 //详情
-                FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getOpenTime,order.OpenTime).eq(FollowOrderDetailEntity::getOpenTime,order.OpenTime).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
+                FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId()).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
                 if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                     log.info("记录详情"+detailServiceOne.getTraderId()+"订单"+detailServiceOne.getOrderNo());
                     updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice(),orderResultEvent.getIpAddress());

@@ -118,6 +118,8 @@ public abstract class AbstractApiTrader extends ApiTrader {
             //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
             this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
+            //默认监听
+            this.quoteClient.Subscribe(Arrays.stream(this.quoteClient.Symbols()).findFirst().get());
         }
 
     }

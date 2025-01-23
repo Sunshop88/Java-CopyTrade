@@ -194,7 +194,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     .eq(FollowSubscribeOrderEntity::getMasterId, orderInfo.getMasterId())
                     .eq(FollowSubscribeOrderEntity::getSlaveId, orderId)
                     .eq(FollowSubscribeOrderEntity::getMasterTicket, orderInfo.getTicket()));
-            FollowOrderDetailEntity followOrderDetailEntity=followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo,cachedCopierOrderInfo.getSlaveTicket().intValue()));
+            FollowOrderDetailEntity followOrderDetailEntity=followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId,copier.getId()).eq(FollowOrderDetailEntity::getOrderNo,cachedCopierOrderInfo.getSlaveTicket().intValue()));
             if (ObjectUtil.isNotEmpty(followOrderDetailEntity)){
                 followOrderDetailEntity.setRemark(e.getMessage());
                 followOrderDetailService.updateById(followOrderDetailEntity);
