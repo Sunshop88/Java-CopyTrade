@@ -32,7 +32,7 @@ public class CommentGenerator {
 
         if (commentType == 2) {
             randomPart.append(generateComplexRandomPart(digits, random));
-        } else {
+        } else if (commentType != 99)  {
             String characterPool = getCharacterPoolByType(commentType);
             if (characterPool.isEmpty()) {
                 throw new IllegalArgumentException("无效的注释类型：" + commentType);
