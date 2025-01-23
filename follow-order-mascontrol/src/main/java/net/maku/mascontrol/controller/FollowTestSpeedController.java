@@ -524,8 +524,8 @@ public class FollowTestSpeedController {
                     isDefaultServer = 1;
                 }
                 targetVO.setIsDefaultServer(isDefaultServer);
-                targetVO.setUpdateTime(targetVO.getUpdateTime());
-                System.out.println(targetVO.getUpdateTime());
+                targetVO.setTestUpdateTime(targetVO.getTestUpdateTime());
+//                System.out.println(targetVO.getUpdateTime());
                 targetVO.setServerUpdateTime(now);
                 // 更新数据库
                 followTestDetailService.update(targetVO);
@@ -576,7 +576,7 @@ public class FollowTestSpeedController {
         for (FollowTestDetailVO vo : detailVOLists) {
             vo.setServerName(followTestServerNameVO.getNewName());
             vo.setServerUpdateTime(now);
-            vo.setUpdateTime(vo.getUpdateTime());
+            vo.setTestUpdateTime(vo.getTestUpdateTime());
             followTestDetailService.update(vo);
         }
 
@@ -631,7 +631,7 @@ public class FollowTestSpeedController {
         //查询vps
         List<String> vps = followVpsService.listByVps().stream().map(FollowVpsVO::getName).collect(Collectors.toList());
 
-log.warn("time:{}", overallResult.getDoTime());
+        log.warn("time:{}", overallResult.getDoTime());
 
         extracted(req, vps, servers, overallResult);
         return Result.ok();
@@ -801,11 +801,12 @@ log.warn("time:{}", overallResult.getDoTime());
 //                    continue;
 //                }
                     }
-                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode));
+                }
+                    followTestDetailService.remove(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerNode, serverNode).eq(FollowTestDetailEntity::getServerName, vo.getServerName()));
                     //切分serverNode节点
                     String[] serverNodeArray = serverNode.split(":");
-                    followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]));
-                }
+                    followBrokeServerService.remove(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerNode, serverNodeArray[0]).eq(FollowBrokeServerEntity::getServerPort, serverNodeArray[1]).eq(FollowBrokeServerEntity::getServerName,vo.getServerName()));
+
             }
             return Result.ok("删除成功");
 

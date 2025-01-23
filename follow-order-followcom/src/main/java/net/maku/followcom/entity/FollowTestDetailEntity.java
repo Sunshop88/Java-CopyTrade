@@ -89,7 +89,7 @@ public class FollowTestDetailEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time")
-	private LocalDateTime updateTime;
+	private LocalDateTime testUpdateTime;
 
 	/**
 	 * Vps ID

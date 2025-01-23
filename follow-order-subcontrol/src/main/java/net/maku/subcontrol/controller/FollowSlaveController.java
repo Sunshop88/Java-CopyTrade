@@ -288,7 +288,13 @@ public class FollowSlaveController {
     public Result<Boolean> startNewVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         try {
+            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).forEach(o->{
+                leaderApiTradersAdmin.removeTrader(o.getId().toString());
+            });
             leaderApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
+            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).forEach(o->{
+                copierApiTradersAdmin.removeTrader(o.getId().toString());
+            });
             copierApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList());
         } catch (Exception e) {
             throw new ServerException("新Vps账号启动异常" + e);

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -22,6 +23,7 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.framework.security.user.UserDetail;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.entity.SysUserEntity;
+import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.query.SysUserQuery;
 import net.maku.system.service.*;
 import net.maku.system.vo.*;
@@ -33,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -55,11 +58,22 @@ public class SysUserController {
     private final FollowVpsUserService followVpsUserService;
     private final SysUserTokenService sysUserTokenService;
     private final TokenStoreCache tokenStoreCache;
+    private final SysUserMfaVerifyService mfaVerifyService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('sys:user:page')")
     public Result<PageResult<SysUserVO>> page(@ParameterObject @Valid SysUserQuery query) {
         PageResult<SysUserVO> page = sysUserService.page(query);
+
+        // 获取用户认证
+        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
+        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
+        // 存入认证状态
+        List<SysUserVO> sysUserVOList = page.getList();
+        for (SysUserVO sysUserVO : sysUserVOList) {
+            setIntoSysUserVo(sysUserVO, mfaVerifyMap);
+        }
+        page.setList(sysUserVOList);
 
         return Result.ok(page);
     }
@@ -89,7 +103,23 @@ public class SysUserController {
             redisCache.set(Constant.SYSTEM_VPS_USER+ id, JSONObject.toJSON(vpsUserVOS));
             vo.setVpsList(vpsUserVOS);
         }
+
+        // 获取用户认证
+        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
+        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
+        setIntoSysUserVo(vo, mfaVerifyMap);
+
         return Result.ok(vo);
+    }
+
+    private void setIntoSysUserVo(SysUserVO vo, Map<String, SysUserMfaVerifyEntity> mfaVerifyMap) {
+        SysUserMfaVerifyEntity sysUserMfaVerifyEntity = mfaVerifyMap.get(vo.getUsername());
+        if (sysUserMfaVerifyEntity != null) {
+            Integer isMfaVerified = sysUserMfaVerifyEntity.getIsMfaVerified();
+            vo.setIsMfaVerified((isMfaVerified != null && isMfaVerified.equals(MfaVerifyEnum.CERTIFIED.getType())) ? isMfaVerified : 0);
+        }else {
+            vo.setIsMfaVerified(0);
+        }
     }
 
     private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
@@ -213,6 +243,9 @@ public class SysUserController {
         }
 
         sysUserService.update(vo);
+
+        // 修改mfa认证
+        mfaVerifyService.editMfaVerify(vo);
 
         return Result.ok();
     }
