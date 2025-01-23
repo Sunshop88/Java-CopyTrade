@@ -55,7 +55,7 @@ public class FollowConstant {
 
     public static String VPS_MEASURE = "/subcontrol/follow/start";
 
-    public static String VPS_RECONNECTION= "/subcontrol/follow/reconnectionServer";
+    public static String VPS_RECONNECTION= "/subcontrol/trader/reconnectionServer";
 
     /**
      * 更新缓存
