@@ -1,10 +1,20 @@
 package net.maku.mascontrol.task;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.service.MessagesService;
+import net.maku.followcom.vo.FixTemplateVO;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Author:  zsd
@@ -16,9 +26,38 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class MissingOrdersNoticeTask {
     private final MessagesService messagesService;
+    private final RedisCache redisCache;
 
-    //@Scheduled(cron = "0 0/10 * * * ?")
+    @Scheduled(cron = "0 0/10 * * * ?")
     public void notice() {
+        Set<String> sendKeys = redisCache.keys(Constant.REPAIR_SEND + "*");
+        Set<String> closeKeys  = redisCache.keys(Constant.REPAIR_CLOSE + "*");
+        AtomicReference<Integer> num= new AtomicReference<>(0);
+        sendKeys.forEach(key -> {
+            Map<String, Object> stringObjectMap = redisCache.hGetAll(key);
+            if(stringObjectMap!=null){
+                stringObjectMap.values().forEach(obj->{
+                    JSONObject jsonObject = JSONObject.parseObject(obj.toString());
+                    Collection<Object> values = jsonObject.values();
+                    num.updateAndGet(v -> v + values.size());
+
+                });
+            }
+        });
+        //检查漏单信息
+        closeKeys.forEach(key -> {
+            Map<String, Object> stringObjectMap = redisCache.hGetAll(key);
+            if(stringObjectMap!=null){
+                stringObjectMap.values().forEach(obj->{
+                    JSONObject jsonObject = JSONObject.parseObject(obj.toString());
+                    Collection<Object> values = jsonObject.values();
+                    num.updateAndGet(v -> v + values.size());
+
+                });
+            }
+        });
+        FixTemplateVO vo=FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_INSPECT.getCode()).num(num.get()).build();
+        messagesService.send(vo);
 
     }
 
