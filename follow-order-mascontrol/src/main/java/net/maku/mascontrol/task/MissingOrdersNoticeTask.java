@@ -17,9 +17,9 @@ import org.springframework.stereotype.Component;
 public class MissingOrdersNoticeTask {
     private final MessagesService messagesService;
 
-    @Scheduled(cron = "0 0/10 * * * ?")
+    //@Scheduled(cron = "0 0/10 * * * ?")
     public void notice() {
-        System.out.println("111");
+
     }
 
 }
