@@ -61,7 +61,7 @@ public class FollowConstant {
      * 更新缓存
      */
     public static String VPS_UPDATE_CACHE_VARIETY_CACHE= "/subcontrol/follow/updateVarietyCache";
-    public static String VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE= "/subcontrol/follow/updatePlatCache";
+    public static String VPS_UPDATE_CACHE_FOLLOW_PLAT_CACHE= "/subcontrol/trader/updatePlatCache";
 
     /**
      * 跟单日志
