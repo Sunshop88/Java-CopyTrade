@@ -121,6 +121,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 
     @Override
     public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
+        log.info("开始测速时间：{}",measureTime);
         // 获取服务器列表
         List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
 
@@ -223,7 +224,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 newEntity.setVpsId(vpsEntity.getId());
                 newEntity.setSpeed(speed);
                 newEntity.setTestId(testId);
-                newEntity.setUpdateTime(measureTime);
+                newEntity.setTestUpdateTime(measureTime);
                 if (detailVO == null) {
                     log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
                     newEntity.setServerUpdateTime(null);
@@ -317,7 +318,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 newEntity.setVpsId(vpsEntity.getId());
                 newEntity.setSpeed(speed); // 设置速度，可能为 null
                 newEntity.setTestId(testId);
-                newEntity.setUpdateTime(measureTime);
+                newEntity.setTestUpdateTime(measureTime);
 //                newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
                 newEntity.setIsDefaultServer(1);
                 if (detailVO == null) {

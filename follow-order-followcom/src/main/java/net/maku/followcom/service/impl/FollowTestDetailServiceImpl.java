@@ -518,10 +518,10 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         }
 
         Map<String, LocalDateTime> updateTimeMap = detailVOList.stream()
-                .filter(item -> item.getServerName() != null && item.getUpdateTime() != null)
+                .filter(item -> item.getServerName() != null && item.getTestUpdateTime() != null)
                 .collect(Collectors.toMap(
                         FollowTestDetailVO::getServerName,
-                        FollowTestDetailVO::getUpdateTime,
+                        FollowTestDetailVO::getTestUpdateTime,
                         (existing, replacement) -> {
                             if (existing == null) return replacement;
                             if (replacement == null) return existing;
