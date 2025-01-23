@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
@@ -24,7 +25,9 @@ import net.maku.framework.security.utils.TokenUtils;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.dao.SysUserDao;
 import net.maku.system.entity.SysLogLoginEntity;
+import net.maku.system.entity.SysRoleEntity;
 import net.maku.system.entity.SysUserEntity;
+import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.enums.SuperAdminEnum;
 import net.maku.system.query.SysRoleUserQuery;
 import net.maku.system.query.SysUserQuery;
@@ -41,6 +44,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户管理
@@ -107,9 +111,18 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         //通过id查询角色用户表中的role_id
         List<Long> roleIdList = sysUserRoleService.getRoleIdList(id);
         //通过roleIdList查询角色表中的name
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.isNotNull(SysRoleEntity::getId);
+        List<SysRoleEntity> sysRoleList = sysRoleService.list(wrapper);
+        Map<Long, SysRoleEntity> sysRoleMap = new HashMap<>();
+        if (sysRoleList != null && !sysRoleList.isEmpty()) {
+            sysRoleMap = sysRoleList.stream().collect(Collectors.toMap(SysRoleEntity::getId, s -> s));
+        }
         for (Long roleId : roleIdList) {
-            String roleName = sysRoleService.getById(roleId).getName();
-            vo.add(roleName);
+            SysRoleEntity sysRoleEntity = sysRoleMap.get(roleId);
+            if (sysRoleEntity != null) {
+                vo.add(sysRoleEntity.getName());
+            }
         }
         return vo;
     }
