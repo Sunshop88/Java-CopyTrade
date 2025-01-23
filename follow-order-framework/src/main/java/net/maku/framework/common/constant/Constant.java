@@ -132,9 +132,16 @@ public interface Constant {
     public static final String     REPAIR_SEND="repair:send:";
     //平仓的
     public static final String     REPAIR_CLOSE="repair:close:";
-
+   //全局参数配置
     public static final String     SYSTEM_PARAM_LOTS_MAX="system:params";
+    //最大手数
     public static final String     LOTS_MAX="max_lots";
-
+    //飞书通知签名
+    public static final String      FS_NOTICE_SECRET="secret";
+    //飞书通知url
+    public static final String        FS_NOTICE_URL="url";
+    //
+    public static final String        NOTICE_MESSAGE_BUY="漏开";
+    public static final String        NOTICE_MESSAGE_SELL="漏平";
     String FOLLOW_RELATION_KEY = "follow:relation:";
 }

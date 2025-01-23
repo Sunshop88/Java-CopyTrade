@@ -9,16 +9,20 @@ import net.maku.followcom.entity.FollowTraderLogEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderLogEnum;
 import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
+import net.maku.subcontrol.service.MessagesService;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.vo.FixTemplateVO;
 import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +45,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 @AllArgsConstructor
 public class OrderSendMaster extends AbstractOperation implements IOperationStrategy {
+      private final MessagesService messagesService;
 
     /**
      * 收到开仓信号处理操作
@@ -55,6 +60,16 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
         subscribeEntityList.forEach(o -> {
             FollowTraderEntity follow = followTraderService.getFollowById(o.getSlaveId());
             redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
+            //发送漏单通知
+            FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
+            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                    vpsName(follow.getServerName())
+                    .source(o.getMasterAccount())
+                    .sourceRemarks(master.getRemark())
+                    .follow(follow.getAccount())
+                    .symbol(orderInfo.getSymbol())
+                    .type(Constant.NOTICE_MESSAGE_BUY).build();
+            messagesService.send(vo);
         });
         ThreadPoolUtils.getExecutor().execute(() -> {
             //生成记录
