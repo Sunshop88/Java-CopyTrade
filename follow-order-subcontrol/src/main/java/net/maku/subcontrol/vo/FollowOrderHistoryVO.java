@@ -6,6 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 所有MT4账号的历史订单
@@ -28,7 +29,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private Integer type;
 
 	@Schema(description = "开仓时间")
-	private LocalDateTime openTime;
+	private Date openTime;
 
 	@Schema(description = "平仓时间")
 	private LocalDateTime closeTime;
