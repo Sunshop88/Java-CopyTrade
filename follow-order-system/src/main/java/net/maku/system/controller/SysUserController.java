@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -70,13 +71,7 @@ public class SysUserController {
         // 存入认证状态
         List<SysUserVO> sysUserVOList = page.getList();
         for (SysUserVO sysUserVO : sysUserVOList) {
-            SysUserMfaVerifyEntity sysUserMfaVerifyEntity = mfaVerifyMap.get(sysUserVO.getUsername());
-            if (sysUserMfaVerifyEntity != null) {
-                Integer isMfaVerified = sysUserMfaVerifyEntity.getIsMfaVerified();
-                sysUserVO.setIsMfaVerified((isMfaVerified != null && isMfaVerified == 1) ? isMfaVerified : 0);
-            }else {
-                sysUserVO.setIsMfaVerified(0);
-            }
+            setIntoSysUserVo(sysUserVO, mfaVerifyMap);
         }
         page.setList(sysUserVOList);
 
@@ -108,7 +103,23 @@ public class SysUserController {
             redisCache.set(Constant.SYSTEM_VPS_USER+ id, JSONObject.toJSON(vpsUserVOS));
             vo.setVpsList(vpsUserVOS);
         }
+
+        // 获取用户认证
+        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
+        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
+        setIntoSysUserVo(vo, mfaVerifyMap);
+
         return Result.ok(vo);
+    }
+
+    private void setIntoSysUserVo(SysUserVO vo, Map<String, SysUserMfaVerifyEntity> mfaVerifyMap) {
+        SysUserMfaVerifyEntity sysUserMfaVerifyEntity = mfaVerifyMap.get(vo.getUsername());
+        if (sysUserMfaVerifyEntity != null) {
+            Integer isMfaVerified = sysUserMfaVerifyEntity.getIsMfaVerified();
+            vo.setIsMfaVerified((isMfaVerified != null && isMfaVerified.equals(MfaVerifyEnum.CERTIFIED.getType())) ? isMfaVerified : 0);
+        }else {
+            vo.setIsMfaVerified(0);
+        }
     }
 
     private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
