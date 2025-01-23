@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.maku.api.module.system.SmsApi;
 import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.framework.common.constant.Constant;
@@ -36,6 +37,7 @@ import java.util.Objects;
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class SysAuthServiceImpl implements SysAuthService {
@@ -85,11 +87,12 @@ public class SysAuthServiceImpl implements SysAuthService {
             MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
             BeanUtils.copyProperties(login, mfaVerifyDto);
             Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
+            log.info("=========结果：{}", String.valueOf(result));
             if (result == null) {
                 throw new ServerException("mfa认证失败");
             }
             Integer mfaCode = result.getCode();
-            if (mfaCode != 1) {
+            if (mfaCode != 0) {
                 throw new ServerException(result.getMsg());
             }
         }

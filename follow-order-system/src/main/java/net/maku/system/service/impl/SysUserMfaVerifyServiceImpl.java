@@ -1,18 +1,26 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.followcom.util.GoogleGeneratorUtil;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.security.crypto.Sm2Util;
 import net.maku.system.dao.SysUserMfaVerifyDao;
 import net.maku.system.dto.MfaDto;
 import net.maku.system.dto.MfaVerifyDto;
 import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.service.SysUserMfaVerifyService;
+import net.maku.system.service.SysUserService;
 import net.maku.system.vo.MfaVo;
 import net.maku.system.vo.SysUserVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +41,32 @@ public class SysUserMfaVerifyServiceImpl extends ServiceImpl<SysUserMfaVerifyDao
     @Autowired
     SysUserMfaVerifyDao sysUserMfaVerifyDao;
 
+    @Autowired
+    SysUserService sysUserService;
+
+    @Autowired
+    AuthenticationManager authenticationManager;
+
     @Override
     public MfaVo mfaVerifyShow(MfaDto mfaDto) {
+
+        //用户是禁用状态，直接抛出异常
+        SysUserVO SysUserVO = sysUserService.getByUsername(mfaDto.getUsername());
+        if(ObjectUtil.isEmpty(SysUserVO)){
+            throw new ServerException("用户名或密码错误");
+        }
+        if (SysUserVO.getStatus() == 0) {
+            throw new ServerException("您的账户已被禁用，请联系管理员。");
+        }
+
+        Authentication authentication;
+        try {
+            // 用户认证
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(mfaDto.getUsername(), Sm2Util.decrypt(mfaDto.getPassword())));
+        } catch (BadCredentialsException e) {
+            throw new ServerException("用户名或密码错误");
+        }
 
         MfaVo mfaVo = new MfaVo();
         // 用户是否已认证
@@ -107,10 +139,11 @@ public class SysUserMfaVerifyServiceImpl extends ServiceImpl<SysUserMfaVerifyDao
             SysUserMfaVerifyEntity sysUserMfaVerifyEntity = new SysUserMfaVerifyEntity();
             sysUserMfaVerifyEntity.setUsername(mfaVerifyDto.getUsername());
             sysUserMfaVerifyEntity.setSecretKey(secretKey);
+            sysUserMfaVerifyEntity.setQrCode(GoogleGeneratorUtil.getQRBarcode(username, secretKey));
             sysUserMfaVerifyEntity.setIsMfaVerified(1);
             sysUserMfaVerifyDao.insert(sysUserMfaVerifyEntity);
         }
-        return Result.ok(1);
+        return Result.ok(null);
     }
 
     @Override
