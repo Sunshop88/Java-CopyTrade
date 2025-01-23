@@ -110,7 +110,7 @@ public class MessagesServiceImpl implements MessagesService {
     public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
         ThreadPoolUtils.getExecutor().execute(() -> {
             //写入到redis中
-            Object repairStr = redisCache.hGet(Constant.REPAIR_CLOSE + ":" + master.getAccount() + ":" + master.getId(), follow.getAccount());
+            Object repairStr = redisCache.hGet(Constant.REPAIR_CLOSE  + master.getAccount() + ":" + master.getId(), follow.getAccount());
             Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
             if (repairStr != null && repairStr.toString().trim().length() > 0) {
                 repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
@@ -157,7 +157,7 @@ public class MessagesServiceImpl implements MessagesService {
                      send(vo);
                 });
                 repairInfoVOS.putAll(closeMap);
-                redisCache.hSet(Constant.REPAIR_CLOSE + ":" + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                redisCache.hSet(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
             }
 
 
@@ -174,7 +174,7 @@ public class MessagesServiceImpl implements MessagesService {
             //确定为漏单
             if (!existsInActive) {
                 //写入到redis中
-                Object repairStr = redisCache.hGet(Constant.REPAIR_SEND + ":" + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                Object repairStr = redisCache.hGet(Constant.REPAIR_SEND+ master.getAccount() + ":" + master.getId(), follow.getAccount());
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
                 if (repairStr != null && repairStr.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
@@ -194,7 +194,7 @@ public class MessagesServiceImpl implements MessagesService {
                 orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
                 orderRepairInfoVO.setSlaveId(follow.getId());
                 repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
-                redisCache.hSet(Constant.REPAIR_SEND + ":" + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                redisCache.hSet(Constant.REPAIR_SEND  + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                 //发送漏单消息
                 FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                         vpsName(follow.getServerName())
