@@ -39,7 +39,7 @@ public class MessagesServiceImpl implements MessagesService {
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
         String json="{\n" +
                 "    \"timestamp\": \""+timestamp+"\",\n" +
-                "    \"timestamp\": \""+secret+"\",\n" +
+                "    \"sign\": \""+secret+"\",\n" +
                 "    \"msg_type\": \"post\",\n" +
                 "    \"content\": {\n" +
                 "        \"post\": {\n" +
@@ -65,7 +65,7 @@ public class MessagesServiceImpl implements MessagesService {
     private  String  fixedTimeTemplate(String secret, Integer timestamp,Integer num) {
         String json="{\n" +
                 "    \"timestamp\": \""+timestamp+"\",\n" +
-                "    \"timestamp\": \""+secret+"\",\n" +
+                "    \"sign\": \""+secret+"\",\n" +
                 "    \"msg_type\": \"post\",\n" +
                 "    \"content\": {\n" +
                 "        \"post\": {\n" +
