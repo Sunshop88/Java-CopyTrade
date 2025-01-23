@@ -719,7 +719,7 @@ log.info("重新连接服务器账号:{}",req);
 
             FollowVpsEntity vpsEntityOptional = vpsEntityOptionals.getFirst();
             log.info("vpsEntityOptional:{}", vpsEntityOptional);
-            if (ObjectUtil.isEmpty(vpsEntityOptional)) {
+            if (ObjectUtil.isNotEmpty(vpsEntityOptional)) {
                 String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntityOptional.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION);
                 String serverName = followTestServerVO.getServerName();
                 RestTemplate restTemplate = new RestTemplate();
