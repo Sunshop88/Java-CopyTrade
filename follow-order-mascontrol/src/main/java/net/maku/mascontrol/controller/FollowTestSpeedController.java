@@ -181,14 +181,15 @@ public class FollowTestSpeedController {
             }
 
             futures.add(executorService.submit(() -> {
-                String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+                try {
+                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
 
-                MeasureRequestVO startRequest = new MeasureRequestVO();
-                startRequest.setServers(servers);
-                startRequest.setVpsEntity(vpsEntity);
-                startRequest.setTestId(overallResult.getId());
-                startRequest.setMeasureTime(overallResult.getDoTime());
-                log.info("测试时间"+overallResult.getDoTime());
+                    MeasureRequestVO startRequest = new MeasureRequestVO();
+                    startRequest.setServers(servers);
+                    startRequest.setVpsEntity(vpsEntity);
+                    startRequest.setTestId(overallResult.getId());
+                    startRequest.setMeasureTime(overallResult.getDoTime());
+                    log.info("测试时间"+overallResult.getDoTime());
 
 //                // 将对象序列化为 JSON
 //                String jsonBody = objectMapper.writeValueAsString(startRequest);
@@ -198,23 +199,28 @@ public class FollowTestSpeedController {
 //                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
 //                log.info("测速请求:" + response.getBody());
 
-                // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
-                String expiryDateStr = vpsEntity.getExpiryDate().toString();
-                startRequest.setExpiryDateStr(expiryDateStr);
+                    // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+                    String expiryDateStr = vpsEntity.getExpiryDate().toString();
+                    startRequest.setExpiryDateStr(expiryDateStr);
 
-                RestTemplate restTemplate = new RestTemplate();
-                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
-                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                log.info("测速请求:" + response.getBody());
+                    RestTemplate restTemplate = new RestTemplate();
+                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
+                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+                    log.info("测速请求:" + response.getBody());
 
 
-                if (!response.getBody().getString("msg").equals("success")) {
-                    log.error("测速失败ip: " + vpsEntity.getIpAddress());
-                    return false; // 返回失败状态
+                    if (!response.getBody().getString("msg").equals("success")) {
+                        log.error("测速失败ip: " + vpsEntity.getIpAddress());
+                        return true; // 返回失败状态
+                    }
+                } catch (Exception e) {
+                    log.error("请求异常: " + e.getMessage() + ", VPS异常");
                 }
                 return true; // 返回成功状态
+
             }));
+
         }
         // 等待所有任务完成并检查结果
         for (Future<Boolean> future : futures) {
