@@ -40,4 +40,7 @@ public class SysAccountLoginVO implements Serializable {
 
     @Schema(description = "用户MFA是否已认证（1：已认证；0：未认证）")
     private Integer isMfaVerified;
+
+    @Schema(description = "是否开启MFA认证（1：是；0：否）")
+    private Integer isStartMfaVerify = 0;
 }

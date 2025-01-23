@@ -81,7 +81,7 @@ public class SysAuthServiceImpl implements SysAuthService {
         MfaDto mfaDto = new MfaDto();
         BeanUtils.copyProperties(login, mfaDto);
         MfaVo mfaVo = mfaVerifyService.mfaVerifyShow(mfaDto);
-        if (mfaVo != null && Objects.equals(mfaVo.getIsMfaVerified(), MfaVerifyEnum.CERTIFIED.getType())) {
+        if (mfaVo != null && Objects.equals(login.getIsStartMfaVerify(), MfaVerifyEnum.START_CERTIFIED.getType())) {
             MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
             BeanUtils.copyProperties(login, mfaVerifyDto);
             Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
