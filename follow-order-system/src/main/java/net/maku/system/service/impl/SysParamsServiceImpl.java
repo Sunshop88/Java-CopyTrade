@@ -1,5 +1,6 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -146,8 +147,8 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
 
     @Override
     public Integer isVerify(String paramKey) {
-        QueryWrapper<SysParamsEntity> wrapper = new QueryWrapper<>();
-        wrapper.eq("param_key", "LOGIN_MFA");
+        LambdaQueryWrapper<SysParamsEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ObjectUtil.isNotEmpty(paramKey), SysParamsEntity::getParamKey, paramKey);
         List<SysParamsEntity> sysParamsList = this.list(wrapper);
         if (!sysParamsList.isEmpty()) {
             SysParamsEntity sysParamsEntity = sysParamsList.getFirst();
