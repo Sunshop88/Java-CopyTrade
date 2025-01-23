@@ -155,7 +155,6 @@ public class SysParamsServiceImpl extends BaseServiceImpl<SysParamsDao, SysParam
                 return sysParamsEntity.getParamType();
             }
         }
-
         return 0;
     }
 
