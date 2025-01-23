@@ -157,7 +157,7 @@ public class MessagesServiceImpl implements MessagesService {
                      send(vo);
                 });
                 repairInfoVOS.putAll(closeMap);
-                redisCache.hSet(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
             }
 
 
@@ -194,7 +194,7 @@ public class MessagesServiceImpl implements MessagesService {
                 orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
                 orderRepairInfoVO.setSlaveId(follow.getId());
                 repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
-                redisCache.hSet(Constant.REPAIR_SEND  + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                redisCache.hSetStr(Constant.REPAIR_SEND  + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                 //发送漏单消息
                 FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                         vpsName(follow.getServerName())

@@ -112,9 +112,10 @@ public class RedisCache {
          objectMapper.registerModule(new JavaTimeModule());
          objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
         redisTemplate.setHashKeySerializer(RedisSerializer.string());
-       redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         return entries;
     }
+
 
     public void hMSet(String key, Map<String, Object> map) {
         hMSet(key, map, DEFAULT_EXPIRE);
@@ -130,6 +131,15 @@ public class RedisCache {
 
     public void hSet(String key, String field, Object value) {
         hSet(key, field, value, DEFAULT_EXPIRE);
+    }
+    public void hSetStr(String key, String field, Object value) {
+        redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        redisTemplate.opsForHash().put(key, field, value);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
     }
 
     public void hSet(String key, String field, Object value, long expire) {
