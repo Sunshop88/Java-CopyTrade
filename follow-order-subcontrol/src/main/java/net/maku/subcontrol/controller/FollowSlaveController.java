@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
@@ -338,8 +339,8 @@ public class FollowSlaveController {
     @PostMapping("batchRepairSend")
     @Operation(summary = "漏单处理")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> batchRepairSend(@RequestBody List<RepairSendVO> repairSendVO) {
-        return Result.ok(followSlaveService.batchRepairSend(repairSendVO));
+    public Result<Boolean> batchRepairSend(@RequestBody List<RepairSendVO> repairSendVO, HttpServletRequest req) {
+        return Result.ok(followSlaveService.batchRepairSend(repairSendVO,req));
     }
 
     private void reconnect(String traderId) {
