@@ -1,8 +1,12 @@
 package net.maku.subcontrol.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
@@ -11,11 +15,14 @@ import net.maku.followcom.enums.TraderRepairEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowSlaveService;
@@ -25,8 +32,14 @@ import net.maku.subcontrol.trader.strategy.OrderCloseCopier;
 import net.maku.subcontrol.trader.strategy.OrderSendCopier;
 import net.maku.subcontrol.vo.RepairSendVO;
 import online.mtapi.mt4.Order;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -182,10 +195,43 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     }
 
     @Override
-    public Boolean batchRepairSend(List<RepairSendVO> repairSendVO) {
+    public Boolean batchRepairSend(List<RepairSendVO> repairSendVO,HttpServletRequest req) {
         repairSendVO.forEach(repair -> {
-            repairSend(repair);
+            Long slaveId = repair.getSlaveId();
+            FollowTraderEntity trader = followTraderService.getById(slaveId);
+            FollowVpsEntity vps = followVpsService.getById(trader.getServerId());
+            sendRequest(req,vps.getIpAddress(),"/subcontrol/follow/repairSend",repair);
+            //repairSend(repair);
         });
         return true;
+    }
+
+    /**
+     * 远程调用方法封装
+     */
+    private static <T> Result<String> sendRequest(HttpServletRequest req, String host, String uri, T t) {
+        //远程调用
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        ObjectMapper objectMapper = new ObjectMapper();
+        // 将对象序列化为 JSON
+        String jsonBody = null;
+        try {
+            jsonBody = objectMapper.writeValueAsString(t);
+        } catch (JsonProcessingException e) {
+            return Result.error("参数转换异常");
+        }
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+        ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.POST, entity, byte[].class);
+        byte[] data = response.getBody();
+        JSONObject body = JSON.parseObject(new String(data));
+        log.info("远程调用响应:{}", body);
+        if (body != null && !body.getString("code").equals("0")) {
+            String msg = body.getString("msg");
+            log.error("远程调用异常: {}", body.get("msg"));
+            return    Result.error("远程调用异常: " + body.get("msg"));
+        }
+        return Result.ok(body.getString("data"));
     }
 }
