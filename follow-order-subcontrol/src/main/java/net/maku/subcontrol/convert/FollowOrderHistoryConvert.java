@@ -29,9 +29,9 @@ public interface FollowOrderHistoryConvert {
 
     List<FollowOrderHistoryVO> convertList(List<FollowOrderHistoryEntity> list);
     @Mappings({//喊单账号
-            @Mapping(source = "magical", target = "magic"),
-            @Mapping(source = "remark", target = "comment")
+            @Mapping(source = "magical", target = "magic")
     })
+     FollowOrderHistoryVO convert(FollowOrderDetailVO vo);
     List<FollowOrderHistoryVO> convertDetailList(List<FollowOrderDetailVO> list);
 
     List<FollowOrderHistoryEntity> convertList2(List<FollowOrderHistoryVO> list);

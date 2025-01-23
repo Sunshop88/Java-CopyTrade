@@ -67,7 +67,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private String comment;
 
 	@Schema(description = "魔数")
-	private Integer magic;
+	private String magic;
 
 	@Schema(description = "下单方式")
 	private Integer placedType;
