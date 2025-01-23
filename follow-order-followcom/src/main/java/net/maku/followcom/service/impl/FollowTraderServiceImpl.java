@@ -333,9 +333,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     @Override
     public PageResult<FollowOrderDetailVO> orderSlipDetail(FollowOrderSendQuery query) {
+
         LambdaQueryWrapper<FollowOrderDetailEntity> wrapper = Wrappers.lambdaQuery();
+
+
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
             wrapper.eq(FollowOrderDetailEntity::getTraderId, query.getTraderId());
+            //如果traderId不为空，说明是订单详情里面点击进去的区分vps
+            wrapper.eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST);
         }
 
         if (ObjectUtil.isNotEmpty(query.getTraderIdList())) {
@@ -409,6 +414,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getCloseId())) {
             wrapper.eq(FollowOrderDetailEntity::getCloseId, query.getCloseId());
         }
+
         wrapper.like(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
         wrapper.orderByDesc(FollowOrderDetailEntity::getId);
