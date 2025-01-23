@@ -5,6 +5,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.enums.MessagesTypeEnum;
@@ -100,11 +101,17 @@ public class MessagesServiceImpl implements MessagesService {
     public void send(FixTemplateVO vo) {
         Object secretRedis = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.FS_NOTICE_SECRET);
         Object urltRedis = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.FS_NOTICE_URL);
-        String secret = secretRedis.toString();
+
         Integer timestamp = Long.valueOf(System.currentTimeMillis()).intValue();
         String url=urltRedis.toString();
+        String secret = null;
+        try {
+            secret = GenSign(secretRedis.toString(),timestamp);
+        } catch (Exception e) {
+            log.error("发送消息失败:{}",e);
+        }
         String json=null;
-           if(vo.equals(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode())){
+           if(vo.getTemplateType().equals(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode())){
                 json=template(secret,timestamp,vo.getVpsName(),vo.getSourceRemarks(),vo.getSource(),vo.getFollow(),vo.getSymbol(),vo.getType());
            }else{
                 json=fixedTimeTemplate(secret,timestamp,vo.getNum());
@@ -120,4 +127,6 @@ public class MessagesServiceImpl implements MessagesService {
             log.error("发送消息失败:{}",body);
         }
     }
+
+
 }
