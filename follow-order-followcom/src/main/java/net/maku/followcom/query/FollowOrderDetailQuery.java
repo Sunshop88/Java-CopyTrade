@@ -31,4 +31,8 @@ public class FollowOrderDetailQuery extends Query {
     private Integer type;
 
     private Boolean isHistory=false;
+
+
+    private String account;
+    private  String platform;
 }

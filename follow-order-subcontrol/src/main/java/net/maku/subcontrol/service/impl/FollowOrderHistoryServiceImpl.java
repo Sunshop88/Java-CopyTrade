@@ -14,7 +14,9 @@ import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.FollowOrderDetailQuery;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.vo.FollowOrderDetailVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -52,6 +54,7 @@ import java.util.List;
 public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHistoryDao, FollowOrderHistoryEntity> implements FollowOrderHistoryService {
     private final TransService transService;
     private final FollowOrderDetailService followOrderDetailService;
+    private final FollowTraderService followTraderService;
 
     @Override
     public PageResult<FollowOrderHistoryVO> page(FollowOrderHistoryQuery query) {
@@ -60,6 +63,15 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
        FollowOrderDetailQuery detailQuery=new FollowOrderDetailQuery();
         detailQuery.setIsHistory(true);
         BeanUtil.copyProperties(query,detailQuery);
+        Long traderId = query.getTraderId();
+        if(ObjectUtil.isNotNull(traderId)){
+            FollowTraderVO traderVO = followTraderService.get(traderId);
+            String account=traderVO.getAccount();
+            String platform = traderVO.getPlatform();
+            detailQuery.setAccount(account);
+            detailQuery.setPlatform(platform);
+            detailQuery.setTraderId(null);
+        }
         PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(detailQuery);
 
         return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertDetailList(page.getList()), page.getTotal());
