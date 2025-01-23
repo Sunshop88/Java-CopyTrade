@@ -199,7 +199,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
         repairSendVO.forEach(repair -> {
             Long slaveId = repair.getSlaveId();
             FollowTraderEntity trader = followTraderService.getById(slaveId);
-            FollowVpsEntity vps = followVpsService.getById(trader.getId());
+            FollowVpsEntity vps = followVpsService.getById(trader.getServerId());
             sendRequest(req,vps.getIpAddress(),"/subcontrol/follow/repairSend",repair);
             //repairSend(repair);
         });
