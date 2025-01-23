@@ -1,5 +1,6 @@
 package net.maku.subcontrol.trader.strategy;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
@@ -67,7 +68,7 @@ public class AbstractOperation {
     }
 
     protected String comment(FollowTraderSubscribeEntity followTraderSubscribeEntity,EaOrderInfo orderInfo,Integer serverId) {
-        return CommentGenerator.generateComment(followTraderSubscribeEntity.getFixedComment(),followTraderSubscribeEntity.getCommentType(),followTraderSubscribeEntity.getDigits(),orderInfo,serverId);
+        return CommentGenerator.generateComment(followTraderSubscribeEntity.getFixedComment(), ObjectUtil.isEmpty(followTraderSubscribeEntity.getCommentType())?99:followTraderSubscribeEntity.getCommentType(),followTraderSubscribeEntity.getDigits(),orderInfo,serverId);
     }
 
     protected Op op(EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier) {

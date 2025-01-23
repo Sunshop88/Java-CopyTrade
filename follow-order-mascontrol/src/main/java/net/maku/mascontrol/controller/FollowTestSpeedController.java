@@ -212,7 +212,7 @@ public class FollowTestSpeedController {
 
                     if (!response.getBody().getString("msg").equals("success")) {
                         log.error("测速失败ip: " + vpsEntity.getIpAddress());
-                        return false; // 返回失败状态
+                        return true; // 返回失败状态
                     }
                 } catch (Exception e) {
                     log.error("请求异常: " + e.getMessage() + ", VPS异常");
