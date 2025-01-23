@@ -57,7 +57,7 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("插入 FollowVps 失败");
             return false;
         }
-        clientService.insert(vo);
+//        clientService.insert(vo);
         log.info("成功插入 FollowVps 和 Client");
         return true;
     }
@@ -65,11 +65,11 @@ public class MasControlServiceImpl implements MasControlService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean update(FollowVpsVO vo) {
-        Boolean result = clientService.update(vo);
-        if (!result) {
-            log.error("更新 Client 失败");
-            return false;
-        }
+//        Boolean result = clientService.update(vo);
+//        if (!result) {
+//            log.error("更新 Client 失败");
+//            return false;
+//        }
         followVpsService.update(vo);
         log.info("成功更新 Client 和 FollowVps");
         return true;
@@ -79,7 +79,7 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(List<Integer> idList) {
         try {
-            clientService.delete(idList);
+//            clientService.delete(idList);
             followVpsService.delete(idList);
             log.info("成功删除 ID 列表: {}", idList);
             return true;
@@ -94,8 +94,8 @@ public class MasControlServiceImpl implements MasControlService {
     public boolean deletePlatform(List<Long> idList) {
         try {
             // 假设 serverService 和 platformService 已经恢复使用
-            serverService.delete(idList);
-            platformService.delete(idList);
+//            serverService.delete(idList);
+//            platformService.delete(idList);
             followPlatformService.delete(idList);
             log.info("成功删除平台 ID 列表: {}", idList);
             return true;
@@ -158,22 +158,22 @@ public class MasControlServiceImpl implements MasControlService {
                     List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
 
                     //外部接口
-                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
-                    if (ObjectUtil.isEmpty(platformEntityList)) {
-                        PlatformEntity platformEntity = new PlatformEntity();
-                        platformEntity.setName(bro);
-                        platformEntity.setType(vo.getPlatformType());
-                        platformService.save(platformEntity);
-
-                        Integer platformId = platformEntity.getId();
-                        list.forEach(o -> {
-                            ServerEntity serverEntity = new ServerEntity();
-                            serverEntity.setHost(o.getServerNode());
-                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
-                            serverEntity.setPlatformId(platformId);
-                            serverService.insert(serverEntity);
-                        });
-                    }
+//                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
+//                    if (ObjectUtil.isEmpty(platformEntityList)) {
+//                        PlatformEntity platformEntity = new PlatformEntity();
+//                        platformEntity.setName(bro);
+//                        platformEntity.setType(vo.getPlatformType());
+//                        platformService.save(platformEntity);
+//
+//                        Integer platformId = platformEntity.getId();
+//                        list.forEach(o -> {
+//                            ServerEntity serverEntity = new ServerEntity();
+//                            serverEntity.setHost(o.getServerNode());
+//                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
+//                            serverEntity.setPlatformId(platformId);
+//                            serverService.insert(serverEntity);
+//                        });
+//                    }
 
                     list.parallelStream().forEach(o -> {
                         String ipAddress = o.getServerNode(); // 目标IP地址
@@ -212,7 +212,7 @@ public class MasControlServiceImpl implements MasControlService {
                 if (!list.isEmpty()) {
                     FollowBrokeServerEntity followBrokeServer = list.get(0);
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
-                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, followBrokeServer.getServerName()).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+//                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, followBrokeServer.getServerName()).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                 }
 //                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
@@ -236,13 +236,13 @@ public class MasControlServiceImpl implements MasControlService {
 
             //外部接口
             //根据serversToRemove查询platform的id
-            List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
-            platformEntityList.forEach(o -> {
-                Integer platformId = o.getId();
-                //删除server
-                serverService.remove(new LambdaQueryWrapper<ServerEntity>().eq(ServerEntity::getPlatformId, platformId));
-            });
-            platformService.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
+//            List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
+//            platformEntityList.forEach(o -> {
+//                Integer platformId = o.getId();
+//                //删除server
+//                serverService.remove(new LambdaQueryWrapper<ServerEntity>().eq(ServerEntity::getPlatformId, platformId));
+//            });
+//            platformService.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
         }
         String authorization = req.getHeader("Authorization");
         ThreadPoolUtils.getExecutor().execute(() -> {
@@ -302,23 +302,23 @@ public class MasControlServiceImpl implements MasControlService {
                     List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, bro));
 
                     //外部接口
-                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
-                    if (ObjectUtil.isEmpty(platformEntityList)) {
-                        PlatformEntity platformEntity = new PlatformEntity();
-                        platformEntity.setName(bro);
-                        platformEntity.setType(vo.getPlatformType());
-                        platformService.save(platformEntity);
-
-                        Integer platformId = platformEntity.getId();
-                        list.forEach(o -> {
-                            ServerEntity serverEntity = new ServerEntity();
-                            serverEntity.setHost(o.getServerNode());
-                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
-                            log.info("保存服务" + o.getServerNode() + ":" + o.getServerPort());
-                            serverEntity.setPlatformId(platformId);
-                            serverService.insert(serverEntity);
-                        });
-                    }
+//                    List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
+//                    if (ObjectUtil.isEmpty(platformEntityList)) {
+//                        PlatformEntity platformEntity = new PlatformEntity();
+//                        platformEntity.setName(bro);
+//                        platformEntity.setType(vo.getPlatformType());
+//                        platformService.save(platformEntity);
+//
+//                        Integer platformId = platformEntity.getId();
+//                        list.forEach(o -> {
+//                            ServerEntity serverEntity = new ServerEntity();
+//                            serverEntity.setHost(o.getServerNode());
+//                            serverEntity.setPort(Integer.valueOf(o.getServerPort()));
+//                            log.info("保存服务" + o.getServerNode() + ":" + o.getServerPort());
+//                            serverEntity.setPlatformId(platformId);
+//                            serverService.insert(serverEntity);
+//                        });
+//                    }
 
                     list.parallelStream().forEach(o -> {
                         String ipAddress = o.getServerNode(); // 目标IP地址
@@ -357,7 +357,7 @@ public class MasControlServiceImpl implements MasControlService {
                     FollowBrokeServerEntity followBrokeServer = list.get(0);
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                     //外部接口
-                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, bro).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+//                    platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, bro).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                 }
             });
         });
