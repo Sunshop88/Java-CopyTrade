@@ -46,21 +46,18 @@ public class RequestFilter implements Filter {
             }
         }else {
 
-            if (ObjectUtil.isEmpty(SecurityUser.getUserId())) {
-                servletResponse.setContentType("application/json");
-                servletResponse.setCharacterEncoding("UTF-8");
-                ServletOutputStream out = servletResponse.getOutputStream();
-                String jsonString = JSON.toJSONString(Result.error("未授权"));
-                out.write(jsonString.getBytes());
-                out.flush();
-                return;
-            }
+//            if (ObjectUtil.isEmpty(SecurityUser.getUserId())) {
+//                servletResponse.setContentType("application/json");
+//                servletResponse.setCharacterEncoding("UTF-8");
+//                ServletOutputStream out = servletResponse.getOutputStream();
+//                String jsonString = JSON.toJSONString(Result.error("未授权"));
+//                out.write(jsonString.getBytes());
+//                out.flush();
+//                return;
+//            }
             // 获取 userId
             Long userId = SecurityUser.getUserId();
-            if (userId == 10000) {
-                filterChain.doFilter(servletRequest, servletResponse);
-            } else {
-
+            if (userId != 10000) {
                 // 根据 userId 查询 vps
                 List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
                 if (vpsList == null || vpsList.isEmpty()) {
