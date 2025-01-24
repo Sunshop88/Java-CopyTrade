@@ -59,8 +59,12 @@ public class MissingOrdersNoticeTask {
                 });
             }
         });
-        FixTemplateVO vo=FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_INSPECT.getCode()).num(num.get()).build();
-        messagesService.send(vo);
+       Integer i = num.get();
+       if(i>0){
+           FixTemplateVO vo=FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_INSPECT.getCode()).num(num.get()).build();
+           messagesService.send(vo);
+        }
+
 
     }
 
