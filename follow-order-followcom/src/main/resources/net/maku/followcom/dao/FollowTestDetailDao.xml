@@ -105,7 +105,23 @@
 
     <select id="selectServerNode" resultType="net.maku.followcom.vo.FollowTestDetailVO">
         SELECT
-            t1.*
+        t1.`id`,
+        t1.`server_id`,
+        t1.`server_name`,
+        t1.`platform_type`,
+        t1.`server_node`,
+        t1.`speed`,
+        t1.`version`,
+        t1.`deleted`,
+        t1.`creator`,
+        t1.`create_time`,
+        t1.`updater`,
+        t1.`update_time` as testUpdateTime,
+        t1.`vps_id`,
+        t1.`vps_name`,
+        t1.`test_id`,
+        t1.`server_update_time`,
+        t1.`is_default_server`
         FROM
             follow_test_detail t1
                 JOIN (
