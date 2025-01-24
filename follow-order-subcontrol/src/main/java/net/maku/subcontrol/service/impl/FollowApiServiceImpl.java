@@ -608,7 +608,6 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean repairOrder(RepairOrderVO vo) {
         FollowTraderEntity follow = followTraderService.getById(vo.getAccountId());
         FollowTraderSubscribeEntity subscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
-        List<RepairSendVO> repairSendVO=new ArrayList<>();
         Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
         List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
         if (ObjectUtil.isNotEmpty(o1)){
@@ -619,9 +618,10 @@ public class FollowApiServiceImpl implements FollowApiService {
             RepairSendVO sendVO=new RepairSendVO();
             sendVO.setOrderNo(ticket);
             if (!existsInActive) {
-               // sendVO.setType(ord);
+               sendVO.setType(TraderRepairEnum.SEND.getType());
+            }else{
+                sendVO.setType(TraderRepairEnum.CLOSE.getType());
             }
-
             sendVO.setSlaveId(follow.getId());
             sendVO.setMasterId(subscribeEntity.getMasterId());
             followSlaveService.repairSend(sendVO);
