@@ -29,7 +29,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private Integer type;
 
 	@Schema(description = "开仓时间")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	@Schema(description = "平仓时间")
 	private LocalDateTime closeTime;
