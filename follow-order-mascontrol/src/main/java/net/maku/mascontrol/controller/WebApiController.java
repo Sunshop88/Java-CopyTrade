@@ -148,6 +148,14 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.CHANGEPASSWORD, vo);
     }
 
+    @PostMapping("/repairorder")
+    @Operation(summary = "补单")
+    public Result<String> repairOrder(@RequestBody @Valid RepairOrderVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.REPAIRORDER, vo);
+    }
+
     @GetMapping("/symbolParams")
     @Operation(summary = "品种规格")
     public Result<String> symbolParams(@RequestParam("clientId") Integer clientId,@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType, HttpServletRequest req) {
