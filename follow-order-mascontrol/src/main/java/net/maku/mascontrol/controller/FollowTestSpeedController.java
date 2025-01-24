@@ -29,6 +29,7 @@ import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
@@ -619,6 +620,9 @@ public class FollowTestSpeedController {
     @Operation(summary = "节点列表测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestSpeedVO> measures(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+        if (ObjectUtil.isEmpty(followVpsService.listByVps())){
+            return Result.error("未拥有VPS权限，无法进行测速");
+        }
         FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
         overallResult.setStatus(VpsSpendEnum.IN_PROGRESS.getType());
 //        overallResult.setDoTime(new Date());
