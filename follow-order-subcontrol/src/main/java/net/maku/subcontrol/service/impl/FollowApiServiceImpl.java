@@ -20,7 +20,9 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowApiService;
+import net.maku.subcontrol.service.FollowSlaveService;
 import net.maku.subcontrol.trader.*;
+import net.maku.subcontrol.vo.RepairSendVO;
 import online.mtapi.mt4.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -60,6 +62,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowVpsService followVps;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
+    private final FollowSlaveService followSlaveService;
 
     /**
      * 喊单账号保存
@@ -597,6 +600,32 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
 
         });
+
+        return true;
+    }
+
+    @Override
+    public Boolean repairOrder(RepairOrderVO vo) {
+        FollowTraderEntity follow = followTraderService.getById(vo.getAccountId());
+        FollowTraderSubscribeEntity subscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
+        List<RepairSendVO> repairSendVO=new ArrayList<>();
+        Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
+        List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+        if (ObjectUtil.isNotEmpty(o1)){
+            orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+        }
+        for (Integer ticket : vo.getSourceTicket()) {
+            boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(ticket.toString()).equalsIgnoreCase(order.getMagicNumber().toString()));
+            RepairSendVO sendVO=new RepairSendVO();
+            sendVO.setOrderNo(ticket);
+            if (!existsInActive) {
+               // sendVO.setType(ord);
+            }
+
+            sendVO.setSlaveId(follow.getId());
+            sendVO.setMasterId(subscribeEntity.getMasterId());
+            followSlaveService.repairSend(sendVO);
+        }
 
         return true;
     }

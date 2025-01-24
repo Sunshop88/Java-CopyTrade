@@ -1,6 +1,7 @@
 package net.maku.subcontrol.service;
 
 
+import jakarta.validation.Valid;
 import net.maku.followcom.vo.*;
 
 import java.util.List;
@@ -46,4 +47,6 @@ public interface FollowApiService {
     Boolean orderCloseLoss(OrderCloseAllVO vo);
 
     ExternalSysmbolSpecificationVO symbolParams(Long accountId, Integer accountType);
+
+    Boolean repairOrder(RepairOrderVO vo);
 }

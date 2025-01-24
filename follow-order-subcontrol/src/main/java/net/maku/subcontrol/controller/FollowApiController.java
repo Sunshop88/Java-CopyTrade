@@ -107,4 +107,10 @@ public class FollowApiController {
     public Result<ExternalSysmbolSpecificationVO> symbolParams(@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType) {
         return  Result.ok(followApiService.symbolParams(accountId,accountType)) ;
     }
+    @PostMapping("/repairorder")
+    @Operation(summary = "补单")
+    public Result<Boolean> repairOrder(@RequestBody @Valid RepairOrderVO vo) {
+        return  Result.ok(followApiService.repairOrder(vo)) ;
+    }
+
 }
