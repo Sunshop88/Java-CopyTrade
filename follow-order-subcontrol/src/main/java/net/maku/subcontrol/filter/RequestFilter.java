@@ -46,19 +46,19 @@ public class RequestFilter implements Filter {
             }
         }
 
-        // 获取 userId
-        Long userId = SecurityUser.getUserId();
-        if (userId == 10000) {
-            filterChain.doFilter(servletRequest, servletResponse);
-            return;
-        }
-        if (userId == null) {
+        if (ObjectUtil.isEmpty(SecurityUser.getUserId())) {
             servletResponse.setContentType("application/json");
             servletResponse.setCharacterEncoding("UTF-8");
             ServletOutputStream out = servletResponse.getOutputStream();
             String jsonString = JSON.toJSONString(Result.error("未授权"));
             out.write(jsonString.getBytes());
             out.flush();
+            return;
+        }
+        // 获取 userId
+        Long userId = SecurityUser.getUserId();
+        if (userId == 10000) {
+            filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
 
