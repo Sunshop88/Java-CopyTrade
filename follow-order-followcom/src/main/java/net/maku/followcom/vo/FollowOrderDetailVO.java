@@ -48,7 +48,7 @@ public class FollowOrderDetailVO  implements Serializable {
 	private BigDecimal requestOpenPrice;
 
 	@Schema(description = "开仓时间")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	@Schema(description = "开仓价格")
 	private BigDecimal openPrice;
