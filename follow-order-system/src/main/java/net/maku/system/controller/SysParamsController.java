@@ -84,6 +84,6 @@ public class SysParamsController {
     @GetMapping(value = "/isMfaVerify")
     public Result<Integer> isVerify(@RequestParam String paramKey) {
         Integer result = sysParamsService.isVerify(paramKey);
-        return Result.ok(1);
+        return Result.ok(result);
     }
 }
