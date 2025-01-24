@@ -197,13 +197,10 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     @Override
     public Boolean batchRepairSend(List<RepairSendVO> repairSendVO,HttpServletRequest req) {
         repairSendVO.forEach(repair -> {
-            ThreadPoolUtils.getExecutor().execute(()->{
                 Long slaveId = repair.getSlaveId();
                 FollowTraderEntity trader = followTraderService.getById(slaveId);
                 FollowVpsEntity vps = followVpsService.getById(trader.getServerId());
                 sendRequest(req,vps.getIpAddress(),"/subcontrol/follow/repairSend",repair);
-            });
-
             //repairSend(repair);
         });
         return true;
