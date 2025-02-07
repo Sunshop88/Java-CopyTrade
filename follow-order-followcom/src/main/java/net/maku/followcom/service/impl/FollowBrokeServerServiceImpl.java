@@ -142,4 +142,14 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
                 .last("LIMIT 1")); // 确保只返回一条记录
     }
 
+    @Override
+    public List<FollowBrokeServerVO> listByServer() {
+        // 查询所有服务器名称
+        LambdaQueryWrapper<FollowBrokeServerEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowBrokeServerEntity::getServerName)
+                .groupBy(FollowBrokeServerEntity::getServerName);
+        List<FollowBrokeServerEntity> list = baseMapper.selectList(wrapper);
+        return FollowBrokeServerConvert.INSTANCE.convertList(list);
+    }
+
 }

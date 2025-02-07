@@ -7,6 +7,7 @@ import net.maku.followcom.convert.FollowTestSpeedConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 @Component
 public class SpeedTestTask {
     @Autowired
+    private FollowBrokeServerService followBrokeServerService;
+    @Autowired
     private FollowPlatformService followPlatformService;
     @Autowired
     private FollowVpsService followVpsService;
@@ -56,10 +59,10 @@ public class SpeedTestTask {
         log.info("开始执行每周测速任务...");
         try {
             // 从数据库中获取所有需要测速的服务器
-            List<String> servers = followPlatformService.listByServer()
+            List<String> servers = followBrokeServerService.listByServer()
                     .stream()
                     .filter(Objects::nonNull)  // 过滤掉 null 值
-                    .map(FollowPlatformVO::getServer)
+                    .map(FollowBrokeServerVO::getServerName)
                     //                    .filter(Objects::nonNull)  // 再次过滤掉可能的 null 值
                     .collect(Collectors.toList());
             //查看是哪个ip
