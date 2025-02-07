@@ -620,6 +620,10 @@ public class FollowTestSpeedController {
     @Operation(summary = "节点列表测速")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<FollowTestSpeedVO> measures(@RequestBody MeasureRequestVO request, HttpServletRequest req) throws Exception {
+        List<String> servers = request.getServers();
+        if(ObjectUtil.isEmpty(followBrokeServerService.getByName(servers.get(0)))){
+            return Result.error("服务器不存在，请重新输入");
+        }
         if (ObjectUtil.isEmpty(followVpsService.listByVps())){
             return Result.error("未拥有VPS权限，无法进行测速");
         }
@@ -637,7 +641,7 @@ public class FollowTestSpeedController {
         overallResult.setTestName(SecurityUser.getUser().getUsername());
         followTestSpeedService.saveTestSpeed(overallResult);
 
-        List<String> servers = request.getServers();
+//        List<String> servers = request.getServers();
         //查询vps
         List<String> vps = followVpsService.listByVps().stream().map(FollowVpsVO::getName).collect(Collectors.toList());
 
