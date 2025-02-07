@@ -194,7 +194,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
                 Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
                 if(ObjectUtil.isNotEmpty(o1)){
-                    BigDecimal max = new BigDecimal(o1.toString());
+                    String s = o1.toString().replaceAll("\"", "");
+                    BigDecimal max = new BigDecimal(s.toString());
                     BigDecimal slaveLots = openOrderMapping.getSlaveLots();
                     if (slaveLots.compareTo(max)>0) {
                         throw new ServerException("超过最大手数限制");
