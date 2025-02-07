@@ -121,145 +121,8 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
     }
 
     @Override
-//    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
-//        log.info("开始测速时间：{}",measureTime);
-//        // 获取服务器列表
-//        List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
-//
-//        // 按服务器名称分组
-//        Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
-//                .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
-//
-//        // 创建一个固定大小的线程池
-//        ExecutorService executorService = Executors.newFixedThreadPool(10); // 可根据需求调整线程池大小
-//        List<FollowTestDetailEntity> entitiesToSave = new ArrayList<>();
-//
-////        FollowTestServerQuery query = new FollowTestServerQuery();
-////        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
-////        List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
-//        // 提交每个测速任务到线程池
-//        for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
-//            List<FollowBrokeServerEntity> serverNodes = entry.getValue();
-//
-//            for (FollowBrokeServerEntity serverNode : serverNodes) {
-//                String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
-//                int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
-//
-//                //将服务器更新时间写进来
-////                FollowTestServerQuery query = new FollowTestServerQuery();
-////                query.setServerName(serverNode.getServerName());
-////                query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-////                List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
-//                List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
-//                List<FollowTestDetailVO> detailVOList = vo.stream()
-//                        .filter(detail -> detail.getServerName().equals(serverNode.getServerName()) && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
-//                        .collect(Collectors.toList());
-//                //拿时间最新的一条数据
-//                FollowTestDetailVO detailVO = detailVOList.stream()
-//                        .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
-//                        .orElse(null);
-//                // 提交测速任务到线程池
-////                executorService.submit(() -> {
-////                    int retryCount = 0; // 重试次数
-////
-////                    while (retryCount < 2) {
-////                        try {
-////                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-////                            long startTime = System.currentTimeMillis(); // 记录起始时间
-////                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-////
-////                            long timeout = 5000; // 设置超时时间
-////                            try {
-////                                future.get(timeout, TimeUnit.MILLISECONDS);
-////                            } catch (TimeoutException e) {
-////                                retryCount++; // 增加重试次数
-////                                if (retryCount == 2) {
-////                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
-////                                    break; // 超过最大重试次数后跳出循环
-////                                }
-////                                continue; // 如果超时，则重试
-////                            }
-////
-////                            long endTime = System.currentTimeMillis(); // 记录结束时间
-////                            long duration = endTime - startTime; // 计算测速时长
-//
-//                // 提交测速任务到线程池
-//                int retryCount = 0; // 重试次数
-//                Integer speed = null; // 初始化速度为 null
-//
-//                while (retryCount < 2) {
-//                    try {
-//                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-//                        long startTime = System.currentTimeMillis(); // 记录起始时间
-//                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-//
-//                        long timeout = 5000; // 设置超时时间
-//                        try {
-//                            future.get(timeout, TimeUnit.MILLISECONDS);
-//                        } catch (TimeoutException e) {
-//                            retryCount++; // 增加重试次数
-//                            if (retryCount == 2) {
-//                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
-//                                break; // 超过最大重试次数后跳出循环
-//                            }
-//                            continue; // 如果超时，则重试
-//                        }
-//
-//                        long endTime = System.currentTimeMillis(); // 记录结束时间
-//                        long duration = endTime - startTime; // 计算测速时长
-//
-//                        speed = (int) duration; // 设置速度
-//                        break; // 测试成功，跳出重试循环
-//                    } catch (Exception e) {
-//                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
-//                        break; // 出现异常时跳出重试循环
-//                    }
-//                }
-//
-//                // 保存测速结果
-//                FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-//                newEntity.setServerName(serverNode.getServerName());
-//                newEntity.setServerId(serverNode.getId());
-//                newEntity.setPlatformType("MT4");
-//                newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-//                newEntity.setVpsName(vpsEntity.getName());
-//                newEntity.setVpsId(vpsEntity.getId());
-//                newEntity.setSpeed(speed);
-//                newEntity.setTestId(testId);
-//                newEntity.setTestUpdateTime(measureTime);
-//                if (detailVO == null) {
-//                    log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
-//                    newEntity.setServerUpdateTime(null);
-//                    newEntity.setIsDefaultServer(1);
-//                } else {
-//                    newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-//                    newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
-//                }
-//                entitiesToSave.add(newEntity);
-////                followTestDetailService.save(newEntity);
-//            }
-//            // 批量插入所有测速结果
-//            if (!entitiesToSave.isEmpty()) {
-//                followTestDetailService.saveBatch(entitiesToSave);
-//            }
-////                });
-//
-//            // 关闭线程池并等待所有任务完成
-//            executorService.shutdown();
-////            try {
-////                if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
-////                    executorService.shutdownNow();
-////                }
-////            } catch (InterruptedException e) {
-////                executorService.shutdownNow();
-////            }
-//        }
-//        log.info("==========所有测速记录入库成功");
-//        return true; // 返回 true 表示所有任务提交成功
-//    }
-
     public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
-        log.info("开始测速时间：{}", measureTime);
+        log.info("开始测速时间：{}",measureTime);
         // 获取服务器列表
         List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
 
@@ -267,9 +130,13 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
                 .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
 
-        // 使用 ThreadPoolUtils 获取线程池实例
+        // 创建一个固定大小的线程池
+        ExecutorService executorService = Executors.newFixedThreadPool(20); // 可根据需求调整线程池大小
         List<FollowTestDetailEntity> entitiesToSave = new ArrayList<>();
 
+//        FollowTestServerQuery query = new FollowTestServerQuery();
+//        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+//        List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
@@ -278,87 +145,228 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
-                // 从 Redis 获取最新的测速详情
+                //将服务器更新时间写进来
+//                FollowTestServerQuery query = new FollowTestServerQuery();
+//                query.setServerName(serverNode.getServerName());
+//                query.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+//                List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(query);
                 List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
                 List<FollowTestDetailVO> detailVOList = vo.stream()
                         .filter(detail -> detail.getServerName().equals(serverNode.getServerName()) && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
                         .collect(Collectors.toList());
-                // 拿时间最新的一条数据
+                //拿时间最新的一条数据
                 FollowTestDetailVO detailVO = detailVOList.stream()
                         .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
                         .orElse(null);
+                // 提交测速任务到线程池
+//                executorService.submit(() -> {
+//                    int retryCount = 0; // 重试次数
+//
+//                    while (retryCount < 2) {
+//                        try {
+//                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+//                            long startTime = System.currentTimeMillis(); // 记录起始时间
+//                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+//
+//                            long timeout = 5000; // 设置超时时间
+//                            try {
+//                                future.get(timeout, TimeUnit.MILLISECONDS);
+//                            } catch (TimeoutException e) {
+//                                retryCount++; // 增加重试次数
+//                                if (retryCount == 2) {
+//                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+//                                    break; // 超过最大重试次数后跳出循环
+//                                }
+//                                continue; // 如果超时，则重试
+//                            }
+//
+//                            long endTime = System.currentTimeMillis(); // 记录结束时间
+//                            long duration = endTime - startTime; // 计算测速时长
 
                 // 提交测速任务到线程池
-                ThreadPoolUtils.execute(() -> {
-                    int retryCount = 0; // 重试次数
-                    Integer speed = null; // 初始化速度为 null
+                int retryCount = 0; // 重试次数
+                Integer speed = null; // 初始化速度为 null
 
-                    while (retryCount < 2) {
+                while (retryCount < 2) {
+                    try {
+                        AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                        long startTime = System.currentTimeMillis(); // 记录起始时间
+                        Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+
+                        long timeout = 5000; // 设置超时时间
                         try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                            long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-
-                            long timeout = 5000; // 设置超时时间
-                            try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
-                            } catch (TimeoutException e) {
-                                retryCount++; // 增加重试次数
-                                if (retryCount == 2) {
-                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
-                                    break; // 超过最大重试次数后跳出循环
-                                }
-                                continue; // 如果超时，则重试
+                            future.get(timeout, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+                            retryCount++; // 增加重试次数
+                            if (retryCount == 2) {
+                                log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+                                break; // 超过最大重试次数后跳出循环
                             }
-
-                            long endTime = System.currentTimeMillis(); // 记录结束时间
-                            long duration = endTime - startTime; // 计算测速时长
-
-                            speed = (int) duration; // 设置速度
-                            break; // 测试成功，跳出重试循环
-                        } catch (Exception e) {
-                            log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
-                            break; // 出现异常时跳出重试循环
+                            continue; // 如果超时，则重试
                         }
-                    }
 
-                    // 保存测速结果
-                    FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
-                    newEntity.setServerName(serverNode.getServerName());
-                    newEntity.setServerId(serverNode.getId());
-                    newEntity.setPlatformType("MT4");
-                    newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                    newEntity.setVpsName(vpsEntity.getName());
-                    newEntity.setVpsId(vpsEntity.getId());
-                    newEntity.setSpeed(speed);
-                    newEntity.setTestId(testId);
-                    newEntity.setTestUpdateTime(measureTime);
-                    if (detailVO == null) {
-                        log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
-                        newEntity.setServerUpdateTime(null);
-                        newEntity.setIsDefaultServer(1);
-                    } else {
-                        newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
-                        newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                        long endTime = System.currentTimeMillis(); // 记录结束时间
+                        long duration = endTime - startTime; // 计算测速时长
+
+                        speed = (int) duration; // 设置速度
+                        break; // 测试成功，跳出重试循环
+                    } catch (Exception e) {
+                        log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+                        break; // 出现异常时跳出重试循环
                     }
-                    synchronized (entitiesToSave) {
-                        entitiesToSave.add(newEntity);
-                    }
-                });
+                }
+
+                // 保存测速结果
+                FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+                newEntity.setServerName(serverNode.getServerName());
+                newEntity.setServerId(serverNode.getId());
+                newEntity.setPlatformType("MT4");
+                newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                newEntity.setVpsName(vpsEntity.getName());
+                newEntity.setVpsId(vpsEntity.getId());
+                newEntity.setSpeed(speed);
+                newEntity.setTestId(testId);
+                newEntity.setTestUpdateTime(measureTime);
+                if (detailVO == null) {
+                    log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                    newEntity.setServerUpdateTime(null);
+                    newEntity.setIsDefaultServer(1);
+                } else {
+                    newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+                    newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                }
+//                entitiesToSave.add(newEntity);
+                synchronized (entitiesToSave) {
+                    entitiesToSave.add(newEntity);
+                }
+//                followTestDetailService.save(newEntity);
             }
-        }
-        log.info("==========线程池关闭前所有测速任务提交成功");
-        // 关闭线程池并等待所有任务完成
-        ThreadPoolUtils.shutdown();
+//            // 批量插入所有测速结果
+//            if (!entitiesToSave.isEmpty()) {
+//                followTestDetailService.saveBatch(entitiesToSave);
+//            }
+//                });
 
-        // 批量插入所有测速结果
-        if (!entitiesToSave.isEmpty()) {
-            followTestDetailService.saveBatch(entitiesToSave);
-        }
+            // 关闭线程池并等待所有任务完成
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
 
+            // 批量插入所有测速结果
+            if (!entitiesToSave.isEmpty()) {
+                followTestDetailService.saveBatch(entitiesToSave);
+            }        }
         log.info("==========所有测速记录入库成功");
         return true; // 返回 true 表示所有任务提交成功
     }
+
+//    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
+//        log.info("开始测速时间：{}", measureTime);
+//        // 获取服务器列表
+//        List<FollowBrokeServerEntity> serverList = followBrokeServerService.listByServerName(servers);
+//
+//        // 按服务器名称分组
+//        Map<String, List<FollowBrokeServerEntity>> serverMap = serverList.stream()
+//                .collect(Collectors.groupingBy(FollowBrokeServerEntity::getServerName));
+//
+//        // 使用 ThreadPoolUtils 获取线程池实例
+//        List<FollowTestDetailEntity> entitiesToSave = new ArrayList<>();
+//
+//        // 提交每个测速任务到线程池
+//        for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
+//            List<FollowBrokeServerEntity> serverNodes = entry.getValue();
+//
+//            for (FollowBrokeServerEntity serverNode : serverNodes) {
+//                String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
+//                int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
+//
+//                // 从 Redis 获取最新的测速详情
+//                List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
+//                List<FollowTestDetailVO> detailVOList = vo.stream()
+//                        .filter(detail -> detail.getServerName().equals(serverNode.getServerName()) && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
+//                        .collect(Collectors.toList());
+//                // 拿时间最新的一条数据
+//                FollowTestDetailVO detailVO = detailVOList.stream()
+//                        .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
+//                        .orElse(null);
+//
+//                // 提交测速任务到线程池
+//                ThreadPoolUtils.execute(() -> {
+//                    int retryCount = 0; // 重试次数
+//                    Integer speed = null; // 初始化速度为 null
+//
+//                    while (retryCount < 2) {
+//                        try {
+//                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+//                            long startTime = System.currentTimeMillis(); // 记录起始时间
+//                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+//
+//                            long timeout = 5000; // 设置超时时间
+//                            try {
+//                                future.get(timeout, TimeUnit.MILLISECONDS);
+//                            } catch (TimeoutException e) {
+//                                retryCount++; // 增加重试次数
+//                                if (retryCount == 2) {
+//                                    log.error("超时重试3次失败，目标地址: {}:{}", ipAddress, port);
+//                                    break; // 超过最大重试次数后跳出循环
+//                                }
+//                                continue; // 如果超时，则重试
+//                            }
+//
+//                            long endTime = System.currentTimeMillis(); // 记录结束时间
+//                            long duration = endTime - startTime; // 计算测速时长
+//
+//                            speed = (int) duration; // 设置速度
+//                            break; // 测试成功，跳出重试循环
+//                        } catch (Exception e) {
+//                            log.error("测速失败，目标地址: {}:{}, 错误信息: {}", ipAddress, port, e.getMessage());
+//                            break; // 出现异常时跳出重试循环
+//                        }
+//                    }
+//
+//                    // 保存测速结果
+//                    FollowTestDetailEntity newEntity = new FollowTestDetailEntity();
+//                    newEntity.setServerName(serverNode.getServerName());
+//                    newEntity.setServerId(serverNode.getId());
+//                    newEntity.setPlatformType("MT4");
+//                    newEntity.setServerNode(serverNode.getServerNode() + ":" + serverNode.getServerPort());
+//                    newEntity.setVpsName(vpsEntity.getName());
+//                    newEntity.setVpsId(vpsEntity.getId());
+//                    newEntity.setSpeed(speed);
+//                    newEntity.setTestId(testId);
+//                    newEntity.setTestUpdateTime(measureTime);
+//                    if (detailVO == null) {
+//                        log.warn(" deailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+//                        newEntity.setServerUpdateTime(null);
+//                        newEntity.setIsDefaultServer(1);
+//                    } else {
+//                        newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
+//                        newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+//                    }
+//                    synchronized (entitiesToSave) {
+//                        entitiesToSave.add(newEntity);
+//                    }
+//                });
+//            }
+//        }
+//        log.info("==========线程池关闭前所有测速任务提交成功");
+//        // 关闭线程池并等待所有任务完成
+//        ThreadPoolUtils.shutdown();
+//
+//        // 批量插入所有测速结果
+//        if (!entitiesToSave.isEmpty()) {
+//            followTestDetailService.saveBatch(entitiesToSave);
+//        }
+//
+//        log.info("==========所有测速记录入库成功");
+//        return true; // 返回 true 表示所有任务提交成功
+//    }
 
     @Override
     public boolean measureTask(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
