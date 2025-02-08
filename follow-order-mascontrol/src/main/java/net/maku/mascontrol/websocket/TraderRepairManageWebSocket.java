@@ -163,13 +163,15 @@ public class TraderRepairManageWebSocket {
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
                                    vpsNumMap.put(trader.getServerId(),1);
-                                   followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
+
                             if (slaveAccount!=0) {
                                 if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
+                                    followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                                 }
                             }else{
                                 orderRepairInfoVOList.add(infoVO);
+                                followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                             }
 
                         });
@@ -186,13 +188,15 @@ public class TraderRepairManageWebSocket {
                             System.out.println(vs.toString());
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
                             vpsNumMap.put(trader.getServerId(),1);
-                            followActiveMap.put(infoVO.getSlaveAccount(),1);
+
                             if (slaveAccount!=0) {
                                 if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
                                     orderRepairInfoVOList.add(infoVO);
+                                    followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                                 }
                             }else{
                                 orderRepairInfoVOList.add(infoVO);
+                                followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                             }
 
                         });
