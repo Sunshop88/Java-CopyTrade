@@ -142,11 +142,15 @@ public class FollowTraderController {
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> update(@RequestBody @Valid FollowTraderVO vo) {
+        FollowTraderVO old = followTraderService.get(vo.getId());
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         followTraderService.update(vo);
         //重连
+        if(ObjectUtil.isNotEmpty(vo.getPassword()) && !old.getPassword().equals(vo.getPassword())){
+            reconnect(vo.getId().toString());
+        }
         Boolean reconnect = reconnect(vo.getId().toString());
         if (!reconnect){
             throw new ServerException("请检查账号密码，稍后再试");

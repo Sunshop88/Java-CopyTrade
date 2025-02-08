@@ -191,6 +191,7 @@ public class FollowSlaveController {
     public Result<Boolean> updateSlave(@RequestBody @Valid FollowUpdateSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
+            String password = followTraderEntity.getPassword();
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
@@ -215,7 +216,10 @@ public class FollowSlaveController {
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
-            reconnect(vo.getId().toString());
+            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
+                reconnect(vo.getId().toString()); 
+            }
+            
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
