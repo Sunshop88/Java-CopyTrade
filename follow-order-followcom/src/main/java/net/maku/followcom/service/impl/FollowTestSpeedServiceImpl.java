@@ -135,8 +135,8 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 //        ConcurrentLinkedQueue<FollowTestDetailEntity> entitiesToSave = new ConcurrentLinkedQueue<>();
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
-        List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
-        Map<String, FollowTestDetailVO> map = vo.stream()
+        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
+        Map<String, FollowTestDetailVO> map = detailVOList.stream()
                 .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
                 .collect(Collectors.toMap(
                         FollowTestDetailVO::getServerName,
