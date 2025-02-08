@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Component
 @ServerEndpoint("/socket/trader/repair/{vpsId}/{masterAccount}/{slaveAccount}") //此注解相当于设置访问URL
@@ -126,6 +127,17 @@ public class TraderRepairManageWebSocket {
                 list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).like(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }else{
                 list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
+            }
+
+            if (slaveAccount!=0) {
+                List<FollowTraderSubscribeEntity> subs = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().like(FollowTraderSubscribeEntity::getSlaveAccount, slaveAccount));
+                if(ObjectUtil.isNotEmpty(subs)){
+                    List<Long> masterIds = subs.stream().map(FollowTraderSubscribeEntity::getMasterId).collect(Collectors.toList());
+                    list= followTraderService.listByIds(masterIds);
+                }else{
+                    list=new ArrayList<>();
+                }
+
             }
             //遍历账号信息
             //vps 漏单数量
