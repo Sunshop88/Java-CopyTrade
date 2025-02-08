@@ -189,13 +189,17 @@ public class FollowTraderController {
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
                 redisUtil.hDel(Constant.REPAIR_SEND+o1.getMasterAccount()+":"+o1.getMasterId(),o1.getSlaveAccount());
+                FollowTraderEntity master = followTraderService.getFollowById(o1.getMasterId());
+                //删除跟单漏单缓存
+                redisCache.delete(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+master.getPlatform()+"#"+o.getPlatform()+"#"+o1.getSlaveAccount() + "#" + o1.getMasterAccount());
+                redisCache.delete(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+ "#"+master.getPlatform()+"#"+o.getPlatform()+"#" +o1.getSlaveAccount() + "#" + o1.getMasterAccount());
                 String cacheKey = generateCacheKey(o1.getSlaveId(), o1.getMasterId());
                 Cache cache = cacheManager.getCache("followSubscriptionCache");
                 if (cache != null) {
                     cache.evict(cacheKey); // 移除指定缓存条目
                 }
-                FollowTraderEntity followById = followTraderService.getFollowById(o1.getMasterId());
-                followTraderService.removeRelation(o,o1.getMasterAccount(),followById.getPlatformId());
+
+                followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
         });
 
