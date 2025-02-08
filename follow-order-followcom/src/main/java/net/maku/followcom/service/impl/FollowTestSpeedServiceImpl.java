@@ -119,7 +119,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         ExcelUtils.excelExport(FollowTestSpeedExcelVO.class, "测速记录", null, excelList);
     }
 
-    @Override
+//    @Override
 //    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
 //        log.info("开始测速时间：{}", measureTime);
 //
@@ -265,7 +265,8 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 //    }
 
 
-    public boolean measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
+
+    public CompletableFuture<Boolean> measure(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
         log.info("开始测速时间：{}", measureTime);
 
         // 获取服务器列表
@@ -368,25 +369,23 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         // 关闭线程池但不等待任务完成
         executorService.shutdown();
 
-        // 启动一个新的线程来处理批量保存操作
-        new Thread(() -> {
-            // 等待所有任务完成
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-            allFutures.thenRun(() -> {
-                // 批量插入所有测速结果
-                if (!entitiesToSave.isEmpty()) {
-                    log.info("准备批量插入 {} 条测速记录", entitiesToSave.size());
-                    followTestDetailService.saveBatch(entitiesToSave);
-                }
+        // 创建一个 CompletableFuture 来管理所有任务的完成状态
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
-                log.info("==========所有测速记录入库成功");
-            }).exceptionally(ex -> {
-                log.error("测速任务处理过程中发生异常", ex);
-                return null;
-            });
-        }).start();
+        // 返回一个 CompletableFuture，表示测速任务的完成状态
+        return allFutures.thenApply(v -> {
+            // 批量插入所有测速结果
+            if (!entitiesToSave.isEmpty()) {
+                log.info("准备批量插入 {} 条测速记录", entitiesToSave.size());
+                followTestDetailService.saveBatch(entitiesToSave);
+            }
 
-        return true; // 返回 true 表示所有任务已提交
+            log.info("==========所有测速记录入库成功");
+            return true; // 返回 true 表示所有任务已完成
+        }).exceptionally(ex -> {
+            log.error("测速任务处理过程中发生异常", ex);
+            return false; // 返回 false 表示测速任务处理失败
+        });
     }
 
     @Override
