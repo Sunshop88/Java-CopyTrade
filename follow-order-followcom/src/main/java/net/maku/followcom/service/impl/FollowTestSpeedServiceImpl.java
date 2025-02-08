@@ -279,6 +279,9 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         ExecutorService executorService = Executors.newFixedThreadPool(20); // 可根据需求调整线程池大小
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
+        // 使用 CompletableFuture 来管理异步任务
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
@@ -288,7 +291,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
                 // 提交测速任务到线程池
-                executorService.submit(() -> {
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     int retryCount = 0; // 重试次数
                     Integer speed = null; // 初始化速度为 null
 
@@ -296,11 +299,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                         try {
                             AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
                             long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                            Future<Void> futureConnect = socketChannel.connect(new InetSocketAddress(ipAddress, port));
 
                             long timeout = 5000; // 设置超时时间
                             try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
+                                futureConnect.get(timeout, TimeUnit.MILLISECONDS);
                             } catch (TimeoutException e) {
                                 retryCount++; // 增加重试次数
                                 if (retryCount == 2) {
@@ -356,7 +359,9 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 
                     // 将结果加入到待保存列表
                     entitiesToSave.add(newEntity);
-                });
+                }, executorService);
+
+                futures.add(future);
             }
         }
 
@@ -365,27 +370,24 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 
         // 启动一个新的线程来处理批量保存操作
         new Thread(() -> {
-            try {
-                if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {  // 设置最大等待时间，避免无限期等待
-                    executorService.shutdownNow();
+            // 等待所有任务完成
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+            allFutures.thenRun(() -> {
+                // 批量插入所有测速结果
+                if (!entitiesToSave.isEmpty()) {
+                    log.info("准备批量插入 {} 条测速记录", entitiesToSave.size());
+                    followTestDetailService.saveBatch(entitiesToSave);
                 }
-            } catch (InterruptedException e) {
-                executorService.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
 
-            // 批量插入所有测速结果
-            if (!entitiesToSave.isEmpty()) {
-                log.info("准备批量插入 {} 条测速记录", entitiesToSave.size());
-                followTestDetailService.saveBatch(entitiesToSave);
-            }
-
-            log.info("==========所有测速记录入库成功");
+                log.info("==========所有测速记录入库成功");
+            }).exceptionally(ex -> {
+                log.error("测速任务处理过程中发生异常", ex);
+                return null;
+            });
         }).start();
 
-        return true; // 返回 true 表示所有任务提交成功
+        return true; // 返回 true 表示所有任务已提交
     }
-
 
     @Override
     public boolean measureTask(List<String> servers, FollowVpsEntity vpsEntity, Integer testId, LocalDateTime measureTime) {
