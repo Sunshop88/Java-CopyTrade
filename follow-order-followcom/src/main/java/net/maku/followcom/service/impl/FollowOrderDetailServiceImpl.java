@@ -176,7 +176,10 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         //  entity.setRequestOpenTime(order.OpenTime);
         // entity.setRequestCloseTime(order.CloseTime);
         entity.setOpenTime(order.OpenTime);
-        entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+        if(!order.Type.equals(Op.Balance)){
+            entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+            entity.setSize(BigDecimal.valueOf(order.Lots));
+        }
         entity.setClosePrice(BigDecimal.valueOf(order.ClosePrice));
         if(order.CloseTime!=null){
             String time = DateUtil.format(order.CloseTime, "yyyy-MM-dd");
@@ -186,10 +189,6 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             }
 
         }
-
-
-
-        entity.setSize(BigDecimal.valueOf(order.Lots));
         entity.setSl(BigDecimal.valueOf(order.StopLoss));
         entity.setSwap(BigDecimal.valueOf(order.Swap));
         entity.setTp(BigDecimal.valueOf(order.TakeProfit));
