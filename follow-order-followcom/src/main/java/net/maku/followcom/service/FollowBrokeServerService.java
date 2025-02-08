@@ -41,4 +41,6 @@ public interface FollowBrokeServerService extends BaseService<FollowBrokeServerE
     FollowBrokeServerEntity getByName(String server);
 
     FollowBrokeServerEntity existsByServerNodeAndServerPort(String serverName, String s, String s1);
+
+    List<FollowBrokeServerVO> listByServer();
 }

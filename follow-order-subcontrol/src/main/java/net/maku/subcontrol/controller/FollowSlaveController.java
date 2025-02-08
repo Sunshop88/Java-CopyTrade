@@ -321,6 +321,7 @@ public class FollowSlaveController {
         LocalDateTime measureTime = request.getMeasureTime();
             // 批量调用服务进行测速
         boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
+        log.info("============测速记录出来状态：" + isSuccess);
         if (isSuccess) {
             return Result.ok();
         } else {
