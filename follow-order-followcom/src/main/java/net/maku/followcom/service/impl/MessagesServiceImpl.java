@@ -178,6 +178,7 @@ public class MessagesServiceImpl implements MessagesService {
             boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
             //确定为漏单
             if (!existsInActive) {
+                log.info("漏单喊单者订单号{}",orderInfo.getTicket());
                 //写入到redis中
                 Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND+ master.getAccount() + ":" + master.getId(), follow.getAccount());
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
