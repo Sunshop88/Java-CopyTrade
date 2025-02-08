@@ -135,29 +135,29 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 //        ConcurrentLinkedQueue<FollowTestDetailEntity> entitiesToSave = new ConcurrentLinkedQueue<>();
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
-        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
-        Map<String, FollowTestDetailVO> map = detailVOList.stream()
-                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
-                .collect(Collectors.toMap(
-                        FollowTestDetailVO::getServerName,
-                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
-                        (existing, replacement) -> existing));
-
-        // 将 map 的值转回列表
-        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
-        //severName默认节点
-        Map<String, String> defaultServerNodeMap = new HashMap<>();
-        //更新时间
-        Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
-        if (ObjectUtil.isNotEmpty(collect)) {
-            defaultServerNodeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
-
-            serverUpdateTimeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
-        }
+//        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
+//        Map<String, FollowTestDetailVO> map = detailVOList.stream()
+//                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+//                .collect(Collectors.toMap(
+//                        FollowTestDetailVO::getServerName,
+//                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
+//                        (existing, replacement) -> existing));
+//
+//        // 将 map 的值转回列表
+//        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
+//        //severName默认节点
+//        Map<String, String> defaultServerNodeMap = new HashMap<>();
+//        //更新时间
+//        Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
+//        if (ObjectUtil.isNotEmpty(collect)) {
+//            defaultServerNodeMap = collect.stream()
+//                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
+//                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
+//
+//            serverUpdateTimeMap = collect.stream()
+//                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
+//                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
+//        }
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
@@ -166,8 +166,8 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
-                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverNode.getServerName());
-                String defaultServerNode = defaultServerNodeMap.get(serverNode.getServerName()) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
+//                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverNode.getServerName());
+//                String defaultServerNode = defaultServerNodeMap.get(serverNode.getServerName()) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
@@ -213,29 +213,29 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     newEntity.setSpeed(speed);
                     newEntity.setTestId(testId);
                     newEntity.setTestUpdateTime(measureTime);
-                    newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 1 : 0);
-                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
+//                    newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 1 : 0);
+//                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
 
                     // 获取最新的服务器更新时间
-//                    List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
-//                    List<FollowTestDetailVO> detailVOList = vo.stream()
-//                            .filter(detail -> detail.getServerName().equals(serverNode.getServerName())
-//                                    && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
-//                            .collect(Collectors.toList());
-//
-//                    // 拿时间最新的一条数据
-//                    FollowTestDetailVO detailVO = detailVOList.stream()
-//                            .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
-//                            .orElse(null);
-//
-//                    if (detailVO == null) {
-//                        log.warn("detailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
-//                        newEntity.setServerUpdateTime(null);
-//                        newEntity.setIsDefaultServer(1);
-//                    } else {
-//                        newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
-//                        newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
-//                    }
+                    List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
+                    List<FollowTestDetailVO> detailVOList = vo.stream()
+                            .filter(detail -> detail.getServerName().equals(serverNode.getServerName())
+                                    && detail.getServerNode().equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()))
+                            .collect(Collectors.toList());
+
+                    // 拿时间最新的一条数据
+                    FollowTestDetailVO detailVO = detailVOList.stream()
+                            .max(Comparator.comparing(FollowTestDetailVO::getCreateTime))
+                            .orElse(null);
+
+                    if (detailVO == null) {
+                        log.warn("detailVO为空的是 : {}:{}", serverNode.getServerName(), serverNode.getServerNode() + ":" + serverNode.getServerPort());
+                        newEntity.setServerUpdateTime(null);
+                        newEntity.setIsDefaultServer(1);
+                    } else {
+                        newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
+                        newEntity.setIsDefaultServer(detailVO.getIsDefaultServer() != null ? detailVO.getIsDefaultServer() : 1);
+                    }
 
                     // 将结果加入到待保存列表
                     entitiesToSave.add(newEntity);
