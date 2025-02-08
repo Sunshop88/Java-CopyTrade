@@ -176,7 +176,10 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         //  entity.setRequestOpenTime(order.OpenTime);
         // entity.setRequestCloseTime(order.CloseTime);
         entity.setOpenTime(order.OpenTime);
-        if(!order.Type.equals(Op.Balance)){
+        if(order.Type.equals(Op.Balance)){
+            entity.setOpenPrice(null);
+            entity.setSize(null);
+        }else{
             entity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             entity.setSize(BigDecimal.valueOf(order.Lots));
         }
