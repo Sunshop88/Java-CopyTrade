@@ -133,7 +133,7 @@ public class TraderRepairManageWebSocket {
                 List<FollowTraderSubscribeEntity> subs = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().like(FollowTraderSubscribeEntity::getSlaveAccount, slaveAccount));
                 if(ObjectUtil.isNotEmpty(subs)){
                     List<Long> masterIds = subs.stream().map(FollowTraderSubscribeEntity::getMasterId).collect(Collectors.toList());
-                    list= followTraderService.listByIds(masterIds);
+                    list= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress()).in(FollowTraderEntity::getId,masterIds));
                 }else{
                     list=new ArrayList<>();
                 }
@@ -142,7 +142,6 @@ public class TraderRepairManageWebSocket {
             //遍历账号信息
             //vps 漏单数量
             AtomicReference<Integer> num= new AtomicReference<>(0);
-
 
 
             list.forEach(trader->{
@@ -224,6 +223,7 @@ public class TraderRepairManageWebSocket {
             repairVpsVOList.add(repairVpsVO);
             //总数
             total.updateAndGet(v -> v + num.get());
+
         });
         repairDataVo.setFollowActiveNum(followActiveMap.keySet().size());
         repairDataVo.setVpsActiveNum(vpsNumMap.keySet().size());
