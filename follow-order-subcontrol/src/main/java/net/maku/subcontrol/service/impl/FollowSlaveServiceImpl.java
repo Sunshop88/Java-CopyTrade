@@ -142,7 +142,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                                 } catch (Exception e) {
 
                                 }
-                                LambdaQueryWrapper<FollowOrderDetailEntity> oldWrapeper = new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSymbol, objects.getSymbol()).eq(FollowOrderDetailEntity::getAccount, slave.getAccount()).last("limit 1");
+                                LambdaQueryWrapper<FollowOrderDetailEntity> oldWrapeper = new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSymbol, objects.getSymbol()).eq(FollowOrderDetailEntity::getAccount, slave.getAccount()).orderByDesc(FollowOrderDetailEntity::getCreateTime).last("limit 1");
                                 FollowOrderDetailEntity one = followOrderDetailService.getOne(oldWrapeper);
                                 if(ObjectUtil.isNotEmpty(one.getOpenPrice())) {
                                     redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform() + "#" + master.getPlatform() + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
@@ -173,26 +173,29 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             orderCloseCopier.operate(copierApiTrader, objects, 1);
                             ThreadPoolUtils.getExecutor().execute(()->{
                                 try {
-                                    Thread.sleep(1000);
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
+                                    Thread.sleep(2000);
+                                } catch (Exception e) {
+
                                 }
                                 //删除平仓redis记录
                                 String mapKey = copierApiTrader.getTrader().getId() + "#" + copierApiTrader.getTrader().getAccount();
                                 if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(objects.getTicket())))){
                                      //判断是否补平成功
                                     //判断是否补单成功
-                                    LambdaQueryWrapper<FollowOrderDetailEntity> oldWrapeper = new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSymbol, objects.getSymbol()).eq(FollowOrderDetailEntity::getAccount, slave.getAccount()).last("limit 1");
+                                    LambdaQueryWrapper<FollowOrderDetailEntity> oldWrapeper = new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSymbol, objects.getSymbol()).eq(FollowOrderDetailEntity::getAccount, slave.getAccount()).orderByDesc(FollowOrderDetailEntity::getCreateTime).last("limit 1");
                                     FollowOrderDetailEntity one = followOrderDetailService.getOne(oldWrapeper);
-                                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
-                                    //删除漏单redis记录
-                                    Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount());
-                                    Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
-                                    if (o1!=null && o1.toString().trim().length()>0){
-                                        repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                                    if(ObjectUtil.isNotEmpty(one.getCloseStatus())) {
+                                        redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
+                                        //删除漏单redis记录
+                                        Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount());
+                                        Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                                        if (o1!=null && o1.toString().trim().length()>0){
+                                            repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                                        }
+                                        repairInfoVOS.remove(repairSendVO.getOrderNo());
+                                        redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount(),JSONObject.toJSONString(repairInfoVOS));
                                     }
-                                    repairInfoVOS.remove(repairSendVO.getOrderNo());
-                                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), slave.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+
 
                                 }
                             });
