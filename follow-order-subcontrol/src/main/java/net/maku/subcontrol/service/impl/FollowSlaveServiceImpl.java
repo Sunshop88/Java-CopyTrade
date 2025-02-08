@@ -138,7 +138,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             //判断是否补单成功
                             LambdaQueryWrapper<FollowOrderDetailEntity> oldWrapeper = new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSymbol, objects.getSymbol()).eq(FollowOrderDetailEntity::getAccount, slave.getAccount()).last("limit 1");
                             FollowOrderDetailEntity one = followOrderDetailService.getOne(oldWrapeper);
-                            if(one.getCloseStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                            if(ObjectUtil.isNotEmpty(one.getOpenPrice())) {
                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform() + "#" + master.getPlatform() + "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
                                 //删除漏单redis记录
                                 Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount());
