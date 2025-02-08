@@ -22,6 +22,7 @@ import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -36,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Author:  zsd
@@ -48,6 +50,7 @@ import java.util.*;
 public class MessagesServiceImpl implements MessagesService {
     private final RedisCache redisCache;
     private final FollowOrderDetailService followOrderDetailService;
+    private final RedissonLockUtil redissonLockUtil;
 
 
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
@@ -179,28 +182,38 @@ public class MessagesServiceImpl implements MessagesService {
             //确定为漏单
             if (!existsInActive) {
                 log.info("漏单喊单者订单号{}",orderInfo.getTicket());
+                String key = Constant.REPAIR_SEND + "：" + follow.getAccount();
                 //写入到redis中
-                Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND+ master.getAccount() + ":" + master.getId(), follow.getAccount());
-                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
-                if (repairStr != null && repairStr.toString().trim().length() > 0) {
-                    repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
+                boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);
+                try {
+                    if(lock) {
+                        Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                        Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
+                        if (repairStr != null && repairStr.toString().trim().length() > 0) {
+                            repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
+                        }
+                        OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                        orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
+                        orderRepairInfoVO.setMasterLots(orderInfo.getLots());
+                        orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
+                        orderRepairInfoVO.setMasterProfit(orderInfo.getProfit().doubleValue());
+                        orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
+                        orderRepairInfoVO.setMasterTicket(orderInfo.getTicket());
+                        orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
+                        orderRepairInfoVO.setMasterType(Op.forValue(orderInfo.getType()).name());
+                        orderRepairInfoVO.setMasterId(orderInfo.getMasterId());
+                        orderRepairInfoVO.setSlaveAccount(follow.getAccount());
+                        orderRepairInfoVO.setSlaveType(Op.forValue(orderInfo.getType()).name());
+                        orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
+                        orderRepairInfoVO.setSlaveId(follow.getId());
+                        repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
+                        redisCache.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                    }
+                } catch (Exception e) {
+                   log.error("漏单数据写入异常{}",e);
+                }finally {
+                    redissonLockUtil.unlock(key);
                 }
-                OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
-                orderRepairInfoVO.setMasterLots(orderInfo.getLots());
-                orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
-                orderRepairInfoVO.setMasterProfit(orderInfo.getProfit().doubleValue());
-                orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
-                orderRepairInfoVO.setMasterTicket(orderInfo.getTicket());
-                orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
-                orderRepairInfoVO.setMasterType(Op.forValue(orderInfo.getType()).name());
-                orderRepairInfoVO.setMasterId(orderInfo.getMasterId());
-                orderRepairInfoVO.setSlaveAccount(follow.getAccount());
-                orderRepairInfoVO.setSlaveType(Op.forValue(orderInfo.getType()).name());
-                orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
-                orderRepairInfoVO.setSlaveId(follow.getId());
-                repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
-                redisCache.hSetStr(Constant.REPAIR_SEND  + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                 //发送漏单消息
                 FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                         vpsName(follow.getServerName())
