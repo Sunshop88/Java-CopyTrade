@@ -178,7 +178,7 @@ public class TraderRepairManageWebSocket {
                     });
                 }
 
-                Map<String, Object> closeMap = redisCache.hGetAll(Constant.REPAIR_CLOSE+trader.getAccount()+":"+trader.getId());
+                Map<Object, Object> closeMap = redisCache.hGetStrAll(Constant.REPAIR_CLOSE+trader.getAccount()+":"+trader.getId());
                 if(closeMap!=null){
                     closeMap.values().forEach(obj->{
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
