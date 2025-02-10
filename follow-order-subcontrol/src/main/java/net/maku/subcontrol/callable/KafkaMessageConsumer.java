@@ -168,7 +168,7 @@ public class KafkaMessageConsumer {
                                                     //发送漏单通知
                                                     FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
                                                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
-                                                    messagesService.isRepairSend(eaOrderInfo,slaveTrader,master,copierApiTrader.quoteClient);
+                                                    messagesService.isRepairSend(eaOrderInfo,slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
                                                 }
                                             });
                                         });
