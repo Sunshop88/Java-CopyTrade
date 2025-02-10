@@ -247,8 +247,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         // 创建一个固定大小的线程池
         ExecutorService executorService = Executors.newFixedThreadPool(20); // 可根据需求调整线程池大小
 //        ConcurrentLinkedQueue<FollowTestDetailEntity> entitiesToSave = new ConcurrentLinkedQueue<>();
-//        List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
-        List<FollowTestDetailEntity> entitiesToSave = new ArrayList<>();
+        List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
         List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
         Map<String, FollowTestDetailVO> map = detailVOList.stream()
@@ -331,7 +330,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 1 : 0);
                     log.info("保存前测速结果：{}", newEntity);
 
-                    newEntity.setServerUpdateTime(localDateTime != null ? localDateTime : null);
+//                    newEntity.setServerUpdateTime(localDateTime != null ? localDateTime : null);
 //                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
                     log.info("保存后测速结果：{}", newEntity);
                     // 获取最新的服务器更新时间
