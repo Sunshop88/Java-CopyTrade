@@ -71,13 +71,13 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             //删除跟单redis记录
             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
            //删除漏单redis记录
-//            Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
-//            Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
-//            if (o1!=null && o1.toString().trim().length()>0){
-//                repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
-//            }
-//            repairInfoVOS.remove(orderInfo.getTicket());
-//            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+            Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+            Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
+            if (o1!=null && o1.toString().trim().length()>0){
+                repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+            }
+            repairInfoVOS.remove(orderInfo.getTicket());
+            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
 
         });
 
