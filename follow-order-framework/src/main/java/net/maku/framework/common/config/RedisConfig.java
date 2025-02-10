@@ -59,7 +59,6 @@ public class RedisConfig {
     }
 
     @Bean
-    @Primary
     public RedisConnectionFactory redisConnectionFactory3(@Qualifier("redisProperties1") RedisProperties redisProperties) {
         return createLettuceConnectionFactory(redisProperties);
     }
