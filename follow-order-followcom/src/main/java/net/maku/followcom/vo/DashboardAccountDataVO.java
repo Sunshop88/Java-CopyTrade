@@ -38,6 +38,8 @@ public class DashboardAccountDataVO implements Serializable {
     private Double lots;
     //可用预付款比例
     private BigDecimal marginProportion;
+
+    private BigDecimal proportion;
    //前端不用后端用
     private Integer type;
     //前端不用后端用
