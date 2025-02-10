@@ -22,6 +22,7 @@ public class RankVO {
     private BigDecimal profit;
     //可用预付款比例
     private BigDecimal freeMargin;
+    private BigDecimal proportion;
     /**
      * 总持仓手数
      */

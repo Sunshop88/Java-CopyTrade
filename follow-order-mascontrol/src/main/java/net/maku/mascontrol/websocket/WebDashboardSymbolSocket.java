@@ -143,6 +143,7 @@ public class WebDashboardSymbolSocket {
                         rankVO.setNum(BigDecimal.valueOf(a.getOrderNum() != null ? a.getOrderNum() : 0));
                         rankVO.setProfit(a.getProfit());
                         rankVO.setFreeMargin(a.getMarginProportion());
+                        rankVO.setProportion(a.getProportion());
                         rank.add(rankVO);
                     }
                 });
@@ -367,6 +368,15 @@ public class WebDashboardSymbolSocket {
                     return o1.getFreeMargin().compareTo(o2.getFreeMargin());
                 } else {
                     return o2.getFreeMargin().compareTo(o1.getFreeMargin());
+                }
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("proportion")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getProportion().compareTo(o2.getProportion());
+                } else {
+                    return o2.getProportion().compareTo(o1.getProportion());
                 }
             }).limit(limit).toList();
         }
