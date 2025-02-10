@@ -22,6 +22,8 @@ import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +45,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderSendMaster extends AbstractOperation implements IOperationStrategy {
       private final MessagesService messagesService;
+      private final CopierApiTradersAdmin copierApiTradersAdmin;
 
     /**
      * 收到开仓信号处理操作
@@ -56,9 +59,11 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
         //保存下单信息
         subscribeEntityList.forEach(o -> {
             FollowTraderEntity follow = followTraderService.getFollowById(o.getSlaveId());
+
             redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
             //发送漏单通知
             FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(follow.getId().toString());
             messagesService.isRepairSend(orderInfo,follow,master,null);
         });
    /*         FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
