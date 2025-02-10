@@ -273,7 +273,7 @@ public class RedisUtil {
             //   redisTemplate.setHashKeySerializer(RedisSerializer.string());
             redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         } catch (Exception e) {
-            o = redisTemplate.opsForHash().get(key, item);
+            o = null;
         }
         return o;
     }

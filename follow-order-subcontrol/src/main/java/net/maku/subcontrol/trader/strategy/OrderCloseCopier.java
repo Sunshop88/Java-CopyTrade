@@ -198,7 +198,12 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
             }
             repairInfoVOS.remove(orderInfo.getTicket());
-            redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+            if(repairInfoVOS==null || repairInfoVOS.size()==0){
+                redisUtil.del(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId());
+            }else{
+                redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+            }
+
             log.info("漏平删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), leaderCopier.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
 
 
