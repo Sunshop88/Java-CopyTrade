@@ -34,6 +34,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -254,6 +256,18 @@ public class MessagesServiceImpl implements MessagesService {
 
         Integer timestamp = Long.valueOf(System.currentTimeMillis()).intValue();
         String url=urltRedis.toString();
+
+        // 清理URL中的非法字符
+        url = url.replaceAll("\"", "");  // 去掉双引号
+
+        // 验证URL是否合法
+        try {
+            new URL(url);  // 如果URL不合法，会抛出MalformedURLException
+        } catch (MalformedURLException e) {
+            log.error("无效的URL: {}", url);
+            return;
+        }
+
         String secret = null;
         try {
             secret = GenSign(secretRedis.toString(),timestamp);
