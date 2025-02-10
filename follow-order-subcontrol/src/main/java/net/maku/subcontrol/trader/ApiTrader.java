@@ -15,6 +15,7 @@ import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -47,7 +48,7 @@ public class ApiTrader {
     protected final FollowTraderService traderService=SpringContextUtils.getBean(FollowTraderServiceImpl.class);;
     protected final FollowBrokeServerService followBrokeServerService=SpringContextUtils.getBean(FollowBrokeServerServiceImpl.class);;
     protected final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(0,Thread.ofVirtual().factory());
-
+    protected KafkaTemplate<Object, Object> kafkaTemplate =SpringContextUtils.getBean(KafkaTemplate.class);
     protected final FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);;
     protected final FollowPlatformService followPlatformService=SpringContextUtils.getBean(FollowPlatformServiceImpl.class);;
 

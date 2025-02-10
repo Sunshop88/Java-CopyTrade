@@ -2,6 +2,7 @@ package net.maku.subcontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -20,6 +21,7 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -102,6 +104,11 @@ public abstract class AbstractApiTrader extends ApiTrader {
             this.orderClient = new OrderClient(quoteClient);
         }
         boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
+        if (isLeader){
+            //检查是否存在订单变化
+            log.info("重连后漏单检查"+trader.getId());
+            kafkaTemplate.send("order-repair",String.valueOf(trader.getId()));
+        }
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听
