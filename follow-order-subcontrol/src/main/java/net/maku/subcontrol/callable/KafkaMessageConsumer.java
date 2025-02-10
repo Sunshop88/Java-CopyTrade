@@ -8,11 +8,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -22,10 +24,7 @@ import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
-import net.maku.subcontrol.trader.LeaderApiTrader;
-import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
-import net.maku.subcontrol.trader.OrderResultCloseEvent;
-import net.maku.subcontrol.trader.OrderResultEvent;
+import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import org.springframework.cache.Cache;
@@ -56,7 +55,9 @@ public class KafkaMessageConsumer {
     private final CacheManager cacheManager;
     private final FollowTraderService followTraderService;
     private final LeaderApiTradersAdmin leaderApiTradersAdmin;
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final MessagesService messagesService;
 
     @KafkaListener(topics = "order-send", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
@@ -156,19 +157,18 @@ public class KafkaMessageConsumer {
                             if (ObjectUtil.isNotEmpty(subscribeOrder)){
                                 subscribeOrder.forEach(o->{
                                     ThreadPoolUtils.getExecutor().execute(()->{
-                                        String mapKey = o.getSlaveId() + "#" + o.getSlaveAccount();
                                         FollowTraderEntity slaveTrader = followTraderService.getFollowById(o.getSlaveId());
                                         Arrays.stream(orders).forEach(order->{
                                             ThreadPoolUtils.getExecutor().execute(()->{
-                                                //查看是否存在跟单
-                                                Object followOrder = redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, String.valueOf(order.Ticket));
-                                                if (ObjectUtil.isEmpty(followOrder)){
-                                                    //漏单记录为空 -添加漏单
-                                                    if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket))))
-                                                    {
-                                                        EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
-                                                        redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
-                                                    }
+                                                //漏单记录为空 -添加漏单
+                                                if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket))))
+                                                {
+                                                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
+                                                    redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
+                                                    //发送漏单通知
+                                                    FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                                                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
+                                                    messagesService.isRepairSend(eaOrderInfo,slaveTrader,master,copierApiTrader.quoteClient);
                                                 }
                                             });
                                         });
