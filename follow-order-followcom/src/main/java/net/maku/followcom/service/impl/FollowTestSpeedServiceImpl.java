@@ -328,8 +328,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     newEntity.setTestId(testId);
                     newEntity.setTestUpdateTime(measureTime);
                     newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 1 : 0);
-                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
+                    log.info("保存前测速结果：{}", newEntity);
 
+//                    newEntity.setServerUpdateTime(localDateTime != null ? localDateTime : null);
+//                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
+                    log.info("保存后测速结果：{}", newEntity);
                     // 获取最新的服务器更新时间
 //                    List<FollowTestDetailVO> vo = (List<FollowTestDetailVO>) redisUtil.get(Constant.VPS_NODE_SPEED + "detail");
 //                    List<FollowTestDetailVO> detailVOList = vo.stream()
@@ -353,6 +356,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 
                     // 将结果加入到待保存列表
                     entitiesToSave.add(newEntity);
+                    log.info("大小：{}", entitiesToSave.size());
                 });
             }
         }
@@ -619,7 +623,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     newEntity.setTestId(testId);
                     newEntity.setTestUpdateTime(measureTime);
                     newEntity.setIsDefaultServer(1);
-                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
+                    newEntity.setServerUpdateTime(localDateTime != null ? localDateTime : null);
 
 
                     // 将结果加入到待保存列表
