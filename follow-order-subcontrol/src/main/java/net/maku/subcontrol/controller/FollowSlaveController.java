@@ -325,31 +325,30 @@ public class FollowSlaveController {
         Integer testId = request.getTestId();
         LocalDateTime measureTime = request.getMeasureTime();
             // 批量调用服务进行测速
-//        boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
-        CompletableFuture<Boolean> isSuccessFuture = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
-        log.info("============测速记录出来状态：" + isSuccessFuture);
-        try {
-            Boolean isSuccess = isSuccessFuture.join();
-            log.info("============测速记录出来状态：" + isSuccess);
-            if (isSuccess != null && isSuccess) {
-                return Result.ok();
-            } else {
-                // 删除当前vps相关的数据
-                followTestDetailService.deleteByTestId(testId);
-                return Result.error("测速失败，已删除相关数据");
-            }
-        } catch (Exception e) {
-            log.error("测速异常", e);
-            followTestDetailService.deleteByTestId(testId);
-            return Result.error("测速过程中出现异常，已删除相关数据");
-        }
-//        if (isSuccess) {
-//            return Result.ok();
-//        } else {
-//            // 删除当前vps相关的数据
+        boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
+        log.info("============测速记录出来状态：" + isSuccess);
+//        try {
+//            Boolean isSuccess = isSuccessFuture.join();
+//            log.info("============测速记录出来状态：" + isSuccess);
+//            if (isSuccess != null && isSuccess) {
+//                return Result.ok();
+//            } else {
+//                // 删除当前vps相关的数据
+//                followTestDetailService.deleteByTestId(testId);
+//                return Result.error("测速失败，已删除相关数据");
+//            }
+//        } catch (Exception e) {
+//            log.error("测速异常", e);
 //            followTestDetailService.deleteByTestId(testId);
-//            return Result.error("测速失败，已删除相关数据");
+//            return Result.error("测速过程中出现异常，已删除相关数据");
 //        }
+        if (isSuccess) {
+            return Result.ok();
+        } else {
+            // 删除当前vps相关的数据
+            followTestDetailService.deleteByTestId(testId);
+            return Result.error("测速失败，已删除相关数据");
+        }
     }
 
     @PostMapping("repairSend")
