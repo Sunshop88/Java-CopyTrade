@@ -33,6 +33,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -69,19 +70,23 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         //取出缓存
         CachedCopierOrderInfo cachedCopierOrderInfo = null;
         long startTime = System.currentTimeMillis(); // 记录开始时间
-        cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
-        while (ObjectUtil.isEmpty(cachedCopierOrderInfo)){
+        String jsonString = (String) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+        while (jsonString != null && !jsonString.isEmpty()) {
             try {
                 Thread.sleep(10);
-                cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 // 检查是否超过3秒
                 if (System.currentTimeMillis() - startTime > 3000) {
                     return; // 超时直接返回
                 }
+                ObjectMapper objectMapper = new ObjectMapper();
+                cachedCopierOrderInfo = objectMapper.readValue(jsonString, CachedCopierOrderInfo.class);
+            } catch (IOException e) {
+                log.error("Failed to deserialize JSON to CachedCopierOrderInfo", e);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
+
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)) {
             log.info("未发现缓存" + mapKey);
             FollowSubscribeOrderEntity openOrderMapping = followSubscribeOrderService.getOne(Wrappers.<FollowSubscribeOrderEntity>lambdaQuery()
