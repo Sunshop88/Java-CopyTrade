@@ -277,6 +277,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
             List<FollowBrokeServerEntity> serverNodes = entry.getValue();
 
             for (FollowBrokeServerEntity serverNode : serverNodes) {
+                if (ObjectUtil.isEmpty(serverNode.getServerNode()) || ObjectUtil.isEmpty(serverNode.getServerPort() == null) ){
+                    // 如果 IP 地址或端口号为 null，则跳过测速
+                    break;
+                }
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
