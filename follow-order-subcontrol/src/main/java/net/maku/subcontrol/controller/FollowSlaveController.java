@@ -167,7 +167,7 @@ public class FollowSlaveController {
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
                             //发送漏单通知
                             FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
-                            messagesService.isRepairSend(eaOrderInfo,convert,master,leaderApiTrader.quoteClient);
+                            messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
                         });
                     }
                 }
