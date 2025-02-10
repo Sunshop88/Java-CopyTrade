@@ -49,7 +49,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
     @Override
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
-        log.info(":请求进入时间1"+trader.getTrader().getId());
+        log.info(":请求进入时间1"+trader.getTrader().getId()+":"+orderInfo.getMasterId());
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
         FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(trader.getTrader().getId(), orderInfo.getMasterId());
         //存入下单方式
