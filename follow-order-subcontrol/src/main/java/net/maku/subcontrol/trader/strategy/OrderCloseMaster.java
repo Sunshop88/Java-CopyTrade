@@ -77,7 +77,12 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
                 repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
             }
             repairInfoVOS.remove(orderInfo.getTicket());
-            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+            if(repairInfoVOS==null || repairInfoVOS.size()==0){
+                redisUtil.del(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId());
+            }else{
+                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+            }
+
 
         });
 
