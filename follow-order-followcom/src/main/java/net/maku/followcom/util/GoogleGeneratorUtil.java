@@ -11,7 +11,7 @@ import java.security.SecureRandom;
 
 public class GoogleGeneratorUtil {
     // 发行者（项目名），可为空，注：不允许包含冒号
-    public static final String ISSUER = "beinet.cn";
+    public static final String ISSUER = "net.maku";
 
     // 生成的key长度( Generate secret key length)
     public static final int SECRET_SIZE = 32;
