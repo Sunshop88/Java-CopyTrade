@@ -2,6 +2,7 @@ package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
@@ -241,6 +243,18 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 // 保存到批量发送队列
                 kafkaMessages.add(jsonEvent);
+                //漏单删除
+                FollowTraderEntity master = followTraderService.getById(openOrderMapping.getMasterId());
+                redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + followTraderEntity.getPlatform() + "#" + master.getPlatform() + "#" + openOrderMapping.getSlaveAccount() + "#" + openOrderMapping.getMasterAccount(), order.Ticket+"");
+                //删除漏单redis记录
+                Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
+                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                if (o2 != null && o2.toString().trim().length() > 0) {
+                    repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
+                }
+                repairInfoVOS.remove(order.Ticket+"");
+                redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
+
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));

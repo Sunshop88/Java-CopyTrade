@@ -136,7 +136,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                             EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
                             orderSendCopier.operate(copierApiTrader,objects,1);
                             //判断是否补单成功
-                            ThreadPoolUtils.getExecutor().execute(()->{
+                  /*          ThreadPoolUtils.getExecutor().execute(()->{
                                 try {
                                     Thread.sleep(2000);
                                 } catch (Exception e) {
@@ -155,9 +155,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                                     repairInfoVOS.remove(repairSendVO.getOrderNo());
                                     redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slave.getAccount(), JSONObject.toJSONString(repairInfoVOS));
                                 }
-                            });
-
-
+                            });*/
                         }else {
                             throw new ServerException("暂无订单需处理");
                         }
@@ -171,7 +169,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString()))) {
                             EaOrderInfo objects = (EaOrderInfo) redisUtil.hGet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+slave.getPlatform()+"#"+master.getPlatform()+ "#" + traderSubscribeEntity.getSlaveAccount() + "#" + traderSubscribeEntity.getMasterAccount(), repairSendVO.getOrderNo().toString());
                             orderCloseCopier.operate(copierApiTrader, objects, 1);
-                            ThreadPoolUtils.getExecutor().execute(()->{
+                           /* ThreadPoolUtils.getExecutor().execute(()->{
                                 try {
                                     //异步问题
                                     Thread.sleep(2000);
@@ -199,7 +197,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
 
 
                                 }
-                            });
+                            });*/
                         } else {
                             throw new ServerException("暂无订单需处理");
                         }

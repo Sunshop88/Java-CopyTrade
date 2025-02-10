@@ -27,6 +27,7 @@ import net.maku.framework.common.constant.Constant;
 
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import online.mtapi.mt4.Op;
+import online.mtapi.mt4.QuoteClient;
 import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -166,19 +167,26 @@ public class MessagesServiceImpl implements MessagesService {
 
         });
     }
-    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
+    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
         ThreadPoolUtils.getExecutor().execute(() -> {
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-              log.error("漏单通知异常{}",e);
+            boolean existsInActive =true;
+            if(quoteClient!=null){
+                existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.Ticket+""));
+            }else{
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    log.error("漏单通知异常{}",e);
+                }
+                Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
+                List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+                if (ObjectUtil.isNotEmpty(o1)) {
+                    orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                }
+                 existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
             }
-            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
-            List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
-            if (ObjectUtil.isNotEmpty(o1)) {
-                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
-            }
-            boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+
+
             //确定为漏单
             if (!existsInActive) {
                 log.info("漏单喊单者订单号{}",orderInfo.getTicket());
