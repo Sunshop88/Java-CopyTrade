@@ -193,13 +193,13 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket())))){
                 redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+copier.getPlatform()+"#"+master.getPlatform()+ "#" + leaderCopier.getSlaveAccount() + "#" + leaderCopier.getMasterAccount(), orderInfo.getTicket().toString());
                 //删除漏单redis记录
-                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount());
-                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
-                if (o1!=null && o1.toString().trim().length()>0){
-                    repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
-                }
-                repairInfoVOS.remove(orderInfo.getTicket().toString());
-                redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+//                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount());
+//                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+//                if (o1!=null && o1.toString().trim().length()>0){
+//                    repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+//                }
+//                repairInfoVOS.remove(orderInfo.getTicket().toString());
+//                redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
 
 
             }
