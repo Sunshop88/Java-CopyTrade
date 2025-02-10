@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -146,244 +147,244 @@ public class FollowTestSpeedController {
         extracted(req, vps, servers, overallResult);
         return Result.ok();
     }
-    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
-        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
-        ObjectMapper objectMapper = new ObjectMapper();
-        boolean allSuccess = true;
-        FollowTestServerQuery query = new FollowTestServerQuery();
-        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
-        //将detailVOLists的数据存储在redis
-        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
-
-        ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
-        List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
-
-        for (FollowVpsEntity vpsEntity : vpsList) {
-            //平台点击测速的时候，断开连接的VPS不需要发起测速请求
-            try {
-                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
-                boolean reachable = inet.isReachable(5000);
-                if (!reachable) {
-                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    continue;
-                }
-                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
-                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
-                } catch (UnknownHostException e) {
-                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    continue;
-                } catch (IOException e) {
-                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    continue;
-                }
-            } catch (UnknownHostException e) {
-                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
-                continue;
-            } catch (IOException e) {
-                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
-                continue;
-            }
-
-            futures.add(executorService.submit(() -> {
-                try {
-                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
-
-                    MeasureRequestVO startRequest = new MeasureRequestVO();
-                    startRequest.setServers(servers);
-                    startRequest.setVpsEntity(vpsEntity);
-                    startRequest.setTestId(overallResult.getId());
-                    startRequest.setMeasureTime(overallResult.getDoTime());
-                    log.info("测试时间" + overallResult.getDoTime());
-
-                    // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
-                    String expiryDateStr = vpsEntity.getExpiryDate().toString();
-                    startRequest.setExpiryDateStr(expiryDateStr);
-
-                    RestTemplate restTemplate = new RestTemplate();
-                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
-                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                    log.info("测速请求:" + response.getBody());
-
-                    if (!response.getBody().getString("msg").equals("success")) {
-                        log.error("测速失败ip: " + vpsEntity.getIpAddress());
-                        return false; // 返回失败状态
-                    }
-                } catch (Exception e) {
-                    log.error("请求异常: " + e.getMessage() + ", VPS异常");
-                    return false; // 返回失败状态
-                }
-                return true; // 返回成功状态
-            }));
-        }
-
-        // 使用CompletableFuture来管理所有测速任务的完成状态
-        List<CompletableFuture<Boolean>> completableFutures = futures.stream()
-                .map(future -> CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.error("测速任务执行异常: " + e.getMessage());
-                        return false;
-                    }
-                }))
-                .collect(Collectors.toList());
-
-        // 等待所有任务完成
-        CompletableFuture<Void> allFutures = CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
-
-        try {
-            allFutures.get(); // 等待所有任务完成
-
-            // 检查所有任务的结果
-             allSuccess = completableFutures.stream().allMatch(CompletableFuture::join);
-
-            // 根据所有任务的执行结果更新 overallResult
-            if (allSuccess) {
-                overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
-            } else {
-                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
-                // 延迟删除操作，确保在所有测速请求完成后再进行删除
-                followTestDetailService.deleteByTestId(overallResult.getId());
-            }
-
-            update(overallResult);
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("等待所有测速任务完成时发生异常: " + e.getMessage());
-            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
-            update(overallResult);
-        } finally {
-            executorService.shutdown(); // 关闭线程池
-        }
-    }
-
-    /*
-    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
-        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
-        ObjectMapper objectMapper = new ObjectMapper();
-        boolean allSuccess = true;
-        FollowTestServerQuery query = new FollowTestServerQuery();
-        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
-        //将detailVOLists的数据存储在redis
-        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
-
-        ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
-        List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
-
-        for (FollowVpsEntity vpsEntity : vpsList) {
-            //平台点击测速的时候，断开连接的VPS不需要发起测速请求
-            try {
-                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
-                boolean reachable = inet.isReachable(5000);
-                if (!reachable) {
-                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    continue;
-                }
-                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
-                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
-                } catch (IOException e) {
-                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
-                    continue;
-                }
-            } catch (IOException e) {
-                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
-                continue;
-            }
-
-            futures.add(executorService.submit(() -> {
-                try {
-                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
-
-                    MeasureRequestVO startRequest = new MeasureRequestVO();
-                    startRequest.setServers(servers);
-                    startRequest.setVpsEntity(vpsEntity);
-                    startRequest.setTestId(overallResult.getId());
-                    startRequest.setMeasureTime(overallResult.getDoTime());
-                    log.info("测试时间"+overallResult.getDoTime());
-
-//                // 将对象序列化为 JSON
-//                String jsonBody = objectMapper.writeValueAsString(startRequest);
-//                RestTemplate restTemplate = new RestTemplate();
-//                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-//                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-//                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-//                log.info("测速请求:" + response.getBody());
-
-                    // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
-                    String expiryDateStr = vpsEntity.getExpiryDate().toString();
-                    startRequest.setExpiryDateStr(expiryDateStr);
-
-                    RestTemplate restTemplate = new RestTemplate();
-                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
-                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                    log.info("测速请求:" + response.getBody());
+//    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
+//        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        boolean allSuccess = true;
+//        FollowTestServerQuery query = new FollowTestServerQuery();
+//        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+//        //将detailVOLists的数据存储在redis
+//        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
+//
+//        ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
+//        List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
+//
+//        for (FollowVpsEntity vpsEntity : vpsList) {
+//            //平台点击测速的时候，断开连接的VPS不需要发起测速请求
+//            try {
+//                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+//                boolean reachable = inet.isReachable(5000);
+//                if (!reachable) {
+//                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+//                    continue;
+//                }
+//                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
+//                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
+//                } catch (UnknownHostException e) {
+//                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+//                    continue;
+//                } catch (IOException e) {
+//                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+//                    continue;
+//                }
+//            } catch (UnknownHostException e) {
+//                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
+//                continue;
+//            } catch (IOException e) {
+//                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
+//                continue;
+//            }
+//
+//            futures.add(executorService.submit(() -> {
+//                try {
+//                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+//
+//                    MeasureRequestVO startRequest = new MeasureRequestVO();
+//                    startRequest.setServers(servers);
+//                    startRequest.setVpsEntity(vpsEntity);
+//                    startRequest.setTestId(overallResult.getId());
+//                    startRequest.setMeasureTime(overallResult.getDoTime());
+//                    log.info("测试时间" + overallResult.getDoTime());
+//
+//                    // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+//                    String expiryDateStr = vpsEntity.getExpiryDate().toString();
+//                    startRequest.setExpiryDateStr(expiryDateStr);
+//
+//                    RestTemplate restTemplate = new RestTemplate();
+//                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+//                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
+//                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+//                    log.info("测速请求:" + response.getBody());
+//
+//                    if (!response.getBody().getString("msg").equals("success")) {
+//                        log.error("测速失败ip: " + vpsEntity.getIpAddress());
+//                        return false; // 返回失败状态
+//                    }
+//                } catch (Exception e) {
+//                    log.error("请求异常: " + e.getMessage() + ", VPS异常");
+//                    return false; // 返回失败状态
+//                }
+//                return true; // 返回成功状态
+//            }));
+//        }
+//
+//        // 使用CompletableFuture来管理所有测速任务的完成状态
+//        List<CompletableFuture<Boolean>> completableFutures = futures.stream()
+//                .map(future -> CompletableFuture.supplyAsync(() -> {
+//                    try {
+//                        return future.get();
+//                    } catch (InterruptedException | ExecutionException e) {
+//                        log.error("测速任务执行异常: " + e.getMessage());
+//                        return false;
+//                    }
+//                }))
+//                .collect(Collectors.toList());
+//
+//        // 等待所有任务完成
+//        CompletableFuture<Void> allFutures = CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+//
+//        try {
+//            allFutures.get(); // 等待所有任务完成
+//
+//            // 检查所有任务的结果
+//             allSuccess = completableFutures.stream().allMatch(CompletableFuture::join);
+//
+//            // 根据所有任务的执行结果更新 overallResult
+//            if (allSuccess) {
+//                overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+//            } else {
+//                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+//                // 延迟删除操作，确保在所有测速请求完成后再进行删除
+//                followTestDetailService.deleteByTestId(overallResult.getId());
+//            }
+//
+//            update(overallResult);
+//        } catch (InterruptedException | ExecutionException e) {
+//            log.error("等待所有测速任务完成时发生异常: " + e.getMessage());
+//            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+//            update(overallResult);
+//        } finally {
+//            executorService.shutdown(); // 关闭线程池
+//        }
+//    }
 
 
-                    if (!response.getBody().getString("msg").equals("success")) {
-                        log.error("测速失败ip: " + vpsEntity.getIpAddress());
-                        return true; // 返回失败状态
-                    }
-                } catch (Exception e) {
-                    log.error("请求异常: " + e.getMessage() + ", VPS异常");
-                }
-                return true; // 返回成功状态
-
-            }));
-
-        }
-        // 等待所有任务完成并检查结果
-        for (Future<Boolean> future : futures) {
-            try {
-                if (!future.get()) { // 如果有任何任务返回失败
-                    allSuccess = false;
-                    break;
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("测速任务执行异常: " + e.getMessage());
-                allSuccess = false;
-                break;
-            }
-        }
-        // 根据所有任务的执行结果更新 overallResult
-        if (allSuccess) {
-            overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
-
-            /*
-            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
-                    new LambdaQueryWrapper<FollowTestDetailEntity>()
-                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
-            );
-            // 获取所有唯一的 VPS 名称
-            List<String> vpsNames = allEntities.stream()
-                    .map(FollowTestDetailEntity::getVpsName)
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            vpsNames.forEach(vpsName -> {
-                // 获取当前 VPS 名称下的所有服务器名称
-                List<String> serverNames = allEntities.stream()
-                        .filter(entity -> vpsName.equals(entity.getVpsName()))
-                        .map(FollowTestDetailEntity::getServerName)
-                        .distinct()
-                        .collect(Collectors.toList());
-                serverNames.forEach(serverName -> {
-                    // 查找当前 VPS 名称和服务器名称下的最小延迟
-                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
-                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
-                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
-                            .orElse(null);
-
-                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
-                        //查询vps名称所对应的id
-                        Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>()
-                                .eq(FollowVpsEntity::getName, vpsName)
-                                .eq(FollowVpsEntity::getDeleted, 0)
-                                .last("LIMIT 1")).getId();
-                        redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
-                    }
-                });
-            });
+//    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
+//        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        boolean allSuccess = true;
+//        FollowTestServerQuery query = new FollowTestServerQuery();
+//        List<FollowTestDetailVO> detailVOLists = followTestDetailService.selectServer(query);
+//        //将detailVOLists的数据存储在redis
+//        redisUtil.set(Constant.VPS_NODE_SPEED + "detail", detailVOLists);
+//
+//        ExecutorService executorService = Executors.newFixedThreadPool(10); // 创建固定大小的线程池
+//        List<Future<Boolean>> futures = new ArrayList<>(); // 存储每个任务的 Future 对象
+//
+//        for (FollowVpsEntity vpsEntity : vpsList) {
+//            //平台点击测速的时候，断开连接的VPS不需要发起测速请求
+//            try {
+//                InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+//                boolean reachable = inet.isReachable(5000);
+//                if (!reachable) {
+//                    log.warn("VPS 地址不可达: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+//                    continue;
+//                }
+//                try (Socket socket = new Socket(vpsEntity.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT))) {
+//                    log.info("成功连接到 VPS: " + vpsEntity.getIpAddress());
+//                } catch (IOException e) {
+//                    log.warn("VPS 服务未启动: " + vpsEntity.getIpAddress() + ", 跳过该VPS");
+//                    continue;
+//                }
+//            } catch (IOException e) {
+//                log.error("请求异常: " + e.getMessage() + ", 跳过该VPS");
+//                continue;
+//            }
+//
+//            futures.add(executorService.submit(() -> {
+//                try {
+//                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+//
+//                    MeasureRequestVO startRequest = new MeasureRequestVO();
+//                    startRequest.setServers(servers);
+//                    startRequest.setVpsEntity(vpsEntity);
+//                    startRequest.setTestId(overallResult.getId());
+//                    startRequest.setMeasureTime(overallResult.getDoTime());
+//                    log.info("测试时间"+overallResult.getDoTime());
+//
+////                // 将对象序列化为 JSON
+////                String jsonBody = objectMapper.writeValueAsString(startRequest);
+////                RestTemplate restTemplate = new RestTemplate();
+////                HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+////                HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+////                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+////                log.info("测速请求:" + response.getBody());
+//
+//                    // 手动序列化 FollowVpsEntity 中的 expiryDate 字段
+//                    String expiryDateStr = vpsEntity.getExpiryDate().toString();
+//                    startRequest.setExpiryDateStr(expiryDateStr);
+//
+//                    RestTemplate restTemplate = new RestTemplate();
+//                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+//                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
+//                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+//                    log.info("测速请求:" + response.getBody());
+//
+//
+//                    if (!response.getBody().getString("msg").equals("success")) {
+//                        log.error("测速失败ip: " + vpsEntity.getIpAddress());
+//                        return true; // 返回失败状态
+//                    }
+//                } catch (Exception e) {
+//                    log.error("请求异常: " + e.getMessage() + ", VPS异常");
+//                }
+//                return true; // 返回成功状态
+//
+//            }));
+//
+//        }
+//        // 等待所有任务完成并检查结果
+//        for (Future<Boolean> future : futures) {
+//            try {
+//                if (!future.get()) { // 如果有任何任务返回失败
+//                    allSuccess = false;
+//                    break;
+//                }
+//            } catch (InterruptedException | ExecutionException e) {
+//                log.error("测速任务执行异常: " + e.getMessage());
+//                allSuccess = false;
+//                break;
+//            }
+//        }
+//        // 根据所有任务的执行结果更新 overallResult
+//        if (allSuccess) {
+//            overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+//
+//            /*
+//            List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
+//                    new LambdaQueryWrapper<FollowTestDetailEntity>()
+//                            .eq(FollowTestDetailEntity::getTestId, overallResult.getId())
+//            );
+//            // 获取所有唯一的 VPS 名称
+//            List<String> vpsNames = allEntities.stream()
+//                    .map(FollowTestDetailEntity::getVpsName)
+//                    .distinct()
+//                    .collect(Collectors.toList());
+//
+//            vpsNames.forEach(vpsName -> {
+//                // 获取当前 VPS 名称下的所有服务器名称
+//                List<String> serverNames = allEntities.stream()
+//                        .filter(entity -> vpsName.equals(entity.getVpsName()))
+//                        .map(FollowTestDetailEntity::getServerName)
+//                        .distinct()
+//                        .collect(Collectors.toList());
+//                serverNames.forEach(serverName -> {
+//                    // 查找当前 VPS 名称和服务器名称下的最小延迟
+//                    FollowTestDetailEntity minLatencyEntity = allEntities.stream()
+//                            .filter(entity -> vpsName.equals(entity.getVpsName()) && serverName.equals(entity.getServerName()))
+//                            .min(Comparator.comparingLong(FollowTestDetailEntity::getSpeed))
+//                            .orElse(null);
+//
+//                    if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+//                        //查询vps名称所对应的id
+//                        Integer vpsId = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>()
+//                                .eq(FollowVpsEntity::getName, vpsName)
+//                                .eq(FollowVpsEntity::getDeleted, 0)
+//                                .last("LIMIT 1")).getId();
+//                        redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, serverName, minLatencyEntity.getServerNode(), 0);
+//                    }
+//                });
+//            });
 //            */
 //        } else {
 //            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
@@ -394,6 +395,76 @@ public class FollowTestSpeedController {
 //        update(overallResult);
 //        executorService.shutdown(); // 关闭线程池
 //    }
+
+    private void extracted(HttpServletRequest req, List<String> vps, List<String> servers, FollowTestSpeedVO overallResult) throws JsonProcessingException {
+        List<FollowVpsEntity> vpsList = followVpsService.listByVpsName(vps);
+        boolean allSuccess = true;
+
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        List<Future<Boolean>> futures = new ArrayList<>();
+
+        for (FollowVpsEntity vpsEntity : vpsList) {
+            // 检查 VPS 可达性
+            if (!isVpsReachable(vpsEntity)) {
+                log.warn("VPS 地址不可达: {}", vpsEntity.getIpAddress());
+                continue;
+            }
+
+            futures.add(executorService.submit(() -> {
+                try {
+                    String url = MessageFormat.format("http://{0}:{1}{2}", vpsEntity.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_MEASURE);
+                    MeasureRequestVO startRequest = new MeasureRequestVO();
+                    startRequest.setServers(servers);
+                    startRequest.setVpsEntity(vpsEntity);
+                    startRequest.setTestId(overallResult.getId());
+                    startRequest.setMeasureTime(overallResult.getDoTime());
+
+                    RestTemplate restTemplate = new RestTemplate();
+                    HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+                    HttpEntity<MeasureRequestVO> entity = new HttpEntity<>(startRequest, headers);
+                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+
+                    if (!"success".equals(response.getBody().getString("msg"))) {
+                        log.error("测速失败ip: {}", vpsEntity.getIpAddress());
+                        return false;
+                    }
+                } catch (Exception e) {
+                    log.error("请求异常: {}, VPS: {}", e.getMessage(), vpsEntity.getIpAddress());
+                    return false;
+                }
+                return true;
+            }));
+        }
+
+        // 等待所有任务完成
+        for (Future<Boolean> future : futures) {
+            try {
+                if (!future.get()) {
+                    allSuccess = false;
+                    break;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("测速任务执行异常: {}", e.getMessage());
+                allSuccess = false;
+                break;
+            }
+        }
+
+        // 更新 overallResult 状态
+        overallResult.setStatus(allSuccess ? VpsSpendEnum.SUCCESS.getType() : VpsSpendEnum.FAILURE.getType());
+        update(overallResult); // 更新数据库中的状态
+        executorService.shutdown(); // 关闭线程池
+    }
+
+    private boolean isVpsReachable(FollowVpsEntity vpsEntity) {
+        try {
+            InetAddress inet = InetAddress.getByName(vpsEntity.getIpAddress());
+            return inet.isReachable(5000);
+        } catch (IOException e) {
+            log.error("检查 VPS 可达性时出现异常: {}", e.getMessage());
+            return false;
+        }
+    }
 
     @GetMapping("listTestSpeed")
     @Operation(summary = "测速记录列表")
