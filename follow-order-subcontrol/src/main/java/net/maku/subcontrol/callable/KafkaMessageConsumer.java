@@ -9,10 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.CopyTradeFlag;
-import net.maku.followcom.enums.TraderLogEnum;
-import net.maku.followcom.enums.TraderLogTypeEnum;
+import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
@@ -25,6 +22,8 @@ import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
+import net.maku.subcontrol.trader.LeaderApiTrader;
+import net.maku.subcontrol.trader.LeaderApiTradersAdmin;
 import net.maku.subcontrol.trader.OrderResultCloseEvent;
 import net.maku.subcontrol.trader.OrderResultEvent;
 import online.mtapi.mt4.Op;
@@ -56,6 +55,8 @@ public class KafkaMessageConsumer {
     private final FollowOrderHistoryService followOrderHistoryService;
     private final CacheManager cacheManager;
     private final FollowTraderService followTraderService;
+    private final LeaderApiTradersAdmin leaderApiTradersAdmin;
+    private final FollowTraderSubscribeService followTraderSubscribeService;
 
     @KafkaListener(topics = "order-send", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
     public void consumeMessageMasterSend(List<String> messages, Acknowledgment acknowledgment) {
@@ -137,6 +138,74 @@ public class KafkaMessageConsumer {
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
+    }
+
+    @KafkaListener(topics = "order-repair", groupId = "order-group", containerFactory = "kafkaListenerContainerFactory")
+    public void consumeMessageMasterOrderRepair(List<String> messages, Acknowledgment acknowledgment) {
+        messages.forEach(message -> {
+            ThreadPoolUtils.getExecutor().execute(()->{
+                log.info("kafka消费order-repair" + message);
+                if (ObjectUtil.isNotEmpty(message)) {
+                    try {
+                        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(message);
+                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                            Order[] orders = leaderApiTrader.quoteClient.GetOpenedOrders();
+                            log.info("orders数量"+orders.length);
+                            //查看跟单账号
+                            List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(Long.valueOf(message));
+                            if (ObjectUtil.isNotEmpty(subscribeOrder)){
+                                subscribeOrder.forEach(o->{
+                                    ThreadPoolUtils.getExecutor().execute(()->{
+                                        String mapKey = o.getSlaveId() + "#" + o.getSlaveAccount();
+                                        FollowTraderEntity slaveTrader = followTraderService.getFollowById(o.getSlaveId());
+                                        Arrays.stream(orders).forEach(order->{
+                                            ThreadPoolUtils.getExecutor().execute(()->{
+                                                //查看是否存在跟单
+                                                Object followOrder = redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, String.valueOf(order.Ticket));
+                                                if (ObjectUtil.isEmpty(followOrder)){
+                                                    //漏单记录为空 -添加漏单
+                                                    if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket))))
+                                                    {
+                                                        EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),slaveTrader);
+                                                        redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
+                                                    }
+                                                }
+                                            });
+                                        });
+                                    });
+                                });
+                            }
+                        }else {
+                            log.error("order-repair 该账户未登录"+message);
+                        }
+                    } catch (Exception e) {
+                        log.error("消费异常");
+                    }
+                }
+            });
+        });
+        acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
+    }
+
+    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate,FollowTraderEntity leader) {
+
+        // 并且要给EaOrderInfo添加额外的信息：喊单者id+喊单者账号+喊单者服务器
+        // #84 喊单者发送订单前需要处理前后缀
+        EaOrderInfo orderInfo = new EaOrderInfo(order, leader.getId() ,leader.getAccount(), leader.getServerName(), equity, currency, Boolean.FALSE);
+        assembleOrderInfo(type, orderInfo, detectedDate);
+        return orderInfo;
+    }
+
+    void assembleOrderInfo(OrderChangeTypeEnum type, EaOrderInfo orderInfo, LocalDateTime detectedDate) {
+        if (type == OrderChangeTypeEnum.NEW) {
+            orderInfo.setOriginal(AcEnum.MO);
+            orderInfo.setDetectedOpenTime(detectedDate);
+        } else if (type == OrderChangeTypeEnum.CLOSED) {
+            orderInfo.setDetectedCloseTime(detectedDate);
+            orderInfo.setOriginal(AcEnum.MC);
+        } else if (type == OrderChangeTypeEnum.MODIFIED) {
+            orderInfo.setOriginal(AcEnum.MM);
+        }
     }
 
     private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price,String ipaddr) {

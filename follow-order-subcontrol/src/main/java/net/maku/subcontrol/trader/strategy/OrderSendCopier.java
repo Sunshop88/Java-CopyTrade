@@ -191,8 +191,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         Thread.sleep(50);
                     }
                 }
-                bidsub =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                asksub =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Ask:0;
+                bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
+                asksub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
                 Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
                 if(ObjectUtil.isNotEmpty(o1)){
