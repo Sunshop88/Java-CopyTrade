@@ -198,7 +198,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 if (o1!=null && o1.toString().trim().length()>0){
                     repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
                 }
-                repairInfoVOS.remove(orderInfo.getTicket().toString());
+                repairInfoVOS.remove(orderInfo.getTicket());
                 redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
 
 
