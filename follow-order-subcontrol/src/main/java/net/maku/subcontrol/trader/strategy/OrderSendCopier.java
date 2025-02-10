@@ -245,16 +245,16 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 kafkaMessages.add(jsonEvent);
                 //漏单删除
                 FollowTraderEntity master = followTraderService.getById(openOrderMapping.getMasterId());
-                redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + followTraderEntity.getPlatform() + "#" + master.getPlatform() + "#" + openOrderMapping.getSlaveAccount() + "#" + openOrderMapping.getMasterAccount(), order.Ticket+"");
+                redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + followTraderEntity.getPlatform() + "#" + master.getPlatform() + "#" + openOrderMapping.getSlaveAccount() + "#" + openOrderMapping.getMasterAccount(), orderInfo.getTicket()+"");
                 //删除漏单redis记录
                 Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
                 if (o2 != null && o2.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
                 }
-               repairInfoVOS.remove(order.Ticket);
+               repairInfoVOS.remove(orderInfo.getTicket());
                 redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
-                log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),order.Ticket );
+                log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
