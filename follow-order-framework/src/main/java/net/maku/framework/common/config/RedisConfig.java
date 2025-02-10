@@ -58,6 +58,12 @@ public class RedisConfig {
         return createLettuceConnectionFactory(redisProperties);
     }
 
+    @Bean
+    @Primary
+    public RedisConnectionFactory redisConnectionFactory3(@Qualifier("redisProperties1") RedisProperties redisProperties) {
+        return createLettuceConnectionFactory(redisProperties);
+    }
+
 //   @Bean
 //   public RedisConnectionFactory redisConnectionFactory2(@Qualifier("redisProperties2") RedisProperties redisProperties) {
 //        return createLettuceConnectionFactory(redisProperties);
@@ -75,6 +81,15 @@ public class RedisConfig {
     @Bean
     @Primary
     public RedisTemplate<String, Object> redisTemplate1(@Qualifier("redisConnectionFactory1") RedisConnectionFactory factory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        configureSerialization(template,factory);
+        return template;
+    }
+
+    @Bean
+    @Primary
+    public RedisTemplate<String, Object> redisTemplate3(@Qualifier("redisConnectionFactory3") RedisConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
         configureSerialization(template,factory);

@@ -34,6 +34,10 @@ public class RedisCache {
     @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    @Qualifier("redisTemplate3")
+    private RedisTemplate<String, Object> redisTemplate3;
+
     /**
      * 默认过期时长为24小时，单位：秒
      */
@@ -101,14 +105,13 @@ public class RedisCache {
      //   redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
         Object o = null;
         try {
-            redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-            o = redisTemplate.opsForHash().get(key, item);
-            ObjectMapper objectMapper = new ObjectMapper();
+            redisTemplate3.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+            o = redisTemplate3.opsForHash().get(key, item);
+          /*  ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             objectMapper.registerModule(new JavaTimeModule());
             objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-            //  redisTemplate.setHashKeySerializer(RedisSerializer.string());
-            redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+            redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));*/
         } catch (Exception e) {
             o =null;
         }
@@ -122,14 +125,13 @@ public class RedisCache {
 
  public Map<Object, Object> hGetStrAll(String key) {
      //   redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-        redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
-         ObjectMapper objectMapper = new ObjectMapper();
+       redisTemplate3.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        Map<Object, Object> entries = redisTemplate3.opsForHash().entries(key);
+        /* ObjectMapper objectMapper = new ObjectMapper();
          objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
          objectMapper.registerModule(new JavaTimeModule());
          objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-     //   redisTemplate.setHashKeySerializer(RedisSerializer.string());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));*/
         return entries;
     }
 
@@ -151,14 +153,13 @@ public class RedisCache {
     }
     public void hSetStr(String key, String field, Object value) {
         //redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-        redisTemplate.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
-        redisTemplate.opsForHash().put(key, field, value);
-        ObjectMapper objectMapper = new ObjectMapper();
+        redisTemplate3.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        redisTemplate3.opsForHash().put(key, field, value);
+       /* ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-       // redisTemplate.setHashKeySerializer(RedisSerializer.string());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));*/
     }
 
     public void hSet(String key, String field, Object value, long expire) {
