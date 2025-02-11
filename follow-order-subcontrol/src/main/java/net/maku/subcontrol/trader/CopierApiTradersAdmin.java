@@ -210,7 +210,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     log.info("启动校验异常" + copier.getId());
                     return ConCodeEnum.EXCEPTION;
                 }
-                if (ObjectUtil.isNotEmpty(this.leader4ApiTraderConcurrentHashMap.get(copier.getId().toString()))) {
+                if (ObjectUtil.isNotEmpty(getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString()))) {
                     log.info("登录数据存在" + copier.getId());
                     return ConCodeEnum.EXCEPTION;
                 }

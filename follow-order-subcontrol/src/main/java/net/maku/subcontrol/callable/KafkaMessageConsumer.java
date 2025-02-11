@@ -27,6 +27,7 @@ import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -145,6 +146,11 @@ public class KafkaMessageConsumer {
     public void consumeMessageMasterOrderRepair(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
             ThreadPoolUtils.getExecutor().execute(()->{
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 log.info("kafka消费order-repair" + message);
                 if (ObjectUtil.isNotEmpty(message)) {
                     try {
