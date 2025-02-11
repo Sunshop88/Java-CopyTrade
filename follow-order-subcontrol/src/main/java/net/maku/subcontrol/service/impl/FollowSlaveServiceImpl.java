@@ -65,11 +65,11 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
         FollowTraderSubscribeEntity subscription = followTraderSubscribeService.subscription(repairSendVO.getSlaveId(), repairSendVO.getMasterId());
         if (repairSendVO.getType().equals(TraderRepairEnum.ALL.getType())) {
             CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(repairSendVO.getSlaveId().toString());
-            Order[] orders = copierApiTrader.quoteClient.GetOpenedOrders();
-
             if (ObjectUtil.isEmpty(copierApiTrader)){
                 throw new ServerException("账号异常请重连");
             }
+            Order[] orders = copierApiTrader.quoteClient.GetOpenedOrders();
+
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())){
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());

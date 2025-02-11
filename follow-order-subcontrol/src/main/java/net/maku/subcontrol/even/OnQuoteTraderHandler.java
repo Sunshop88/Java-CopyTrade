@@ -135,25 +135,14 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     }
 
     private List<OrderActiveInfoVO> convertOrderActive(List<Order> openedOrders, String account) {
-        List<OrderActiveInfoVO> collect = new ArrayList<>();
-        for (Order o : openedOrders) {
-            // 从对象池中借用对象
-            OrderActiveInfoVO reusableOrderActiveInfoVO = orderActiveInfoPool.borrowObject();
-            resetOrderActiveInfoVO(reusableOrderActiveInfoVO, o, account); // 重用并重置对象
-            collect.add(reusableOrderActiveInfoVO);
-        }
-        // 倒序返回
-        List<OrderActiveInfoVO> sortedList = collect.stream()
+        return openedOrders.stream()
+                .map(order -> createOrderActiveInfoVO(order, account))
                 .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
                 .collect(Collectors.toList());
-
-        // 将对象归还到池中
-        collect.forEach(orderActiveInfoPool::returnObject);
-
-        return sortedList;
     }
 
-    private void resetOrderActiveInfoVO(OrderActiveInfoVO vo, Order order, String account) {
+    private OrderActiveInfoVO createOrderActiveInfoVO(Order order, String account) {
+        OrderActiveInfoVO vo = new OrderActiveInfoVO();
         vo.setAccount(account);
         vo.setLots(order.Lots);
         vo.setComment(order.Comment);
@@ -169,5 +158,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
+        return vo;
     }
+
 }
