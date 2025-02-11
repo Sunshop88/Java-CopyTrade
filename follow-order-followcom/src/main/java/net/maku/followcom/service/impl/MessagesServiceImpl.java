@@ -2,6 +2,7 @@ package net.maku.followcom.service.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.http.HttpException;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import com.alibaba.fastjson.JSON;
@@ -259,7 +260,7 @@ public class MessagesServiceImpl implements MessagesService {
 
         // 清理URL中的非法字符
         url = url.replaceAll("\"", "");  // 去掉双引号
-
+        JSONObject parameters =null;
         // 验证URL是否合法
         try {
             new URL(url);  // 如果URL不合法，会抛出MalformedURLException
@@ -274,21 +275,25 @@ public class MessagesServiceImpl implements MessagesService {
         } catch (Exception e) {
             log.error("发送消息失败:{}",e);
         }
-        String json=null;
-           if(vo.getTemplateType().equals(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode())){
-                json=template(secret,timestamp,vo.getVpsName(),vo.getSourceRemarks(),vo.getSource(),vo.getFollow(),vo.getSymbol(),vo.getType());
-           }else{
-                json=fixedTimeTemplate(secret,timestamp,vo.getNum());
-           }
-        JSONObject parameters = JSON.parseObject(json);
-        HttpResponse response = HttpRequest.post(url)
-                .body(parameters.toJSONString(), "application/json") // 设置表单参数转成json格式
-                .execute();
-        String body = response.body();
-        JSONObject jsonObject = JSON.parseObject(body);
-        Integer code = jsonObject.getInteger("code");
-        if(code!=0){
-            log.error("发送消息失败:{}",body);
+        try {
+            String json=null;
+            if(vo.getTemplateType().equals(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode())){
+                 json=template(secret,timestamp,vo.getVpsName(),vo.getSourceRemarks(),vo.getSource(),vo.getFollow(),vo.getSymbol(),vo.getType());
+            }else{
+                 json=fixedTimeTemplate(secret,timestamp,vo.getNum());
+            }
+             parameters = JSON.parseObject(json);
+            HttpResponse response = HttpRequest.post(url)
+                    .body(parameters.toJSONString(), "application/json") // 设置表单参数转成json格式
+                    .execute();
+            String body = response.body();
+            JSONObject jsonObject = JSON.parseObject(body);
+            Integer code = jsonObject.getInteger("code");
+            if(code!=0){
+                log.error("发送消息失败:{}",body);
+            }
+        } catch (Exception e) {
+            log.error("发送消息失败:发送url:{},参数：{}",url,parameters);
         }
     }
 

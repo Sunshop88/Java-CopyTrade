@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -27,10 +28,7 @@ import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.RandomStringUtil;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.common.utils.*;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.framework.security.user.SecurityUser;
 import online.mtapi.mt4.*;
@@ -325,6 +323,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         return true;
     }
+
 
     @Override
     public PageResult<FollowOrderSlipPointVO> pageSlipPoint(FollowOrderSpliListQuery query) {
@@ -1092,6 +1091,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //下单方式
         oc.PlacedType = PlacedType.forValue(placedType);
         try {
+            //检查最大手数
+            Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
+            if(ObjectUtil.isNotEmpty(o1)){
+                BigDecimal max = new BigDecimal(o1.toString());
+                BigDecimal lots = new BigDecimal(lotsPerOrder);
+                if (lots.compareTo(max)>0) {
+                   throw  new ServerException("超过最大手数限制");
+                }
+            }
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
@@ -1125,6 +1133,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setMagical(order.Ticket);
             followOrderDetailEntity.setSourceUser(account);
             followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
+        }catch (ServerException e){
+            followOrderDetailEntity.setRemark( e.getMessage());
         } catch (TimeoutException e) {
             log.info("下单超时");
             followOrderDetailEntity.setRemark("下单超时" + e.getMessage());

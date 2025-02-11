@@ -272,14 +272,7 @@ public class FollowTraderController {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             return Result.error("开始手数不能大于结束手数");
         }
-        //检查最大手数
-        Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
-        if(ObjectUtil.isNotEmpty(o1)){
-            BigDecimal max = new BigDecimal(o1.toString());
-            if (vo.getEndSize().compareTo(max)>0) {
-                return Result.error("下单手数已超出上限");
-            }
-        }
+
 
         QuoteClient quoteClient = null;
         AbstractApiTrader abstractApiTrader = null;
