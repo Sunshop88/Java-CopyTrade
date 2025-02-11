@@ -70,7 +70,7 @@ public class FollowTestDetailVO implements Serializable {
 
 	@Schema(description = "更新时间")
 //	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
-	private LocalDateTime updateTime;
+	private LocalDateTime testUpdateTime;
 
 	@Schema(description = "vps id")
 	@NotNull(message = "VPS ID不能为空")

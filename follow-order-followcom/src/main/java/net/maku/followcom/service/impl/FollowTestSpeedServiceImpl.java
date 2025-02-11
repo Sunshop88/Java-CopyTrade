@@ -190,7 +190,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                             newEntity.setVpsId(vpsEntity.getId());
                             newEntity.setSpeed((int) duration);
                             newEntity.setTestId(testId);
-                            newEntity.setUpdateTime(measureTime);
+                            newEntity.setTestUpdateTime(measureTime);
 //                            newEntity.setServerUpdateTime(detailVO.getServerUpdateTime());
 //                            newEntity.setIsDefaultServer(detailVO.getIsDefaultServer());
                             newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
@@ -287,7 +287,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 newEntity.setVpsId(vpsEntity.getId());
                 newEntity.setSpeed(speed); // 设置速度，可能为 null
                 newEntity.setTestId(testId);
-                newEntity.setUpdateTime(measureTime);
+                newEntity.setTestUpdateTime(measureTime);
                 newEntity.setServerUpdateTime(detailVO.getServerUpdateTime() != null ? detailVO.getServerUpdateTime() : null);
                 newEntity.setIsDefaultServer(1);
                 followTestDetailService.save(newEntity);

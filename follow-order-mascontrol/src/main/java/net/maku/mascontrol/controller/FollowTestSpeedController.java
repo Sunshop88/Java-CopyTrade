@@ -513,8 +513,8 @@ public class FollowTestSpeedController {
                     isDefaultServer = 1;
                 }
                 targetVO.setIsDefaultServer(isDefaultServer);
-                targetVO.setUpdateTime(targetVO.getUpdateTime());
-                System.out.println(targetVO.getUpdateTime());
+                targetVO.setTestUpdateTime(targetVO.getTestUpdateTime());
+                System.out.println(targetVO.getTestUpdateTime());
                 targetVO.setServerUpdateTime(now);
                 // 更新数据库
                 followTestDetailService.update(targetVO);
@@ -565,7 +565,7 @@ public class FollowTestSpeedController {
         for (FollowTestDetailVO vo : detailVOLists) {
             vo.setServerName(followTestServerNameVO.getNewName());
             vo.setServerUpdateTime(now);
-            vo.setUpdateTime(vo.getUpdateTime());
+            vo.setTestUpdateTime(vo.getTestUpdateTime());
             followTestDetailService.update(vo);
         }
 
