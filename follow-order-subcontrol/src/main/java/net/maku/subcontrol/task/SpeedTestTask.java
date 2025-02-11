@@ -115,7 +115,7 @@ public class SpeedTestTask {
                                     .min(Comparator.comparingLong(entity -> entity.getSpeed() != null ? entity.getSpeed() : Long.MAX_VALUE))
                                     .orElse(null);
 
-                            if (ObjectUtil.isNotEmpty(minLatencyEntity)) {
+                            if (ObjectUtil.isNotEmpty(minLatencyEntity) && minLatencyEntity.getSpeed() != null) {
                                 //将最快的节点后面加上isDefaultServerNode =0
                                 minLatencyEntity.setIsDefaultServer(0);
                                 followTestDetailService.updateById(minLatencyEntity);
