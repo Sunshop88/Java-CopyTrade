@@ -459,7 +459,7 @@ public class FollowTraderController {
         }
         //获取vps数据
         if (ObjectUtil.isEmpty(quoteClient)){
-            throw new ServerException(vo.getTraderId()+"登录异常");
+            throw new ServerException(vo.getAccount()+"登录异常");
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())) {
