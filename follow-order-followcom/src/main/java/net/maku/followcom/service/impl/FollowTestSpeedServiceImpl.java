@@ -331,7 +331,7 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                     newEntity.setSpeed(speed);
                     newEntity.setTestId(testId);
                     newEntity.setTestUpdateTime(measureTime);
-                    newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 1 : 0);
+                    newEntity.setIsDefaultServer(defaultServerNode.equals(serverNode.getServerNode() + ":" + serverNode.getServerPort()) ? 0 : 1);
                     newEntity.setServerUpdateTime(localDateTime != null ? localDateTime : null);
 //                    newEntity.setServerUpdateTime(localDateTime != null ? LocalDateTime.parse(DateUtil.format(localDateTime, "yyyy-MM-dd HH:mm:ss")) : null);
                     // 获取最新的服务器更新时间
