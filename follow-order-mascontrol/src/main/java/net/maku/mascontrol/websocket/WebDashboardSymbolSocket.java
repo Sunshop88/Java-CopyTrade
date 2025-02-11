@@ -108,6 +108,7 @@ public class WebDashboardSymbolSocket {
             vo.setOrder(accountOrder);
             vo.setAccount(account);
             vo.setSourceAccount(sourceAccount);
+            vo.setVpsName(vpsName);
             accountDataPage = dashboardService.getAccountDataPage(vo);
             //遍历账号数据修改仪表盘统计数据
             Map<String, Integer> accountMap = new HashMap<>();
