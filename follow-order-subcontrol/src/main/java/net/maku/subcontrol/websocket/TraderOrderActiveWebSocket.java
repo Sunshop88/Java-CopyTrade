@@ -113,6 +113,7 @@ public class TraderOrderActiveWebSocket {
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
                     leaderApiTradersAdmin.removeTrader(accountId);
+                    log.info("activeWebsockaddTrader"+accountId);
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
                         quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;

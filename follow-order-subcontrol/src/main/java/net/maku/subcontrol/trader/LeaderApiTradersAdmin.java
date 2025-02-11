@@ -163,6 +163,12 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         if (redissonLockUtil.tryLockForShortTime("addTrader" + leader.getId(), 0, 10, TimeUnit.SECONDS)) {
             try {
                 log.info("进入登录！！！" + leader.getId());
+                //查看账号是否存在
+                FollowTraderEntity followById = followTraderService.getById(leader.getId());
+                if (ObjectUtil.isEmpty(followById)){
+                    log.info("启动账号校验异常" + leader.getId());
+                    return ConCodeEnum.EXCEPTION;
+                }
                 //VPS判断
                 if (!leader.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
                     log.info("启动校验异常" + leader.getId());

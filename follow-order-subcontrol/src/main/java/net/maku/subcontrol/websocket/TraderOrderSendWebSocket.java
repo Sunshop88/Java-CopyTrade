@@ -96,6 +96,7 @@ public class TraderOrderSendWebSocket {
                 abstractApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
+                    log.info("sendWebSocketaddTrader"+traderId);
                     leaderApiTradersAdmin.removeTrader(traderId);
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS ) {
