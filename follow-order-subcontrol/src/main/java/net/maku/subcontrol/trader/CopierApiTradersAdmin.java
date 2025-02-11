@@ -206,6 +206,12 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
         if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 10, TimeUnit.SECONDS)) {
             try{
+                //查看账号是否存在
+                FollowTraderEntity followById = followTraderService.getById(copier.getId());
+                if (ObjectUtil.isEmpty(followById)){
+                    log.info("启动账号校验异常" + copier.getId());
+                    return ConCodeEnum.EXCEPTION;
+                }
                 if (!copier.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
                     log.info("启动校验异常" + copier.getId());
                     return ConCodeEnum.EXCEPTION;

@@ -113,6 +113,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
+                log.info("添加监听"+trader.getId());
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
 //            else {
@@ -316,6 +317,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         }
 
         try {
+            log.info("删除监听"+trader.getId());
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();
             quoteClient.OnDisconnect.removeAllListeners();
