@@ -97,7 +97,7 @@ public interface FollowTraderAnalysisDao extends BaseDao<FollowTraderAnalysisEnt
             " AND  FIND_IN_SET(p.server,#{query.server}) ",
             "</if>",
             "<if test='query!=null and query.vpsName != null and   query.vpsName.trim() != \"\" '>",
-            " AND t.server_name LIKE CONCAT('%',#{query.vpsName},'%')",
+            " AND t.vps_name LIKE CONCAT('%',#{query.vpsName},'%')",
             "</if>",
             "<if test='query!=null and query.account != null and   query.account.trim() != \"\" '>",
             " AND t.account LIKE CONCAT('%',#{query.account},'%')",
