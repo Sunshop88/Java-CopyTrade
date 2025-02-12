@@ -172,7 +172,7 @@ public class MessagesServiceImpl implements MessagesService {
                 }
             }
             } catch (Exception e) {
-                log.error("漏平数据写入异常{}",e);
+                log.error("漏平数据写入异常{0}",e);
             }finally {
                 redissonLockUtil.unlock(key);
             }
@@ -188,7 +188,7 @@ public class MessagesServiceImpl implements MessagesService {
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
-                    log.error("漏单通知异常{}",e);
+                    log.error("漏单通知异常{0}",e);
                 }
                 Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
                 List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
@@ -230,7 +230,7 @@ public class MessagesServiceImpl implements MessagesService {
                         redisCache.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                     }
                 } catch (Exception e) {
-                   log.error("漏单数据写入异常{}",e);
+                   log.error("漏单数据写入异常{0}",e);
                 }finally {
                     redissonLockUtil.unlock(key);
                 }
