@@ -155,8 +155,8 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     Thread.sleep(50);
                 }
             }
-            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Ask:0;
+            bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
+            ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
             double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
