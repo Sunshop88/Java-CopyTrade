@@ -9,10 +9,7 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import net.maku.followcom.entity.FollowOrderDetailEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
@@ -29,6 +26,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
@@ -123,7 +121,24 @@ public class TraderRepairManageWebSocket {
             repairVpsVO.setVpsName(o.getName());
             List<MasterRepairVO> masterRepairVOList=new ArrayList<>(List.of());
             List<FollowTraderEntity> list ;
+
+            //除了admin都需要判断
+         /*   if (!ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
+                //查看当前用户拥有的vps
+                if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + userId))) {
+                    list = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + userId);
+                } else {
+                    List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId));
+                    if(ObjectUtil.isEmpty(vpsUserEntityList)){
+                        return null;
+                    }
+                    List<VpsUserVO> vpsUserVOS = convertoVpsUser(vpsUserEntityList);
+                    redisUtil.set(Constant.SYSTEM_VPS_USER + userId, JSONObject.toJSON(vpsUserVOS));
+                    list = vpsUserVOS;
+                }
+            }*/
             if (masterAccount!=0){
+
                 list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).like(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }else{
                 list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
