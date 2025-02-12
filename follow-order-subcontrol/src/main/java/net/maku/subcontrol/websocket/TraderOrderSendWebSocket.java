@@ -147,7 +147,7 @@ public class TraderOrderSendWebSocket {
             //获取symbol信息
             Map<String, FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.valueOf(traderId));
             // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(abstractApiTrader.getTrader().getTemplateId());
+            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
             List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
             log.info("匹配品种"+listv);
             QuoteEventArgs eventArgs = null;
