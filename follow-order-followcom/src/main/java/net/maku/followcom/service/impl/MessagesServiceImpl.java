@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
@@ -163,14 +164,24 @@ public class MessagesServiceImpl implements MessagesService {
                         orderRepairInfoVO.setSlaveId(follow.getId());
                         closeMap.put(orderInfo.getTicket(), orderRepairInfoVO);
                         //发送漏单
-                        FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                vpsName(follow.getServerName())
-                                .source(master.getAccount())
-                                .sourceRemarks(master.getRemark())
-                                .follow(follow.getAccount())
-                                .symbol(orderInfo.getSymbol())
-                                .type(Constant.NOTICE_MESSAGE_SELL).build();
-                        send(vo);
+                        ThreadPoolUtils.getExecutor().execute(() -> {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                            FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
+                            if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus()== CloseOrOpenEnum.CLOSE.getValue()) {
+                                FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                        vpsName(follow.getServerName())
+                                        .source(master.getAccount())
+                                        .sourceRemarks(master.getRemark())
+                                        .follow(follow.getAccount())
+                                        .symbol(orderInfo.getSymbol())
+                                        .type(Constant.NOTICE_MESSAGE_SELL).build();
+                                send(vo);
+                            }
+                        });
                     });
                     repairInfoVOS.putAll(closeMap);
                     redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
