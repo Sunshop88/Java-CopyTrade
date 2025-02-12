@@ -310,6 +310,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Integer insertSource(SourceInsertVO vo) {
         //参数转换，转成主表数据
         FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
+        followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
         //根据平台id查询平台
         FollowPlatformEntity platform = followPlatformService.getById(vo.getPlatformId());
         if (ObjectUtil.isEmpty(platform)) {
