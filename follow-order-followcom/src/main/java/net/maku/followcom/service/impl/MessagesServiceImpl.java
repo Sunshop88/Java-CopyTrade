@@ -198,22 +198,32 @@ public class MessagesServiceImpl implements MessagesService {
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
         ThreadPoolUtils.getExecutor().execute(() -> {
             boolean existsInActive =true;
-            if(quoteClient!=null){
-                existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.Ticket+""));
+           /* if(quoteClient!=null){
+              //   existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.Ticket+""));
             }else{
-                try {
-                    Thread.sleep(5000);
+               *//* try {
+                    Thread.sleep(3000);
                 } catch (InterruptedException e) {
                     log.error("漏单通知异常{0}",e);
-                }
+                }*//*
                 Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
                 List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
                 if (ObjectUtil.isNotEmpty(o1)) {
                     orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 }
                  existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+            }*/
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                log.error("漏单通知异常{0}",e);
             }
-
+            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
+            List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+            if (ObjectUtil.isNotEmpty(o1)) {
+                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+            }
+            existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
 
             //确定为漏单
             if (!existsInActive) {
