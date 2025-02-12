@@ -26,5 +26,7 @@ public class RepairSendVO implements Serializable {
 
 	@Schema(description = "订单号")
 	private Integer orderNo;
+	@Schema(description = "vpsId")
+	private Integer vpsId;
 
 }

@@ -2,6 +2,7 @@ package net.maku.subcontrol.trader;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -20,6 +21,7 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
@@ -102,22 +104,29 @@ public abstract class AbstractApiTrader extends ApiTrader {
             this.orderClient = new OrderClient(quoteClient);
         }
         boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
+        if (isLeader){
+            //检查是否存在订单变化
+            log.info("重连后漏单检查"+trader.getId());
+            kafkaTemplate.send("order-repair",String.valueOf(trader.getId()));
+        }
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
+                log.info("添加监听"+trader.getId());
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+            }else {
+                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
-//            else {
-//                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
-//                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-//            }
         }
 
         if (this.onQuoteTraderHandler==null){
             //账号监听
             onQuoteTraderHandler=new OnQuoteTraderHandler(this);
             this.quoteClient.OnQuote.addListener(onQuoteTraderHandler);
+            //默认监听
+            this.quoteClient.Subscribe(Arrays.stream(this.quoteClient.Symbols()).findFirst().get());
         }
 
     }
@@ -307,6 +316,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         }
 
         try {
+            log.info("删除监听"+trader.getId());
             quoteClient.OnOrderUpdate.removeAllListeners();
             quoteClient.OnConnect.removeAllListeners();
             quoteClient.OnDisconnect.removeAllListeners();

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.maku.system.dao.SysUserMfaVerifyDao">
+    <delete id="deleteByUsername">
+        delete from sys_user_mfa_verify where username = #{username}
+    </delete>
+
+    <select id="getMfaVerifyByUsername" resultType="java.lang.Integer">
+        select is_mfa_verified from sys_user_mfa_verify where username = #{username}
+    </select>
+    <select id="getSecretKey" resultType="java.lang.String">
+        select secret_key from sys_user_mfa_verify where username = #{username}
+    </select>
+    <select id="getMfaVerifies" resultType="net.maku.system.entity.SysUserMfaVerifyEntity">
+        select * from sys_user_mfa_verify
+    </select>
+    <select id="getKeyByUsername" resultType="java.lang.String">
+        select secret_key from sys_user_mfa_verify where username = #{username} and is_deleted = 0
+    </select>
+
+</mapper>

@@ -40,7 +40,8 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "count(1) AS symbolNum " +
             "FROM follow_order_detail " +
             "<where>" +
-            " AND order_no is not null" +
+            " order_no is not null" +
+            " AND send_no is not null" +
             "<if test='query.serverId != null '> and trader_id IN ( SELECT id FROM follow_trader WHERE  server_id=#{query.serverId}) </if> \n" +
             "<if test='query.traderIdList != null and query.traderIdList.size > 0'> AND trader_id in \n" +
             "  <foreach collection='query.traderIdList' item='item' open='(' separator=',' close=')'>\n" +
@@ -113,6 +114,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "close_ip_addr,",
             "close_server_name,",
             "close_server_host,",
+            "comment,",
             "is_external",
             ") values " ,
             " <foreach collection='list' item='OrderDetail'  separator=','>",
@@ -164,10 +166,11 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             "#{OrderDetail.closeIpAddr},",
             "#{OrderDetail.closeServerName},",
             "#{OrderDetail.closeServerHost},",
+            "#{OrderDetail.comment},",
             "#{OrderDetail.isExternal}",
             ")",
             "</foreach>",
-            "ON DUPLICATE KEY UPDATE update_time = now() , version=version+1,close_time=values(close_time),close_price=values(close_price),tp=values(tp),",
+            "ON DUPLICATE KEY UPDATE comment=values(comment),update_time = now() , version=version+1,close_time=values(close_time),close_price=values(close_price),tp=values(tp),",
             "sl=values(sl),swap=values(swap),profit=values(profit),close_server_host=values(close_server_host)",
             "</script>",
     })

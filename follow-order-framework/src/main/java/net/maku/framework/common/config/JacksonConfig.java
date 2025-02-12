@@ -3,7 +3,6 @@ package net.maku.framework.common.config;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
@@ -64,21 +63,6 @@ public class JacksonConfig {
         return mapper;
     }
 
-    public static ObjectMapper getObjectMapperUp() {
-        ObjectMapper mapper = new ObjectMapper();
-
-        // 注册 Java 8 时间模块
-        mapper.registerModule(new JavaTimeModule());
-
-        // 禁用数组格式的时间序列化
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE);
-
-        // 设置全局日期格式（如果需要）
-        mapper.setDateFormat(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
-
-        return mapper;
-    }
 
     public static <T> T parse(String json, Class<T> clazz) {
         return JSON.parseObject(json, clazz);

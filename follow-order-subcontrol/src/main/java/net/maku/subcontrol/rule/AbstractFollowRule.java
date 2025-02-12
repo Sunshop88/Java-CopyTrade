@@ -80,6 +80,7 @@ public abstract class AbstractFollowRule {
         //MT4平台
         LeaderApiTrader LeaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId().toString());
         double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getSymbol());
+        double leaderPr = getPr(LeaderApiTrader, LeaderApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol());
         switch (masterSlave.getFollowMode()) {
             case 0:
                 //按固定手数
@@ -87,13 +88,13 @@ public abstract class AbstractFollowRule {
                 break;
             case 1:
                 //按比例跟单
-                log.info("{}按比例下单参数:下单比例{}-下单手数{}-合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),pr);
-                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,pr);
+                log.info("{}按比例下单参数:下单比例{}-下单手数{}-跟单合约比例{}-喊单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),pr,leaderPr);
+                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,pr,leaderPr);
                 break;
             case 2:
-                log.info("{}按净值下单参数:下单比例{}-下单手数{}-喊单净值{}-跟单净值{}-合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr);
+                log.info("{}按净值下单参数:下单比例{}-下单手数{}-喊单净值{}-跟单净值{}-跟单合约比例{}-喊单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr,leaderPr);
                 //按净值比例
-                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,pr);
+                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,pr,leaderPr);
                 break;
             case 3:
                 //按资金比例(余额
@@ -124,7 +125,7 @@ public abstract class AbstractFollowRule {
         Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(symbol)).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
-        log.info("跟单账号标准合约大小{}", contract);
+        log.info("账号标准合约大小{}", contract);
         if (contract != 0) {
             //查询合约手数比例
             Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(traderId);

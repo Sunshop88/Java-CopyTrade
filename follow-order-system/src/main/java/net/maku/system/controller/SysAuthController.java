@@ -7,9 +7,12 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.security.utils.TokenUtils;
+import net.maku.system.dto.MfaDto;
+import net.maku.system.service.SysUserMfaVerifyService;
 import net.maku.system.service.SysAuthService;
 import net.maku.system.service.SysCaptchaService;
 import net.maku.system.vo.*;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class SysAuthController {
     private final SysCaptchaService sysCaptchaService;
     private final SysAuthService sysAuthService;
+    private final SysUserMfaVerifyService mfaVerifyService;
 
     @GetMapping("captcha")
     @Operation(summary = "验证码")
@@ -91,5 +95,12 @@ public class SysAuthController {
         sysAuthService.logout(TokenUtils.getAccessToken(request));
 
         return Result.ok();
+    }
+
+    @Operation(summary = "获取MFA秘钥")
+    @PostMapping(value = "/mfaVerifyShow")
+    public Result<MfaVo> mfaVerifyShow(@RequestBody MfaDto mfaDto) {
+        MfaVo mfaVo = mfaVerifyService.mfaVerifyShow(mfaDto);
+        return Result.ok(mfaVo);
     }
 }

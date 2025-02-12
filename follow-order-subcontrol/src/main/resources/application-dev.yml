@@ -4,7 +4,7 @@ spring:
       primary: redis1 # 默认 Redis 数据源为 redis1
       redis1:
         database: 1
-        host: 192.168.77.154
+        host: 127.0.0.1
         port: 6379
 
       redis2:
@@ -19,7 +19,7 @@ spring:
     password: guest
 
   kafka:
-    bootstrap-servers: 192.168.77.154:9092
+    bootstrap-servers: 127.0.0.1:9092
     consumer:
       group-id: order-group  # 消费者组 ID
       auto-offset-reset: earliest  # 消费起始位置
@@ -43,13 +43,13 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://192.168.77.154:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://127.0.0.1:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://192.168.77.154:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://127.0.0.1:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
   mqtt:

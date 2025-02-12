@@ -113,6 +113,7 @@ public class TraderOrderActiveWebSocket {
                 if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
                         || !abstractApiTrader.quoteClient.Connected()) {
                     leaderApiTradersAdmin.removeTrader(accountId);
+                    log.info("activeWebsockaddTrader"+accountId);
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
                     if (conCodeEnum == ConCodeEnum.SUCCESS) {
                         quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
@@ -212,7 +213,7 @@ public class TraderOrderActiveWebSocket {
                     //通过备注查询未平仓记录
                     List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
                     if (ObjectUtil.isNotEmpty(detailServiceList)) {
-                        detailServiceList.forEach(detail -> {
+                        for (FollowOrderDetailEntity detail : detailServiceList) {
                             OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
                             orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
                             orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
@@ -228,7 +229,7 @@ public class TraderOrderActiveWebSocket {
                             orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
                             orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
                             list.add(orderRepairInfoVO);
-                        });
+                        }
                     }
                 });
                 if (list.size()>=2){

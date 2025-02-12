@@ -54,4 +54,7 @@ public interface FollowOrderDetailConvert {
     })
     List<OrderClosePageVO.OrderVo> convertOrderList(List<FollowOrderDetailEntity> list);
 
+
+
+
 }

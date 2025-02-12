@@ -42,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -206,7 +207,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 //为什么修改stdContract时，要是有数值就能全部更新，但是stdContract为空就不能全部更新，就算为空也要全部更新，那应该怎么做
     public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try {
-            InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+            InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
             for (CSVRecord record : csvParser) {
@@ -452,14 +453,13 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
 
-
     public void addCsv(MultipartFile file, Integer template, String templateName) throws Exception {
         try {
-            InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+            InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
 
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-
+//            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
             for (CSVRecord record : csvParser) {
                 String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
                 String stdSymbol = record.get(1);      // 第二个字段是 stdSymbol

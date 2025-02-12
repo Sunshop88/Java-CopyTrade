@@ -8,7 +8,7 @@
         SELECT platform as serverName,
                count(1) as accountCount
         FROM follow_trader
-        WHERE `status` = 0
+--         WHERE `status` = 0
         GROUP BY platform
     </select>
     <select id="getDefaultAccountCounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
@@ -16,7 +16,7 @@
                login_node AS defaultServerNode,
                count(1)   AS nodeCount
         FROM follow_trader
-        WHERE `status` = 0
+--         WHERE `status` = 0
         GROUP BY platform,
                  login_node
     </select>
@@ -24,7 +24,7 @@
         SELECT platform AS serverName,
                count(1) AS nodeCount
         FROM follow_trader
-        WHERE `status` = 0
+--         WHERE `status` = 0
         GROUP BY platform
     </select>
 </mapper>

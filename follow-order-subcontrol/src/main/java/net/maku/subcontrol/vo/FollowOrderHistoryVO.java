@@ -6,6 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 所有MT4账号的历史订单
@@ -67,7 +68,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	private String comment;
 
 	@Schema(description = "魔数")
-	private Integer magic;
+	private String magic;
 
 	@Schema(description = "下单方式")
 	private Integer placedType;

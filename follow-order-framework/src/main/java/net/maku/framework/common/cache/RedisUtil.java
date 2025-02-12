@@ -33,7 +33,9 @@ public class RedisUtil {
     @Autowired
     @Qualifier("redisTemplate2")
     private RedisTemplate<String, Object> redisTemplate2;
-
+    @Autowired
+    @Qualifier("redisTemplate3")
+    private RedisTemplate<String, Object> redisTemplate3;
     /**
      * 指定缓存失效时间
      *
@@ -254,6 +256,24 @@ public class RedisUtil {
         return redisTemplate.opsForHash().get(key, item);
     }
 
+    public Object hGetStr(String key, String item) {
+        //redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        Object o = null;
+        try {
+            redisTemplate3.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+            o = redisTemplate3.opsForHash().get(key, item);
+           /* ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            objectMapper.registerModule(new JavaTimeModule());
+            objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+            //   redisTemplate.setHashKeySerializer(RedisSerializer.string());
+            redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));*/
+        } catch (Exception e) {
+            o = null;
+        }
+        return o;
+    }
+
     /**
      * HashGet 获获取所有给定字段的值
      * HMGET key field1 [field2]
@@ -301,7 +321,17 @@ public class RedisUtil {
             throw new Exception("");
         }
     }
-
+    public void hSetStr(String key, String field, Object value) {
+      //  redisTemplate.setHashKeySerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        redisTemplate3.setHashValueSerializer(new StringRedisSerializer(StandardCharsets.UTF_8));
+        redisTemplate3.opsForHash().put(key, field, value);
+      /*  ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+      //  redisTemplate.setHashKeySerializer(RedisSerializer.string());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));*/
+    }
     /**
      * 获取所有哈希表中的字段
      * HKEYS key

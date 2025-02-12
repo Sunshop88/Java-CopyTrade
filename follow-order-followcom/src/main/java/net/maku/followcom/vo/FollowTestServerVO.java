@@ -27,4 +27,7 @@ public class FollowTestServerVO implements Serializable {
     @Schema(description = "服务器节点列表")
     @NotEmpty(message = "服务器节点列表不能为空")
     private List<String> serverNodeList;
+
+    @Schema(description = "vps名称列表")
+    private List<String> vpsNameList;
 }

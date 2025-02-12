@@ -13,6 +13,7 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
@@ -75,7 +76,8 @@ public class InitRunner implements ApplicationRunner {
     private FollowSubscribeOrderService followSubscribeOrderService;
     @Autowired
     private CacheManager cacheManager;
-
+    @Autowired
+    private RedisUtil redisUtil;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
@@ -138,9 +140,13 @@ public class InitRunner implements ApplicationRunner {
         //订单关系缓存
         List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list();
         followTraderSubscribeEntityList.forEach(o->{
-            ThreadPoolUtils.getExecutor().execute(()->{
-                followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
-            });
+            followTraderSubscribeService.subscription(o.getSlaveId(),o.getMasterId());
+            FollowTraderEntity slave = followTraderService.getFollowById(o.getSlaveId());
+            FollowTraderEntity master = followTraderService.getFollowById(o.getMasterId());
+            // 将跟单关系存储到Redis
+            String key = Constant.FOLLOW_RELATION_KEY + o.getMasterAccount()+"#"+master.getPlatformId();
+            String followerId =o.getSlaveAccount()+"#"+slave.getPlatformId();;
+            redisUtil.sSet(key, followerId);
         });
 
         //喊单所有跟单缓存
@@ -153,5 +159,6 @@ public class InitRunner implements ApplicationRunner {
                 followTraderSubscribeService.getSubscribeOrder(o);
             });
         });
+
     }
 }

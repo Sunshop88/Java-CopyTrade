@@ -23,7 +23,7 @@ public class CommentGenerator {
      * @return 生成的注释
      */
     public static String generateComment(String fixedComment, Integer commentType, Integer digits, EaOrderInfo orderInfo,Integer serverId) {
-        if (ObjectUtil.isEmpty(fixedComment)&&digits == 0) {
+        if (ObjectUtil.isEmpty(fixedComment)&&(commentType==99||digits == 0)) {
             return "#"+serverId+"#" + Long.toString(Long.parseLong(orderInfo.getAccount()), 36) + "#" + Long.toString(orderInfo.getTicket(), 36) + "#FO_AUTO";
         }
 
@@ -32,7 +32,7 @@ public class CommentGenerator {
 
         if (commentType == 2) {
             randomPart.append(generateComplexRandomPart(digits, random));
-        } else {
+        } else if (commentType != 99)  {
             String characterPool = getCharacterPoolByType(commentType);
             if (characterPool.isEmpty()) {
                 throw new IllegalArgumentException("无效的注释类型：" + commentType);

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
@@ -48,6 +49,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -72,6 +74,7 @@ public class FollowSlaveController {
     private final FollowPlatformService followPlatformService;
     private final CacheManager cacheManager;
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
+    private final MessagesService messagesService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -92,18 +95,19 @@ public class FollowSlaveController {
                     throw new ServerException("请输入正确跟单参数");
                 }
             }
+            followTraderService.getFollowRelation(followTraderEntity,vo.getAccount(),vo.getPlatform());
             //查看是否存在循环跟单情况
-            List<FollowTraderSubscribeEntity> traderSubscribeEntity = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
-            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)) {
-                //同平台 同账号判断
-                traderSubscribeEntity.forEach(o -> {
-                    FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
-                    FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
-                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
-                        throw new ServerException("存在循环跟单,请检查");
-                    }
-                });
-            }
+//            List<FollowTraderSubscribeEntity> traderSubscribeEntity = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getMasterAccount, vo.getAccount()).eq(FollowTraderSubscribeEntity::getSlaveAccount, followTraderEntity.getAccount()));
+//            if (ObjectUtil.isNotEmpty(traderSubscribeEntity)) {
+//                //同平台 同账号判断
+//                traderSubscribeEntity.forEach(o -> {
+//                    FollowTraderEntity masterFollow = followTraderService.getFollowById(o.getMasterId());
+//                    FollowTraderEntity slaveFollow = followTraderService.getFollowById(o.getSlaveId());
+//                    if (masterFollow.getPlatform().equals(followTraderEntity.getPlatform()) && slaveFollow.getPlatform().equals(vo.getPlatform())) {
+//                        throw new ServerException("存在循环跟单,请检查");
+//                    }
+//                });
+//            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
             followTraderVo.setPassword(vo.getPassword());
@@ -161,6 +165,9 @@ public class FollowSlaveController {
                         Arrays.stream(orders).toList().forEach(order -> {
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), followTraderEntity);
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
+                            //发送漏单通知
+                            FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                            messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
                         });
                     }
                 }
@@ -185,6 +192,7 @@ public class FollowSlaveController {
     public Result<Boolean> updateSlave(@RequestBody @Valid FollowUpdateSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
+            String password = followTraderEntity.getPassword();
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
@@ -209,7 +217,10 @@ public class FollowSlaveController {
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
-            reconnect(vo.getId().toString());
+            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
+                reconnect(vo.getId().toString());
+            }
+
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
@@ -283,7 +294,13 @@ public class FollowSlaveController {
     public Result<Boolean> startNewVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         try {
+            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).forEach(o->{
+                leaderApiTradersAdmin.removeTrader(o.getId().toString());
+            });
             leaderApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
+            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).forEach(o->{
+                copierApiTradersAdmin.removeTrader(o.getId().toString());
+            });
             copierApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList());
         } catch (Exception e) {
             throw new ServerException("新Vps账号启动异常" + e);
@@ -309,6 +326,22 @@ public class FollowSlaveController {
         LocalDateTime measureTime = request.getMeasureTime();
             // 批量调用服务进行测速
         boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
+        log.info("============测速记录出来状态：" + isSuccess);
+//        try {
+//            Boolean isSuccess = isSuccessFuture.join();
+//            log.info("============测速记录出来状态：" + isSuccess);
+//            if (isSuccess != null && isSuccess) {
+//                return Result.ok();
+//            } else {
+//                // 删除当前vps相关的数据
+//                followTestDetailService.deleteByTestId(testId);
+//                return Result.error("测速失败，已删除相关数据");
+//            }
+//        } catch (Exception e) {
+//            log.error("测速异常", e);
+//            followTestDetailService.deleteByTestId(testId);
+//            return Result.error("测速过程中出现异常，已删除相关数据");
+//        }
         if (isSuccess) {
             return Result.ok();
         } else {
@@ -327,8 +360,8 @@ public class FollowSlaveController {
     @PostMapping("batchRepairSend")
     @Operation(summary = "漏单处理")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<Boolean> batchRepairSend(@RequestBody List<RepairSendVO> repairSendVO) {
-        return Result.ok(followSlaveService.batchRepairSend(repairSendVO));
+    public Result<Boolean> batchRepairSend(@RequestBody List<RepairSendVO> repairSendVO, HttpServletRequest req) {
+        return Result.ok(followSlaveService.batchRepairSend(repairSendVO,req));
     }
 
     private void reconnect(String traderId) {

@@ -885,8 +885,8 @@ public class FollowApiServiceImpl implements FollowApiService {
                         Thread.sleep(50);
                     }
                 }
-                bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
+                ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
 
                 if (order.Type.getValue() == Buy.getValue()) {
                     oc.OrderClose(order.Symbol, vo.getOrderNo(), order.Lots, bid, 0);

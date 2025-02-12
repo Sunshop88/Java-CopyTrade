@@ -19,4 +19,20 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "订单详情查询")
 public class FollowOrderDetailQuery extends Query {
+    @Schema(description = "账号ID")
+    private Long traderId;
+
+    @Schema(description = "时间-开始")
+    private String startTime;
+
+    @Schema(description = "时间-结束")
+    private String endTime;
+
+    private Integer type;
+
+    private Boolean isHistory=false;
+
+
+    private String account;
+    private  String platform;
 }

@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -24,12 +25,10 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.framework.common.utils.PageResult;
-import net.maku.framework.common.utils.RandomStringUtil;
-import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.common.utils.*;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.framework.security.user.SecurityUser;
 import online.mtapi.mt4.*;
@@ -80,6 +79,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final CacheManager cacheManager;
+    private final RedisUtil redisUtil;
 
 
     @Autowired
@@ -172,7 +172,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         if (ObjectUtil.isEmpty(followVpsEntity)) {
-            throw new ServerException("请先添加VPS:"+vo.getServerIp());
+            throw new ServerException("请先添加VPS");
         }
         entity.setTemplateId(vo.getTemplateId());
         entity.setPlatformId(followPlatform.getId().intValue());
@@ -324,6 +324,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return true;
     }
 
+
     @Override
     public PageResult<FollowOrderSlipPointVO> pageSlipPoint(FollowOrderSpliListQuery query) {
         return followOrderDetailService.listFollowOrderSlipPoint(query);
@@ -331,7 +332,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     @Override
     public PageResult<FollowOrderDetailVO> orderSlipDetail(FollowOrderSendQuery query) {
+
         LambdaQueryWrapper<FollowOrderDetailEntity> wrapper = Wrappers.lambdaQuery();
+
+
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
             wrapper.eq(FollowOrderDetailEntity::getTraderId, query.getTraderId());
         }
@@ -407,6 +411,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getCloseId())) {
             wrapper.eq(FollowOrderDetailEntity::getCloseId, query.getCloseId());
         }
+
         wrapper.like(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
         wrapper.orderByDesc(FollowOrderDetailEntity::getId);
@@ -455,8 +460,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         Thread.sleep(50);
                     }
                 }
-                bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-                ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+                bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
+                ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
                 Order order = quoteClient.GetOpenedOrder(vo.getOrderNo());
                 long start = System.currentTimeMillis();
                 if (order.Type.getValue() == Buy.getValue()) {
@@ -609,7 +614,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
                             try {
                                 //判断是否存在指定数据
-                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
@@ -633,7 +638,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         int finalI = i;
                         try {
                             //判断是否存在指定数据
-                            updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                            updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
@@ -663,7 +668,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             try {
                                 int finalI = i;
                                 CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
-                                    updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                    updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                                     //进行平仓滑点分析
                                     updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
                                 }, ThreadPoolUtils.getExecutor());
@@ -701,7 +706,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                             try {
                                 int finalI = i;
-                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI))), quoteClient, oc, followOrderCloseEntity);
+                                updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                                 //进行平仓滑点分析
                                 updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
 
@@ -905,8 +910,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     Thread.sleep(50);
                 }
             }
-            bid =ObjectUtil.isNotEmpty(quoteEventArgs.Bid)?quoteEventArgs.Bid:0;
-            ask =ObjectUtil.isNotEmpty(quoteEventArgs.Ask)?quoteEventArgs.Bid:0;
+            bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
+            ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
             LocalDateTime nowdate = LocalDateTime.now();
             log.info("平仓信息{},{},{},{},{}", symbol, orderNo, followOrderDetailEntity.getSize(), bid, ask);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
@@ -1086,6 +1091,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //下单方式
         oc.PlacedType = PlacedType.forValue(placedType);
         try {
+            //检查最大手数
+            Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
+            if(ObjectUtil.isNotEmpty(o1)){
+                BigDecimal max = new BigDecimal(o1.toString());
+                BigDecimal lots = new BigDecimal(lotsPerOrder);
+                if (lots.compareTo(max)>0) {
+                   throw  new ServerException("超过最大手数限制");
+                }
+            }
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
@@ -1119,6 +1133,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setMagical(order.Ticket);
             followOrderDetailEntity.setSourceUser(account);
             followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
+        }catch (ServerException e){
+            followOrderDetailEntity.setRemark( e.getMessage());
         } catch (TimeoutException e) {
             log.info("下单超时");
             followOrderDetailEntity.setRemark("下单超时" + e.getMessage());
@@ -1653,14 +1669,121 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
+    public void getFollowRelation(FollowTraderEntity followTraderEntity, String account, String platform) {
+        FollowPlatformEntity followPlatform= followPlatformService.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform));
+        if (ObjectUtil.isNotEmpty(followPlatform)){
+            addFollowRelation(followTraderEntity.getAccount()+"#"+followTraderEntity.getPlatformId(),account+"#"+followPlatform.getId());
+        }else {
+            throw new ServerException("平台异常");
+        }
+    }
+
+    @Override
+    public void removeRelation(FollowTraderEntity o, String account, Integer platformId) {
+        removeFollowRelation(account+"#"+platformId,o.getAccount()+"#"+o.getPlatformId());
+    }
+
+    @Override
+    public List<FollowSendAccountListVO> accountPage() {
+        List<FollowSendAccountListVO> listVOArrayList = new ArrayList<>();
+        List<FollowTraderEntity> list = this.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST).eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()));
+        list.forEach(o->{
+            FollowSendAccountListVO followSendAccountListVO = new FollowSendAccountListVO();
+            followSendAccountListVO.setId(o.getId());
+            followSendAccountListVO.setAccount(o.getAccount());
+            List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(o.getId());
+            List<FollowSendAccountEntity> followSendAccountEntityList= new ArrayList<>();
+            subscribeOrder.forEach(sub->{
+                followSendAccountEntityList.add(FollowSendAccountEntity.builder().id(sub.getSlaveId()).masterId(sub.getMasterId()).account(sub.getSlaveAccount()).build());
+            });
+            followSendAccountListVO.setFollowSendAccountEntityList(followSendAccountEntityList);
+            listVOArrayList.add(followSendAccountListVO);
+        });
+        return listVOArrayList;
+    }
+
+    @Override
     public List<FollowTraderEntity> listByServerName(String name) {
         //根据名称查询列表信息
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = Wrappers.lambdaQuery();
         queryWrapper.eq(FollowTraderEntity::getPlatform, name)
-                .eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()
+                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST
                 );
         // 执行查询并返回结果
         return baseMapper.selectList(queryWrapper);
     }
 
+    /**
+     * 添加跟单关系
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 是否添加成功
+     */
+    public boolean addFollowRelation(String callerId, String followerId) {
+        // 检查是否会形成环
+        if (checkCycle(callerId, followerId)) {
+            throw new ServerException("存在循环跟单,请检查");
+        }
+
+        // 将跟单关系存储到Redis
+        String key = Constant.FOLLOW_RELATION_KEY + callerId;
+        return redisUtil.sSet(key, followerId) > 0;
+    }
+
+    /**
+     * 检查添加新的跟单关系是否会形成环
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 是否会形成环
+     */
+    private boolean checkCycle(String callerId, String followerId) {
+        Set<String> visited = new HashSet<>();
+        return dfs(followerId, callerId, visited);
+    }
+
+    /**
+     * 深度优先搜索检测环
+     * @param current 当前节点
+     * @param target 目标节点(原始喊单者)
+     * @param visited 已访问节点集合
+     * @return 是否存在环
+     */
+    private boolean dfs(String current, String target, Set<String> visited) {
+        // 如果当前节点已经是目标节点，说明形成了环
+        if (current.equals(target)) {
+            return true;
+        }
+
+        // 将当前节点标记为已访问
+        visited.add(current);
+
+        // 获取当前节点的所有跟单关系
+        String key = Constant.FOLLOW_RELATION_KEY + current;
+        Set<Object> followers = redisUtil.sGet(key);
+
+        if (followers != null) {
+            // 遍历所有跟单关系
+            for (Object follower : followers) {
+                String followerId = follower.toString();
+                if (!visited.contains(followerId)) {
+                    if (dfs(followerId, target, visited)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 移除跟单关系
+     * @param callerId 喊单者ID
+     * @param followerId 跟单者ID
+     * @return 移除的数量
+     */
+    public long removeFollowRelation(String callerId, String followerId) {
+        String key = Constant.FOLLOW_RELATION_KEY + callerId;
+        return redisUtil.setRemove(key, followerId);
+    }
 }

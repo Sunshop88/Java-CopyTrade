@@ -116,7 +116,7 @@ public class ObtainOrderHistoryTask {
                 newList.add(u);
             }else {
                 //保存历史订单
-                //    followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
+                //   followOrderHistoryService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
                 //订单详情保存订单
                 followOrderDetailService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-1)));
                 //保存持仓订单

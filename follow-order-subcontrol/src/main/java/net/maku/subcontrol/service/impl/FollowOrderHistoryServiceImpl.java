@@ -1,5 +1,6 @@
 package net.maku.subcontrol.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,7 +9,14 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderDetailConvert;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.query.FollowOrderDetailQuery;
+import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.vo.FollowOrderDetailVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
@@ -45,12 +53,28 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHistoryDao, FollowOrderHistoryEntity> implements FollowOrderHistoryService {
     private final TransService transService;
+    private final FollowOrderDetailService followOrderDetailService;
+    private final FollowTraderService followTraderService;
 
     @Override
     public PageResult<FollowOrderHistoryVO> page(FollowOrderHistoryQuery query) {
-        IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        // IPage<FollowOrderHistoryEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        //     修改查询订单详情表
+        FollowOrderDetailQuery detailQuery=new FollowOrderDetailQuery();
+        detailQuery.setIsHistory(true);
+        BeanUtil.copyProperties(query,detailQuery);
+        Long traderId = query.getTraderId();
+        if(ObjectUtil.isNotNull(traderId)){
+            FollowTraderVO traderVO = followTraderService.get(traderId);
+            String account=traderVO.getAccount();
+            String platform = traderVO.getPlatform();
+            detailQuery.setAccount(account);
+            detailQuery.setPlatform(platform);
+            detailQuery.setTraderId(null);
+        }
+        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(detailQuery);
 
-        return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+        return new PageResult<>(FollowOrderHistoryConvert.INSTANCE.convertDetailList(page.getList()), page.getTotal());
     }
 
     private LambdaQueryWrapper<FollowOrderHistoryEntity> getWrapper(FollowOrderHistoryQuery query) {
@@ -131,13 +155,13 @@ public class FollowOrderHistoryServiceImpl extends BaseServiceImpl<FollowOrderHi
     @Override
     public void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity leader,LocalDateTime startTime) {
         try {
-         //   Calendar cal = Calendar.getInstance();
+            //   Calendar cal = Calendar.getInstance();
             //获取数据库最后一次历史订单时间，追溯5天
-        //    cal.add(Calendar.DATE, -5);
+            //    cal.add(Calendar.DATE, -5);
             //日历往前追溯3个月
             //    cal.add(Calendar.MONTH,-3);
             //获取mt4历史订单
-        //    Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)), LocalDateTime.now());
+            //    Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)), LocalDateTime.now());
             Order[] orders = quoteClient.DownloadOrderHistory(startTime, LocalDateTime.now());
             //保存历史订单
             List<FollowOrderHistoryEntity> list=new ArrayList<>();

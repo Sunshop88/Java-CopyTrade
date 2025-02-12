@@ -181,6 +181,7 @@ public class FollowVarietyController {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
         }
+        log.info("名称：");
         if (ObjectUtil.isEmpty(templateName)){
             return Result.error("请输入模板名称");
         }

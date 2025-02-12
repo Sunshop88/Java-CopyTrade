@@ -8,17 +8,22 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderLogEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderLogEnum;
 import net.maku.followcom.enums.TraderLogTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
+import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FixTemplateVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.trader.CopierApiTrader;
+import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
 
@@ -27,8 +32,6 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -41,6 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 @AllArgsConstructor
 public class OrderSendMaster extends AbstractOperation implements IOperationStrategy {
+      private final MessagesService messagesService;
 
     /**
      * 收到开仓信号处理操作
@@ -54,37 +58,25 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
         //保存下单信息
         subscribeEntityList.forEach(o -> {
             FollowTraderEntity follow = followTraderService.getFollowById(o.getSlaveId());
+
             redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
+            //发送漏单通知
+            FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
+            messagesService.isRepairSend(orderInfo,follow,master,null);
         });
+   /*         FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
+            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                    vpsName(follow.getServerName())
+                    .source(o.getMasterAccount())
+                    .sourceRemarks(master.getRemark())
+                    .follow(follow.getAccount())
+                    .symbol(orderInfo.getSymbol())
+                    .type(Constant.NOTICE_MESSAGE_BUY).build();*/
+
         ThreadPoolUtils.getExecutor().execute(() -> {
             //生成记录
             FollowSubscribeOrderEntity openOrderMapping = new FollowSubscribeOrderEntity(orderInfo, trader);
             followSubscribeOrderService.save(openOrderMapping);
-            //插入历史订单
-            FollowOrderHistoryEntity historyEntity = new FollowOrderHistoryEntity();
-            historyEntity.setTraderId(trader.getId());
-            historyEntity.setAccount(trader.getAccount());
-            historyEntity.setOrderNo(orderInfo.getTicket());
-            historyEntity.setType(orderInfo.getType());
-            historyEntity.setOpenTime(orderInfo.getOpenTime());
-            historyEntity.setCloseTime(orderInfo.getCloseTime());
-            historyEntity.setSize(BigDecimal.valueOf(orderInfo.getLots()));
-            historyEntity.setSymbol(orderInfo.getSymbol());
-            historyEntity.setOpenPrice(BigDecimal.valueOf(orderInfo.getOpenPrice()));
-            historyEntity.setClosePrice(BigDecimal.valueOf(orderInfo.getClosePrice()));
-            //止损
-            BigDecimal copierProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add( orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
-            historyEntity.setProfit(copierProfit);
-            historyEntity.setComment(orderInfo.getComment());
-            historyEntity.setSwap(orderInfo.getSwap());
-            historyEntity.setMagic((int) orderInfo.getMagic());
-            historyEntity.setTp(BigDecimal.valueOf(orderInfo.getTp()));
-            historyEntity.setSl(BigDecimal.valueOf(orderInfo.getSl()));
-            historyEntity.setCreateTime(LocalDateTime.now());
-            historyEntity.setVersion(0);
-            historyEntity.setPlacedType(0);
-            historyEntity.setCommission(orderInfo.getCommission());
-            followOrderHistoryService.customBatchSaveOrUpdate(Arrays.asList(historyEntity));
             //生成日志
             FollowTraderLogEntity followTraderLogEntity = new FollowTraderLogEntity();
             followTraderLogEntity.setTraderType(TraderLogEnum.FOLLOW_OPERATION.getType());

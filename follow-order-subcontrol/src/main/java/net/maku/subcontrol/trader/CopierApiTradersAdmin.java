@@ -24,6 +24,7 @@ import net.maku.framework.common.utils.ThreadPoolUtils;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
+import online.mtapi.mt4.OrderClient;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
 import org.springframework.stereotype.Component;
@@ -205,11 +206,17 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
         if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 10, TimeUnit.SECONDS)) {
             try{
+                //查看账号是否存在
+                FollowTraderEntity followById = followTraderService.getById(copier.getId());
+                if (ObjectUtil.isEmpty(followById)){
+                    log.info("启动账号校验异常" + copier.getId());
+                    return ConCodeEnum.EXCEPTION;
+                }
                 if (!copier.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
                     log.info("启动校验异常" + copier.getId());
                     return ConCodeEnum.EXCEPTION;
                 }
-                if (ObjectUtil.isNotEmpty(this.leader4ApiTraderConcurrentHashMap.get(copier.getId().toString()))) {
+                if (ObjectUtil.isNotEmpty(getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString()))) {
                     log.info("登录数据存在" + copier.getId());
                     return ConCodeEnum.EXCEPTION;
                 }

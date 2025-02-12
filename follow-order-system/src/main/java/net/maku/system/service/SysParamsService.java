@@ -52,4 +52,11 @@ public interface SysParamsService extends BaseService<SysParamsEntity> {
      * @param valueType 类型
      */
     <T> T getJSONObject(String paramKey, Class<T> valueType);
+
+    /**
+     * 是否开启MFA认证
+     * @param paramKey
+     * @return
+     */
+    Integer isVerify(String paramKey);
 }

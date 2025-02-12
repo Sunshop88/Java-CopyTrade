@@ -10,6 +10,7 @@ import net.maku.framework.mybatis.service.BaseService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 测速记录

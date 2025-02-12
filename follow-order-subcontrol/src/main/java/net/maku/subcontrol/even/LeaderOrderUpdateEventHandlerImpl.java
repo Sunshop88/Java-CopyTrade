@@ -158,7 +158,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 ThreadPoolUtils.getExecutor().execute(()->{
                     //发送平仓MQ
-                    //发送平仓MQ
                     ObjectMapper mapper = JacksonConfig.getObjectMapper();
                     try {
                         producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
