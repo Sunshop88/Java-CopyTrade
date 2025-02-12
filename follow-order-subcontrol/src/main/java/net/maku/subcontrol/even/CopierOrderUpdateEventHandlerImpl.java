@@ -16,6 +16,7 @@ import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -61,15 +62,43 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 //                    producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
 //                });
 //            }
-
+            Order order = orderUpdateEventArgs.Order;
+            FollowTraderEntity follow = copier4ApiTrader.getTrader();
+            FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
+            FollowTraderEntity master = followTraderService.getById(subscribeEntity.getMasterId());
+            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
             switch (orderUpdateEventArgs.Action) {
+                case PositionOpen:
+                case PendingFill:
+                    String mapKey = follow.getId() + "#" + follow.getAccount();
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+
+                    }
+                    Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.FOLLOW_SUB_ORDER + mapKey);
+                    objectObjectMap.forEach((k, v) -> {
+                        CachedCopierOrderInfo cachedCopierOrderInfo =(CachedCopierOrderInfo) v;
+                        if(cachedCopierOrderInfo.getSlaveTicket()==order.Ticket){
+                            Integer magical = (Integer)k;
+                            Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
+                            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                            if (o2 != null && o2.toString().trim().length() > 0) {
+                                repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
+                            }
+                            repairInfoVOS.remove(magical);
+                            if (repairInfoVOS == null || repairInfoVOS.size() == 0) {
+                                redisUtil.del(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId());
+                            } else {
+                                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
+                            }
+                            log.info("漏单删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
+                        }
+                    });
+
+                    log.info("监听跟单漏开删除:订单{},跟单账号{},订单号：{},平台:{}",list, follow.getAccount(),order.Ticket,follow.getPlatform());
                 case PositionClose:
-                    Order order = orderUpdateEventArgs.Order;
-                    FollowTraderEntity follow = copier4ApiTrader.getTrader();
-                    FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
-                    FollowTraderEntity master = followTraderService.getById(subscribeEntity.getMasterId());
-                    List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, master.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
-                   if(list!=null && list.size()>0){
+                      if(list!=null && list.size()>0){
                        Integer magical = list.get(0).getMagical();
                        redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+follow.getPlatform()+"#"+master.getPlatform()+ "#" + follow.getAccount() + "#" + master.getAccount(), magical.toString());
                        //删除漏单redis记录
@@ -86,6 +115,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                        }
                        log.info("监听跟单漏平删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),magical);
                    }
+                    log.info("监听跟单漏平删除:订单{},跟单账号{},订单号：{},平台:{}",list, follow.getAccount(),order.Ticket,follow.getPlatform());
                     break;
             }
         } catch (IllegalStateException e) {

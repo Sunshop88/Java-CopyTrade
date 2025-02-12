@@ -116,6 +116,11 @@ public class MessagesServiceImpl implements MessagesService {
     }
     public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
         ThreadPoolUtils.getExecutor().execute(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+
+            }
             //写入到redis中
             String key = Constant.REPAIR_CLOSE + "：" + follow.getAccount();
             boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);

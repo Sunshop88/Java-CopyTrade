@@ -116,10 +116,10 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 log.info("添加监听"+trader.getId());
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
-//            else {
-//                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
-//                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-//            }
+            else {
+                this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
+               this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+            }
         }
 
         if (this.onQuoteTraderHandler==null){
