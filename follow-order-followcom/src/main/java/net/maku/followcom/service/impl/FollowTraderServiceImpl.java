@@ -1103,6 +1103,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
+            followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
+            followOrderDetailEntity.setSourceUser(account);
+            followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
             if (type.equals(Buy.getValue())) {
                 long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
@@ -1125,14 +1128,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
-            followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
             followOrderDetailEntity.setSl(BigDecimal.valueOf(order.StopLoss));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
             followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
             followOrderDetailEntity.setRateMargin(order.RateMargin);
             followOrderDetailEntity.setMagical(order.Ticket);
-            followOrderDetailEntity.setSourceUser(account);
-            followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
         }catch (ServerException e){
             followOrderDetailEntity.setRemark( e.getMessage());
         } catch (TimeoutException e) {

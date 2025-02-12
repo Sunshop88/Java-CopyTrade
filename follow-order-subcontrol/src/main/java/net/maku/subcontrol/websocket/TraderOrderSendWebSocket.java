@@ -152,7 +152,7 @@ public class TraderOrderSendWebSocket {
             log.info("匹配品种"+listv);
             QuoteEventArgs eventArgs = null;
             if (ObjectUtil.isEmpty(listv)){
-                eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+                eventArgs = getEventArgs(quoteClient);
             }else {
                 for (FollowVarietyEntity o:listv){
                     if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
@@ -160,7 +160,7 @@ public class TraderOrderSendWebSocket {
                         if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
                             log.info("匹配symbol"+o.getBrokerSymbol());
                             this.symbol=o.getBrokerSymbol();
-                            eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+                            eventArgs = getEventArgs(quoteClient);
                             if (ObjectUtil.isNotEmpty(eventArgs)){
                                 break;
                             }
@@ -169,15 +169,14 @@ public class TraderOrderSendWebSocket {
                 }
                 if (ObjectUtil.isEmpty(eventArgs)){
                     this.symbol=symbol;
-                    eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+                    eventArgs = getEventArgs(quoteClient);
                 }
             }
             //开启定时任务
             QuoteEventArgs finalEventArgs = eventArgs;
-            AbstractApiTrader finalLeaderApiTrader = abstractApiTrader;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(finalLeaderApiTrader, finalEventArgs);
+                    sendPeriodicMessage(followTraderEntity, finalEventArgs);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -190,12 +189,12 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private QuoteEventArgs getEventArgs(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient){
+    private QuoteEventArgs getEventArgs(QuoteClient quoteClient){
         QuoteEventArgs eventArgs = null;
         try {
-            if (ObjectUtil.isEmpty(abstractApiTrader.quoteClient.GetQuote(this.symbol))){
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
                 //订阅
-                abstractApiTrader.quoteClient.Subscribe(this.symbol);
+                quoteClient.Subscribe(this.symbol);
             }
             while (eventArgs==null && quoteClient.Connected()) {
                 try {
@@ -205,7 +204,7 @@ public class TraderOrderSendWebSocket {
                 }
                 eventArgs=quoteClient.GetQuote(this.symbol);
             }
-            eventArgs = abstractApiTrader.quoteClient.GetQuote(this.symbol);
+            eventArgs = quoteClient.GetQuote(this.symbol);
             return eventArgs;
         }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
             log.info("获取报价失败,品种不正确,请先配置品种");
@@ -213,11 +212,11 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private void sendPeriodicMessage(AbstractApiTrader abstractApiTrader,QuoteEventArgs eventArgs){
+    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs){
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
-            List<FollowOrderSendEntity> list= followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,abstractApiTrader.getTrader().getId()));
+            List<FollowOrderSendEntity> list= followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,trader.getId()));
             FollowOrderSendSocketVO followOrderSendSocketVO=new FollowOrderSendSocketVO();
             followOrderSendSocketVO.setSellPrice(eventArgs.Bid);
             followOrderSendSocketVO.setBuyPrice(eventArgs.Ask);
@@ -232,7 +231,7 @@ public class TraderOrderSendWebSocket {
                     followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
                 }
             }
-            pushMessage(abstractApiTrader.getTrader().getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
+            pushMessage(trader.getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
         }
     }
 
