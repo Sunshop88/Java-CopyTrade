@@ -47,6 +47,9 @@ public class MasControlServiceImpl implements MasControlService {
     private final ServerService serverService;
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
+    private final ClientServicePt clientServicePt;
+    private final PlatformServicePt platformServicePt;
+    private final ServerServicePt serverServicePt;
 
 
     @Override
@@ -58,6 +61,7 @@ public class MasControlServiceImpl implements MasControlService {
             return false;
         }
         clientService.insert(vo);
+        clientServicePt.insert(vo);
         log.info("成功插入 FollowVps 和 Client");
         return true;
     }
@@ -70,6 +74,11 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("更新 Client 失败");
             return false;
         }
+        Boolean result2 = clientServicePt.update(vo);
+        if (!result2) {
+            log.error("更新 Client-pt 失败");
+            return false;
+        }
         followVpsService.update(vo);
         log.info("成功更新 Client 和 FollowVps");
         return true;
@@ -80,6 +89,7 @@ public class MasControlServiceImpl implements MasControlService {
     public boolean delete(List<Integer> idList) {
         try {
             clientService.delete(idList);
+            clientServicePt.delete(idList);
             followVpsService.delete(idList);
             log.info("成功删除 ID 列表: {}", idList);
             return true;
@@ -96,6 +106,8 @@ public class MasControlServiceImpl implements MasControlService {
             // 假设 serverService 和 platformService 已经恢复使用
             serverService.delete(idList);
             platformService.delete(idList);
+            serverServicePt.delete(idList);
+            platformServicePt.delete(idList);
             followPlatformService.delete(idList);
             log.info("成功删除平台 ID 列表: {}", idList);
             return true;
@@ -164,6 +176,7 @@ public class MasControlServiceImpl implements MasControlService {
                         platformEntity.setName(bro);
                         platformEntity.setType(vo.getPlatformType());
                         platformService.save(platformEntity);
+                        platformServicePt.save(platformEntity);
 
                         Integer platformId = platformEntity.getId();
                         list.forEach(o -> {
@@ -213,6 +226,7 @@ public class MasControlServiceImpl implements MasControlService {
                     FollowBrokeServerEntity followBrokeServer = list.get(0);
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                     platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, followBrokeServer.getServerName()).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                    platformServicePt.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, followBrokeServer.getServerName()).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                 }
 //                    platformEntity.set("defaultServer", followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort());
             });
@@ -241,8 +255,10 @@ public class MasControlServiceImpl implements MasControlService {
                 Integer platformId = o.getId();
                 //删除server
                 serverService.remove(new LambdaQueryWrapper<ServerEntity>().eq(ServerEntity::getPlatformId, platformId));
+                serverServicePt.remove(new LambdaQueryWrapper<ServerEntity>().eq(ServerEntity::getPlatformId, platformId));
             });
             platformService.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
+            platformServicePt.remove(new LambdaQueryWrapper<PlatformEntity>().in(PlatformEntity::getName, serversToRemove));
         }
         String authorization = req.getHeader("Authorization");
         ThreadPoolUtils.getExecutor().execute(() -> {
@@ -308,6 +324,7 @@ public class MasControlServiceImpl implements MasControlService {
                         platformEntity.setName(bro);
                         platformEntity.setType(vo.getPlatformType());
                         platformService.save(platformEntity);
+                        platformServicePt.save(platformEntity);
 
                         Integer platformId = platformEntity.getId();
                         list.forEach(o -> {
@@ -317,6 +334,7 @@ public class MasControlServiceImpl implements MasControlService {
                             log.info("保存服务" + o.getServerNode() + ":" + o.getServerPort());
                             serverEntity.setPlatformId(platformId);
                             serverService.insert(serverEntity);
+                            serverServicePt.insert(serverEntity);
                         });
                     }
 
@@ -358,6 +376,7 @@ public class MasControlServiceImpl implements MasControlService {
                     followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer, followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                     //外部接口
                     platformService.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, bro).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
+                    platformServicePt.update(Wrappers.<PlatformEntity>lambdaUpdate().eq(PlatformEntity::getName, bro).set(PlatformEntity::getDefaultServer, followBrokeServer.getServerNode() + ":" + followBrokeServer.getServerPort()));
                 }
             });
         });

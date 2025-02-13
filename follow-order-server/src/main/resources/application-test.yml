@@ -34,6 +34,11 @@ spring:
 
         slave:
           driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://98.142.143.187:3306/copier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: 7b358d806f6f444d
+        slave2:
+          driver-class-name: com.mysql.cj.jdbc.Driver
           url: jdbc:mysql://66.112.212.130:3306/copier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 7a6d5cbcdcdc8c85
