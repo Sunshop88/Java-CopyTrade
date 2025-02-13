@@ -142,7 +142,11 @@ public class PushRedisTask {
 
                             //订单信息
                             QuoteClient quoteClient = null;
-                            quoteClient= getQuoteClient(h.getId(),h,quoteClient);
+                            try {
+                                quoteClient= getQuoteClient(h.getId(),h,quoteClient);
+                            } catch (Exception e) {
+
+                            }
                             //所有持仓
                             if (ObjectUtil.isNotEmpty(quoteClient)) {
                                 Order[] orders = quoteClient.GetOpenedOrders();
@@ -229,6 +233,39 @@ public class PushRedisTask {
                                     }
                                     accountCache.setOrders(orderCaches);
                                 });
+                            }else{
+                                accountCache.setCredit(0.00);
+                                accountCache.setLots(0.00);
+                                accountCache.setCount(0);
+                                accountCache.setBuy(0);
+                                accountCache.setSell(0);
+                                accountCache.setProfit(0.00);
+                                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                    FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                    String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                    //  0-固定手数 1-手数比例 2-净值比例
+                                    String mode =null;
+                                    switch (followTraderSubscribeEntity.getFollowMode()) {
+                                        case(0):
+                                            mode="固定";
+                                            break;
+                                        case(1):
+                                            mode="手";
+                                            break;
+                                        case(2):
+                                            mode="净";
+                                            break;
+                                    }
+                                    accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
+                                }
+                                if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                    accountCache.setModeString("");
+                                }
+                                accountCache.setManagerStatus("Disconnected");
+                                OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                orderCaches.add(orderCacheVO);
+                                accountCache.setLots(0.00);
+                                accountCache.setProfit(0.00);
                             }
                             if(ObjectUtil.isEmpty(accountCache.getOrders())){
                                 accountCache.setOrders(new ArrayList<>());
