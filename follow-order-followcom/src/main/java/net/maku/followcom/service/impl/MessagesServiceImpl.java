@@ -24,6 +24,7 @@ import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 
@@ -56,6 +57,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final RedisCache redisCache;
     private final FollowOrderDetailService followOrderDetailService;
     private final RedissonLockUtil redissonLockUtil;
+    private final RedisUtil redisUtil;
 
 
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
@@ -201,11 +203,7 @@ public class MessagesServiceImpl implements MessagesService {
             if(quoteClient!=null){
                 existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
             }else{
-               try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    log.error("漏单通知异常{0}",e);
-                }
+
                 Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
                 List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
                 if (ObjectUtil.isNotEmpty(o1)) {
@@ -230,7 +228,7 @@ public class MessagesServiceImpl implements MessagesService {
                 log.info("漏单喊单者订单号{}",orderInfo.getTicket());
                 String key = Constant.REPAIR_SEND + "：" + follow.getAccount();
                 //写入到redis中
-                boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);
+                boolean lock = redissonLockUtil.lock(key, 30, -1, TimeUnit.SECONDS);
                 try {
                     if(lock) {
                         Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
@@ -253,22 +251,29 @@ public class MessagesServiceImpl implements MessagesService {
                         orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
                         orderRepairInfoVO.setSlaveId(follow.getId());
                         repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
-                        redisCache.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                     //   redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + "#" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                        log.info("漏开数据写入,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
                     }
+
                 } catch (Exception e) {
                    log.error("漏单数据写入异常{0}",e);
                 }finally {
                     redissonLockUtil.unlock(key);
                 }
                 //发送漏单消息
-                FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                        vpsName(follow.getServerName())
-                        .source(master.getAccount())
-                        .sourceRemarks(master.getRemark())
-                        .follow(follow.getAccount())
-                        .symbol(orderInfo.getSymbol())
-                        .type(Constant.NOTICE_MESSAGE_BUY).build();
-                send(vo);
+                try {
+                    FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                            vpsName(follow.getServerName())
+                            .source(master.getAccount())
+                            .sourceRemarks(master.getRemark())
+                            .follow(follow.getAccount())
+                            .symbol(orderInfo.getSymbol())
+                            .type(Constant.NOTICE_MESSAGE_BUY).build();
+                    send(vo);
+                } catch (Exception e) {
+
+                }
             }
         });
     }

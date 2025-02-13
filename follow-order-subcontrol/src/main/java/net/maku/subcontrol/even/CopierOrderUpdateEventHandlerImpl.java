@@ -73,32 +73,28 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
                 case PendingFill:
-                    String mapKey = follow.getId() + "#" + follow.getAccount();
+                    String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
+                    boolean lock1 = redissonLockUtil.lock(key1, 10, -1, TimeUnit.SECONDS);
+                    log.info("监听跟单漏开删除开始:跟单账号:{},跟单订单号：{}", follow.getAccount(),order.Ticket);
                     try {
-                        Thread.sleep(1000);
-                    } catch (Exception e) {
-
-                    }
-                    Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.FOLLOW_SUB_ORDER + mapKey);
-                    objectObjectMap.forEach((k, v) -> {
-                        CachedCopierOrderInfo cachedCopierOrderInfo =(CachedCopierOrderInfo) v;
-                        if(cachedCopierOrderInfo.getSlaveTicket()==order.Ticket){
-                            Integer magical = (Integer)k;
+                        if (lock1) {
+                            Integer mg = order.MagicNumber;
                             Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
-                            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                            Map<Integer, OrderRepairInfoVO> repairVOS = new HashMap();
                             if (o2 != null && o2.toString().trim().length() > 0) {
-                                repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
+                                repairVOS = JSONObject.parseObject(o2.toString(), Map.class);
                             }
-                            repairInfoVOS.remove(magical);
-                            if (repairInfoVOS == null || repairInfoVOS.size() == 0) {
+                            repairVOS.remove(mg);
+                            if (repairVOS == null || repairVOS.size() == 0) {
                                 redisUtil.del(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId());
                             } else {
-                                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
+                                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairVOS));
                             }
-                            log.info("监听跟单漏单删除,key:{},key:{},val:{},喊单订单号:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
+                            log.info("监听跟单漏单删除,key:{},key:{},喊单订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), mg, JSONObject.toJSONString(repairVOS));
                         }
-                    });
-
+                    }finally {
+                            redissonLockUtil.unlock(key1);
+                        }
                     log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{},跟单订单号：{}", follow.getAccount(),order.Ticket,follow.getPlatform(),list);
                     break;
                 case PositionClose:
