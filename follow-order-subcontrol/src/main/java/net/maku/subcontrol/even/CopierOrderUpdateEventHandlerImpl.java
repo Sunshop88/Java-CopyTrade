@@ -95,11 +95,11 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             } else {
                                 redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                             }
-                            log.info("漏单删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
+                            log.info("监听跟单漏单删除,key:{},key:{},val:{},喊单订单号:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
                         }
                     });
 
-                    log.info("监听跟单漏开删除:订单{},跟单账号{},订单号：{},平台:{}",list, follow.getAccount(),order.Ticket,follow.getPlatform());
+                    log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{},跟单订单号：{}", follow.getAccount(),order.Ticket,follow.getPlatform(),list);
                     break;
                 case PositionClose:
                     try {
