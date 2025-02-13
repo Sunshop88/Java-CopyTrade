@@ -625,17 +625,25 @@ public class FollowApiServiceImpl implements FollowApiService {
             orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
         }
         for (Integer ticket : vo.getSourceTicket()) {
-            boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(ticket.toString()).equalsIgnoreCase(order.getMagicNumber().toString()));
-            RepairSendVO sendVO=new RepairSendVO();
-            sendVO.setOrderNo(ticket);
-            if (!existsInActive) {
-               sendVO.setType(TraderRepairEnum.SEND.getType());
-            }else{
-                sendVO.setType(TraderRepairEnum.CLOSE.getType());
-            }
-            sendVO.setSlaveId(follow.getId());
-            sendVO.setMasterId(subscribeEntity.getMasterId());
-            followSlaveService.repairSend(sendVO);
+            List<OrderActiveInfoVO> finalOrderActiveInfoList = orderActiveInfoList;
+            ThreadPoolUtils.getExecutor().execute(()->{
+                try {
+                    boolean existsInActive = finalOrderActiveInfoList.stream().anyMatch(order ->String.valueOf(ticket.toString()).equalsIgnoreCase(order.getMagicNumber().toString()));
+                    RepairSendVO sendVO=new RepairSendVO();
+                    sendVO.setOrderNo(ticket);
+                    if (!existsInActive) {
+                        sendVO.setType(TraderRepairEnum.SEND.getType());
+                    }else{
+                        sendVO.setType(TraderRepairEnum.CLOSE.getType());
+                    }
+                    sendVO.setSlaveId(follow.getId());
+                    sendVO.setMasterId(subscribeEntity.getMasterId());
+                    followSlaveService.repairSend(sendVO);
+                } catch (Exception e) {
+                    log.error("外部接口批量补单失败:"+ticket);
+                }
+            });
+
         }
 
         return true;
