@@ -74,6 +74,11 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
                 case PendingFill:
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+
+                    }
                     String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
                     boolean lock1 = redissonLockUtil.lock(key1, 10, -1, TimeUnit.SECONDS);
                     log.info("监听跟单漏开删除开始:跟单账号:{},跟单订单号：{}", follow.getAccount(),order.Ticket);
