@@ -366,6 +366,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Integer insertFollow(FollowInsertVO vo) {
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
+
+
         //根据平台id查询平台
         FollowPlatformEntity platform = followPlatformService.getById(vo.getPlatformId());
         if (ObjectUtil.isEmpty(platform)) {
@@ -375,6 +377,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).eq(FollowTraderEntity::getServerId, vo.getClientId()).one();
         followAddSalveVo.setPlatform(platform.getServer());
         followAddSalveVo.setTraderId(one.getId());
+        if(vo.getPlacedType()!=null){
+            Integer val = FollowModeEnum.getVal(vo.getPlacedType());
+            followAddSalveVo.setPlacedType(val);
+        }
         //判断主表如果保存失败，则返回false
         Long result = addSlave(followAddSalveVo);
         if (ObjectUtil.isEmpty(result)) {
@@ -406,6 +412,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
         followUpdateSalveVo.setPassword(pwd);
         // 判断主表如果保存失败，则返回false
+        if(vo.getPlacedType()!=null){
+            Integer val = FollowModeEnum.getVal(vo.getPlacedType());
+            followUpdateSalveVo.setPlacedType(val);
+        }
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {
             return false;
