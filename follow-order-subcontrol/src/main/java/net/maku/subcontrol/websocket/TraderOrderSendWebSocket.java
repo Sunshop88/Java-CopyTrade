@@ -176,7 +176,7 @@ public class TraderOrderSendWebSocket {
             QuoteEventArgs finalEventArgs = eventArgs;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(followTraderEntity, finalEventArgs);
+                    sendPeriodicMessage(followTraderEntity, finalEventArgs,symbol);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -192,6 +192,7 @@ public class TraderOrderSendWebSocket {
     private QuoteEventArgs getEventArgs(QuoteClient quoteClient){
         QuoteEventArgs eventArgs = null;
         try {
+            log.info("quoteClient.GetQuote(this.symbol)"+quoteClient.GetQuote(this.symbol)+quoteClient.Connected());
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
                 //订阅
                 quoteClient.Subscribe(this.symbol);
@@ -204,15 +205,14 @@ public class TraderOrderSendWebSocket {
                 }
                 eventArgs=quoteClient.GetQuote(this.symbol);
             }
-            eventArgs = quoteClient.GetQuote(this.symbol);
             return eventArgs;
-        }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
+        }catch (Exception e) {
             log.info("获取报价失败,品种不正确,请先配置品种");
             return eventArgs;
         }
     }
 
-    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs){
+    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs,String symbol){
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
