@@ -16,7 +16,7 @@ public class RabbitMQProducer {
     }
 
     public void sendMessage(String message) {
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, message);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME,"", message);
         log.info("Message sent: " + message);
     }
 }
