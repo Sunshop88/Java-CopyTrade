@@ -252,7 +252,7 @@ public class MessagesServiceImpl implements MessagesService {
                         orderRepairInfoVO.setSlaveId(follow.getId());
                         repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
-                     //   redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + "#" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                      //  redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + "#" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                         log.info("漏开数据写入,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
                     }
 

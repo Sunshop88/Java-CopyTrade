@@ -199,7 +199,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             repairInfoVOS.remove(orderInfo.getTicket());
             if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                redisUtil.del(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId());
+                redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount());
             }else{
                 redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
             }

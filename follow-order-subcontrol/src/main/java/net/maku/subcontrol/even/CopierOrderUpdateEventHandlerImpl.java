@@ -1,6 +1,7 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -86,7 +87,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             }
                             repairVOS.remove(mg);
                             if (repairVOS == null || repairVOS.size() == 0) {
-                                redisUtil.del(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId());
+                                redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
                             } else {
                                 redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairVOS));
                             }
@@ -118,7 +119,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 }
                                 repairInfoVOS.remove(magical);
                                 if (repairInfoVOS == null || repairInfoVOS.size() == 0) {
-                                    redisUtil.del(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId());
+                                    redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(),follow.getAccount());
                                 } else {
                                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSONObject.toJSONString(repairInfoVOS));
                                 }
