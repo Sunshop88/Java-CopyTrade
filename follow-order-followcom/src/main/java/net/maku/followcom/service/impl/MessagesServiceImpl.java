@@ -166,7 +166,7 @@ public class MessagesServiceImpl implements MessagesService {
                         //发送漏单
                         ThreadPoolUtils.getExecutor().execute(() -> {
                             try {
-                                Thread.sleep(1000);
+                                Thread.sleep(3000);
                             } catch (InterruptedException e) {
                                 throw new RuntimeException(e);
                             }
@@ -198,26 +198,26 @@ public class MessagesServiceImpl implements MessagesService {
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
         ThreadPoolUtils.getExecutor().execute(() -> {
             boolean existsInActive =true;
-           /* if(quoteClient!=null){
-              //   existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.Ticket+""));
+            if(quoteClient!=null){
+                existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
             }else{
-               *//* try {
+               try {
                     Thread.sleep(3000);
                 } catch (InterruptedException e) {
                     log.error("漏单通知异常{0}",e);
-                }*//*
+                }
                 Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
                 List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
                 if (ObjectUtil.isNotEmpty(o1)) {
                     orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 }
                  existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-            }*/
-            try {
+            }
+          /*  try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
                 log.error("漏单通知异常{0}",e);
-            }
+            }*/
             Object o1 = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
             List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
             if (ObjectUtil.isNotEmpty(o1)) {
