@@ -66,9 +66,17 @@ public class PushRedisTask {
 
     @Scheduled(cron = "0/5 * * * * ?")
     public void execute(){
-        FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
+      //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
+        //"39.98.109.212"
+        FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
             pushCache(one.getId());
+        }else{
+           List<FollowVpsEntity>  vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
+            vpsLists.forEach(v->{
+                redisUtil.delSlaveRedis(Integer.toString(v.getId()));
+            });
+
         }
 
     }
@@ -88,6 +96,11 @@ public class PushRedisTask {
             List<FollowPlatformEntity> platformList = followPlatformService.list();
             Map<Long, List<FollowPlatformEntity>> platformMap = platformList.stream().collect(Collectors.groupingBy(FollowPlatformEntity::getId));
             String key = "VPS:PUSH:";
+            List<FollowTraderEntity> followTraderEntities = map.get(vpsId);
+            followTraderEntities.sort((o1,o2)->{
+              return   o1.getType().compareTo(o2.getType());
+            });
+            map.put(vpsId, followTraderEntities);
             map.forEach((k, v) -> {
                 //多线程写
                 boolean flag = redisUtil.setnx(key + k, k, 2);

@@ -963,6 +963,13 @@ public class RedisUtil {
         }
     }
 
+    public void delSlaveRedis(String key) {
+        if (key != null && key.length() > 0) {
+            redisTemplate2.delete(key);
+        }
+
+    }
+
 //4	ZINCRBY key increment member
 //    有序集合中对指定成员的分数加上增量 increment
 //5	ZINTERSTORE destination numkeys key [key ...]
