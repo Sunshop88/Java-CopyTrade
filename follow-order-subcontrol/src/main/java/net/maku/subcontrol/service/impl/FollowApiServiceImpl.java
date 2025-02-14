@@ -4,8 +4,6 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.Mode;
-import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -17,7 +15,6 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -189,7 +186,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -342,7 +339,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
 
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
-       if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
+        if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
         followTrader.setId(one.getId());
         followTraderService.updateById(followTrader);
         //重连
@@ -409,14 +406,14 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
-        followUpdateSalveVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+        followUpdateSalveVo.setPassword(pwd);
         // 判断主表如果保存失败，则返回false
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {
             return false;
         }
         //重连
-       // reconnectSlave(vo.getId().toString());
+        // reconnectSlave(vo.getId().toString());
         //处理副表数据
         followService.edit(vo);
         return true;
@@ -510,7 +507,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                     throw  new ServerException("订单号不能为空");
                 }
                 followOrderSendCloseVO.setOrderNo(o);
-                
+
                 localOrderClose(followOrderSendCloseVO,followTraderVO);
             });
 
@@ -531,7 +528,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 SourceEntity     source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
-                 platformId = source.getPlatformId();
+                platformId = source.getPlatformId();
             }else{
                 //查询从表
                 FollowEntity   followEntity = followService.getEntityById(a.getId());
@@ -562,7 +559,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             FollowEntity followEntity=null;
             Integer platformId=null;
             if(type==0){
-                 source = sourceService.getEntityById(a.getId());
+                source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
                 platformId = source.getPlatformId();
@@ -586,7 +583,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             //如果修改登录密码触发
             if (!vo.getInvestor()){
-                followTraderVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                followTraderVO.setPassword(vo.getPassword());
                 followTraderService.updateById(followTraderVO);
                 if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                     reconnect(followTraderVO.getId().toString());
@@ -595,11 +592,11 @@ public class FollowApiServiceImpl implements FollowApiService {
                 }
                 if(type==0){
                     source = sourceService.getEntityById(a.getId());
-                    source.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    source.setPassword(vo.getPassword());
                     sourceService.edit(source);
                 }else{
                     //修改从数据库
-                    followEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    followEntity.setPassword(vo.getPassword());
                     followService.edit(followEntity);
                 }
 
@@ -757,7 +754,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                     countDownLatch.countDown();
                 });
             }
-          
+
             try {
                 countDownLatch.await();
             } catch (InterruptedException e) {

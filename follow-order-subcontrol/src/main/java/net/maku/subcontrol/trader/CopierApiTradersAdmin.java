@@ -15,7 +15,6 @@ import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
@@ -92,7 +91,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("跟单者:[{}-{}-{}]启动重复", slave.getId(), slave.getAccount(), slave.getServerName());
                     } else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), AesUtils.decryptStr(slave.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -138,7 +137,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("跟单者:[{}-{}-{}]启动重复", copier.getId(), copier.getAccount(), copier.getServerName());
                     }else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), AesUtils.decryptStr(copier.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                         if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
                             setTraderOrder(copierApiTrader);

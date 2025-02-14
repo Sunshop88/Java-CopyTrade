@@ -6,14 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.convert.FollowConvert;
-import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
@@ -84,29 +81,12 @@ public class InitRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
-        log.info("全局加密=======开始");
-        setPassword();
-        log.info("全局加密=======结束");
         log.info("加载缓存=======开始");
         getCache();
         log.info("加载缓存=======结束");
         // 连接MT4交易账户
         mt4TraderStartup();
         log.info("=============启动时加载示例内容完毕=============");
-    }
-
-    private void setPassword() {
-        List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
-                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
-                .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
-                .orderByAsc(FollowTraderEntity::getCreateTime));
-        mt4TraderList.forEach(o->{
-            if (o.getPassword().length()!=32){
-                //加密处理
-                o.setPassword(AesUtils.aesEncryptStr(o.getPassword()));
-            }
-            followTraderService.update(FollowTraderConvert.INSTANCE.convert(o));
-        });
     }
 
 

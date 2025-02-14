@@ -3,8 +3,6 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.Mode;
-import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -24,7 +22,6 @@ import net.maku.followcom.query.FollowOrderSendQuery;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -84,13 +81,41 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final CacheManager cacheManager;
     private final RedisUtil redisUtil;
 
+
+    @Autowired
+    @Qualifier(value = "commonThreadPool")
+    private ExecutorService commonThreadPool;
+
     @Override
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
-        followTraderVOS.forEach(o->{
-            o.setPassword(o.getPassword().length()==32?AesUtils.decryptStr(o.getPassword()):o.getPassword());
-        });
+        Map<Long, List<FollowTraderSubscribeEntity>> traderSubscribes = new HashMap<>();
+        //查询跟单状态是否开启，只有差策略账号的时候才做处理
+        if (ObjectUtil.isNotEmpty(query.getType()) && query.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
+            List<Long> masterIds = followTraderVOS.stream().filter(o -> o.getType() == TraderTypeEnum.MASTER_REAL.getType()).map(FollowTraderVO::getId).toList();
+            if (ObjectUtil.isNotEmpty(masterIds)) {
+                List<FollowTraderSubscribeEntity> ls = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, masterIds).eq(FollowTraderSubscribeEntity::getFollowStatus, CloseOrOpenEnum.OPEN.getValue()));
+                traderSubscribes = ls.stream().collect(Collectors.groupingBy(FollowTraderSubscribeEntity::getMasterId));
+            }
+        }
+        Map<Long, List<FollowTraderSubscribeEntity>> finalTraderSubscribes = traderSubscribes;
+//        followTraderVOS.parallelStream().forEach(o -> {
+//            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
+//                FollowRedisTraderVO followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+//                o.setBalance(followRedisTraderVO.getBalance());
+//                o.setEuqit(followRedisTraderVO.getEuqit());
+//                o.setFreeMargin(followRedisTraderVO.getFreeMargin());
+//                o.setMarginProportion(followRedisTraderVO.getMarginProportion());
+//                o.setTotal(ObjectUtil.isNotEmpty(followRedisTraderVO.getTotal()) ? followRedisTraderVO.getTotal() : 0);
+//                o.setBuyNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getBuyNum()) ? followRedisTraderVO.getBuyNum() : 0);
+//                o.setSellNum(ObjectUtil.isNotEmpty(followRedisTraderVO.getSellNum()) ? followRedisTraderVO.getSellNum() : 0);
+//              //  Integer followStatus = ObjectUtil.isNotEmpty(finalTraderSubscribes.get(o.getId())) ? CloseOrOpenEnum.OPEN.getValue() : CloseOrOpenEnum.OPEN.getValue();
+//               // o.setFollowStatus(followStatus);
+//                o.setProfit(followRedisTraderVO.getProfit());
+//
+//            }
+//        });
         return new PageResult<>(followTraderVOS, page.getTotal());
     }
 
