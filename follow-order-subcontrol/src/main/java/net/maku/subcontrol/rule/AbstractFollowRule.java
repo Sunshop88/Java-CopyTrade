@@ -122,7 +122,7 @@ public abstract class AbstractFollowRule {
         double pr = 1;
         // 查看品种匹配 模板
         List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
-        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(symbol)).findFirst()
+        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerSymbol()) && o.getBrokerSymbol().equals(symbol)).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
         log.info("账号标准合约大小{}", contract);

@@ -136,4 +136,12 @@ public class AesUtils {
         }
         return data;
     }
+
+    public static void main(String[] args) {
+        System.out.println("ddddd");
+        String encrypted = aesEncryptStr("343nnf1");
+        System.out.println("Encrypted: " + encrypted);
+        String decrypted = decryptStr("ce47bd6823bbccf55c6dfdb1fb1f81ed");
+        System.out.println("Decrypted: " + decrypted);
+    }
 }

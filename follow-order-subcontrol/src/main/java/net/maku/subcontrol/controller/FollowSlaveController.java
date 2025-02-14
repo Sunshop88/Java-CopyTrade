@@ -269,7 +269,6 @@ public class FollowSlaveController {
                 o.setFixedComment(subscribes.get(0).getFixedComment());
                 o.setCommentType(subscribes.get(0).getCommentType());
                 o.setDigits(subscribes.get(0).getDigits());
-                o.setPassword(AesUtils.decryptStr(o.getPassword()));
             }
         });
         return Result.ok(page);
