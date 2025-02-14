@@ -5,11 +5,13 @@ import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.maku.followcom.vo.ExternalSysmbolSpecificationVO;
 import net.maku.followcom.vo.OpenOrderInfoVO;
 import net.maku.followcom.vo.OrderClosePageVO;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Author:  zsd
@@ -53,10 +55,13 @@ public class ResponseFilter implements Filter {
                 newJson.put("message", oldJson.get("msg"));
 
                     if(uri.startsWith("/api/v1/orderhistory")){
-                        OrderClosePageVO     data = JSONObject.parseObject(oldJson.getString("data"), OrderClosePageVO.class);
+                        OrderClosePageVO data = JSONObject.parseObject(oldJson.getString("data"), OrderClosePageVO.class);
                         newJson.put("data", data);
                     }else if(uri.startsWith("/api/v1/openedorders")){
-                        OpenOrderInfoVO  data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
+                        OpenOrderInfoVO data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
+                        newJson.put("data", data);
+                    }else if (uri.startsWith("/api/v1/symbolParams")) {
+                        List<ExternalSysmbolSpecificationVO> data = (List<ExternalSysmbolSpecificationVO>) JSONObject.parseObject(oldJson.getString("data"), ExternalSysmbolSpecificationVO.class);
                         newJson.put("data", data);
                     }else{
                         newJson.put("data", oldJson.getString("data"));
