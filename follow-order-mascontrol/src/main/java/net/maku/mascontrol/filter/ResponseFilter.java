@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.maku.followcom.vo.OpenOrderInfoVO;
 import net.maku.followcom.vo.OrderClosePageVO;
 import org.springframework.stereotype.Component;
 
@@ -51,13 +52,16 @@ public class ResponseFilter implements Filter {
                 newJson.put("success", oldJson.getInteger("code") == 0 ? true : false);
                 newJson.put("message", oldJson.get("msg"));
 
-                OrderClosePageVO data = null;
-                try {
-                    data = JSONObject.parseObject(oldJson.getString("data"), OrderClosePageVO.class);
-                    newJson.put("data", data);
-                } catch (Exception e) {
-                    newJson.put("data", oldJson.getString("data"));
-                }
+                    if(uri.startsWith("/api/v1/orderhistory")){
+                        OrderClosePageVO     data = JSONObject.parseObject(oldJson.getString("data"), OrderClosePageVO.class);
+                        newJson.put("data", data);
+                    }else if(uri.startsWith("/api/v1/openedorders")){
+                        OpenOrderInfoVO  data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
+                        newJson.put("data", data);
+                    }else{
+                        newJson.put("data", oldJson.getString("data"));
+                    }
+
 
                 // 将修改后的内容写入响应
                 out.write(newJson.toJSONString().getBytes());
