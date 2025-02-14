@@ -46,7 +46,7 @@ public interface FollowApiService {
 
     Boolean orderCloseLoss(OrderCloseAllVO vo);
 
-    ExternalSysmbolSpecificationVO symbolParams(Long accountId, Integer accountType);
+    List<ExternalSysmbolSpecificationVO> symbolParams(Long accountId, Integer accountType);
 
     Boolean repairOrder(RepairOrderVO vo);
 }
