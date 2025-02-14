@@ -157,125 +157,130 @@ public class PushRedisTask {
 
                             }
                             //所有持仓
-                            if (ObjectUtil.isNotEmpty(quoteClient)) {
-                                Order[] orders = quoteClient.GetOpenedOrders();
-                                //账号信息
-                                ConGroup account = quoteClient.Account();
-                                accountCache.setCredit(quoteClient.Credit);
-                                Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
-                                accountCache.setLots(0.00);
-                                accountCache.setCount(0);
-                                accountCache.setBuy(0);
-                                accountCache.setSell(0);
-                                accountCache.setProfit(0.00);
-                                // accountCache.setCredit(quoteClient.Credit);
-                                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
-                                    FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                    String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
-                                    //  0-固定手数 1-手数比例 2-净值比例
-                                    String mode =null;
-                                    switch (followTraderSubscribeEntity.getFollowMode()) {
-                                        case(0):
-                                            mode="固定";
-                                            break;
-                                        case(1):
-                                            mode="手";
-                                            break;
-                                        case(2):
-                                            mode="净";
-                                            break;
+                            try {
+                                if (ObjectUtil.isNotEmpty(quoteClient)) {
+                                    Order[] orders = quoteClient.GetOpenedOrders();
+                                    //账号信息
+                                    ConGroup account = quoteClient.Account();
+                                    accountCache.setCredit(quoteClient.Credit);
+                                    Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
+                                    accountCache.setLots(0.00);
+                                    accountCache.setCount(0);
+                                    accountCache.setBuy(0);
+                                    accountCache.setSell(0);
+                                    accountCache.setProfit(0.00);
+                                    // accountCache.setCredit(quoteClient.Credit);
+                                    if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                        FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                        String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                        //  0-固定手数 1-手数比例 2-净值比例
+                                        String mode =null;
+                                        switch (followTraderSubscribeEntity.getFollowMode()) {
+                                            case(0):
+                                                mode="固定";
+                                                break;
+                                            case(1):
+                                                mode="手";
+                                                break;
+                                            case(2):
+                                                mode="净";
+                                                break;
+                                        }
+                                        accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                                     }
-                                    accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
-                                }
-                                if(ObjectUtil.isEmpty(accountCache.getModeString())){
-                                    accountCache.setModeString("");
-                                }
-                                if(quoteClient.Connected()){
-                                    accountCache.setManagerStatus("Connected");
-                                }else{
-                                    accountCache.setManagerStatus("Disconnected");
-                                }
+                                    if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                        accountCache.setModeString("");
+                                    }
+                                    if(quoteClient.Connected()){
+                                        accountCache.setManagerStatus("Connected");
+                                    }else{
+                                        accountCache.setManagerStatus("Disconnected");
+                                    }
 
-                                orderMap.forEach((a, b) -> {
-                                    switch (a) {
-                                        case Buy:
-                                            accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
-                                            break;
-                                        case Sell:
-                                            accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size());
-                                            break;
-                                        default:
-                                            Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
-                                            accountCache.setCount(accountCache.getCount() + count);
-                                            break;
+                                    orderMap.forEach((a, b) -> {
+                                        switch (a) {
+                                            case Buy:
+                                                accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                                break;
+                                            case Sell:
+                                                accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                                break;
+                                            default:
+                                                Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
+                                                accountCache.setCount(accountCache.getCount() + count);
+                                                break;
+                                        }
+                                        if (ObjectUtil.isNotEmpty(b)) {
+                                            b.forEach(x -> {
+                                                OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                                //  orderCacheVO.setId(x.);
+                                                //    orderCacheVO.setLogin(x.);
+                                                orderCacheVO.setTicket(x.Ticket);
+                                                orderCacheVO.setOpenTime(x.OpenTime);
+                                                orderCacheVO.setCloseTime(x.CloseTime);
+                                                orderCacheVO.setType(x.Type);
+                                                orderCacheVO.setLots(x.Lots);
+                                                orderCacheVO.setSymbol(x.Symbol);
+                                                orderCacheVO.setOpenPrice(x.OpenPrice);
+                                                orderCacheVO.setStopLoss(x.StopLoss);
+                                                orderCacheVO.setTakeProfit(x.TakeProfit);
+                                                orderCacheVO.setClosePrice(x.ClosePrice);
+                                                orderCacheVO.setMagicNumber(x.MagicNumber);
+                                                orderCacheVO.setSwap(x.Swap);
+                                                orderCacheVO.setCommission(x.Commission);
+                                                orderCacheVO.setComment(x.Comment);
+                                                orderCacheVO.setProfit(x.Profit);
+                                                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                                    FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                                   // orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
+                                                }
+                                                orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
+                                                  orderCacheVO.setPlaceType("Client");
+                                                orderCaches.add(orderCacheVO);
+                                                accountCache.setLots(accountCache.getLots() + x.Lots);
+                                                accountCache.setProfit(accountCache.getProfit() + x.Profit);
+                                            });
+                                        }
+                                        accountCache.setOrders(orderCaches);
+                                    });
+                                }else{
+                                    accountCache.setCredit(0.00);
+                                    accountCache.setLots(0.00);
+                                    accountCache.setCount(0);
+                                    accountCache.setBuy(0);
+                                    accountCache.setSell(0);
+                                    accountCache.setProfit(0.00);
+                                    if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                        FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                        String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                        //  0-固定手数 1-手数比例 2-净值比例
+                                        String mode =null;
+                                        switch (followTraderSubscribeEntity.getFollowMode()) {
+                                            case(0):
+                                                mode="固定";
+                                                break;
+                                            case(1):
+                                                mode="手";
+                                                break;
+                                            case(2):
+                                                mode="净";
+                                                break;
+                                        }
+                                        accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                                     }
-                                    if (ObjectUtil.isNotEmpty(b)) {
-                                        b.forEach(x -> {
-                                            OrderCacheVO orderCacheVO = new OrderCacheVO();
-                                            //  orderCacheVO.setId(x.);
-                                            //    orderCacheVO.setLogin(x.);
-                                            orderCacheVO.setTicket(x.Ticket);
-                                            orderCacheVO.setOpenTime(x.OpenTime);
-                                            orderCacheVO.setCloseTime(x.CloseTime);
-                                            orderCacheVO.setType(x.Type);
-                                            orderCacheVO.setLots(x.Lots);
-                                            orderCacheVO.setSymbol(x.Symbol);
-                                            orderCacheVO.setOpenPrice(x.OpenPrice);
-                                            orderCacheVO.setStopLoss(x.StopLoss);
-                                            orderCacheVO.setTakeProfit(x.TakeProfit);
-                                            orderCacheVO.setClosePrice(x.ClosePrice);
-                                            orderCacheVO.setMagicNumber(x.MagicNumber);
-                                            orderCacheVO.setSwap(x.Swap);
-                                            orderCacheVO.setCommission(x.Commission);
-                                            orderCacheVO.setComment(x.Comment);
-                                            orderCacheVO.setProfit(x.Profit);
-                                            if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
-                                                FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                               // orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
-                                            }
-                                            orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
-                                              orderCacheVO.setPlaceType("Client");
-                                            orderCaches.add(orderCacheVO);
-                                            accountCache.setLots(accountCache.getLots() + x.Lots);
-                                            accountCache.setProfit(accountCache.getProfit() + x.Profit);
-                                        });
+                                    if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                        accountCache.setModeString("");
                                     }
-                                    accountCache.setOrders(orderCaches);
-                                });
-                            }else{
-                                accountCache.setCredit(0.00);
-                                accountCache.setLots(0.00);
-                                accountCache.setCount(0);
-                                accountCache.setBuy(0);
-                                accountCache.setSell(0);
-                                accountCache.setProfit(0.00);
-                                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
-                                    FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                    String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
-                                    //  0-固定手数 1-手数比例 2-净值比例
-                                    String mode =null;
-                                    switch (followTraderSubscribeEntity.getFollowMode()) {
-                                        case(0):
-                                            mode="固定";
-                                            break;
-                                        case(1):
-                                            mode="手";
-                                            break;
-                                        case(2):
-                                            mode="净";
-                                            break;
-                                    }
-                                    accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
+                                    accountCache.setManagerStatus("Disconnected");
+                                    OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                    orderCaches.add(orderCacheVO);
+                                    accountCache.setLots(0.00);
+                                    accountCache.setProfit(0.00);
                                 }
-                                if(ObjectUtil.isEmpty(accountCache.getModeString())){
-                                    accountCache.setModeString("");
-                                }
-                                accountCache.setManagerStatus("Disconnected");
-                                OrderCacheVO orderCacheVO = new OrderCacheVO();
-                                orderCaches.add(orderCacheVO);
-                                accountCache.setLots(0.00);
-                                accountCache.setProfit(0.00);
+                            } catch (Exception e) {
+                               log.error("推送redis异常："+e);
                             }
+
                             if(ObjectUtil.isEmpty(accountCache.getOrders())){
                                 accountCache.setOrders(new ArrayList<>());
                             }
