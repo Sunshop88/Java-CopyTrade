@@ -166,12 +166,12 @@ public class WebApiController {
 
     @GetMapping("/symbolParams")
     @Operation(summary = "品种规格")
-    public Result<JSONObject> symbolParams(@RequestParam("clientId") Integer clientId, @RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId, @RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType, HttpServletRequest req) {
         String host = getServerIp(clientId);
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
         map.put("accountType",accountType);
-        return sendRequestByGetArray(req, host, FollowConstant.SYMBOLPARAMS, map);
+        return sendRequestByGet(req, host, FollowConstant.SYMBOLPARAMS, map);
     }
 
 
@@ -232,33 +232,6 @@ public class WebApiController {
             return    Result.error("远程调用异常: " + body.get("msg"));
         }
         return Result.ok(body.getString("data"));
-    }
-
-    private static <T> Result<JSONObject> sendRequestByGetArray(HttpServletRequest req, String host, String uri, Map<String,Object> t) {
-        // 远程调用
-        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
-        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-        headers.add("x-sign", "417B110F1E71BD2CFE96366E67849B0B");
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.fluentPutAll(t);
-        JSONObject body = RestUtil.request(url, HttpMethod.GET, headers, jsonObject, null, JSONObject.class).getBody();
-        log.info("远程调用响应:{}", body);
-        if (body != null && !body.getString("code").equals("0")) {
-            String msg = body.getString("msg");
-            log.error("远程调用异常: {}", body.get("msg"));
-            return Result.error(msg);
-        }
-        // 获取 data 字段并解析为 JSON 数组
-        String dataStr = body.getString("data");
-        JSONArray dataArray = JSON.parseArray(dataStr);
-        // 构建最终的响应 JSON 对象
-        JSONObject response = new JSONObject();
-        response.put("success", true);
-        response.put("message", "string");
-        response.put("data", dataArray);
-
-        // 返回 JSON 对象
-        return Result.ok(response);
     }
 
 }
