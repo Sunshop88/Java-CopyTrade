@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -179,11 +180,11 @@ public class WebApiController {
      * 远程调用方法封装 POST
      */
     private static <T> Result<String> sendRequest(HttpServletRequest req, String host, String uri, T t) {
-        //远程调用
+        // 远程调用
         String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
-        headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
+        headers.add("x-sign", "417B110F1E71BD2CFE96366E67849B0B");
         ObjectMapper objectMapper = new ObjectMapper();
         // 将对象序列化为 JSON
         String jsonBody = null;
@@ -196,14 +197,18 @@ public class WebApiController {
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
         ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.POST, entity, byte[].class);
         byte[] data = response.getBody();
-       JSONObject body = JSON.parseObject(new String(data));
+        JSONObject body = JSON.parseObject(new String(data));
         log.info("远程调用响应:{}", body);
         if (body != null && !body.getString("code").equals("0")) {
             String msg = body.getString("msg");
             log.error("远程调用异常: {}", body.get("msg"));
-            return    Result.error("远程调用异常: " + body.get("msg"));
+            return Result.error("远程调用异常: " + body.get("msg"));
         }
-        return Result.ok(body.getString("data"));
+        // 获取 data 字段并解析为 JSON 数组
+        String dataStr = body.getString("data");
+        JSONArray dataArray = JSON.parseArray(dataStr);
+        // 将 JSON 数组转换为字符串返回
+        return Result.ok(dataArray.toJSONString());
     }
 
     /**
