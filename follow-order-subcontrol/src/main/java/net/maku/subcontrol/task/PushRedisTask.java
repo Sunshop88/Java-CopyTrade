@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,12 +63,18 @@ public class PushRedisTask {
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+  /* @PostConstruct
+   public void init(){
+       for (int i = 0; i <20 ; i++) {
+           execute();
+       }
 
+   }*/
 
     @Scheduled(cron = "0/5 * * * * ?")
     public void execute(){
       //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
-        //"39.98.109.212"
+        //"39.98.109.212" FollowConstant.LOCAL_HOST
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
             pushCache(one.getId());
@@ -282,6 +289,7 @@ public class PushRedisTask {
                     }
                     //转出json格式
                     String json = convertJson(accounts);
+                   log.info("redis推送数据账号数量:{},数据{}",accounts.size(),json);
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
                 }
             });
