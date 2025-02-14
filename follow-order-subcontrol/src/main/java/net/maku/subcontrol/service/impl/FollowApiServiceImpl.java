@@ -4,6 +4,8 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -15,6 +17,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -186,7 +189,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(vo.getPassword());
+            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -406,7 +409,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
-        followUpdateSalveVo.setPassword(pwd);
+        followUpdateSalveVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         // 判断主表如果保存失败，则返回false
         Boolean result = updateSlave(followUpdateSalveVo);
         if (!result) {
@@ -583,7 +586,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             //如果修改登录密码触发
             if (!vo.getInvestor()){
-                followTraderVO.setPassword(vo.getPassword());
+                followTraderVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                 followTraderService.updateById(followTraderVO);
                 if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                     reconnect(followTraderVO.getId().toString());
@@ -592,11 +595,11 @@ public class FollowApiServiceImpl implements FollowApiService {
                 }
                 if(type==0){
                     source = sourceService.getEntityById(a.getId());
-                    source.setPassword(vo.getPassword());
+                    source.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     sourceService.edit(source);
                 }else{
                     //修改从数据库
-                    followEntity.setPassword(vo.getPassword());
+                    followEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     followService.edit(followEntity);
                 }
 

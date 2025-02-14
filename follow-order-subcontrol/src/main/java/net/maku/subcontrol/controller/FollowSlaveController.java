@@ -2,6 +2,8 @@ package net.maku.subcontrol.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,7 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -110,7 +113,7 @@ public class FollowSlaveController {
 //            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(vo.getPassword());
+            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -266,8 +269,8 @@ public class FollowSlaveController {
                 o.setFixedComment(subscribes.get(0).getFixedComment());
                 o.setCommentType(subscribes.get(0).getCommentType());
                 o.setDigits(subscribes.get(0).getDigits());
+                o.setPassword(AesUtils.decryptStr(o.getPassword()));
             }
-            ;
         });
         return Result.ok(page);
     }

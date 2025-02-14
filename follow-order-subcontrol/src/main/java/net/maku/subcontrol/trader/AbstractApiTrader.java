@@ -20,6 +20,7 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -85,12 +86,12 @@ public abstract class AbstractApiTrader extends ApiTrader {
     }
 
     public AbstractApiTrader(FollowTraderEntity trader,  String host, int port) throws IOException {
-        quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port);
+        quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()), host, port);
         this.trader = trader;
     }
 
     public AbstractApiTrader(FollowTraderEntity trader, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
-        quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(), host, port, closedOrdersFrom, closedOrdersTo);
+        quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()), host, port, closedOrdersFrom, closedOrdersTo);
         this.trader = trader;
     }
 
@@ -204,7 +205,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
-            log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), trader.getPassword(), eurusd, e.getMessage());
+            log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), AesUtils.decryptStr(trader.getPassword()), eurusd, e.getMessage());
             traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
             String serverNode;
             //优先查看平台默认节点
@@ -218,7 +219,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 try {
                     //处理节点格式
                     String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()),  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
                 }catch (Exception e1){
                     if (e.getMessage().contains("Invalid account")){
@@ -238,7 +239,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 serverEntityList.stream().anyMatch(address->{
                     try {
                         this.quoteClient.Disconnect();
-                        this.quoteClient.Password = trader.getPassword();
+                        this.quoteClient.Password = AesUtils.decryptStr(trader.getPassword());
                         this.quoteClient.Host = address.getServerNode();
                         this.quoteClient.Port = Integer.valueOf(address.getServerPort());
                     } catch (Exception ex) {

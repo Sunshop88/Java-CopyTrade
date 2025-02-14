@@ -1,6 +1,8 @@
 package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.Mode;
+import cn.hutool.crypto.Padding;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,6 +15,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -105,6 +108,7 @@ public class FollowTraderController {
         }
         //本机处理
         try {
+            vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
@@ -146,6 +150,7 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
+        vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         followTraderService.update(vo);
         //重连
         if(ObjectUtil.isNotEmpty(vo.getPassword()) && !old.getPassword().equals(vo.getPassword())){
