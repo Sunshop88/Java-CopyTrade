@@ -105,7 +105,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     break;
                 case PositionClose:
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                     } catch (Exception e) {
 
                     }
@@ -113,8 +113,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);
                     try {
                         if(lock) {
-                            if (list != null && list.size() > 0) {
-                                Integer magical = list.get(0).getMagical();
+                                Integer magical = order.MagicNumber;
                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + follow.getPlatform() + "#" + master.getPlatform() + "#" + follow.getAccount() + "#" + master.getAccount(), magical.toString());
                                 //删除漏单redis记录
                                 Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
@@ -129,7 +128,6 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSONObject.toJSONString(repairInfoVOS));
                                 }
                                 log.info("监听跟单漏平删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
-                            }
                         }
                         }finally {
                             redissonLockUtil.unlock(key);
