@@ -24,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.validation.Valid;
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -171,7 +172,7 @@ public class WebApiController {
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
         map.put("accountType",accountType);
-        return sendRequestByGet(req, host, FollowConstant.SYMBOLPARAMS, map);
+        return sendRequestByGetArray(req, host, FollowConstant.SYMBOLPARAMS, map);
     }
 
 
@@ -233,5 +234,28 @@ public class WebApiController {
         }
         return Result.ok(body.getString("data"));
     }
+
+    private static <T> Result<String> sendRequestByGetArray(HttpServletRequest req, String host, String uri, Map<String,Object> t) {
+        // 远程调用
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        headers.add("x-sign", "417B110F1E71BD2CFE96366E67849B0B");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.fluentPutAll(t);
+        JSONObject body = RestUtil.request(url, HttpMethod.GET, headers, jsonObject, null, JSONObject.class).getBody();
+        log.info("远程调用响应:{}", body);
+        if (body != null && !body.getString("code").equals("0")) {
+            String msg = body.getString("msg");
+            log.error("远程调用异常: {}", body.get("msg"));
+            return Result.error(msg);
+        }
+
+        // 获取 data 字段并解析为 JSON 数组
+        String dataStr = body.getString("data");
+        List<ExternalSysmbolSpecificationVO> dataArray = JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class);
+        // 将 JSON 数组转换为字符串返回
+        return Result.ok(JSON.toJSONString(dataArray));
+    }
+
 
 }
