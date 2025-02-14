@@ -74,7 +74,7 @@ public class PushRedisTask {
     @Scheduled(cron = "0/5 * * * * ?")
     public void execute(){
       //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
-        //"39.98.109.212" FollowConstant.LOCAL_HOST
+        //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
             pushCache(one.getId());
@@ -98,19 +98,21 @@ public class PushRedisTask {
             List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
             Map<Long, FollowTraderSubscribeEntity> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, Function.identity()));
             //根据vpsId账号分组
-            Map<Integer, List<FollowTraderEntity>> map = followTraderList.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId));
+            Map<Integer, List<FollowTraderEntity>> map = new HashMap<>();
             //查询所有平台
             List<FollowPlatformEntity> platformList = followPlatformService.list();
             Map<Long, List<FollowPlatformEntity>> platformMap = platformList.stream().collect(Collectors.groupingBy(FollowPlatformEntity::getId));
             String key = "VPS:PUSH:";
-            List<FollowTraderEntity> followTraderEntities = map.get(vpsId);
-            followTraderEntities.sort((o1,o2)->{
-              return   o1.getType().compareTo(o2.getType());
+            followTraderList.sort((o1,o2)->{
+                return   o1.getType().compareTo(o2.getType());
             });
-            map.put(vpsId, followTraderEntities);
+            map.put(vpsId, followTraderList);
+
+
             map.forEach((k, v) -> {
                 //多线程写
                 boolean flag = redisUtil.setnx(key + k, k, 2);
+                StringBuilder sbb=new StringBuilder();
                 //设置成功过表示超过2秒内
                 if (flag) {
                     List<AccountCacheVO> accounts = new ArrayList<>();
@@ -277,9 +279,10 @@ public class PushRedisTask {
                             if(ObjectUtil.isEmpty(accountCache.getOrders())){
                                 accountCache.setOrders(new ArrayList<>());
                             }
-
+                            sbb.append(accountCache.getId()+",");
                             accounts.add(accountCache);
                             countDownLatch.countDown();
+
                         });
                     }
                     try {
@@ -289,7 +292,7 @@ public class PushRedisTask {
                     }
                     //转出json格式
                     String json = convertJson(accounts);
-                   log.info("redis推送数据账号数量:{},数据{}",accounts.size(),json);
+                   log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
                 }
             });

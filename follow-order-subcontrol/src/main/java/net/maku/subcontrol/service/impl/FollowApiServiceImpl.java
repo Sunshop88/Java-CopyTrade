@@ -478,6 +478,48 @@ public class FollowApiServiceImpl implements FollowApiService {
     }
 
     @Override
+    public List<OpenOrderInfoVO> openedOrders(OpenOrderVO vo) {
+        List<OpenOrderInfoVO> orderInfoVOS=new ArrayList<>();
+        vo.getAccount().forEach(o->{
+            QuoteClient quoteClient = null;
+            FollowTraderEntity trader = followTraderService.getById(o.getId());
+            quoteClient = getQuoteClient(o.getId(), trader, quoteClient);
+            if(quoteClient!=null){
+                List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Profit>0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                if(openedOrders!=null && openedOrders.size()>0){
+                    openedOrders.forEach(order->{
+                        OpenOrderInfoVO infoVO = new OpenOrderInfoVO();
+                        infoVO.setId(o.getId());
+                        infoVO.setLogin(Integer.valueOf(trader.getAccount()));
+                        infoVO.setTicket(order.Ticket);
+                        infoVO.setOpenTime(order.OpenTime);
+                        infoVO.setCloseTime(order.OpenTime);
+                        infoVO.setType(order.Type);
+                        infoVO.setLots(order.Lots);
+                        infoVO.setSymbol(order.Symbol);
+                        infoVO.setOpenPrice(order.OpenPrice);
+                        infoVO.setStopLoss(order.StopLoss);
+                        infoVO.setTakeProfit(order.TakeProfit);
+                        infoVO.setClosePrice(order.ClosePrice);
+                        infoVO.setMagicNumber(order.MagicNumber);
+                        infoVO.setSwap(order.Swap);
+                        infoVO.setCommission(order.Commission);
+                        infoVO.setComment(order.Comment);
+                        infoVO.setProfit(order.Profit);
+                        infoVO.setPlaceType("Client");
+                        orderInfoVOS.add(infoVO);
+                    }) ;
+                }
+            }
+
+
+        });
+
+        return orderInfoVOS;
+    }
+
+
+    @Override
     public Boolean orderSend(OrderSendVO vo) {
 
         return null;

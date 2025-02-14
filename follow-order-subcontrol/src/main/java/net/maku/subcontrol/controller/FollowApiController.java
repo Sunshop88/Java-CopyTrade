@@ -2,8 +2,10 @@ package net.maku.subcontrol.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.service.FollowApiService;
@@ -68,6 +70,12 @@ public class FollowApiController {
         return  Result.ok(followApiService.orderCloseList(vo)) ;
     }
 
+    @PostMapping("/openedOrders")
+    @Operation(summary = "查询持仓订单")
+    public Result<List<OpenOrderInfoVO>> openedOrders(@RequestBody @Valid OpenOrderVO vo) {
+        return  Result.ok(followApiService.openedOrders(vo)) ;
+    }
+
     @PostMapping("/orderSend")
     @Operation(summary = "开仓")
     public Result<Boolean> orderSend(@RequestBody @Valid OrderSendVO vo) {
@@ -114,5 +122,6 @@ public class FollowApiController {
     public Result<Boolean> repairOrder(@RequestBody @Valid RepairOrderVO vo) {
         return  Result.ok(followApiService.repairOrder(vo)) ;
     }
+
 
 }

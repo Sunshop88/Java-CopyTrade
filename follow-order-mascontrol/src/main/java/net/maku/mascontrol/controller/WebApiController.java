@@ -101,6 +101,15 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.ORDERHISTORY, vo);
     }
 
+    @PostMapping("/openedorders")
+    @Operation(summary = "查询持仓订单")
+    public Result<String> openedOrders(@RequestBody @Valid OpenOrderVO vo, HttpServletRequest req) {
+        //根据vpsId查询ip
+        String host = getServerIp(vo.getClientId());
+        return sendRequest(req, host, FollowConstant.OPENEDORDERS, vo);
+    }
+
+
     @PostMapping("/ordersend")
     @Operation(summary = "开仓")
     public Result<String> ordersend(@RequestBody @Valid OrderSendVO vo, HttpServletRequest req) {

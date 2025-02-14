@@ -49,4 +49,6 @@ public interface FollowApiService {
     List<ExternalSysmbolSpecificationVO> symbolParams(Long accountId, Integer accountType);
 
     Boolean repairOrder(RepairOrderVO vo);
+
+    List<OpenOrderInfoVO> openedOrders(OpenOrderVO vo);
 }
