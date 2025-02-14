@@ -714,13 +714,13 @@ public class FollowApiServiceImpl implements FollowApiService {
     }
 
     @Override
-    public ExternalSysmbolSpecificationVO symbolParams(Long accountId, Integer accountType) {
+    public  List<ExternalSysmbolSpecificationVO> symbolParams(Long accountId, Integer accountType) {
         //0=喊单，1=跟单
         Long user=null;
         Integer serverId=null;
         Integer platformId=null;
         if(accountType==0){
-            SourceEntity     source = sourceService.getEntityById(accountId);
+            SourceEntity source = sourceService.getEntityById(accountId);
             user=source.getUser();
             serverId=source.getClientId();
             platformId = source.getPlatformId();
@@ -732,28 +732,32 @@ public class FollowApiServiceImpl implements FollowApiService {
             platformId = followEntity.getPlatformId();
         }
         FollowTraderEntity followTraderVO = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount,user).eq(FollowTraderEntity::getPlatformId, platformId).eq(FollowTraderEntity::getServerId,serverId).one();
-        FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne = followSysmbolSpecificationService.getOne(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, followTraderVO.getId()));
+        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationServiceOne = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, followTraderVO.getId()));
         if (ObjectUtil.isEmpty(sysmbolSpecificationServiceOne)){
             return null;
         }
         return convertExternal(sysmbolSpecificationServiceOne);
     }
 
-    private ExternalSysmbolSpecificationVO convertExternal(FollowSysmbolSpecificationEntity sysmbolSpecificationServiceOne) {
-        ExternalSysmbolSpecificationVO externalSysmbolSpecificationVO = new ExternalSysmbolSpecificationVO();
-        externalSysmbolSpecificationVO.setContractSize(sysmbolSpecificationServiceOne.getContractSize());
-        externalSysmbolSpecificationVO.setDigits(sysmbolSpecificationServiceOne.getDigits());
-        externalSysmbolSpecificationVO.setSymbol(sysmbolSpecificationServiceOne.getSymbol());
-        externalSysmbolSpecificationVO.setLotMax(sysmbolSpecificationServiceOne.getMaxLot());
-        externalSysmbolSpecificationVO.setLotMin(sysmbolSpecificationServiceOne.getMinLot());
-        externalSysmbolSpecificationVO.setLotStep(sysmbolSpecificationServiceOne.getLotStep());
-        externalSysmbolSpecificationVO.setStopsLevel(sysmbolSpecificationServiceOne.getStopsLevel());
-        externalSysmbolSpecificationVO.setMarginCurrency(sysmbolSpecificationServiceOne.getMarginCurrency());
-        externalSysmbolSpecificationVO.setSwapLong(sysmbolSpecificationServiceOne.getSwapLong());
-        externalSysmbolSpecificationVO.setSwapShort(sysmbolSpecificationServiceOne.getSwapShort());
-        //默认0
-        externalSysmbolSpecificationVO.setSwapType(0);
-        return externalSysmbolSpecificationVO;
+    private List<ExternalSysmbolSpecificationVO> convertExternal(List<FollowSysmbolSpecificationEntity> sysmbolSpecifications) {
+        List<ExternalSysmbolSpecificationVO> externalSysmbolSpecificationVOs = new ArrayList<>();
+        for (FollowSysmbolSpecificationEntity entity : sysmbolSpecifications) {
+            ExternalSysmbolSpecificationVO vo = new ExternalSysmbolSpecificationVO();
+            vo.setContractSize(entity.getContractSize());
+            vo.setDigits(entity.getDigits());
+            vo.setSymbol(entity.getSymbol());
+            vo.setLotMax(entity.getMaxLot());
+            vo.setLotMin(entity.getMinLot());
+            vo.setLotStep(entity.getLotStep());
+            vo.setStopsLevel(entity.getStopsLevel());
+            vo.setMarginCurrency(entity.getMarginCurrency());
+            vo.setSwapLong(entity.getSwapLong());
+            vo.setSwapShort(entity.getSwapShort());
+            // 默认0
+            vo.setSwapType(0);
+            externalSysmbolSpecificationVOs.add(vo);
+        }
+        return externalSysmbolSpecificationVOs;
     }
 
     private Boolean localOrderClose(FollowOrderSendCloseVO vo, FollowTraderEntity followTraderVO){

@@ -9,6 +9,8 @@ import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.service.FollowApiService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @Tag(name = "喊单，跟单api")
@@ -104,7 +106,7 @@ public class FollowApiController {
 
     @GetMapping("/symbolParams")
     @Operation(summary = "品种规格")
-    public Result<ExternalSysmbolSpecificationVO> symbolParams(@RequestParam("accountId") Long accountId,@RequestParam("accountType") Integer accountType) {
+    public Result<List<ExternalSysmbolSpecificationVO>> symbolParams(@RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType) {
         return  Result.ok(followApiService.symbolParams(accountId,accountType)) ;
     }
     @PostMapping("/repairorder")
