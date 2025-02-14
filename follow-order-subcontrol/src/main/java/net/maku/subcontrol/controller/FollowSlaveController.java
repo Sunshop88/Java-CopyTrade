@@ -221,9 +221,9 @@ public class FollowSlaveController {
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
-                reconnect(vo.getId().toString()); 
+                reconnect(vo.getId().toString());
             }
-            
+
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
@@ -326,7 +326,7 @@ public class FollowSlaveController {
         FollowVpsEntity vpsEntity = request.getVpsEntity();
         Integer testId = request.getTestId();
         LocalDateTime measureTime = request.getMeasureTime();
-            // 批量调用服务进行测速
+        // 批量调用服务进行测速
         boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, testId,measureTime);
         log.info("============测速记录出来状态：" + isSuccess);
 //        try {

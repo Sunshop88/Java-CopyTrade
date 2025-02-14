@@ -126,7 +126,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FollowTraderVO save(FollowTraderVO vo) {
-       vo.setServerIp(FollowConstant.LOCAL_HOST);
+        vo.setServerIp(FollowConstant.LOCAL_HOST);
         if (ObjectUtil.isEmpty(vo.getPlatform())) {
             throw new ServerException("服务商错误");
         }
@@ -393,7 +393,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
         //查询结算汇率
-       // List<FollowOrderDetailEntity> records = pageOrder.getRecords();
+        // List<FollowOrderDetailEntity> records = pageOrder.getRecords();
 
         return new PageResult<>(FollowOrderDetailConvert.INSTANCE.convertList(pageOrder.getRecords()), pageOrder.getTotal());
     }
@@ -1072,7 +1072,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 BigDecimal max = new BigDecimal(o1.toString());
                 BigDecimal lots = new BigDecimal(lotsPerOrder);
                 if (lots.compareTo(max)>0) {
-                   throw  new ServerException("超过最大手数限制");
+                    throw  new ServerException("超过最大手数限制");
                 }
             }
             double asksub = quoteClient.GetQuote(symbol).Ask;

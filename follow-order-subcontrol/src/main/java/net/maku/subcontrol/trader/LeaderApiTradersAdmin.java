@@ -389,7 +389,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             redisUtil.set(Constant.TRADER_USER+followTraderVO.getId(),followRedisTraderVO);
         } catch (Exception e) {
             log.info("初始化添加{}账号推送redis数据失败:{}",followTraderVO.getAccount(),e);
-           e.printStackTrace();
+            e.printStackTrace();
 
         }
 //                qc.Disconnect();

@@ -119,7 +119,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
             else {
                 this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
-               this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
+                this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
         }
 
