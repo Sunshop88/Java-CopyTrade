@@ -263,14 +263,30 @@ public class MessagesServiceImpl implements MessagesService {
                 }
                 //发送漏单消息
                 try {
-                    FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                            vpsName(follow.getServerName())
-                            .source(master.getAccount())
-                            .sourceRemarks(master.getRemark())
-                            .follow(follow.getAccount())
-                            .symbol(orderInfo.getSymbol())
-                            .type(Constant.NOTICE_MESSAGE_BUY).build();
-                    send(vo);
+                    ThreadPoolUtils.getExecutor().execute(() -> {
+                                try {
+                                    Thread.sleep(3000);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                        Object o = redisCache.get(Constant.TRADER_ACTIVE + follow.getId());
+                        List<OrderActiveInfoVO> orderActive = new ArrayList<>();
+                        if (ObjectUtil.isNotEmpty(o1)) {
+                            orderActive = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                        }
+                        boolean flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+                        if (!flag) {
+                            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                    vpsName(follow.getServerName())
+                                    .source(master.getAccount())
+                                    .sourceRemarks(master.getRemark())
+                                    .follow(follow.getAccount())
+                                    .symbol(orderInfo.getSymbol())
+                                    .type(Constant.NOTICE_MESSAGE_BUY).build();
+                            send(vo);
+                        }
+                    });
+
                 } catch (Exception e) {
 
                 }
