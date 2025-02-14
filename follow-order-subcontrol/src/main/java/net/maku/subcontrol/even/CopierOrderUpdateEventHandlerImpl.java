@@ -75,7 +75,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 case PositionOpen:
                 case PendingFill:
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(3000);
                     } catch (Exception e) {
 
                     }
@@ -105,7 +105,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     break;
                 case PositionClose:
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(3000);
                     } catch (Exception e) {
 
                     }

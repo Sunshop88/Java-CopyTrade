@@ -164,13 +164,13 @@ public class KafkaMessageConsumer {
                                 subscribeOrder.forEach(o->{
                                     ThreadPoolUtils.getExecutor().execute(()->{
                                         FollowTraderEntity slaveTrader = followTraderService.getFollowById(o.getSlaveId());
+                                        //检查redis漏单数据（掉线回补漏单机制）
+                                        FollowTraderVO master = followTraderService.get(leaderApiTrader.getTrader().getId());
+                                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
+                                        //漏单检查
+                                        repair(slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
                                         Arrays.stream(orders).forEach(order->{
                                             ThreadPoolUtils.getExecutor().execute(()->{
-                                                //检查redis漏单数据（掉线回补漏单机制）
-                                                FollowTraderVO master = followTraderService.get(leaderApiTrader.getTrader().getId());
-                                                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
-                                                //漏单检查
-                                                repair(slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
                                                 //漏单记录为空 -添加漏单
                                                 if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket))))
                                                 {
@@ -206,27 +206,30 @@ public class KafkaMessageConsumer {
         try {
             if(lock) {
                 Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" +master.getId(), follow.getAccount().toString());
-                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                Map<Integer, JSONObject> repairInfoVOS = new HashMap();
                 if (o2 != null && o2.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
                 }
                 AtomicBoolean existsInActive = new AtomicBoolean(true);
                 Map<Integer, OrderRepairInfoVO> repairNewVOS = new HashMap();
-                repairInfoVOS.forEach((k,v)->{
-                    if(quoteClient!=null){
-                        existsInActive.set(Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.MagicNumber + "")));
-                    }else{
-                        Object o1 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
-                        List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
-                        if (ObjectUtil.isNotEmpty(o1)) {
-                            orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                if(repairInfoVOS!=null && repairInfoVOS.size()>0) {
+                    repairInfoVOS.forEach((k, v) -> {
+                        if (quoteClient != null) {
+                            existsInActive.set(Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.MagicNumber + "")));
+                        } else {
+                            Object o1 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+                            List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+                            if (ObjectUtil.isNotEmpty(o1)) {
+                                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                            }
+                            existsInActive.set(orderActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString())));
                         }
-                        existsInActive.set(orderActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString())));
-                    }
-                    if(!existsInActive.get()){
-                        repairNewVOS.put(k,v);
-                    }
-                });
+                        if (!existsInActive.get()) {
+                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                            repairNewVOS.put(k, infoVO);
+                        }
+                    });
+                }
                 if (repairNewVOS == null || repairNewVOS.size() == 0) {
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
                 } else {
@@ -235,7 +238,7 @@ public class KafkaMessageConsumer {
             }
 
         } catch (Exception e) {
-            log.error("漏单检查写入异常{0}",e);
+            log.error("漏单检查写入异常"+e);
         }finally {
             redissonLockUtil.unlock(openKey);
         }
@@ -246,14 +249,15 @@ public class KafkaMessageConsumer {
             if(closelock) {
                 Map<Integer, OrderRepairInfoVO> repairCloseNewVOS = new HashMap();
                 Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
-                Map<Integer, OrderRepairInfoVO> repairVos = new HashMap();
+                Map<Integer, JSONObject> repairVos = new HashMap();
                 if (o1!=null && o1.toString().trim().length()>0){
                     repairVos= JSONObject.parseObject(o1.toString(), Map.class);
                 }
                 repairVos.forEach((k,v)->{
                     List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
-                    if (ObjectUtil.isNotEmpty(detailServiceList)) {
-                        repairCloseNewVOS.put(k,v);
+                    if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                        OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                        repairCloseNewVOS.put(k,infoVO);
                     }
                 });
                 if(repairCloseNewVOS==null || repairCloseNewVOS.size()==0){
@@ -261,9 +265,10 @@ public class KafkaMessageConsumer {
                 }else{
                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
                 }
+                log.info("漏平检查写入数据,跟单账号:{},数据：{}",follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
           }
         } catch (Exception e) {
-            log.error("漏平检查写入异常{0}",e);
+            log.error("漏平检查写入异常"+e);
         }finally {
             redissonLockUtil.unlock(closekey);
         }

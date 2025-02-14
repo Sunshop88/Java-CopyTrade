@@ -118,7 +118,7 @@ public class MessagesServiceImpl implements MessagesService {
         return new String(Base64.encodeBase64(signData));
     }
     public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
-        ThreadPoolUtils.getExecutor().execute(() -> {
+    //    ThreadPoolUtils.getExecutor().execute(() -> {
           /*  try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -187,6 +187,8 @@ public class MessagesServiceImpl implements MessagesService {
                     });
                     repairInfoVOS.putAll(closeMap);
                     redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                    log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+
                 }
             }
             } catch (Exception e) {
@@ -195,10 +197,10 @@ public class MessagesServiceImpl implements MessagesService {
                 redissonLockUtil.unlock(key);
             }
 
-        });
+      //  });
     }
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
-        ThreadPoolUtils.getExecutor().execute(() -> {
+      //  ThreadPoolUtils.getExecutor().execute(() -> {
             boolean existsInActive =true;
             if(quoteClient!=null){
                 existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
@@ -291,7 +293,7 @@ public class MessagesServiceImpl implements MessagesService {
 
                 }
             }
-        });
+       // });
     }
     /**
      * 发送消息
