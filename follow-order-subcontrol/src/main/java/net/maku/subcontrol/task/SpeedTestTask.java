@@ -8,6 +8,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
@@ -185,7 +186,7 @@ public class SpeedTestTask {
                     log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
                     result=true;
                 }
@@ -201,7 +202,7 @@ public class SpeedTestTask {
                     log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 }  else {
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                     copierApiTrader.startTrade();
                     result=true;
                 }
