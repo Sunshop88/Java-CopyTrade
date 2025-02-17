@@ -75,12 +75,17 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 case PositionOpen:
                 case PendingFill:
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(4000);
                     } catch (Exception e) {
 
                     }
                     String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
                     boolean lock1 = redissonLockUtil.lock(key1, 10, -1, TimeUnit.SECONDS);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+
+                    }
                     log.info("监听跟单漏开删除开始:跟单账号:{},跟单订单号：{}", follow.getAccount(),order.Ticket);
                     try {
                         if (lock1) {
@@ -105,13 +110,18 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     break;
                 case PositionClose:
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(4000);
                     } catch (Exception e) {
 
                     }
                     String key = Constant.REPAIR_CLOSE + "：" + follow.getAccount();
-                    boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);
+                    boolean lock = redissonLockUtil.lock(key, 100, -1, TimeUnit.SECONDS);
                     try {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (Exception e) {
+
+                        }
                         if(lock) {
                                 Integer magical = order.MagicNumber;
                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + follow.getPlatform() + "#" + master.getPlatform() + "#" + follow.getAccount() + "#" + master.getAccount(), magical.toString());
@@ -127,12 +137,12 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 } else {
                                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                                 }
-                                log.info("监听跟单漏平删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSONObject.toJSONString(repairInfoVOS), magical);
+                                log.info("监听跟单漏平删除,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(),magical, JSONObject.toJSONString(repairInfoVOS));
                         }
                         }finally {
                             redissonLockUtil.unlock(key);
                         }
-                    log.info("监听跟单漏平删除:订单{},跟单账号{},订单号：{},平台:{}",list, follow.getAccount(),order.Ticket,follow.getPlatform());
+                    log.info("监听跟单漏平删除:跟单账号{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
                     break;
                 default:
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);
