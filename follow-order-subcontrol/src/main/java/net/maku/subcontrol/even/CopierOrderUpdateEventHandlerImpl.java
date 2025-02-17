@@ -75,12 +75,17 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 case PositionOpen:
                 case PendingFill:
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(4000);
                     } catch (Exception e) {
 
                     }
                     String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
                     boolean lock1 = redissonLockUtil.lock(key1, 10, -1, TimeUnit.SECONDS);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+
+                    }
                     log.info("监听跟单漏开删除开始:跟单账号:{},跟单订单号：{}", follow.getAccount(),order.Ticket);
                     try {
                         if (lock1) {
@@ -105,13 +110,18 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     break;
                 case PositionClose:
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(4000);
                     } catch (Exception e) {
 
                     }
                     String key = Constant.REPAIR_CLOSE + "：" + follow.getAccount();
                     boolean lock = redissonLockUtil.lock(key, 100, -1, TimeUnit.SECONDS);
                     try {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (Exception e) {
+
+                        }
                         if(lock) {
                                 Integer magical = order.MagicNumber;
                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + follow.getPlatform() + "#" + master.getPlatform() + "#" + follow.getAccount() + "#" + master.getAccount(), magical.toString());
