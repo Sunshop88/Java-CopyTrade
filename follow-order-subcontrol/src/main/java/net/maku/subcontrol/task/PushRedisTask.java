@@ -135,7 +135,9 @@ public class PushRedisTask {
                             orderCacheVO.setSwap(one.getSwap().doubleValue());
                             orderCacheVO.setCommission(one.getCommission().doubleValue());
                             orderCacheVO.setComment(one.getComment());
-                            orderCacheVO.setClosePrice(one.getClosePrice().doubleValue());
+                            if(one.getClosePrice()!=null){
+                                orderCacheVO.setClosePrice(one.getClosePrice().doubleValue());
+                            }
                             orderCacheVO.setProfit(one.getProfit().doubleValue());
                         }
 
