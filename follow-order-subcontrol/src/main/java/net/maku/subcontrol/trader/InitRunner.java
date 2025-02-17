@@ -83,29 +83,12 @@ public class InitRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
-        log.info("全局解密=======开始");
-        setPassword();
-        log.info("全局解密=======结束");
         log.info("加载缓存=======开始");
         getCache();
         log.info("加载缓存=======结束");
         // 连接MT4交易账户
         mt4TraderStartup();
         log.info("=============启动时加载示例内容完毕=============");
-    }
-
-    private void setPassword() {
-        List<FollowTraderEntity> mt4TraderList = aotfxTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
-                .eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
-                .eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue())
-                .orderByAsc(FollowTraderEntity::getCreateTime));
-        mt4TraderList.forEach(o->{
-            if (o.getPassword().length()==32){
-                //加密处理
-                o.setPassword(AesUtils.decryptStr(o.getPassword()));
-            }
-            followTraderService.update(FollowTraderConvert.INSTANCE.convert(o));
-        });
     }
 
     private void mt4TraderStartup() throws Exception {
