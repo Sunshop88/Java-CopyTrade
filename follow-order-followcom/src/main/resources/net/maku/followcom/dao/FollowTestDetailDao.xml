@@ -59,21 +59,33 @@
 <!--            </if>-->
 <!--        </where>-->
 
+--         SELECT
+--         t1.*,
+--         fp.broker_name
+--         FROM follow_test_detail t1
+--         JOIN (
+--         SELECT server_name, platform_type, COALESCE(server_node, '') AS server_node, MAX(create_time) AS latest_time, vps_id
+--         FROM follow_test_detail
+--         WHERE deleted = 0
+--         GROUP BY server_name, platform_type, COALESCE(server_node, ''), vps_id
+--         ) t2
+--         ON t1.server_name = t2.server_name
+--         AND t1.platform_type = t2.platform_type
+--         AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
+--         AND t1.create_time = t2.latest_time
+--         AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
+--         LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         SELECT
         t1.*,
         fp.broker_name
         FROM follow_test_detail t1
-        JOIN (
-        SELECT server_name, platform_type, COALESCE(server_node, '') AS server_node, MAX(create_time) AS latest_time, vps_id
+        RIGHT JOIN (
+        SELECT  MAX(id) AS id
         FROM follow_test_detail
         WHERE deleted = 0
         GROUP BY server_name, platform_type, COALESCE(server_node, ''), vps_id
         ) t2
-        ON t1.server_name = t2.server_name
-        AND t1.platform_type = t2.platform_type
-        AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
-        AND t1.create_time = t2.latest_time
-        AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
+        ON t1.id = t2.id
         LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         <where>
             <if test="query.brokerName != null and query.brokerName != ''">

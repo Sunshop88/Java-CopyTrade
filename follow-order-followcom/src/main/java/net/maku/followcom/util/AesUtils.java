@@ -109,9 +109,39 @@ public class AesUtils {
         // 解密16进制表示的字符串
         return JSON.parseObject(aes.decryptStr(encryptHex, charset));
     }
-
+    public static String  aesEncryptStr(String password){
+        return aesEncryptHex(Mode.ECB, Padding.ZeroPadding,FollowConstant.MT4_KEY,password,null);
+    }
 
     public static String  decryptStr(String password){
-        return new AES(Mode.ECB, Padding.ZeroPadding,FollowConstant.MT4_KEY.getBytes()).decryptStr(password);
+        byte[] encryptedBytes = hexStringToByteArray(password);
+
+        // 进行解密
+        String decrypted = new AES(Mode.ECB, Padding.ZeroPadding, FollowConstant.MT4_KEY.getBytes()).decryptStr(encryptedBytes);
+
+        // 如果解密后的字符串带有引号，去除引号
+        if (decrypted.startsWith("\"") && decrypted.endsWith("\"")) {
+            decrypted = decrypted.substring(1, decrypted.length() - 1);
+        }
+        return decrypted;
+    }
+
+    // 十六进制字符串转字节数组
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    public static void main(String[] args) {
+        System.out.println("ddddd");
+        String encrypted = aesEncryptStr("343nnf1");
+        System.out.println("Encrypted: " + encrypted);
+        String decrypted = decryptStr("ce47bd6823bbccf55c6dfdb1fb1f81ed");
+        System.out.println("Decrypted: " + decrypted);
     }
 }
