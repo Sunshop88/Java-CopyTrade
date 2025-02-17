@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,14 +135,14 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.ORDERCLOSEALL, vo);
     }
 
-    @PostMapping("/orderCloseProfit")
+    @PostMapping("/ordercloseprofit")
     @Operation(summary = "平仓盈利")
     public Result<String> orderCloseProfit(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
         String host = getServerIp(vo.getClientId());
         return sendRequest(req, host, FollowConstant.ORDERCLOSEPROFIT, vo);
     }
 
-    @PostMapping("/orderCloseLoss")
+    @PostMapping("/ordercloseloss")
     @Operation(summary = "平仓亏损")
     public Result<String> orderCloseLoss(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
         String host = getServerIp(vo.getClientId());
@@ -164,9 +165,9 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.REPAIRORDER, vo);
     }
 
-    @GetMapping("/symbolParams")
+    @GetMapping("/symbolparams")
     @Operation(summary = "品种规格")
-    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId, @RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+    public Result<String> symbolParams(@RequestParam("AlientId") Integer clientId, @RequestParam("AccountId") Long accountId, @RequestParam("AccountType") Integer accountType, HttpServletRequest req) {
         String host = getServerIp(clientId);
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
@@ -248,16 +249,9 @@ public class WebApiController {
             log.error("远程调用异常: {}", body.get("msg"));
             return Result.error(msg);
         }
-
-        // 获取 data 字段并解析为 JSON 数组
-//        List<ExternalSysmbolSpecificationVO> dataArray = body.getJSONArray("data");
-//        log.info(dataStr);
-        String dataStr = body.getString("data");
-//        List<ExternalSysmbolSpecificationVO> dataArray = JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class);
-//        log.info("格式:"+JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class));
-
+        String dataArray = String.valueOf(body.getJSONArray("data"));
         // 将 JSON 数组转换为字符串返回
-        return Result.ok(dataStr);
+        return Result.ok(dataArray);
     }
 
 
