@@ -18,7 +18,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class AccountModelVO  implements Serializable {
     //客户端Id
-    @JsonProperty(value = "id")
+    @JsonProperty(value = "Id")
     @NotNull(message = "账号id不能为空")
     private Long id;
     //客户端Id
