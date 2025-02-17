@@ -1,7 +1,6 @@
 package net.maku.mascontrol.controller;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -251,10 +250,14 @@ public class WebApiController {
         }
 
         // 获取 data 字段并解析为 JSON 数组
+//        List<ExternalSysmbolSpecificationVO> dataArray = body.getJSONArray("data");
+//        log.info(dataStr);
         String dataStr = body.getString("data");
-        List<ExternalSysmbolSpecificationVO> dataArray = JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class);
+//        List<ExternalSysmbolSpecificationVO> dataArray = JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class);
+//        log.info("格式:"+JSON.parseArray(dataStr, ExternalSysmbolSpecificationVO.class));
+
         // 将 JSON 数组转换为字符串返回
-        return Result.ok(JSON.toJSONString(dataArray));
+        return Result.ok(dataStr);
     }
 
 
