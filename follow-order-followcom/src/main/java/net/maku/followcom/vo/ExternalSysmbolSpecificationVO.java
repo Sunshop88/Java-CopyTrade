@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -19,37 +20,37 @@ public class ExternalSysmbolSpecificationVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 
-	@JsonProperty(value = "Symbol")
+	@JSONField(name = "Symbol")
 	private String symbol;
 
-	@JsonProperty(value = "LotMin")
+	@JSONField(name = "LotMin")
 	private Double lotMin;
 
-	@JsonProperty(value = "LotMax")
+	@JSONField(name = "LotMax")
 	private Double lotMax;
 
-	@JsonProperty(value = "LotStep")
+	@JSONField(name = "LotStep")
 	private Double lotStep;
 
-	@JsonProperty(value = "SwapLong")
+	@JSONField(name = "SwapLong")
 	private Double swapLong;
 
-	@JsonProperty(value = "SwapShort")
+	@JSONField(name = "SwapShort")
 	private Double swapShort;
 
-	@JsonProperty(value = "ContractSize")
+	@JSONField(name = "ContractSize")
 	private Double contractSize;
 
-	@JsonProperty(value = "Digits")
+	@JSONField(name = "Digits")
 	private Integer digits;
 
-	@JsonProperty(value = "StopsLevel")
+	@JSONField(name = "StopsLevel")
 	private Integer stopsLevel;
 
-	@JsonProperty(value = "MarginCurrency")
+	@JSONField(name = "MarginCurrency")
 	private String marginCurrency;
 
-	@JsonProperty(value = "SwapType")
+	@JSONField(name = "SwapType")
 	private Integer swapType;
 
 }

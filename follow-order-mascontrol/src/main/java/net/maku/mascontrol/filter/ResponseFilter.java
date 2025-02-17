@@ -13,7 +13,10 @@ import net.maku.followcom.vo.OrderClosePageVO;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+
+import static org.apache.kafka.common.requests.DeleteAclsResponse.log;
 
 /**
  * Author:  zsd
@@ -66,8 +69,9 @@ public class ResponseFilter implements Filter {
                     }else if(uri.startsWith("/api/v1/openedorders")){
                         OpenOrderInfoVO data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
                         newJson.put("data", data);
-                    }else if (uri.startsWith("/api/v1/symbolParams")) {
-                        List<ExternalSysmbolSpecificationVO> data = JSON.parseArray(oldJson.getString("data"), ExternalSysmbolSpecificationVO.class);
+                    }else if (uri.startsWith("/api/v1/symbolparams")) {
+                        String data1 = oldJson.getString("data");
+                        List<ExternalSysmbolSpecificationVO> data = JSON.parseArray(data1 , ExternalSysmbolSpecificationVO.class);
                         newJson.put("data", data);
                     }else{
                         newJson.put("data", oldJson.getString("data"));
