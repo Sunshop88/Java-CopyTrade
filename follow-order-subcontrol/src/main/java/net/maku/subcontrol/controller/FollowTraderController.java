@@ -13,6 +13,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -146,9 +147,12 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
+        if(ObjectUtil.isNotEmpty(vo.getPassword())){
+            vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+        }
         followTraderService.update(vo);
         //重连
-        if(ObjectUtil.isNotEmpty(vo.getPassword()) && !old.getPassword().equals(vo.getPassword())){
+        if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(old.getPassword()).equals(vo.getPassword())){
             reconnect(vo.getId().toString());
         }
         Boolean reconnect = reconnect(vo.getId().toString());
@@ -283,7 +287,7 @@ public class FollowTraderController {
         }
 
         if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
-            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+           abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
                     .get(vo.getTraderId().toString());
 
             if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
@@ -577,7 +581,7 @@ public class FollowTraderController {
                     log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                    log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
                     result=true;
                 }
@@ -593,7 +597,7 @@ public class FollowTraderController {
                     log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                 }  else {
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                     copierApiTrader.startTrade();
                     result=true;
                 }

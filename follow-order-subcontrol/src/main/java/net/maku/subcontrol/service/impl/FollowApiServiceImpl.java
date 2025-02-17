@@ -12,6 +12,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -184,7 +185,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(vo.getPassword());
+            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -411,7 +412,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
         String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
-        followUpdateSalveVo.setPassword(pwd);
+        followUpdateSalveVo.setPassword(AesUtils.aesEncryptStr(pwd));
         // 判断主表如果保存失败，则返回false
         if(vo.getPlacedType()!=null){
             Integer val = PlacedTypeEnum.getVal(vo.getPlacedType());
@@ -675,7 +676,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             //如果修改登录密码触发
             if (!vo.getInvestor()){
-                followTraderVO.setPassword(vo.getPassword());
+                followTraderVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                 followTraderService.updateById(followTraderVO);
                 if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                     reconnect(followTraderVO.getId().toString());
@@ -684,11 +685,11 @@ public class FollowApiServiceImpl implements FollowApiService {
                 }
                 if(type==0){
                     source = sourceService.getEntityById(a.getId());
-                    source.setPassword(vo.getPassword());
+                    source.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     sourceService.edit(source);
                 }else{
                     //修改从数据库
-                    followEntity.setPassword(vo.getPassword());
+                    followEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     followService.edit(followEntity);
                 }
 
@@ -1136,7 +1137,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 log.info("喊单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
             } else {
                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                 leaderApiTrader.startTrade();
             }
         }catch (RuntimeException e){
@@ -1158,7 +1159,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
             } else {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(),AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }
 

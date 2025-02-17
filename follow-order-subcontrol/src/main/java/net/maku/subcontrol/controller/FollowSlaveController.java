@@ -15,6 +15,7 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -110,7 +111,7 @@ public class FollowSlaveController {
 //            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(vo.getPassword());
+            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -197,6 +198,9 @@ public class FollowSlaveController {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
+            if(ObjectUtil.isNotEmpty(vo.getPassword())){
+                followTraderEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            }
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
@@ -217,7 +221,7 @@ public class FollowSlaveController {
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
-            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
+            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(password).equals(vo.getPassword())){
                 reconnect(vo.getId().toString());
             }
 
@@ -267,7 +271,6 @@ public class FollowSlaveController {
                 o.setCommentType(subscribes.get(0).getCommentType());
                 o.setDigits(subscribes.get(0).getDigits());
             }
-            ;
         });
         return Result.ok(page);
     }
@@ -378,7 +381,7 @@ public class FollowSlaveController {
                 log.info("跟单者:[{}-{}-{}]启动重复", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
             } else {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(),AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }
 
