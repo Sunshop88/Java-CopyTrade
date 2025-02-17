@@ -339,7 +339,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
 
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
-       if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
+        if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
         followTrader.setId(one.getId());
         followTraderService.updateById(followTrader);
         //重连
@@ -413,7 +413,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             return false;
         }
         //重连
-       // reconnectSlave(vo.getId().toString());
+        // reconnectSlave(vo.getId().toString());
         //处理副表数据
         followService.edit(vo);
         return true;
@@ -507,7 +507,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                     throw  new ServerException("订单号不能为空");
                 }
                 followOrderSendCloseVO.setOrderNo(o);
-                
+
                 localOrderClose(followOrderSendCloseVO,followTraderVO);
             });
 
@@ -528,7 +528,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 SourceEntity     source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
-                 platformId = source.getPlatformId();
+                platformId = source.getPlatformId();
             }else{
                 //查询从表
                 FollowEntity   followEntity = followService.getEntityById(a.getId());
@@ -559,7 +559,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             FollowEntity followEntity=null;
             Integer platformId=null;
             if(type==0){
-                 source = sourceService.getEntityById(a.getId());
+                source = sourceService.getEntityById(a.getId());
                 user=source.getUser();
                 serverId=source.getClientId();
                 platformId = source.getPlatformId();
@@ -754,7 +754,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                     countDownLatch.countDown();
                 });
             }
-          
+
             try {
                 countDownLatch.await();
             } catch (InterruptedException e) {

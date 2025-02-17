@@ -283,7 +283,7 @@ public class FollowTraderController {
         }
 
         if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
-           abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
                     .get(vo.getTraderId().toString());
 
             if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)

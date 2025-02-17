@@ -163,13 +163,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader1.setTrader(followTraderEntity);
-                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        //重复提交
-                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        if (ObjectUtil.isNotEmpty(copierApiTrader1)){
-                            quoteClient = copierApiTrader1.quoteClient;
-                        }
-                    } else {
+                    }else {
+                        log.error(trader.getTrader().getId()+"掉线异常");
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }
@@ -209,7 +204,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 // 记录开始时间
                 LocalDateTime startTime=LocalDateTime.now();
                 long start = System.currentTimeMillis();
-                Order order = quoteClient.OrderClient.OrderSend(
+                OrderClient oc;
+                if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
+                    oc = quoteClient.OrderClient;
+                } else {
+                    oc = new OrderClient(quoteClient);
+                }
+                oc.PlacedType=PlacedType.forValue(leaderCopier.getPlacedType());
+                Order order = oc.OrderSend(
                         orderInfo.getSymbol(),
                         op,
                         openOrderMapping.getSlaveLots().doubleValue(),
@@ -338,6 +340,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         copierApiTrader1.setTrader(followTraderEntity);
                     }
                 } else {
+                    log.error(trader.getTrader().getId()+"掉线异常");
                     throw new RuntimeException("登录异常" + trader.getTrader().getId());
                 }
             }
@@ -368,7 +371,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             // 记录开始时间
             LocalDateTime startTime=LocalDateTime.now();
             long start = System.currentTimeMillis();
-            Order order = quoteClient.OrderClient.OrderSend(
+            OrderClient oc;
+            if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
+                oc = quoteClient.OrderClient;
+            } else {
+                oc = new OrderClient(quoteClient);
+            }
+            oc.PlacedType=PlacedType.forValue(leaderCopier.getPlacedType());
+            Order order = oc.OrderSend(
                     orderInfo.getSymbol(),
                     op,
                     openOrderMapping.getSlaveLots().doubleValue(),
