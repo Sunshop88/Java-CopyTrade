@@ -59,7 +59,7 @@ public class AccountCacheVO {
     private BigDecimal profitPercentage;
     //可用预付款
     @JsonProperty(value = "FreeMargin")
-    private BigDecimal freeMargin;
+    private Double freeMargin;
     //  是对margin_proportion
     @JsonProperty(value = "Margin")
     private BigDecimal margin;
@@ -77,10 +77,10 @@ public class AccountCacheVO {
     private Double lots;
     //
     @JsonProperty(value = "Buy")
-    private Integer buy;
+    private Double buy;
 
     @JsonProperty(value = "Sell")
-    private Integer sell;
+    private Double sell;
 
     @JsonProperty(value = "ModeString")
     private String modeString;

@@ -1,6 +1,7 @@
 package net.maku.subcontrol.task;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,25 +12,19 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.FollowOrderDetailServiceImpl;
 import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
 import net.maku.followcom.service.impl.FollowVpsServiceImpl;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.followcom.vo.AccountCacheVO;
-import net.maku.followcom.vo.FollowTraderCacheVO;
-import net.maku.followcom.vo.OrderCacheVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.*;
 import online.mtapi.mt4.ConGroup;
@@ -63,6 +58,7 @@ public class PushRedisTask {
     private LeaderApiTradersAdmin leaderApiTradersAdmin = SpringContextUtils.getBean(LeaderApiTradersAdmin.class);
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+    private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
   /* @PostConstruct
    public void init(){
        for (int i = 0; i <20 ; i++) {
@@ -78,15 +74,133 @@ public class PushRedisTask {
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
             pushCache(one.getId());
+            pushRepair(one.getId());
         }else{
            List<FollowVpsEntity>  vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
             vpsLists.forEach(v->{
                 redisUtil.delSlaveRedis(Integer.toString(v.getId()));
+                redisUtil.delSlaveRedis(Integer.toString(v.getId())+"-Compare");
             });
 
         }
 
     }
+
+    /***
+     * 推送redis漏单
+     * */
+    private  void  pushRepair(Integer vpsId){
+        ThreadPoolUtils.execute(() -> {
+            //查询当前vpsId所有账号
+            List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId).eq(FollowTraderEntity::getType,TraderTypeEnum.SLAVE_REAL.getType()));
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
+            Map<Long, FollowTraderSubscribeEntity> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, Function.identity()));
+            List<RepairCacheVO> repairs=new ArrayList<>();
+            followTraderList.forEach(t->{
+                FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(t.getId());
+                if(followTraderSubscribeEntity!=null){
+                RepairCacheVO repairCacheVO = new RepairCacheVO();
+                repairCacheVO.setFollowId(followTraderSubscribeEntity.getSlaveId());
+                repairCacheVO.setSourceId(followTraderSubscribeEntity.getMasterId());
+                repairCacheVO.setSourceUser(Long.valueOf(followTraderSubscribeEntity.getMasterAccount()));
+                repairCacheVO.setFollowUser(Long.valueOf(followTraderSubscribeEntity.getSlaveAccount()));
+                //漏开
+                Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + followTraderSubscribeEntity.getMasterAccount() + ":" + followTraderSubscribeEntity.getMasterId(), followTraderSubscribeEntity.getSlaveAccount());
+                Map<Integer, JSONObject> opens = new HashMap();
+               List<OrderCacheVO> openList = new ArrayList<>();
+                if (o1 != null && o1.toString().trim().length() > 0) {
+                    opens = JSONObject.parseObject(o1.toString(), Map.class);
+                    opens.forEach((k,o)->{
+                        OrderRepairInfoVO v = JSONObject.parseObject(String.valueOf(o), OrderRepairInfoVO.class);
+                        OrderCacheVO orderCacheVO = new OrderCacheVO();
+                        orderCacheVO.setId(null);
+                        orderCacheVO.setLogin(repairCacheVO.getFollowUser());
+                        orderCacheVO.setTicket(v.getMasterTicket());
+                        orderCacheVO.setOpenTime(v.getMasterOpenTime());
+                        orderCacheVO.setCloseTime(v.getMasterCloseTime());
+                        if( v.getMasterType().equals("Buy")){
+                            orderCacheVO.setType(Op.Buy);
+                        }else {
+                            orderCacheVO.setType(Op.Sell);
+                        }
+                        orderCacheVO.setLots(v.getMasterLots());
+                        orderCacheVO.setSymbol(v.getMasterSymbol());
+                        orderCacheVO.setOpenPrice(v.getMasterOpenPrice());
+                        orderCacheVO.setMagicNumber(v.getMasterTicket());
+                        orderCacheVO.setPlaceType("Client");
+                        FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, v.getMasterTicket()).eq(FollowOrderDetailEntity::getAccount,followTraderSubscribeEntity.getMasterAccount()));
+                       /* orderCacheVO.setStopLoss(one.gets);
+                        orderCacheVO.setTakeProfit(one.);*/
+                        if(one!=null){
+                            orderCacheVO.setSwap(one.getSwap().doubleValue());
+                            orderCacheVO.setCommission(one.getCommission().doubleValue());
+                            orderCacheVO.setComment(one.getComment());
+                            orderCacheVO.setClosePrice(one.getClosePrice().doubleValue());
+                            orderCacheVO.setProfit(one.getProfit().doubleValue());
+                        }
+
+                        openList.add(orderCacheVO);
+                    });
+                }
+                repairCacheVO.setOpen(openList);
+                //漏平
+                Object o2 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + followTraderSubscribeEntity.getMasterAccount() + ":" + followTraderSubscribeEntity.getMasterId(), followTraderSubscribeEntity.getSlaveAccount());
+                Map<Integer, JSONObject> close = new HashMap();
+                List<OrderCacheVO> closeList = new ArrayList<>();
+                if (o2 != null && o2.toString().trim().length() > 0) {
+                    close = JSONObject.parseObject(o2.toString(), Map.class);
+                    close.forEach((k,o)->{
+                        OrderRepairInfoVO v = JSONObject.parseObject(String.valueOf(o), OrderRepairInfoVO.class);
+                        OrderCacheVO orderCacheVO = new OrderCacheVO();
+                        orderCacheVO.setId(null);
+                        orderCacheVO.setLogin(repairCacheVO.getFollowUser());
+                        orderCacheVO.setTicket(v.getMasterTicket());
+                        orderCacheVO.setOpenTime(v.getMasterOpenTime());
+                        orderCacheVO.setCloseTime(v.getMasterCloseTime());
+                        if( v.getMasterType().equals("Buy")){
+                            orderCacheVO.setType(Op.Buy);
+                        }else {
+                            orderCacheVO.setType(Op.Sell);
+                        }
+                        orderCacheVO.setLots(v.getMasterLots());
+                        orderCacheVO.setSymbol(v.getMasterSymbol());
+                        orderCacheVO.setOpenPrice(v.getMasterOpenPrice());
+                        orderCacheVO.setMagicNumber(v.getMasterTicket());
+                        orderCacheVO.setPlaceType("Client");
+                        FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, v.getMasterTicket()).eq(FollowOrderDetailEntity::getAccount, followTraderSubscribeEntity.getMasterAccount()));
+                       /* orderCacheVO.setStopLoss(one.gets);
+                        orderCacheVO.setTakeProfit(one.);*/
+                        if(one!=null){
+                            orderCacheVO.setSwap(one.getSwap().doubleValue());
+                            orderCacheVO.setCommission(one.getCommission().doubleValue());
+                            orderCacheVO.setComment(one.getComment());
+                            orderCacheVO.setClosePrice(one.getClosePrice().doubleValue());
+                            orderCacheVO.setProfit(one.getProfit().doubleValue());
+                        }
+
+                        closeList.add(orderCacheVO);
+                    });
+                }
+                repairCacheVO.setClose(closeList);
+                repairs.add(repairCacheVO);
+                }
+            });
+            //设置redis
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+
+                JavaTimeModule javaTimeModule = new JavaTimeModule();
+                //格式化时间格式
+                javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                objectMapper.registerModule(javaTimeModule);
+                String    json = objectMapper.writeValueAsString(repairs);
+                redisUtil.setSlaveRedis(Integer.toString(vpsId)+"-Compare", json);
+            } catch (JsonProcessingException e) {
+               log.error("外部接口redis漏单数据推送异常"+e);
+            }
+        });
+    }
+
     /**
      * 推送redis缓存
      */
@@ -119,7 +233,7 @@ public class PushRedisTask {
                     CountDownLatch countDownLatch = new CountDownLatch(v.size());
                     //遍历账号获取持仓订单
                     for (FollowTraderEntity h : v) {
-                        ThreadPoolUtils.execute(() -> {
+                     //   ThreadPoolUtils.execute(() -> {
                             AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
                             if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                 accountCache.setType("FOLLOW");
@@ -166,9 +280,10 @@ public class PushRedisTask {
                                     Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
                                     accountCache.setLots(0.00);
                                     accountCache.setCount(0);
-                                    accountCache.setBuy(0);
-                                    accountCache.setSell(0);
+                                    accountCache.setBuy(0.00);
+                                    accountCache.setSell(0.00);
                                     accountCache.setProfit(0.00);
+                                    accountCache.setFreeMargin(quoteClient.FreeMargin);
                                     // accountCache.setCredit(quoteClient.Credit);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
@@ -198,18 +313,18 @@ public class PushRedisTask {
                                     }
 
                                     orderMap.forEach((a, b) -> {
-                                        switch (a) {
+                                      /*  switch (a) {
                                             case Buy:
                                                 accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
                                                 break;
                                             case Sell:
-                                                accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                                accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size()) ;
                                                 break;
                                             default:
                                                 Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
                                                 accountCache.setCount(accountCache.getCount() + count);
                                                 break;
-                                        }
+                                        }*/
                                         if (ObjectUtil.isNotEmpty(b)) {
                                             b.forEach(x -> {
                                                 OrderCacheVO orderCacheVO = new OrderCacheVO();
@@ -238,6 +353,20 @@ public class PushRedisTask {
                                                   orderCacheVO.setPlaceType("Client");
                                                 orderCaches.add(orderCacheVO);
                                                 accountCache.setLots(accountCache.getLots() + x.Lots);
+                                                switch (a) {
+                                                    case Buy:
+                                                        accountCache.setBuy(accountCache.getBuy() + x.Lots);
+                                                        accountCache.setCount(accountCache.getCount() + 1);
+                                                        break;
+                                                    case Sell:
+                                                        accountCache.setSell(accountCache.getSell() + x.Lots);
+                                                        accountCache.setCount(accountCache.getCount() + 1);
+                                                        break;
+                                                    default:
+                                                       // Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
+                                                       // accountCache.setCount(accountCache.getCount() + count);
+                                                        break;
+                                                }
                                                 accountCache.setProfit(accountCache.getProfit() + x.Profit);
                                             });
                                         }
@@ -247,9 +376,10 @@ public class PushRedisTask {
                                     accountCache.setCredit(0.00);
                                     accountCache.setLots(0.00);
                                     accountCache.setCount(0);
-                                    accountCache.setBuy(0);
-                                    accountCache.setSell(0);
+                                    accountCache.setBuy(0.00);
+                                    accountCache.setSell(0.00);
                                     accountCache.setProfit(0.00);
+                                    accountCache.setFreeMargin(0.00);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
                                         String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
@@ -288,7 +418,7 @@ public class PushRedisTask {
                             accounts.add(accountCache);
                             countDownLatch.countDown();
 
-                        });
+                  //      });
                     }
                     try {
                         countDownLatch.await();

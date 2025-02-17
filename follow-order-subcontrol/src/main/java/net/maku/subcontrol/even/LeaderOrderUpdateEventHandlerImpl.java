@@ -361,11 +361,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
                                 accountCache.setLots(0.00);
                                 accountCache.setCount(0);
-                                accountCache.setBuy(0);
-                                accountCache.setSell(0);
+                                accountCache.setBuy(0.00);
+                                accountCache.setSell(0.00);
                                 accountCache.setProfit(0.00);
                                 orderMap.forEach((a, b) -> {
-                                    switch (a) {
+                                   /* switch (a) {
                                         case Buy:
                                             accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
                                             break;
@@ -376,7 +376,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                             Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
                                             accountCache.setCount(accountCache.getCount() + count);
                                             break;
-                                    }
+                                    }*/
                                     if (ObjectUtil.isNotEmpty(b)) {
                                         b.forEach(x -> {
                                             OrderCacheVO orderCacheVO = new OrderCacheVO();
