@@ -165,9 +165,9 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.REPAIRORDER, vo);
     }
 
-    @GetMapping("/symbolParams")
+    @GetMapping("/symbolparams")
     @Operation(summary = "品种规格")
-    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId, @RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+    public Result<String> symbolParams(@RequestParam("AlientId") Integer clientId, @RequestParam("AccountId") Long accountId, @RequestParam("AccountType") Integer accountType, HttpServletRequest req) {
         String host = getServerIp(clientId);
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
