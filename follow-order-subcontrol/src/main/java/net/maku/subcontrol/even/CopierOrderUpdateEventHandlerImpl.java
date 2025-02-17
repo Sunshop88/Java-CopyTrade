@@ -92,11 +92,11 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             }
                             repairVOS.remove(mg);
                             if (repairVOS == null || repairVOS.size() == 0) {
-                                redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                                redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                             } else {
                                 redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairVOS));
                             }
-                            log.info("监听跟单漏单删除,key:{},key:{},喊单订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), mg, JSONObject.toJSONString(repairVOS));
+                            log.info("监听跟单漏单删除,key:{},key:{},喊单订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), mg, JSONObject.toJSONString(repairVOS));
                         }
                     }finally {
                             redissonLockUtil.unlock(key1);
@@ -116,18 +116,18 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 Integer magical = order.MagicNumber;
                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + follow.getPlatform() + "#" + master.getPlatform() + "#" + follow.getAccount() + "#" + master.getAccount(), magical.toString());
                                 //删除漏单redis记录
-                                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
                                 if (o1 != null && o1.toString().trim().length() > 0) {
                                     repairInfoVOS = JSONObject.parseObject(o1.toString(), Map.class);
                                 }
                                 repairInfoVOS.remove(magical);
                                 if (repairInfoVOS == null || repairInfoVOS.size() == 0) {
-                                    redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(),follow.getAccount());
+                                    redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(),follow.getAccount().toString());
                                 } else {
-                                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSONObject.toJSONString(repairInfoVOS));
+                                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                                 }
-                                log.info("监听跟单漏平删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS), magical);
+                                log.info("监听跟单漏平删除,key:{},key:{},val:{},订单号:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSONObject.toJSONString(repairInfoVOS), magical);
                         }
                         }finally {
                             redissonLockUtil.unlock(key);

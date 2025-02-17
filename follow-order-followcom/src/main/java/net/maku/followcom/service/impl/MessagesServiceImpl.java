@@ -186,7 +186,7 @@ public class MessagesServiceImpl implements MessagesService {
                         });
                     });
                     repairInfoVOS.putAll(closeMap);
-                    redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                    redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
                     log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
 
                 }
@@ -233,7 +233,7 @@ public class MessagesServiceImpl implements MessagesService {
                 boolean lock = redissonLockUtil.lock(key, 30, -1, TimeUnit.SECONDS);
                 try {
                     if(lock) {
-                        Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                        Object repairStr = redisCache.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                         Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
                         if (repairStr != null && repairStr.toString().trim().length() > 0) {
                             repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
@@ -253,7 +253,7 @@ public class MessagesServiceImpl implements MessagesService {
                         orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
                         orderRepairInfoVO.setSlaveId(follow.getId());
                         repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
-                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
+                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
                       //  redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + "#" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
                         log.info("漏开数据写入,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
                     }

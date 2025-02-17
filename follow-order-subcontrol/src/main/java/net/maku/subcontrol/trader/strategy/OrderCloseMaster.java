@@ -71,19 +71,19 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             //删除跟单redis记录
             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
            //删除漏单redis记录
-            Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+            Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
             Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
             if (o1!=null && o1.toString().trim().length()>0){
                 repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
             }
             repairInfoVOS.remove(orderInfo.getTicket());
             if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),follow.getAccount());
+                redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),follow.getAccount().toString());
             }else{
-                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS));
+                redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
             }
 
-            log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
+            log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
 
         });
 

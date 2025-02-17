@@ -254,7 +254,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                repairInfoVOS.remove(orderInfo.getTicket());
                 if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                    redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount());
+                    redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
                 }else{
                     redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                 }

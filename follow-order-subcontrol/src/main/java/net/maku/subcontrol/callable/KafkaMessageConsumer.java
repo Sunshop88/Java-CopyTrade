@@ -231,7 +231,7 @@ public class KafkaMessageConsumer {
                     });
                 }
                 if (repairNewVOS == null || repairNewVOS.size() == 0) {
-                    redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                    redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                 } else {
                     redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairNewVOS));
                 }
@@ -248,7 +248,7 @@ public class KafkaMessageConsumer {
         try {
             if(closelock) {
                 Map<Integer, OrderRepairInfoVO> repairCloseNewVOS = new HashMap();
-                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                 Map<Integer, JSONObject> repairVos = new HashMap();
                 if (o1!=null && o1.toString().trim().length()>0){
                     repairVos= JSONObject.parseObject(o1.toString(), Map.class);
@@ -261,9 +261,9 @@ public class KafkaMessageConsumer {
                     }
                 });
                 if(repairCloseNewVOS==null || repairCloseNewVOS.size()==0){
-                    redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
+                    redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                 }else{
-                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
+                    redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairCloseNewVOS));
                 }
                 log.info("漏平检查写入数据,跟单账号:{},数据：{}",follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
           }
