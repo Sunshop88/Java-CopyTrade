@@ -247,11 +247,13 @@ public class PushRedisTask {
                             //根据id
                             String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
                             accountCache.setKey(akey);
+
                             if (h.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                                 String group = h.getId() + " " + h.getAccount();
                                 accountCache.setGroup(group);
                             }else{
                                 FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
+                                accountCache.setStatus(sb.getFollowStatus()==0?false:true);
                                 if(sb!=null) {
                                     String group = sb.getMasterId() + " " + sb.getMasterAccount();
                                     accountCache.setGroup(group);

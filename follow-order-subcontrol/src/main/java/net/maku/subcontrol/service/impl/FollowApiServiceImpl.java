@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -334,7 +335,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean updateSource(SourceUpdateVO vo) {
         SourceEntity source = sourceService.getEntityById(vo.getId());
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
-
+        followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
        if (ObjectUtil.isEmpty(one)) { throw  new ServerException("账号不存在,请检查id");}
         followTrader.setId(one.getId());
@@ -473,7 +474,48 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         }
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, query);
-        OrderClosePageVO orderList = OrderClosePageVO.builder().totalCount(pageOrder.getTotal()).orders(FollowOrderDetailConvert.INSTANCE.convertOrderList(page.getRecords())).build();
+        List<FollowOrderDetailEntity> records = pageOrder.getRecords();
+        List<OrderClosePageVO.OrderVo> orderVos =new ArrayList<>();
+        records.forEach(followOrderDetailEntity->{
+            OrderClosePageVO.OrderVo orderVo=new OrderClosePageVO.OrderVo();
+            orderVo.setId( followOrderDetailEntity.getId() );
+            if ( followOrderDetailEntity.getOpenTime() != null ) {
+                orderVo.setOpenTime( Date.from( followOrderDetailEntity.getOpenTime().toInstant( ZoneOffset.UTC ) ) );
+            }
+            if ( followOrderDetailEntity.getCloseTime() != null ) {
+                orderVo.setCloseTime( Date.from( followOrderDetailEntity.getCloseTime().toInstant( ZoneOffset.UTC ) ) );
+            }
+            if ( followOrderDetailEntity.getType() != null ) {
+                orderVo.setType( String.valueOf( followOrderDetailEntity.getType() ) );
+            }
+            orderVo.setSymbol( followOrderDetailEntity.getSymbol() );
+            orderVo.setOpenPrice( followOrderDetailEntity.getOpenPrice() );
+            orderVo.setClosePrice( followOrderDetailEntity.getClosePrice() );
+            orderVo.setSwap( followOrderDetailEntity.getSwap() );
+            orderVo.setCommission( followOrderDetailEntity.getCommission() );
+
+            orderVo.setProfit( followOrderDetailEntity.getProfit() );
+            orderVo.setTicket(followOrderDetailEntity.getOrderNo());
+            if(followOrderDetailEntity.getType().equals(Op.Buy.getValue())){
+                orderVo.setType("Buy");
+            }else if(followOrderDetailEntity.getType().equals(Op.Sell.getValue())){
+                orderVo.setType("Sell");
+            }else if (followOrderDetailEntity.getType().equals(Op.Balance.getValue())){
+                orderVo.setType("Balance");
+            }else if (followOrderDetailEntity.getType().equals(Op.Credit.getValue())){
+                orderVo.setType("Credit");
+            }
+            orderVo.setStopLoss(followOrderDetailEntity.getSl());
+            orderVo.setTakeProfit(followOrderDetailEntity.getTp());
+            orderVo.setMagicNumber(followOrderDetailEntity.getMagical());
+            orderVo.setComment(followOrderDetailEntity.getComment()==null?"":followOrderDetailEntity.getComment());
+            orderVo.setLogin(Long.parseLong(followOrderDetailEntity.getAccount()));
+           // PlacedTypeEnum
+            orderVo.setPlaceType(followOrderDetailEntity.getPlacedType());
+            orderVos.add(orderVo);
+        });
+
+        OrderClosePageVO orderList = OrderClosePageVO.builder().totalCount(pageOrder.getTotal()).orders(orderVos).build();
         return orderList;
     }
 

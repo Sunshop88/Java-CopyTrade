@@ -62,7 +62,7 @@ public class OrderClosePageVO implements Serializable {
         @JsonProperty(value = "Commission")
         private BigDecimal commission;
         @JsonProperty(value = "Comment")
-        private Integer comment;
+        private String comment;
         @JsonProperty(value = "Profit")
         private BigDecimal profit;
         @JsonProperty(value = "PlaceType")
