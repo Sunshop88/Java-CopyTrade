@@ -225,8 +225,18 @@ public class KafkaMessageConsumer {
                             existsInActive.set(orderActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString())));
                         }
                         if (!existsInActive.get()) {
-                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
-                            repairNewVOS.put(k, infoVO);
+                            //如果主账号这边都平掉了,就删掉这笔订单
+                            Object o1 = redisUtil.get(Constant.TRADER_ACTIVE + master.getId());
+                            List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+                            if (ObjectUtil.isNotEmpty(o1)) {
+                                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                            }
+                            boolean flag = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
+                            if(flag){
+                                OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                                repairNewVOS.put(k, infoVO);
+                            }
+
                         }
                     });
                 }
