@@ -378,7 +378,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followAddSalveVo.setPlatform(platform.getServer());
         followAddSalveVo.setTraderId(one.getId());
         if(vo.getPlacedType()!=null){
-            Integer val = FollowModeEnum.getVal(vo.getPlacedType());
+            Integer val = PlacedTypeEnum.getVal(vo.getPlacedType());
             followAddSalveVo.setPlacedType(val);
         }
         //判断主表如果保存失败，则返回false
@@ -413,7 +413,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setPassword(pwd);
         // 判断主表如果保存失败，则返回false
         if(vo.getPlacedType()!=null){
-            Integer val = FollowModeEnum.getVal(vo.getPlacedType());
+            Integer val = PlacedTypeEnum.getVal(vo.getPlacedType());
             followUpdateSalveVo.setPlacedType(val);
         }
         Boolean result = updateSlave(followUpdateSalveVo);

@@ -19,6 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+
 public class OrderClosePageVO implements Serializable {
     @JsonProperty(value = "Orders")
     private List<OrderVo> orders;
