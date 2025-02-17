@@ -446,7 +446,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         Page<FollowOrderDetailEntity> page = new Page<>(vo.getPageNumber(), vo.getPageSize());
         LambdaQueryWrapper<FollowOrderDetailEntity> query = new LambdaQueryWrapper<>();
         query.isNotNull(FollowOrderDetailEntity::getCloseId);
-        query.eq(ObjectUtil.isNotEmpty(vo.getAccount()),FollowOrderDetailEntity::getAccount, vo.getAccount());
+      //  query.eq(ObjectUtil.isNotEmpty(vo.getAccount()),FollowOrderDetailEntity::getAccount, vo.getAccount().);
         query.in(ObjectUtil.isNotEmpty(vo.getPlaceType()),FollowOrderDetailEntity::getPlacedType, vo.getPlaceType());
         query.in(ObjectUtil.isNotEmpty(vo.getType()),FollowOrderDetailEntity::getType, vo.getType());
         query.ge(ObjectUtil.isNotEmpty(vo.getCloseFrom()),FollowOrderDetailEntity::getCloseTime,DateUtils.format(vo.getCloseFrom(),DateUtils.DATE_TIME_PATTERN));
