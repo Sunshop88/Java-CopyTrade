@@ -134,14 +134,14 @@ public class WebApiController {
         return sendRequest(req, host, FollowConstant.ORDERCLOSEALL, vo);
     }
 
-    @PostMapping("/orderCloseProfit")
+    @PostMapping("/ordercloseprofit")
     @Operation(summary = "平仓盈利")
     public Result<String> orderCloseProfit(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
         String host = getServerIp(vo.getClientId());
         return sendRequest(req, host, FollowConstant.ORDERCLOSEPROFIT, vo);
     }
 
-    @PostMapping("/orderCloseLoss")
+    @PostMapping("/ordercloseloss")
     @Operation(summary = "平仓亏损")
     public Result<String> orderCloseLoss(@RequestBody @Valid  OrderCloseAllVO vo, HttpServletRequest req) {
         String host = getServerIp(vo.getClientId());
@@ -166,7 +166,7 @@ public class WebApiController {
 
     @GetMapping("/symbolParams")
     @Operation(summary = "品种规格")
-    public Result<String> symbolParams(@RequestParam("clientId") Integer clientId, @RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType, HttpServletRequest req) {
+    public Result<String> symbolParams(@RequestParam("ClientId") Integer clientId, @RequestParam("AccountId") Long accountId, @RequestParam("AccountType") Integer accountType, HttpServletRequest req) {
         String host = getServerIp(clientId);
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
