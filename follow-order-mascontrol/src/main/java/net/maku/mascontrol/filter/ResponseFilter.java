@@ -1,6 +1,7 @@
 package net.maku.mascontrol.filter;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,7 +62,7 @@ public class ResponseFilter implements Filter {
                         OpenOrderInfoVO data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
                         newJson.put("data", data);
                     }else if (uri.startsWith("/api/v1/symbolParams")) {
-                        List<ExternalSysmbolSpecificationVO> data = (List<ExternalSysmbolSpecificationVO>) JSONObject.parseObject(oldJson.getString("data"), ExternalSysmbolSpecificationVO.class);
+                        List<ExternalSysmbolSpecificationVO> data = JSON.parseArray(oldJson.getString("data"), ExternalSysmbolSpecificationVO.class);
                         newJson.put("data", data);
                     }else{
                         newJson.put("data", oldJson.getString("data"));

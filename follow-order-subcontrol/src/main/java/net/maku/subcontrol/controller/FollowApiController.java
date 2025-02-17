@@ -115,7 +115,7 @@ public class FollowApiController {
     @GetMapping("/symbolParams")
     @Operation(summary = "品种规格")
     public Result<List<ExternalSysmbolSpecificationVO>> symbolParams(@RequestParam("accountId") Long accountId, @RequestParam("accountType") Integer accountType) {
-        return  Result.ok(followApiService.symbolParams(accountId,accountType)) ;
+        return Result.ok(followApiService.symbolParams(accountId,accountType)) ;
     }
     @PostMapping("/repairorder")
     @Operation(summary = "补单")
