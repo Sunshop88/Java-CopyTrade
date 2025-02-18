@@ -47,6 +47,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final ServerService serverService;
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
+    private final FollowTestDetailService followTestDetailService;
 
 
     @Override
@@ -81,6 +82,18 @@ public class MasControlServiceImpl implements MasControlService {
         try {
 //            clientService.delete(idList);
             followVpsService.delete(idList);
+            //删除其vps下的所有测速记录
+            List<FollowTestDetailEntity> testDetails = followTestDetailService.list(
+                    new LambdaQueryWrapper<FollowTestDetailEntity>()
+                            .in(FollowTestDetailEntity::getVpsId, idList)
+            );
+
+            if (ObjectUtil.isNotEmpty(testDetails)) {
+                List<Long> testDetailIds = testDetails.stream()
+                        .map(FollowTestDetailEntity::getId)
+                        .collect(Collectors.toList());
+                followTestDetailService.delete(testDetailIds);
+            }
             log.info("成功删除 ID 列表: {}", idList);
             return true;
         } catch (Exception e) {
