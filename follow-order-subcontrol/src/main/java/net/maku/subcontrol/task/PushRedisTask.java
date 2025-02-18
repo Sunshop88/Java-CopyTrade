@@ -73,6 +73,7 @@ public class PushRedisTask {
       //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
         //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
+        //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
             pushCache(one.getId());
             pushRepair(one.getId());
@@ -254,6 +255,7 @@ public class PushRedisTask {
                                 accountCache.setGroup(group);
                             }else{
                                 FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
+                                accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(sb.getPlacedType()));
                                 accountCache.setStatus(sb.getFollowStatus()==0?false:true);
                                 if(sb!=null) {
                                     String group = sb.getMasterId() + " " + sb.getMasterAccount();
@@ -353,7 +355,7 @@ public class PushRedisTask {
                                                 if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                                     FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
                                                  //  orderCacheVO.setPlaceType(x.p);
-                                                    accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                                                  //  accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
                                                 }
                                                 orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
                                                   orderCacheVO.setPlaceType("Client");
@@ -388,6 +390,7 @@ public class PushRedisTask {
                                     accountCache.setFreeMargin(0.00);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                        accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
                                         String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
                                         //  0-固定手数 1-手数比例 2-净值比例
                                         String mode =null;

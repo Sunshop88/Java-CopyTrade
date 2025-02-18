@@ -554,6 +554,8 @@ public class FollowApiServiceImpl implements FollowApiService {
                         orderInfoVOS.add(infoVO);
                     }) ;
                 }
+            }else{
+                log.info("持仓quoteClient不存在");
             }
 
 
