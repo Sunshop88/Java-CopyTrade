@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.ConCodeEnum;
+import net.maku.followcom.enums.PlacedTypeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowOrderDetailServiceImpl;
@@ -351,7 +352,8 @@ public class PushRedisTask {
                                                 orderCacheVO.setProfit(x.Profit);
                                                 if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                                     FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                                   // orderCacheVO.setPlaceType(followTraderSubscribeEntity.getPlacedType());
+                                                 //  orderCacheVO.setPlaceType(x.p);
+                                                    accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
                                                 }
                                                 orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
                                                   orderCacheVO.setPlaceType("Client");
