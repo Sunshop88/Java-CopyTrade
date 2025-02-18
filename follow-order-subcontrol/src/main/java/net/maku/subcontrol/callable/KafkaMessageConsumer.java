@@ -153,11 +153,6 @@ public class KafkaMessageConsumer {
     public void consumeMessageMasterOrderRepair(List<String> messages, Acknowledgment acknowledgment) {
         messages.forEach(message -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
                 log.info("kafka消费order-repair" + message);
                 if (ObjectUtil.isNotEmpty(message)) {
                     try {
@@ -178,16 +173,54 @@ public class KafkaMessageConsumer {
                                         //漏单检查
                                         repair(slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
                                         Arrays.stream(orders).forEach(order->{
-                                            ThreadPoolUtils.getExecutor().execute(()->{
+                                            ThreadPoolUtils.getExecutor().execute(()-> {
                                                 //漏单记录为空 -添加漏单
-                                                if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket))))
-                                                {
-                                                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
-                                                    redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
+                                                if (ObjectUtil.isEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slaveTrader.getPlatform() + "#" + leaderApiTrader.getTrader().getPlatform() + "#" + o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(), String.valueOf(order.Ticket)))) {
+                                                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), leaderApiTrader.getTrader());
+                                                    redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slaveTrader.getPlatform() + "#" + leaderApiTrader.getTrader().getPlatform() + "#" + o.getSlaveAccount() + "#" + leaderApiTrader.getTrader().getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
                                                     //发送漏单通知
-                                                    messagesService.isRepairSend(eaOrderInfo,slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
+                                                    messagesService.isRepairSend(eaOrderInfo, slaveTrader, master, ObjectUtil.isNotEmpty(copierApiTrader) ? copierApiTrader.quoteClient : null);
                                                 }
                                             });
+                                        });
+
+                                        //漏平处理
+                                        log.info(slaveTrader+"漏平处理");
+                                        QuoteClient quoteClient;
+                                        if (ObjectUtil.isEmpty(copierApiTrader)) {
+                                            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(slaveTrader);
+                                            if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                                CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveTrader.getId().toString());
+                                                copierApiTrader1.setTrader(slaveTrader);
+                                                quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveTrader.getId().toString()).quoteClient;
+                                            } else {
+                                                quoteClient = null;
+                                            }
+                                        } else {
+                                            quoteClient = copierApiTrader.quoteClient;
+                                        }
+                                        if (ObjectUtil.isEmpty(quoteClient))return;
+                                        Order[] orders1 = quoteClient.GetOpenedOrders();
+                                        String mapKey = slaveTrader.getId() + "#" + slaveTrader.getAccount();
+                                        List<Integer> listOrder = Arrays.stream(orders).toList().stream().map(order -> order.Ticket).toList();
+                                        Order[] orderMaster = leaderApiTrader.quoteClient.ClosedOrders;
+                                        Arrays.stream(orders1).toList().forEach(order1 -> {
+                                            log.info(slaveTrader.getAccount()+"订单:"+order1.Ticket);
+                                            //查看是否在订单关系列表里 并且主账号不包含该订单
+                                            if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(order1.MagicNumber)))&& !listOrder.contains(order1.MagicNumber)){
+                                                log.info(slaveTrader.getAccount()+"订单:"+order1.Ticket+"存在");
+                                                Optional<Order> first = Arrays.asList(orderMaster).stream().filter(om -> om.Ticket == order1.MagicNumber).findFirst();
+                                                if (first.isPresent()){
+                                                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, first.get(), 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
+                                                    //删除漏单数据
+                                                    //删除跟单redis记录
+                                                    redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(order1.MagicNumber));
+                                                    //创建漏平数据
+                                                    redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(order1.MagicNumber),eaOrderInfo);
+                                                }else {
+                                                    log.info(slaveTrader.getAccount()+"暂无订单"+order1.Ticket);
+                                                }
+                                            }
                                         });
                                     });
                                 });
@@ -293,7 +326,7 @@ public class KafkaMessageConsumer {
 
 
     }
-    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate,FollowTraderEntity leader) {
+    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, Order order, double equity, String currency, LocalDateTime detectedDate,FollowTraderEntity leader) {
 
         // 并且要给EaOrderInfo添加额外的信息：喊单者id+喊单者账号+喊单者服务器
         // #84 喊单者发送订单前需要处理前后缀

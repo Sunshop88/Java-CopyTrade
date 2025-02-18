@@ -82,6 +82,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity slave : slaves) {
             ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
+                    if (ObjectUtil.isNotEmpty(copier4ApiTraderConcurrentHashMap.get(slave.getId().toString()))){
+                        return;
+                    }
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {

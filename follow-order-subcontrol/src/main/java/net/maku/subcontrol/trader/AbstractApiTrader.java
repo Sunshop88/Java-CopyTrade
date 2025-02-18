@@ -104,11 +104,6 @@ public abstract class AbstractApiTrader extends ApiTrader {
             this.orderClient = new OrderClient(quoteClient);
         }
         boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
-        if (isLeader){
-            //检查是否存在订单变化
-            log.info("重连后漏单检查"+trader.getId());
-            kafkaTemplate.send("order-repair",String.valueOf(trader.getId()));
-        }
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听
