@@ -385,9 +385,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         }
         //判断主表如果保存失败，则返回false
         Long result = addSlave(followAddSalveVo);
-        if (ObjectUtil.isEmpty(result)) {
+        if (ObjectUtil.isEmpty(result) || result.intValue()==0) {
             return null;
         }
+
         //处理副表数据
         vo.setId(result.intValue());
         Integer id = followService.add(vo);
