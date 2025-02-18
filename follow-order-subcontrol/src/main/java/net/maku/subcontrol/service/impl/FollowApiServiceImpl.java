@@ -86,6 +86,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
+
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
             if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
                 followTraderService.removeById(followTraderVO.getId());
@@ -313,6 +314,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertSource(SourceInsertVO vo) {
+        String s = AesUtils.aesEncryptStr(vo.getPassword());
+        vo.setPassword(s);
         //参数转换，转成主表数据
         FollowTraderVO followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
@@ -324,10 +327,11 @@ public class FollowApiServiceImpl implements FollowApiService {
         followTrader.setPlatform(platform.getServer());
         //判断主表如果保存失败，则返回false
         Long result = save(followTrader);
-        if (ObjectUtil.isEmpty(result)) {
+        if (ObjectUtil.isEmpty(result)  || result.intValue()==0) {
             return null;
         }
         //保存从表数据
+
         vo.setId(result.intValue());
         Integer id = sourceService.add(vo);
         return id;
@@ -338,6 +342,13 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateSource(SourceUpdateVO vo) {
         SourceEntity source = sourceService.getEntityById(vo.getId());
+        if(ObjectUtil.isNotEmpty(vo.getPassword())) {
+            //重连
+            if(ObjectUtil.isNotEmpty(vo.getPassword())) {
+                String s = AesUtils.aesEncryptStr(vo.getPassword());
+                vo.setPassword(s);
+            }
+        }
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
         FollowTraderEntity one = followTraderService.lambdaQuery().eq(FollowTraderEntity::getAccount, source.getUser()).eq(FollowTraderEntity::getServerId, vo.getServerId()).eq(FollowTraderEntity::getPlatformId, source.getPlatformId()).one();
@@ -345,7 +356,12 @@ public class FollowApiServiceImpl implements FollowApiService {
         followTrader.setId(one.getId());
         followTraderService.updateById(followTrader);
         //重连
-        reconnect(one.getId().toString());
+        if(ObjectUtil.isNotEmpty(vo.getPassword())) {
+            String s = AesUtils.aesEncryptStr(vo.getPassword());
+            vo.setPassword(s);
+            followTrader.setPassword(vo.getPassword());
+            reconnect(one.getId().toString(),followTrader);
+        }
         //保存从表数据
         sourceService.edit(vo);
         return true;
@@ -503,7 +519,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 orderVo.setClosePrice(followOrderDetailEntity.getClosePrice());
                 orderVo.setSwap(followOrderDetailEntity.getSwap());
                 orderVo.setCommission(followOrderDetailEntity.getCommission());
-
+                orderVo.setLots(followOrderDetailEntity.getSize());
                 orderVo.setProfit(followOrderDetailEntity.getProfit());
                 orderVo.setTicket(followOrderDetailEntity.getOrderNo());
                 if (followOrderDetailEntity.getType().equals(Op.Buy.getValue())) {
@@ -559,7 +575,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                         orderVo.setClosePrice(new BigDecimal(order.ClosePrice));
                         orderVo.setSwap(new BigDecimal(order.Swap));
                         orderVo.setCommission(new BigDecimal(order.Commission));
-
+                        orderVo.setLots(new BigDecimal(order.Lots));
                         orderVo.setProfit(new BigDecimal(order.Profit));
                         orderVo.setTicket(order.Ticket);
                         if (order.Type.equals(Op.Buy) ){
@@ -576,11 +592,12 @@ public class FollowApiServiceImpl implements FollowApiService {
                         orderVo.setMagicNumber(order.MagicNumber);
                         orderVo.setComment(order.Comment == null ? "" : order.Comment);
                         orderVo.setLogin(Long.parseLong(trader.getAccount()));
-                     //   String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
-                     //   orderVo.setPlaceType(desc);
+                      /*  String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
+                        orderVo.setPlaceType();*/
                         orderVos.add(orderVo);
                     });
-
+                    orderList.setTotalCount(Long.valueOf(orders.length));
+                    orderList.setOrders(orderVos);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -752,7 +769,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 followTraderVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                 followTraderService.updateById(followTraderVO);
                 if(followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
-                    reconnect(followTraderVO.getId().toString());
+                    reconnect(followTraderVO.getId().toString(),null);
                 }else{
                     reconnectSlave(followTraderVO.getId().toString());
                 }
@@ -1196,10 +1213,13 @@ public class FollowApiServiceImpl implements FollowApiService {
             throw new ServerException("账号id不能为空");
         }
     }
-    private void reconnect(String traderId) {
+    private void reconnect(String traderId,FollowTraderEntity followTraderEntity) {
         try{
             leaderApiTradersAdmin.removeTrader(traderId);
-            FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+            if(followTraderEntity==null){
+                 followTraderEntity = followTraderService.getById(traderId);
+            }
+
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
             if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                 followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
