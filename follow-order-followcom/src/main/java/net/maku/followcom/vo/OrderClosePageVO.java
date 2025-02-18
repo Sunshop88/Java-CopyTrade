@@ -66,6 +66,6 @@ public class OrderClosePageVO implements Serializable {
         @JsonProperty(value = "Profit")
         private BigDecimal profit;
         @JsonProperty(value = "PlaceType")
-        private Integer placeType;
+        private String placeType;
     }
 }

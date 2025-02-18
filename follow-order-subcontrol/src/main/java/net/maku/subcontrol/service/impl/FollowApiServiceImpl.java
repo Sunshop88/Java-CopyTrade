@@ -479,7 +479,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         List<OrderClosePageVO.OrderVo> orderVos =new ArrayList<>();
         records.forEach(followOrderDetailEntity->{
             OrderClosePageVO.OrderVo orderVo=new OrderClosePageVO.OrderVo();
-            orderVo.setId( followOrderDetailEntity.getId() );
+            orderVo.setId(followOrderDetailEntity.getTraderId() );
             if ( followOrderDetailEntity.getOpenTime() != null ) {
                 orderVo.setOpenTime( Date.from( followOrderDetailEntity.getOpenTime().toInstant( ZoneOffset.UTC ) ) );
             }
@@ -511,8 +511,8 @@ public class FollowApiServiceImpl implements FollowApiService {
             orderVo.setMagicNumber(followOrderDetailEntity.getMagical());
             orderVo.setComment(followOrderDetailEntity.getComment()==null?"":followOrderDetailEntity.getComment());
             orderVo.setLogin(Long.parseLong(followOrderDetailEntity.getAccount()));
-           // PlacedTypeEnum
-            orderVo.setPlaceType(followOrderDetailEntity.getPlacedType());
+            String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
+            orderVo.setPlaceType(desc);
             orderVos.add(orderVo);
         });
 

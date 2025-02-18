@@ -27,6 +27,43 @@ public enum PlacedTypeEnum {
         this.code = code;
         this.description = description;
     }
+
+    public static String getDesc(Integer code) {
+        String val = CLIENT.description;
+        switch (code) {
+            case 0:
+                val = CLIENT.description;
+                break;
+            case 1:
+                val = DEALER.description;
+                break;
+            case 2:
+                val = SIGNAL.description;
+                break;
+            case 3:
+                val = GATEWAY.description;
+                break;
+            case 4:
+                val = MOBILE.description;
+                break;
+            case 5:
+                val = WEB.description;
+                break;
+            case 6:
+                val = API.description;
+                break;
+            case 7:
+                val = EXPERT.description;
+                break;
+            case 8:
+                val = DEFAULT.description;
+                break;
+            default:
+                val = DEFAULT.description;
+                break;
+        }
+        return val;
+    }
     public static Integer getVal(Integer apiCode) {
         Integer val = CLIENT.code;
         switch (apiCode) {
@@ -64,40 +101,5 @@ public enum PlacedTypeEnum {
         return val;
     }
 
-    /*public static String getDesc(Integer code) {
-        String val = CLIENT.description;
-        switch (code) {
-            case 0:
-                val = CLIENT.description;
-                break;
-            case 1:
-                val = EXPERT.code;
-                break;
-            case 2:
-                val = DEALER.code;
-                break;
-            case 3:
-                val = SIGNAL.code;
-                break;
-            case 4:
-                val = GATEWAY.code;
-                break;
-            case 5:
-                val = MOBILE.code;
-                break;
-            case 6:
-                val = WEB.code;
-                break;
-            case 7:
-                val = API.code;
-                break;
-            case 8:
-                val = DEFAULT.code;
-                break;
-            default:
-                val = DEFAULT.code;
-                break;
-        }
-        return val;
-    }*/
+
 }
