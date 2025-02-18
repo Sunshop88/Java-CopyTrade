@@ -118,7 +118,7 @@ public class MessagesServiceImpl implements MessagesService {
         return new String(Base64.encodeBase64(signData));
     }
     public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
-    //    ThreadPoolUtils.getExecutor().execute(() -> {
+       ThreadPoolUtils.getExecutor().execute(() -> {
           /*  try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -197,10 +197,10 @@ public class MessagesServiceImpl implements MessagesService {
                 redissonLockUtil.unlock(key);
             }
 
-      //  });
+        });
     }
     public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
-      //  ThreadPoolUtils.getExecutor().execute(() -> {
+        ThreadPoolUtils.getExecutor().execute(() -> {
             boolean existsInActive =true;
             if(quoteClient!=null){
                 existsInActive= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
@@ -293,7 +293,7 @@ public class MessagesServiceImpl implements MessagesService {
 
                 }
             }
-       // });
+       });
     }
     /**
      * 发送消息
