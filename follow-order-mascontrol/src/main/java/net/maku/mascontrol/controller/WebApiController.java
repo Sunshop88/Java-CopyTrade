@@ -167,7 +167,7 @@ public class WebApiController {
 
     @GetMapping("/symbolparams")
     @Operation(summary = "品种规格")
-    public Result<String> symbolParams(@RequestParam("AlientId") Integer clientId, @RequestParam("AccountId") Long accountId, @RequestParam("AccountType") Integer accountType, HttpServletRequest req) {
+    public Result<String> symbolParams(@RequestParam("ClientId") Integer clientId, @RequestParam("AccountId") Long accountId, @RequestParam("AccountType") Integer accountType, HttpServletRequest req) {
         String host = getServerIp(clientId);
         HashMap<String, Object> map = new HashMap<>();
         map.put("accountId",accountId);
