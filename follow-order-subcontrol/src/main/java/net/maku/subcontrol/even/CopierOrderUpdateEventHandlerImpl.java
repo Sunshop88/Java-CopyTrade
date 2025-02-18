@@ -69,7 +69,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             Order order = orderUpdateEventArgs.Order;
             FollowTraderEntity follow = copier4ApiTrader.getTrader();
             FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
-            FollowTraderEntity master = followTraderService.getById(subscribeEntity.getMasterId());
+            FollowTraderEntity master = followTraderService.getFollowById(subscribeEntity.getMasterId());
             List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
