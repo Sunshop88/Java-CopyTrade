@@ -83,6 +83,13 @@ public class KafkaMessageConsumer {
                         log.info("消费异常");
                     }
                 }
+                //漏单检查
+                FollowTraderEntity copier = orderResultEvent.getCopier();
+                FollowTraderEntity master = followTraderService.getFollowById(orderResultEvent.getOrderInfo().getMasterId());
+                FollowTraderVO vo = new FollowTraderVO();
+                vo.setId(master.getId());
+                vo.setAccount(master.getAccount());
+                repair(copier,vo,null);
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -137,6 +144,12 @@ public class KafkaMessageConsumer {
                 //删除redis中的缓存
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
+                //漏单检查
+                FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
+                FollowTraderVO vo = new FollowTraderVO();
+                vo.setId(master.getId());
+                vo.setAccount(master.getAccount());
+                repair(followTraderEntity,vo,null);
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
