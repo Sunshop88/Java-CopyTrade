@@ -17,11 +17,11 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AccountModelVO  implements Serializable {
-    //客户端Id
+    //账号id
     @JsonProperty(value = "Id")
     @NotNull(message = "账号id不能为空")
     private Long id;
-    //客户端Id
+    //账号类型
     @JsonProperty(value = "Type")
     @NotNull(message = "账号类型不能为空")
     @Min(value = 0, message = "账号类型只能喊单或者跟单")

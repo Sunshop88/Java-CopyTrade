@@ -67,8 +67,10 @@ public class ResponseFilter implements Filter {
                         newJson.put("data", jsonObject);
 
                     }else if(uri.startsWith("/api/v1/openedorders")){
-                        OpenOrderInfoVO data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
-                        newJson.put("data", data);
+                       // OpenOrderInfoVO data = JSONObject.parseObject(oldJson.getString("data"), OpenOrderInfoVO.class);
+                      //  JSONObject jsonObject = JSONArray.parseObject(oldJson.getString("data"));
+                        JSONArray objects = JSONArray.parseArray(oldJson.getString("data"));
+                        newJson.put("data", objects);
                     }else if (uri.startsWith("/api/v1/symbolparams")) {
                         String data1 = oldJson.getString("data");
                         List<ExternalSysmbolSpecificationVO> data = JSON.parseArray(data1 , ExternalSysmbolSpecificationVO.class);

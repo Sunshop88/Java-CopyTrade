@@ -358,7 +358,7 @@ public class PushRedisTask {
                                                   //  accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
                                                 }
                                                 orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
-                                                  orderCacheVO.setPlaceType("Client");
+                                                  orderCacheVO.setPlaceType(accountCache.getPlacedTypeString());
                                                 orderCaches.add(orderCacheVO);
                                                 accountCache.setLots(accountCache.getLots() + x.Lots);
                                                 switch (a) {

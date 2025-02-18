@@ -1,6 +1,7 @@
 package net.maku.subcontrol.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -37,7 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -447,77 +450,141 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     public OrderClosePageVO orderCloseList(OrderHistoryVO vo) {
         Page<FollowOrderDetailEntity> page = new Page<>(vo.getPageNumber(), vo.getPageSize());
-        LambdaQueryWrapper<FollowOrderDetailEntity> query = new LambdaQueryWrapper<>();
-        query.isNotNull(FollowOrderDetailEntity::getCloseId);
-      //  query.eq(ObjectUtil.isNotEmpty(vo.getAccount()),FollowOrderDetailEntity::getAccount, vo.getAccount().);
-        query.in(ObjectUtil.isNotEmpty(vo.getPlaceType()),FollowOrderDetailEntity::getPlacedType, vo.getPlaceType());
-        query.in(ObjectUtil.isNotEmpty(vo.getType()),FollowOrderDetailEntity::getType, vo.getType());
-        query.ge(ObjectUtil.isNotEmpty(vo.getCloseFrom()),FollowOrderDetailEntity::getCloseTime,DateUtils.format(vo.getCloseFrom(),DateUtils.DATE_TIME_PATTERN));
-        query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()),FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseTo(),DateUtils.DATE_TIME_PATTERN));
-        query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenFrom(),DateUtils.DATE_TIME_PATTERN));
-        query.le(ObjectUtil.isNotEmpty(vo.getOpenTo()),FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenTo(),DateUtils.DATE_TIME_PATTERN));
-        if(ObjectUtil.isNotEmpty(vo.getClientId())){
-            FollowVpsEntity vps = followVps.getById(vo.getClientId());
-            query.eq(ObjectUtil.isNotEmpty(vps),FollowOrderDetailEntity::getIpAddr,vps.getIpAddress());
+        OrderClosePageVO orderList =OrderClosePageVO.builder().totalCount(0l).build();
+        if(!vo.getIsFromServer()) {
+            LambdaQueryWrapper<FollowOrderDetailEntity> query = new LambdaQueryWrapper<>();
+            query.isNotNull(FollowOrderDetailEntity::getCloseId);
+            //  query.eq(ObjectUtil.isNotEmpty(vo.getAccount()),FollowOrderDetailEntity::getAccount, vo.getAccount().);
+            query.in(ObjectUtil.isNotEmpty(vo.getPlaceType()), FollowOrderDetailEntity::getPlacedType, vo.getPlaceType());
+            query.in(ObjectUtil.isNotEmpty(vo.getType()), FollowOrderDetailEntity::getType, vo.getType());
+            query.ge(ObjectUtil.isNotEmpty(vo.getCloseFrom()), FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseFrom(), DateUtils.DATE_TIME_PATTERN));
+            query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()), FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseTo(), DateUtils.DATE_TIME_PATTERN));
+            query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()), FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenFrom(), DateUtils.DATE_TIME_PATTERN));
+            query.le(ObjectUtil.isNotEmpty(vo.getOpenTo()), FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenTo(), DateUtils.DATE_TIME_PATTERN));
+            if (ObjectUtil.isNotEmpty(vo.getClientId())) {
+                FollowVpsEntity vps = followVps.getById(vo.getClientId());
+                query.eq(ObjectUtil.isNotEmpty(vps), FollowOrderDetailEntity::getIpAddr, vps.getIpAddress());
+            }
+            if (ObjectUtil.isNotEmpty(vo.getAccount())) {
+                List<Long> traderIds = new ArrayList<>();
+                List<Integer> types = vo.getAccount().stream().map(AccountModelVO::getType).collect(Collectors.toList());
+                if (ObjectUtil.isNotEmpty(types)) {
+                    List<FollowTraderEntity> ls = followTraderService.lambdaQuery().in(FollowTraderEntity::getType, types).list();
+                    List<Long> ids = ls.stream().map(FollowTraderEntity::getId).collect(Collectors.toList());
+                    traderIds.addAll(ids);
+                }
+                List<Long> aids = vo.getAccount().stream().map(AccountModelVO::getId).collect(Collectors.toList());
+                if (ObjectUtil.isNotEmpty(aids)) {
+                    traderIds.addAll(aids);
+                }
+                query.in(ObjectUtil.isNotEmpty(traderIds), FollowOrderDetailEntity::getTraderId, traderIds);
+
+            }
+            Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, query);
+            List<FollowOrderDetailEntity> records = pageOrder.getRecords();
+            List<OrderClosePageVO.OrderVo> orderVos = new ArrayList<>();
+            records.forEach(followOrderDetailEntity -> {
+                OrderClosePageVO.OrderVo orderVo = new OrderClosePageVO.OrderVo();
+                orderVo.setId(followOrderDetailEntity.getTraderId());
+                if (followOrderDetailEntity.getOpenTime() != null) {
+                    orderVo.setOpenTime(Date.from(followOrderDetailEntity.getOpenTime().toInstant(ZoneOffset.UTC)));
+                }
+                if (followOrderDetailEntity.getCloseTime() != null) {
+                    orderVo.setCloseTime(Date.from(followOrderDetailEntity.getCloseTime().toInstant(ZoneOffset.UTC)));
+                }
+                if (followOrderDetailEntity.getType() != null) {
+                    orderVo.setType(String.valueOf(followOrderDetailEntity.getType()));
+                }
+                orderVo.setSymbol(followOrderDetailEntity.getSymbol());
+                orderVo.setOpenPrice(followOrderDetailEntity.getOpenPrice());
+                orderVo.setClosePrice(followOrderDetailEntity.getClosePrice());
+                orderVo.setSwap(followOrderDetailEntity.getSwap());
+                orderVo.setCommission(followOrderDetailEntity.getCommission());
+
+                orderVo.setProfit(followOrderDetailEntity.getProfit());
+                orderVo.setTicket(followOrderDetailEntity.getOrderNo());
+                if (followOrderDetailEntity.getType().equals(Op.Buy.getValue())) {
+                    orderVo.setType("Buy");
+                } else if (followOrderDetailEntity.getType().equals(Op.Sell.getValue())) {
+                    orderVo.setType("Sell");
+                } else if (followOrderDetailEntity.getType().equals(Op.Balance.getValue())) {
+                    orderVo.setType("Balance");
+                } else if (followOrderDetailEntity.getType().equals(Op.Credit.getValue())) {
+                    orderVo.setType("Credit");
+                }
+                orderVo.setStopLoss(followOrderDetailEntity.getSl());
+                orderVo.setTakeProfit(followOrderDetailEntity.getTp());
+                orderVo.setMagicNumber(followOrderDetailEntity.getMagical());
+                orderVo.setComment(followOrderDetailEntity.getComment() == null ? "" : followOrderDetailEntity.getComment());
+                orderVo.setLogin(Long.parseLong(followOrderDetailEntity.getAccount()));
+                String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
+                orderVo.setPlaceType(desc);
+                orderVos.add(orderVo);
+            });
+            orderList.setTotalCount(pageOrder.getTotal());
+            orderList.setOrders(orderVos);
+        }else{
+            QuoteClient quoteClient = null;
+            List<AccountModelVO> accounts = vo.getAccount();
+            if(accounts!=null && accounts.size()>0){
+                AccountModelVO accountModelVO = accounts.get(0);
+                FollowTraderEntity trader = followTraderService.getById(accountModelVO.getId());
+                quoteClient = getQuoteClient(accountModelVO.getId(), trader, quoteClient);
+                Date start = DateUtils.parse("2000-01-01", DateUtils.DATE_PATTERN);
+                try {
+                    Order[] orders = quoteClient.DownloadOrderHistory(DateUtil.toLocalDateTime(start), LocalDateTime.now());
+                    List<Order> collect = Arrays.stream(orders).skip((vo.getPageNumber() - 1) * vo.getPageSize()).limit(vo.getPageSize()).collect(Collectors.toList());
+                    collect.forEach(order -> {
+                        OrderClosePageVO.OrderVo orderVo = new OrderClosePageVO.OrderVo();
+                        orderVo.setId(trader.getId());
+                        ZoneId zoneId = ZoneId.systemDefault();
+                        LocalDateTime localDateTime = order.OpenTime;
+                        ZonedDateTime zdt = localDateTime.atZone(zoneId);
+                        Date date = Date.from(zdt.toInstant());
+                        /*orderVo.setOpenTime(;
+                        orderVo.set
+                        if (followOrderDetailEntity.getOpenTime() != null) {
+                            orderVo.setOpenTime(Date.from(followOrderDetailEntity.getOpenTime().toInstant(ZoneOffset.UTC)));
+                        }
+                        if (followOrderDetailEntity.getCloseTime() != null) {
+                            orderVo.setCloseTime(Date.from(followOrderDetailEntity.getCloseTime().toInstant(ZoneOffset.UTC)));
+                        }
+                        if (followOrderDetailEntity.getType() != null) {
+                            orderVo.setType(String.valueOf(followOrderDetailEntity.getType()));
+                        }
+                        orderVo.setSymbol(followOrderDetailEntity.getSymbol());
+                        orderVo.setOpenPrice(followOrderDetailEntity.getOpenPrice());
+                        orderVo.setClosePrice(followOrderDetailEntity.getClosePrice());
+                        orderVo.setSwap(followOrderDetailEntity.getSwap());
+                        orderVo.setCommission(followOrderDetailEntity.getCommission());
+
+                        orderVo.setProfit(followOrderDetailEntity.getProfit());
+                        orderVo.setTicket(followOrderDetailEntity.getOrderNo());
+                        if (followOrderDetailEntity.getType().equals(Op.Buy.getValue())) {
+                            orderVo.setType("Buy");
+                        } else if (followOrderDetailEntity.getType().equals(Op.Sell.getValue())) {
+                            orderVo.setType("Sell");
+                        } else if (followOrderDetailEntity.getType().equals(Op.Balance.getValue())) {
+                            orderVo.setType("Balance");
+                        } else if (followOrderDetailEntity.getType().equals(Op.Credit.getValue())) {
+                            orderVo.setType("Credit");
+                        }
+                        orderVo.setStopLoss(followOrderDetailEntity.getSl());
+                        orderVo.setTakeProfit(followOrderDetailEntity.getTp());
+                        orderVo.setMagicNumber(followOrderDetailEntity.getMagical());
+                        orderVo.setComment(followOrderDetailEntity.getComment() == null ? "" : followOrderDetailEntity.getComment());
+                        orderVo.setLogin(Long.parseLong(followOrderDetailEntity.getAccount()));
+                        String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
+                        orderVo.setPlaceType(desc);
+                        orderVos.add(orderVo);*/
+                    });
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+          
         }
-        if(ObjectUtil.isNotEmpty(vo.getAccount())){
-            List<Long> traderIds =new ArrayList<>();
-            List<Integer> types = vo.getAccount().stream().map(AccountModelVO::getType).collect(Collectors.toList());
-            if(ObjectUtil.isNotEmpty(types)){
-                List<FollowTraderEntity> ls = followTraderService.lambdaQuery().in(FollowTraderEntity::getType, types).list();
-                List<Long> ids = ls.stream().map(FollowTraderEntity::getId).collect(Collectors.toList());
-                traderIds.addAll(ids);
-            }
-            List<Long> aids = vo.getAccount().stream().map(AccountModelVO::getId).collect(Collectors.toList());
-            if(ObjectUtil.isNotEmpty(aids)){
-                traderIds.addAll(aids);
-            }
-            query.in(ObjectUtil.isNotEmpty(traderIds),FollowOrderDetailEntity::getTraderId,traderIds);
-
-        }
-        Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, query);
-        List<FollowOrderDetailEntity> records = pageOrder.getRecords();
-        List<OrderClosePageVO.OrderVo> orderVos =new ArrayList<>();
-        records.forEach(followOrderDetailEntity->{
-            OrderClosePageVO.OrderVo orderVo=new OrderClosePageVO.OrderVo();
-            orderVo.setId(followOrderDetailEntity.getTraderId() );
-            if ( followOrderDetailEntity.getOpenTime() != null ) {
-                orderVo.setOpenTime( Date.from( followOrderDetailEntity.getOpenTime().toInstant( ZoneOffset.UTC ) ) );
-            }
-            if ( followOrderDetailEntity.getCloseTime() != null ) {
-                orderVo.setCloseTime( Date.from( followOrderDetailEntity.getCloseTime().toInstant( ZoneOffset.UTC ) ) );
-            }
-            if ( followOrderDetailEntity.getType() != null ) {
-                orderVo.setType( String.valueOf( followOrderDetailEntity.getType() ) );
-            }
-            orderVo.setSymbol( followOrderDetailEntity.getSymbol() );
-            orderVo.setOpenPrice( followOrderDetailEntity.getOpenPrice() );
-            orderVo.setClosePrice( followOrderDetailEntity.getClosePrice() );
-            orderVo.setSwap( followOrderDetailEntity.getSwap() );
-            orderVo.setCommission( followOrderDetailEntity.getCommission() );
-
-            orderVo.setProfit( followOrderDetailEntity.getProfit() );
-            orderVo.setTicket(followOrderDetailEntity.getOrderNo());
-            if(followOrderDetailEntity.getType().equals(Op.Buy.getValue())){
-                orderVo.setType("Buy");
-            }else if(followOrderDetailEntity.getType().equals(Op.Sell.getValue())){
-                orderVo.setType("Sell");
-            }else if (followOrderDetailEntity.getType().equals(Op.Balance.getValue())){
-                orderVo.setType("Balance");
-            }else if (followOrderDetailEntity.getType().equals(Op.Credit.getValue())){
-                orderVo.setType("Credit");
-            }
-            orderVo.setStopLoss(followOrderDetailEntity.getSl());
-            orderVo.setTakeProfit(followOrderDetailEntity.getTp());
-            orderVo.setMagicNumber(followOrderDetailEntity.getMagical());
-            orderVo.setComment(followOrderDetailEntity.getComment()==null?"":followOrderDetailEntity.getComment());
-            orderVo.setLogin(Long.parseLong(followOrderDetailEntity.getAccount()));
-            String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
-            orderVo.setPlaceType(desc);
-            orderVos.add(orderVo);
-        });
-
-        OrderClosePageVO orderList = OrderClosePageVO.builder().totalCount(pageOrder.getTotal()).orders(orderVos).build();
         return orderList;
     }
 
@@ -529,7 +596,8 @@ public class FollowApiServiceImpl implements FollowApiService {
             FollowTraderEntity trader = followTraderService.getById(o.getId());
             quoteClient = getQuoteClient(o.getId(), trader, quoteClient);
             if(quoteClient!=null){
-                List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Profit>0&&(order.Type == Buy || order.Type == Sell)).collect(Collectors.toList());
+                List<Order> openedOrders = Arrays.stream(quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell ).collect(Collectors.toList());
+                log.info("进入持仓订单数量"+openedOrders.size());
                 if(openedOrders!=null && openedOrders.size()>0){
                     openedOrders.forEach(order->{
                         OpenOrderInfoVO infoVO = new OpenOrderInfoVO();
