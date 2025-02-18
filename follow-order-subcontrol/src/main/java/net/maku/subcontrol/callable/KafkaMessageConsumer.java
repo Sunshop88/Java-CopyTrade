@@ -86,10 +86,7 @@ public class KafkaMessageConsumer {
                 //漏单检查
                 FollowTraderEntity copier = orderResultEvent.getCopier();
                 FollowTraderEntity master = followTraderService.getFollowById(orderResultEvent.getOrderInfo().getMasterId());
-                FollowTraderVO vo = new FollowTraderVO();
-                vo.setId(master.getId());
-                vo.setAccount(master.getAccount());
-                repair(copier,vo,null);
+                repair(copier,master,null);
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -146,10 +143,7 @@ public class KafkaMessageConsumer {
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 //漏单检查
                 FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
-                FollowTraderVO vo = new FollowTraderVO();
-                vo.setId(master.getId());
-                vo.setAccount(master.getAccount());
-                repair(followTraderEntity,vo,null);
+                repair(followTraderEntity,master,null);
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -178,7 +172,8 @@ public class KafkaMessageConsumer {
                                     ThreadPoolUtils.getExecutor().execute(()->{
                                         FollowTraderEntity slaveTrader = followTraderService.getFollowById(o.getSlaveId());
                                         //检查redis漏单数据（掉线回补漏单机制）
-                                        FollowTraderVO master = followTraderService.get(leaderApiTrader.getTrader().getId());
+                                        FollowTraderEntity master =leaderApiTrader.getTrader();
+
                                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
                                         //漏单检查
                                         repair(slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
@@ -212,7 +207,7 @@ public class KafkaMessageConsumer {
     /**
      * 漏单回补机制
      * **/
-    public void repair(FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient){
+    public void repair(FollowTraderEntity follow, FollowTraderEntity master, QuoteClient quoteClient){
         //检查漏开记录
         String openKey = Constant.REPAIR_SEND + "：" + follow.getAccount();
         boolean lock = redissonLockUtil.lock(openKey, 30, -1, TimeUnit.SECONDS);

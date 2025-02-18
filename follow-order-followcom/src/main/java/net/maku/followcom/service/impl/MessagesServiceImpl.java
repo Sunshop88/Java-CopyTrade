@@ -117,7 +117,7 @@ public class MessagesServiceImpl implements MessagesService {
         byte[] signData = mac.doFinal(new byte[]{});
         return new String(Base64.encodeBase64(signData));
     }
-    public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderVO master){
+    public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow,FollowTraderEntity master){
        ThreadPoolUtils.getExecutor().execute(() -> {
           /*  try {
                 Thread.sleep(1000);
@@ -199,7 +199,7 @@ public class MessagesServiceImpl implements MessagesService {
 
         });
     }
-    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient ){
+    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderEntity master, QuoteClient quoteClient ){
         ThreadPoolUtils.getExecutor().execute(() -> {
             boolean existsInActive =true;
             if(quoteClient!=null){

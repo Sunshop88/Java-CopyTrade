@@ -238,7 +238,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),followTraderEntity);
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+vo.getAccount()+"#"+followTraderEntity.getAccount(),String.valueOf(order.Ticket),eaOrderInfo);
                             //发送漏单通知
-                            FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                            FollowTraderEntity master = followTraderService.getFollowById(eaOrderInfo.getMasterId());
                             messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
                         });
                     }

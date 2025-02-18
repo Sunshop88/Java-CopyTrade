@@ -66,7 +66,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             //创建平仓redis记录
             redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
             //发送漏单通知
-            FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
+            FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
             messagesService.isRepairClose(orderInfo,follow,master);
             //删除跟单redis记录
             redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString());
