@@ -343,7 +343,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         SourceEntity source = sourceService.getEntityById(vo.getId());
         if(ObjectUtil.isNotEmpty(vo.getPassword())) {
             String s = AesUtils.aesEncryptStr(vo.getPassword());
-            vo.setPassword(vo.getPassword());
+            vo.setPassword(s);
         }
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
