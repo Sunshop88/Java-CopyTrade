@@ -84,18 +84,8 @@ public class KafkaMessageConsumer {
                         log.info("消费异常");
                     }
                 }
-                //漏单检查
-                ThreadPoolUtils.getExecutor().execute(()-> {
-                    //确保主账号持仓写入
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    FollowTraderEntity copier = orderResultEvent.getCopier();
-                    FollowTraderEntity master = followTraderService.getFollowById(orderResultEvent.getOrderInfo().getMasterId());
-                    repair(copier, master, null);
-                });
+
+
             });
         });
         acknowledgment.acknowledge(); // 全部处理完成后提交偏移量
@@ -151,10 +141,10 @@ public class KafkaMessageConsumer {
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 //漏单检查
-                ThreadPoolUtils.getExecutor().execute(()-> {
+               /* ThreadPoolUtils.getExecutor().execute(()-> {
                     FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
                     repair(followTraderEntity,master,null);
-                });
+                });*/
 
             });
         });
@@ -424,7 +414,7 @@ public class KafkaMessageConsumer {
                 }else{
                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairCloseNewVOS));
                 }
-                log.info("漏平检查写入数据,跟单账号:{},数据：{}",follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
+                log.info("漏平补偿检查写入数据,跟单账号:{},数据：{}",follow.getAccount(),JSONObject.toJSONString(repairCloseNewVOS));
           }
         } catch (Exception e) {
             log.error("漏平检查写入异常"+e);
