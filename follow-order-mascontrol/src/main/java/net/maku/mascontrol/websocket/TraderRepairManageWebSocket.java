@@ -94,10 +94,6 @@ public class TraderRepairManageWebSocket {
         //查看当前用户拥有的vps
         List<VpsUserVO> vpsList = new ArrayList<>();
         if (!ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
-
-            if (ObjectUtil.isNotEmpty(redisUtil.get(Constant.SYSTEM_VPS_USER + userId))) {
-                vpsList = (List<VpsUserVO>) redisUtil.get(Constant.SYSTEM_VPS_USER + userId);
-            } else {
                 List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId).eq(FollowVpsUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
                 if(ObjectUtil.isNotEmpty(vpsUserEntityList)){
                     for (FollowVpsUserEntity followVpsUserEntity : vpsUserEntityList) {
@@ -109,7 +105,6 @@ public class TraderRepairManageWebSocket {
                 }
 
 
-            }
         }else{
             List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
             if(ObjectUtil.isNotEmpty(list)){
@@ -133,6 +128,7 @@ public class TraderRepairManageWebSocket {
             }
             followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list));
         }else {
+
             if(ObjectUtil.isEmpty(vpsList)){
                 followVpsEntityList=new ArrayList<>();
             }else{
