@@ -137,6 +137,7 @@ public class FollowTraderController {
             sourceInsertVO.setPassword(vo.getPassword());
             sourceInsertVO.setRemark(vo.getRemark());
             sourceInsertVO.setStatus(true);
+            sourceInsertVO.setId(followTraderVO.getId());
            sourceService.add(sourceInsertVO);
         } catch (Exception e) {
             log.error("保存失败" + e);

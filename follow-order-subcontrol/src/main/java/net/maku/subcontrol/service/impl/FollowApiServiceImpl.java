@@ -331,7 +331,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             return null;
         }
         //保存从表数据
-        vo.setId(result.intValue());
+        vo.setId(result);
         Integer id = sourceService.add(vo);
         return id;
 

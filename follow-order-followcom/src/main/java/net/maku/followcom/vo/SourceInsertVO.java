@@ -21,7 +21,7 @@ public class SourceInsertVO implements Serializable {
     //id
     @JsonProperty("Id")
    // @NotNull(message = "id")
-    private Integer id;
+    private Long id;
     //vps服务器id
     @JsonProperty("ClientId")
     @NotNull(message = "vps服务器不能为空")
