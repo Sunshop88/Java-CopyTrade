@@ -153,7 +153,7 @@ public class FollowTraderController {
         }
         Boolean reconnect = reconnect(vo.getId().toString());
         if (!reconnect){
-            throw new ServerException("请检查账号密码，稍后再试");
+            throw new ServerException("账号信息有误，登录失败！");
         }
         return Result.ok();
     }

@@ -1006,7 +1006,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 leaderApiTrader.startTrade();
             }
         }catch (RuntimeException e){
-            throw new ServerException("请检查账号密码，稍后再试");
+            throw new ServerException("账号信息有误，登录失败！");
         }
     }
 
@@ -1029,7 +1029,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
 
         } catch (RuntimeException e) {
-            throw new ServerException("请检查账号密码，稍后再试");
+            throw new ServerException("账号信息有误，登录失败！");
         }
     }
     private String generateCacheKey(Long slaveId, Long masterId) {
