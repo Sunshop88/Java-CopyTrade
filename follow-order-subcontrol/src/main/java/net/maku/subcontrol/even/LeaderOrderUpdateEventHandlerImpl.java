@@ -246,7 +246,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             if (ObjectUtil.isEmpty(copierApiTrader)) {
                                 log.info("开平重连" + slaveId);
                                 copierApiTradersAdmin.removeTrader(slaveId);
-                                copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                    copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                    copierApiTrader.startTrade();
+                                }
                             }
                             if (orderUpdateEventArgs.Action == PositionClose) {
                                 //跟单平仓
