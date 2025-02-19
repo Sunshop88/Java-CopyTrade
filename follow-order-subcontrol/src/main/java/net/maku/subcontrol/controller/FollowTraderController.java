@@ -100,12 +100,14 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
         //默认模板最新的模板id
+        long newId=0;
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
+            newId=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
@@ -126,6 +128,7 @@ public class FollowTraderController {
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
         } catch (Exception e) {
+            followTraderService.removeById(newId);
             log.error("保存失败" + e);
             if (e instanceof ServerException) {
                 throw e;

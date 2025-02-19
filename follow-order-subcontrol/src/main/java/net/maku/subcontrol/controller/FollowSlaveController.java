@@ -80,6 +80,7 @@ public class FollowSlaveController {
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
+        long newID = 0;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity) || !followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
@@ -119,7 +120,7 @@ public class FollowSlaveController {
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
-
+            newID=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
@@ -174,6 +175,7 @@ public class FollowSlaveController {
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);
+            followTraderService.removeById(newID);
             if (e instanceof ServerException) {
                 throw e;
             } else {
@@ -406,7 +408,7 @@ public class FollowSlaveController {
         return Result.ok(followPlatformService.updatePlatCache(id));
     }
 
-    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, online.mtapi.mt4.Order order, double equity, String currency, LocalDateTime detectedDate, FollowTraderEntity leader) {
+    protected EaOrderInfo send2Copiers(OrderChangeTypeEnum type, Order order, double equity, String currency, LocalDateTime detectedDate, FollowTraderEntity leader) {
 
         // 并且要给EaOrderInfo添加额外的信息：喊单者id+喊单者账号+喊单者服务器
         // #84 喊单者发送订单前需要处理前后缀
