@@ -432,8 +432,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         log.info("{}跟随模式{}",vo.getMode(),mode);
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
-        String pwd = StringUtils.isNotBlank(vo.getPassword()) ? AesUtils.aesEncryptStr(vo.getPassword()) : entity.getPassword();
-        followUpdateSalveVo.setPassword(pwd);
+        String s = AesUtils.aesEncryptStr(vo.getPassword());
+        vo.setPassword(s);
+        followUpdateSalveVo.setPassword(vo.getPassword());
         // 判断主表如果保存失败，则返回false
         if(vo.getPlacedType()!=null){
             Integer val = PlacedTypeEnum.getVal(vo.getPlacedType());
