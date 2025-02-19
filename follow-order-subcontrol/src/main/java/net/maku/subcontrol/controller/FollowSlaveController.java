@@ -232,7 +232,12 @@ public class FollowSlaveController {
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
             });
         } catch (Exception e) {
-            throw new ServerException("修改失败" + e);
+            if (e instanceof ServerException) {
+                throw e;
+            }else{
+                throw new ServerException("修改失败" + e);
+            }
+
         }
 
         return Result.ok();
@@ -385,7 +390,7 @@ public class FollowSlaveController {
             }
 
         } catch (RuntimeException e) {
-            throw new ServerException("请检查账号密码，稍后再试");
+            throw new ServerException("账号信息有误，登录失败！");
         }
     }
 
