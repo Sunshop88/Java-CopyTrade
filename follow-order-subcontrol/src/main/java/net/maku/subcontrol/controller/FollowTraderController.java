@@ -203,6 +203,12 @@ public class FollowTraderController {
                     cache.evict(cacheKey); // 移除指定缓存条目
                 }
 
+                //删除跟单对应主账号缓存
+                Cache cache1 = cacheManager.getCache("followSubOrderCache");
+                if (cache1 != null) {
+                    cache1.evict(o1.getMasterId()); // 移除指定缓存条目
+                }
+
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
         });

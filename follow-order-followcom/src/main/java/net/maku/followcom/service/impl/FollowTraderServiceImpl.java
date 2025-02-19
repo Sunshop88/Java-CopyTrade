@@ -560,7 +560,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderCloseEntity.setType(TraderCloseEnum.BUYANDSELL.getType());
             //全平
             orderActive = orderActiveInfoVOS.stream().sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
-            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
+            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
+                    .eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).isNotNull(FollowOrderDetailEntity::getOpenTime)
+                    .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue()).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
             // 提取 list 中的订单号
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
             log.info("持仓数量{},平台持仓数量{}", orderActive.size(), listOrderNos.size());
