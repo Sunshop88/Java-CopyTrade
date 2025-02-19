@@ -109,6 +109,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             log.info("重连后漏单检查"+trader.getId());
             kafkaTemplate.send("order-repair",String.valueOf(trader.getId()));
         }
+        kafkaTemplate.send("order-repair-listener",String.valueOf(trader.getId()));
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听
