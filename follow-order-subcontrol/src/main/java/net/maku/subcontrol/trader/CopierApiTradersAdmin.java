@@ -16,6 +16,7 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
@@ -27,6 +28,7 @@ import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderClient;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -58,7 +60,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
      * 显示mt4账户管理器是否启动完成
      */
     private Boolean launchOn = false;
-
+    private KafkaTemplate<Object, Object> kafkaTemplate = SpringContextUtils.getBean(KafkaTemplate.class);
     public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, RedisUtil redisUtil) {
         this.followTraderService = followTraderService;
         this.followBrokeServerService = followBrokeServerService;
@@ -314,6 +316,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 traderUpdateEn.setLoginNode(serverNode + ":" + serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
+                kafkaTemplate.send("order-repair-listener",String.valueOf(leader.getId()));
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
