@@ -23,6 +23,7 @@ import net.maku.framework.common.utils.DateUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.service.FollowSlaveService;
+import net.maku.subcontrol.task.PushRedisTask;
 import net.maku.subcontrol.trader.*;
 import net.maku.subcontrol.vo.RepairSendVO;
 import online.mtapi.mt4.*;
@@ -68,6 +69,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowSlaveService followSlaveService;
+    private final PushRedisTask pushRedisTask;
 
     /**
      * 喊单账号保存
@@ -109,6 +111,8 @@ public class FollowApiServiceImpl implements FollowApiService {
                 throw new ServerException(e.getMessage());
             }
         }
+        //触发redis
+        pushRedisTask.execute();
         return id;
     }
 
@@ -372,6 +376,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         delete(ids);
         //删除从表数据
         sourceService.del(vo.getId());
+        //触发redis
+        pushRedisTask.execute();
         return true;
     }
 
@@ -405,6 +411,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         //处理副表数据
         vo.setId(result);
         Integer id = followService.add(vo);
+        //触发redis
+        pushRedisTask.execute();
         return id;
     }
 
@@ -455,6 +463,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         delete(ids);
         //删除从表数据
         followService.del(vo.getId());
+        //触发redis
+        pushRedisTask.execute();
         return true;
     }
 
