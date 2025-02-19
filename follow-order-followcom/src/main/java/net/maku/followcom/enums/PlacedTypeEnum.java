@@ -27,6 +27,42 @@ public enum PlacedTypeEnum {
         this.code = code;
         this.description = description;
     }
+    public static Integer getApiCode(Integer code) {
+        Integer val = CLIENT.code;
+        switch (code) {
+            case 0:
+                val = CLIENT.apiCode;
+                break;
+            case 1:
+                val = DEALER.code;
+                break;
+            case 2:
+                val = SIGNAL.code;
+                break;
+            case 3:
+                val = GATEWAY.code;
+                break;
+            case 4:
+                val = MOBILE.code;
+                break;
+            case 5:
+                val = WEB.code;
+                break;
+            case 6:
+                val = API.code;
+                break;
+            case 7:
+                val = EXPERT.code;
+                break;
+            case 8:
+                val = DEFAULT.code;
+                break;
+            default:
+                val = DEFAULT.code;
+                break;
+        }
+        return val;
+    }
 
     public static String getDesc(Integer code) {
         String val = CLIENT.description;
@@ -100,6 +136,8 @@ public enum PlacedTypeEnum {
         }
         return val;
     }
+
+
 
 
 }

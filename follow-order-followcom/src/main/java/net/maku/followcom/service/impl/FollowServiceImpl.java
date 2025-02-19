@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowConvert;
 import net.maku.followcom.dao.FollowDao;
 import net.maku.followcom.entity.FollowEntity;
+import net.maku.followcom.enums.PlacedTypeEnum;
 import net.maku.followcom.service.FollowService;
 import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.followcom.vo.FollowInsertVO;
@@ -70,6 +71,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
     @Override
     public FollowInsertVO  convert(FollowTraderVO followTraderVO, FollowAddSalveVo vo) {
         FollowInsertVO followInsertVO=new FollowInsertVO();
+        PlacedTypeEnum.getApiCode(vo.getPlacedType());
         followInsertVO.setId(followTraderVO.getId());
         followInsertVO.setClientId(Integer.valueOf(followTraderVO.getServerId()));
         followInsertVO.setSourceId(vo.getTraderId());
