@@ -255,12 +255,14 @@ public class PushRedisTask {
                                 accountCache.setGroup(group);
                             }else{
                                 FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
-                                String desc = PlacedTypeEnum.getDesc(sb.getPlacedType() == null ? 0 : sb.getPlacedType());
-                                accountCache.setPlacedTypeString(desc);
-                                accountCache.setStatus(sb.getFollowStatus()==0?false:true);
                                 if(sb!=null) {
-                                    String group = sb.getMasterId() + " " + sb.getMasterAccount();
-                                    accountCache.setGroup(group);
+                                    String desc = PlacedTypeEnum.getDesc(sb.getPlacedType() == null ? 0 : sb.getPlacedType());
+                                    accountCache.setPlacedTypeString(desc);
+                                    accountCache.setStatus(sb.getFollowStatus() == 0 ? false : true);
+                                    if (sb != null) {
+                                        String group = sb.getMasterId() + " " + sb.getMasterAccount();
+                                        accountCache.setGroup(group);
+                                    }
                                 }
                             }
 
