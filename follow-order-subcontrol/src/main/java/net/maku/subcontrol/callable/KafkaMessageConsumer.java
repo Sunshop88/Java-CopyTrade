@@ -308,7 +308,6 @@ public class KafkaMessageConsumer {
                             try {
                                 LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(message);
                                 if (ObjectUtil.isNotEmpty(leaderApiTrader)){
-                                    Order[] orders = leaderApiTrader.quoteClient.GetOpenedOrders();
                                     //查看跟单账号
                                     List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(Long.valueOf(message));
                                     if (ObjectUtil.isNotEmpty(subscribeOrder)){
