@@ -266,26 +266,24 @@ public class KafkaMessageConsumer {
                                         //多余漏单删除
                                         Map<Object, Object> map = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slaveTrader.getPlatform() + "#" + leaderApiTrader.getTrader().getPlatform() + "#" + o.getSlaveAccount() + "#" + o.getMasterAccount());
                                         map.keySet().stream().forEach(omap->{
-                                            if (ObjectUtil.isNotEmpty(finalOrderMaster.contains(omap))){
+                                            Optional<Order> first = finalOrderMaster.stream().filter(of -> omap.equals(of.Ticket)).findFirst();
+                                            if (first.isPresent()){
                                                 log.info("存在多余漏单"+omap);
                                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(omap));
-                                                Optional<Order> first = finalOrderMaster.stream().filter(of -> omap.equals(of.Ticket)).findFirst();
-                                                if (first.isPresent()){
-                                                    //删除
-                                                    EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, first.get(), 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
-                                                    Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString());
-                                                    Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
-                                                    if (o1!=null && o1.toString().trim().length()>0){
-                                                        repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
-                                                    }
-                                                    repairInfoVOS.remove(eaOrderInfo.getTicket());
-                                                    if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                                                        redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),slaveTrader.getAccount().toString());
-                                                    }else{
-                                                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
-                                                    }
-                                                    log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), slaveTrader.getAccount(),eaOrderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+                                                //删除
+                                                EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, first.get(), 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
+                                                Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString());
+                                                Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                                                if (o1!=null && o1.toString().trim().length()>0){
+                                                    repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
                                                 }
+                                                repairInfoVOS.remove(eaOrderInfo.getTicket());
+                                                if(repairInfoVOS==null || repairInfoVOS.size()==0){
+                                                    redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),slaveTrader.getAccount().toString());
+                                                }else{
+                                                    redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
+                                                }
+                                                log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), slaveTrader.getAccount(),eaOrderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
                                             }
                                         });
                                     });
