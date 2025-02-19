@@ -172,6 +172,9 @@ public class FollowTraderController {
         if (!reconnect){
             throw new ServerException("请检查账号密码，稍后再试");
         }
+        //修改从库
+
+     //   sourceService.edit();
         return Result.ok();
     }
 
