@@ -267,6 +267,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 conCodeEnum = ConCodeEnum.SUCCESS;
                 log.info("重连后漏单检查"+leader.getId());
                 kafkaTemplate.send("order-repair",String.valueOf(leader.getId()));
+                kafkaTemplate.send("order-repair-listener",String.valueOf(leader.getId()));
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
