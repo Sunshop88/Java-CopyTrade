@@ -84,6 +84,18 @@ public class KafkaMessageConsumer {
                         log.info("消费异常");
                     }
                 }
+                //漏单检查
+                ThreadPoolUtils.getExecutor().execute(()-> {
+                    //确保主账号持仓写入
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    FollowTraderEntity copier = orderResultEvent.getCopier();
+                    FollowTraderEntity master = followTraderService.getFollowById(orderResultEvent.getOrderInfo().getMasterId());
+                    repair(copier, master, null);
+                });
 
 
             });
@@ -141,10 +153,15 @@ public class KafkaMessageConsumer {
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 //漏单检查
-               /* ThreadPoolUtils.getExecutor().execute(()-> {
+                ThreadPoolUtils.getExecutor().execute(()-> {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                     FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
                     repair(followTraderEntity,master,null);
-                });*/
+                });
 
             });
         });
@@ -322,7 +339,7 @@ public class KafkaMessageConsumer {
                        //跟单账号重连
                     }else {
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(Long.valueOf(message));
-                        FollowTraderEntity slaveTrader = copierApiTrader.getTrader();
+                        FollowTraderEntity slaveTrader = followTraderService.getFollowById(Long.valueOf(message));
                         FollowTraderSubscribeEntity subscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, slaveTrader.getId()));
                         FollowTraderEntity master = followTraderService.getFollowById(subscribeEntity.getMasterId());
                         repair(slaveTrader,master,ObjectUtil.isNotEmpty(copierApiTrader)?copierApiTrader.quoteClient:null);
@@ -351,38 +368,42 @@ public class KafkaMessageConsumer {
                     orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                 }
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
-                orderActiveInfoList.stream().forEach(orderInfo -> {
-                    AtomicBoolean existsInActive = new AtomicBoolean(true);
-                    if (quoteClient != null) {
-                        existsInActive.set(Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.MagicNumber + "")));
-                    } else {
-                        Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
-                        List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
-                        if (ObjectUtil.isNotEmpty(o2)) {
-                            followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+                if(orderActiveInfoList!=null && orderActiveInfoList.size()>0) {
+                    orderActiveInfoList.stream().forEach(orderInfo -> {
+                        AtomicBoolean existsInActive = new AtomicBoolean(true);
+                        if (quoteClient != null) {
+                            existsInActive.set(Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.MagicNumber + "")));
+                        } else {
+                            Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+                            List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
+                            if (ObjectUtil.isNotEmpty(o2)) {
+                                followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+                            }
+                            existsInActive.set(followActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.getMagicNumber().toString())));
                         }
-                        existsInActive.set(followActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.getMagicNumber().toString())));
-                    }
-                    if (!existsInActive.get()) {
-                        OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                        orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
-                        orderRepairInfoVO.setMasterLots(orderInfo.getLots());
-                        orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
-                        orderRepairInfoVO.setMasterProfit(orderInfo.getProfit());
-                        orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
-                        orderRepairInfoVO.setMasterTicket(orderInfo.getOrderNo());
-                        orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
-                        orderRepairInfoVO.setMasterType(orderInfo.getType());
-                        orderRepairInfoVO.setMasterId(master.getId());
-                        orderRepairInfoVO.setSlaveAccount(follow.getAccount());
-                        orderRepairInfoVO.setSlaveType(orderInfo.getType());
-                        orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
-                        orderRepairInfoVO.setSlaveId(follow.getId());
-                        repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
-                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),orderInfo.getOrderNo() ,JSONObject.toJSONString(repairInfoVOS));
-                    }
-                });
+                        if (!existsInActive.get()) {
+                            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
+                            orderRepairInfoVO.setMasterLots(orderInfo.getLots());
+                            orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
+                            orderRepairInfoVO.setMasterProfit(orderInfo.getProfit());
+                            orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
+                            orderRepairInfoVO.setMasterTicket(orderInfo.getOrderNo());
+                            orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
+                            orderRepairInfoVO.setMasterType(orderInfo.getType());
+                            orderRepairInfoVO.setMasterId(master.getId());
+                            orderRepairInfoVO.setSlaveAccount(follow.getAccount());
+                            orderRepairInfoVO.setSlaveType(orderInfo.getType());
+                            orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
+                            orderRepairInfoVO.setSlaveId(follow.getId());
+                            repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
+                            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
+                            log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                        }
+                    });
+                }else{
+                    redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
+                }
             }
             } catch (Exception e) {
                 log.error("漏单检查写入异常"+e);
