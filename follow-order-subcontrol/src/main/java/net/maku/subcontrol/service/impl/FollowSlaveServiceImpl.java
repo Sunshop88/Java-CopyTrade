@@ -73,6 +73,9 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())){
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
+                if (master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                    throw new ServerException("请开启补仓开关");
+                }
                 //下单
                  String key=  Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
                 Map<Object,Object> sendRepair=redisUtil.hGetAll(key);
@@ -131,6 +134,9 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())) {
                         FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                         FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
+                        if (master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                            throw new ServerException("请开启补仓开关");
+                        }
                         //获取redis内的下单信息
                         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString()))){
                             EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
