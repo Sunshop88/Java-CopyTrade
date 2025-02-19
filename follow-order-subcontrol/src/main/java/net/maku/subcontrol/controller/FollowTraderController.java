@@ -175,7 +175,7 @@ public class FollowTraderController {
         }
         //修改从库
         SourceUpdateVO sourceUpdateVO=new SourceUpdateVO();
-        sourceUpdateVO.setServerId(Integer.valueOf(vo.getServerId()));
+     //   sourceUpdateVO.setServerId(Integer.valueOf(vo.getServerId()));
         sourceUpdateVO.setPassword(vo.getPassword());
         sourceUpdateVO.setRemark(vo.getRemark());
         sourceUpdateVO.setStatus(vo.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()));
