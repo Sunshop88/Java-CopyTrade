@@ -433,6 +433,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         log.info("{}跟随模式{}",vo.getMode(),mode);
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
+        followUpdateSalveVo.setFollowOpen(vo.getOpenOrderStatus());
+        followUpdateSalveVo.setFollowClose(vo.getCloseOrderStatus());
+        followUpdateSalveVo.setFollowRep(vo.getRepairStatus());
         String s = AesUtils.aesEncryptStr(vo.getPassword());
         vo.setPassword(s);
         followUpdateSalveVo.setPassword(vo.getPassword());
