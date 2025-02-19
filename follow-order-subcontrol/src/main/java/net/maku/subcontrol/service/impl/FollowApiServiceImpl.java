@@ -331,7 +331,6 @@ public class FollowApiServiceImpl implements FollowApiService {
             return null;
         }
         //保存从表数据
-
         vo.setId(result.intValue());
         Integer id = sourceService.add(vo);
         return id;
@@ -409,7 +408,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         }
 
         //处理副表数据
-        vo.setId(result.intValue());
+        vo.setId(result);
         Integer id = followService.add(vo);
         return id;
     }

@@ -76,6 +76,8 @@ public class FollowTraderController {
     private final SpeedTestTask speedTestTask;
     private final RedisUtil redisUtil;
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
+    private final SourceService sourceService;
+    private final FollowService followService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -127,6 +129,15 @@ public class FollowTraderController {
                 leaderApiTrader.startTrade();
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
+            //保存从表数据
+            SourceInsertVO sourceInsertVO=new SourceInsertVO();
+            sourceInsertVO.setServerId(Integer.valueOf(convert.getServerId()));
+            sourceInsertVO.setPlatformId(convert.getPlatformId());
+            sourceInsertVO.setAccount(Long.valueOf(vo.getAccount()));
+            sourceInsertVO.setPassword(vo.getPassword());
+            sourceInsertVO.setRemark(vo.getRemark());
+            sourceInsertVO.setStatus(true);
+           sourceService.add(sourceInsertVO);
         } catch (Exception e) {
             log.error("保存失败" + e);
             if (e instanceof ServerException) {
@@ -135,6 +146,7 @@ public class FollowTraderController {
                 throw new ServerException(e.getMessage());
             }
         }
+
         return Result.ok();
     }
 
@@ -190,6 +202,9 @@ public class FollowTraderController {
             if (cache != null) {
                 cache.evict(o); // 移除指定缓存条目
             }
+            //删除从表
+            followService.del(o.getId());
+            sourceService.del(o.getId());
         });
 
         slaveList.forEach(o->{
@@ -222,6 +237,8 @@ public class FollowTraderController {
 
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
+
+
         return Result.ok();
     }
 

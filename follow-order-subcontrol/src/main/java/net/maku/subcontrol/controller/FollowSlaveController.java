@@ -76,6 +76,7 @@ public class FollowSlaveController {
     private final CacheManager cacheManager;
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     private final MessagesService messagesService;
+    private final FollowService followService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -132,6 +133,10 @@ public class FollowSlaveController {
             List<FollowTraderEntity> newList = new ArrayList<>();
             convert.setIsFirstSync(1);
             obtainOrderHistoryTask.update(convert,newList);
+            //保存从表数据
+            FollowInsertVO followInsertVO = followService.convert(followTraderVO, vo);
+            followService.add(followInsertVO);
+
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);

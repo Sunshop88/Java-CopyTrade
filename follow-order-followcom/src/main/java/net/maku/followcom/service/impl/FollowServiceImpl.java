@@ -8,7 +8,9 @@ import net.maku.followcom.convert.FollowConvert;
 import net.maku.followcom.dao.FollowDao;
 import net.maku.followcom.entity.FollowEntity;
 import net.maku.followcom.service.FollowService;
+import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.followcom.vo.FollowInsertVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.FollowUpdateVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -63,6 +65,28 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
         });
         save(follow);
         return follow.getId();
+    }
+
+    @Override
+    public FollowInsertVO  convert(FollowTraderVO followTraderVO, FollowAddSalveVo vo) {
+        FollowInsertVO followInsertVO=new FollowInsertVO();
+        followInsertVO.setId(followTraderVO.getId());
+        followInsertVO.setClientId(Integer.valueOf(followTraderVO.getServerId()));
+        followInsertVO.setSourceId(vo.getTraderId());
+        followInsertVO.setPlatformId(Integer.valueOf(followTraderVO.getPlatformId()));
+        followInsertVO.setUser(Long.valueOf(vo.getAccount()));
+        followInsertVO.setPassword(vo.getPassword());
+        followInsertVO.setComment(vo.getRemark());
+        followInsertVO.setDirection(vo.getFollowDirection());
+        followInsertVO.setType(4);
+        followInsertVO.setMode(vo.getFollowMode());
+        followInsertVO.setModeValue(vo.getFollowParam());
+        followInsertVO.setStatus(vo.getFollowStatus());
+        followInsertVO.setCloseOrderStatus(0);
+        followInsertVO.setOpenOrderStatus(0);
+        followInsertVO.setRepairStatus(0);
+        followInsertVO.setPlacedType(vo.getPlacedType());
+         return followInsertVO;
     }
 
     @Override
