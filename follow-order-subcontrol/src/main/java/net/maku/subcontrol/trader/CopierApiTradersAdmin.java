@@ -316,7 +316,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 traderUpdateEn.setLoginNode(serverNode + ":" + serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
-                kafkaTemplate.send("order-repair-listener",String.valueOf(leader.getId()));
+                kafkaTemplate.send("order-repair-listener",String.valueOf(copier.getId()));
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
