@@ -532,9 +532,9 @@ public class FollowTraderController {
             query.setTraderIdList(collectPlat);
         }
 
-        if (ObjectUtil.isEmpty(query.getStartTime()) || ObjectUtil.isEmpty(query.getEndTime())) {
-            return Result.error("开仓时间为必填项");
-        }
+//        if (ObjectUtil.isEmpty(query.getStartTime()) || ObjectUtil.isEmpty(query.getEndTime())) {
+//            return Result.error("开仓时间为必填项");
+//        }
         PageResult<FollowOrderDetailVO> followOrderDetailVOPageResult = followTraderService.orderSlipDetail(query);
         detailService.export(followOrderDetailVOPageResult.getList());
         return Result.ok();
