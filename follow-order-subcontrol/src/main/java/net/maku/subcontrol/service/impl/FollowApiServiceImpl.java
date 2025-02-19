@@ -384,8 +384,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertFollow(FollowInsertVO vo) {
-        String s = AesUtils.aesEncryptStr(vo.getPassword());
-        vo.setPassword(s);
+
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
 
@@ -410,6 +409,8 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         //处理副表数据
         vo.setId(result);
+        String s = AesUtils.aesEncryptStr(vo.getPassword());
+        vo.setPassword(s);
         Integer id = followService.add(vo);
         return id;
     }
