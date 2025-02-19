@@ -229,6 +229,9 @@ public class FollowSlaveController {
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(password).equals(vo.getPassword())){
                 reconnect(vo.getId().toString());
             }
+            //编辑从库
+            FollowUpdateVO followUpdateVO = followService.convert(vo);
+            followService.edit(followUpdateVO);
 
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());

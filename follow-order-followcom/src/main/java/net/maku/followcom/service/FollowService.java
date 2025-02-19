@@ -1,10 +1,7 @@
 package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowEntity;
-import net.maku.followcom.vo.FollowAddSalveVo;
-import net.maku.followcom.vo.FollowInsertVO;
-import net.maku.followcom.vo.FollowTraderVO;
-import net.maku.followcom.vo.FollowUpdateVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.mybatis.service.BaseService;
 
 /**
@@ -18,6 +15,7 @@ public interface FollowService extends BaseService<FollowEntity> {
     Integer add(FollowInsertVO followInsertVO);
 
     FollowInsertVO convert(FollowTraderVO followTraderVO, FollowAddSalveVo vo);
+    FollowUpdateVO convert(FollowUpdateSalveVo vo);
     void edit(FollowUpdateVO followUpdateVO);
     void edit(FollowEntity followEntity);
 

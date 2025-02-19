@@ -9,10 +9,7 @@ import net.maku.followcom.dao.FollowDao;
 import net.maku.followcom.entity.FollowEntity;
 import net.maku.followcom.enums.PlacedTypeEnum;
 import net.maku.followcom.service.FollowService;
-import net.maku.followcom.vo.FollowAddSalveVo;
-import net.maku.followcom.vo.FollowInsertVO;
-import net.maku.followcom.vo.FollowTraderVO;
-import net.maku.followcom.vo.FollowUpdateVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import org.springframework.stereotype.Service;
@@ -89,6 +86,22 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
         followInsertVO.setRepairStatus(0);
         followInsertVO.setPlacedType(vo.getPlacedType());
          return followInsertVO;
+    }
+
+    @Override
+    public FollowUpdateVO convert(FollowUpdateSalveVo vo) {
+        FollowUpdateVO followUpdateVO=new FollowUpdateVO();
+        PlacedTypeEnum.getApiCode(vo.getPlacedType());
+        followUpdateVO.setId(vo.getId());
+        followUpdateVO.setPassword(vo.getPassword());
+        followUpdateVO.setComment(vo.getRemark());
+        followUpdateVO.setDirection(vo.getFollowDirection());
+        followUpdateVO.setType(4);
+        followUpdateVO.setMode(vo.getFollowMode());
+        followUpdateVO.setModeValue(vo.getFollowParam());
+        followUpdateVO.setStatus(vo.getFollowStatus());
+        followUpdateVO.setPlacedType(vo.getPlacedType());
+        return followUpdateVO;
     }
 
     @Override
