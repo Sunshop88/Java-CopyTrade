@@ -388,7 +388,10 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
-
+        followAddSalveVo.setFollowOpen(vo.getOpenOrderStatus());
+        followAddSalveVo.setFollowClose(vo.getCloseOrderStatus());
+        followAddSalveVo.setFollowRep(vo.getRepairStatus());
+        followAddSalveVo.setRemainder(vo.getLotsRounding());
         //根据平台id查询平台
         FollowPlatformEntity platform = followPlatformService.getById(vo.getPlatformId());
         if (ObjectUtil.isEmpty(platform)) {
@@ -436,6 +439,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         followUpdateSalveVo.setFollowOpen(vo.getOpenOrderStatus());
         followUpdateSalveVo.setFollowClose(vo.getCloseOrderStatus());
         followUpdateSalveVo.setFollowRep(vo.getRepairStatus());
+        followUpdateSalveVo.setRemainder(vo.getLotsRounding());
         String s = AesUtils.aesEncryptStr(vo.getPassword());
         vo.setPassword(s);
         followUpdateSalveVo.setPassword(vo.getPassword());
