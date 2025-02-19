@@ -384,9 +384,10 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertFollow(FollowInsertVO vo) {
+        String s = AesUtils.aesEncryptStr(vo.getPassword());
+        vo.setPassword(s);
         //参数转化
         FollowAddSalveVo followAddSalveVo = FollowTraderConvert.INSTANCE.convert(vo);
-
 
         //根据平台id查询平台
         FollowPlatformEntity platform = followPlatformService.getById(vo.getPlatformId());
@@ -430,8 +431,8 @@ public class FollowApiServiceImpl implements FollowApiService {
         log.info("{}跟随模式{}",vo.getMode(),mode);
         followUpdateSalveVo.setFollowMode(mode);*/
         followUpdateSalveVo.setId(entity.getId());
-        String pwd = StringUtils.isNotBlank(vo.getPassword()) ? vo.getPassword() : entity.getPassword();
-        followUpdateSalveVo.setPassword(AesUtils.aesEncryptStr(pwd));
+        String pwd = StringUtils.isNotBlank(vo.getPassword()) ? AesUtils.aesEncryptStr(vo.getPassword()) : entity.getPassword();
+        followUpdateSalveVo.setPassword(pwd);
         // 判断主表如果保存失败，则返回false
         if(vo.getPlacedType()!=null){
             Integer val = PlacedTypeEnum.getVal(vo.getPlacedType());
@@ -442,7 +443,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             return false;
         }
         //重连
-       // reconnectSlave(vo.getId().toString());
+        reconnectSlave(vo.getId().toString());
         //处理副表数据
         followService.edit(vo);
         return true;
