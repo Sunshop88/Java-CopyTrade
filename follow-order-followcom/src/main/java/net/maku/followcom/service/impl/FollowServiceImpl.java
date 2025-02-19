@@ -36,6 +36,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public Integer add(FollowInsertVO followInsertVO) {
         FollowEntity follow = FollowConvert.INSTANCE.convert(followInsertVO);
+        follow.setPassword( AesUtils.aesEncryptStr(follow.getPassword()));
         //默认值赋值
         //暴力反射设置默认值
         Field[] declaredFields = follow.getClass().getDeclaredFields();

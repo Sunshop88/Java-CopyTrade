@@ -38,6 +38,6 @@ public interface SourceConvert {
         if (status == null) {
             return null;
         }
-        return status ? 0 : 1;
+        return status ? 1 : 0;
     }
 }

@@ -342,11 +342,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean updateSource(SourceUpdateVO vo) {
         SourceEntity source = sourceService.getEntityById(vo.getId());
         if(ObjectUtil.isNotEmpty(vo.getPassword())) {
-            //重连
-            if(ObjectUtil.isNotEmpty(vo.getPassword())) {
-                String s = AesUtils.aesEncryptStr(vo.getPassword());
-                vo.setPassword(s);
-            }
+            String s = AesUtils.aesEncryptStr(vo.getPassword());
+            vo.setPassword(vo.getPassword());
         }
         FollowTraderEntity followTrader = FollowTraderConvert.INSTANCE.convert(vo);
         followTrader.setFollowStatus(vo.getStatus() ? 1 : 0);
@@ -356,8 +353,6 @@ public class FollowApiServiceImpl implements FollowApiService {
         followTraderService.updateById(followTrader);
         //重连
         if(ObjectUtil.isNotEmpty(vo.getPassword())) {
-            String s = AesUtils.aesEncryptStr(vo.getPassword());
-            vo.setPassword(s);
             followTrader.setPassword(vo.getPassword());
             reconnect(one.getId().toString(),followTrader);
         }
@@ -409,8 +404,6 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         //处理副表数据
         vo.setId(result);
-        String s = AesUtils.aesEncryptStr(vo.getPassword());
-        vo.setPassword(s);
         Integer id = followService.add(vo);
         return id;
     }
