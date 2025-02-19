@@ -29,7 +29,7 @@ public class RepairOrderVO {
     private Boolean riskStatus;
     @JsonProperty(value = "EnforceStatus")
     private Boolean enforceStatus;
-    @JsonProperty(value = "SourceTicket ")
+    @JsonProperty(value = "SourceTicket")
     @Size(min = 1,message = "订单账号不能为空")
     private List<Integer> sourceTicket ;
 }

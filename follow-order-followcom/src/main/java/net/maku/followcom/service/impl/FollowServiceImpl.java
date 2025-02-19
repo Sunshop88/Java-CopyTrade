@@ -9,6 +9,7 @@ import net.maku.followcom.dao.FollowDao;
 import net.maku.followcom.entity.FollowEntity;
 import net.maku.followcom.enums.PlacedTypeEnum;
 import net.maku.followcom.service.FollowService;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -74,7 +75,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
         followInsertVO.setSourceId(vo.getTraderId());
         followInsertVO.setPlatformId(Integer.valueOf(followTraderVO.getPlatformId()));
         followInsertVO.setUser(Long.valueOf(vo.getAccount()));
-        followInsertVO.setPassword(vo.getPassword());
+        followInsertVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         followInsertVO.setComment(vo.getRemark());
         followInsertVO.setDirection(vo.getFollowDirection());
         followInsertVO.setType(4);
@@ -93,7 +94,7 @@ public class FollowServiceImpl extends BaseServiceImpl<FollowDao, FollowEntity> 
         FollowUpdateVO followUpdateVO=new FollowUpdateVO();
         PlacedTypeEnum.getApiCode(vo.getPlacedType());
         followUpdateVO.setId(vo.getId());
-        followUpdateVO.setPassword(vo.getPassword());
+        followUpdateVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         followUpdateVO.setComment(vo.getRemark());
         followUpdateVO.setDirection(vo.getFollowDirection());
         followUpdateVO.setType(4);
