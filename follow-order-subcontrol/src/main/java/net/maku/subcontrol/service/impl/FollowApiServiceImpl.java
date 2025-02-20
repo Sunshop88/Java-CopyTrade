@@ -69,7 +69,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowSlaveService followSlaveService;
-
+    private final PushRedisTask pushRedisTask;
 
     /**
      * 喊单账号保存
@@ -103,6 +103,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 leaderApiTrader.startTrade();
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
+           // pushRedisTask.execute(convert);
         } catch (Exception e) {
             log.error("保存失败{}" + e);
             if (e instanceof ServerException) {
@@ -341,6 +342,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         //保存从表数据
         vo.setId(result);
         Integer id = sourceService.add(vo);
+
         return id;
 
     }

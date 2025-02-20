@@ -71,13 +71,15 @@ public class PushRedisTask {
        }
 
    }*/
-/*  @Scheduled(cron = "0/5 * * * * ?")
+  @Scheduled(cron = "0/5 * * * * ?")
   public void execute(){
       execute(null);
-  }*/
-    @Scheduled(cron = "0/5 * * * * ?")
-    public void execute(){
-
+  }
+  //  @Scheduled(cron = "0/5 * * * * ?")
+    public void execute(Boolean mflag){
+                if (mflag!=null){
+                    log.info("动态触发");
+                }
 
                 //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                 //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
@@ -247,7 +249,8 @@ public class PushRedisTask {
 
             map.forEach((k, v) -> {
                 //多线程写
-                boolean flag = redisUtil.setnx(key + k, k, 2);
+             //   boolean flag = redisUtil.setnx(key + k, k, 2);
+                boolean flag = true;
                 StringBuilder sbb=new StringBuilder();
                 //设置成功过表示超过2秒内
                 if (flag) {
@@ -457,7 +460,7 @@ public class PushRedisTask {
                     }
                     //转出json格式
                     String json = convertJson(accounts);
-                   log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
+                    log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
 
                 }
