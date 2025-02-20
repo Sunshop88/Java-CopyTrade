@@ -88,7 +88,7 @@ public class KafkaMessageConsumer {
                 ThreadPoolUtils.getExecutor().execute(()-> {
                     //确保主账号持仓写入
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(5000);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -155,7 +155,7 @@ public class KafkaMessageConsumer {
                 //漏单检查
                 ThreadPoolUtils.getExecutor().execute(()-> {
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(5000);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
