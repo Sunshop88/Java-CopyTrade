@@ -211,7 +211,7 @@ public class TraderOrderActiveWebSocket {
                 closeRepairToExtract.forEach(o -> {
                     EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
                     //通过备注查询未平仓记录
-                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
+                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).isNull(FollowOrderDetailEntity::getCloseTime).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
                     if (ObjectUtil.isNotEmpty(detailServiceList)) {
                         for (FollowOrderDetailEntity detail : detailServiceList) {
                             OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
