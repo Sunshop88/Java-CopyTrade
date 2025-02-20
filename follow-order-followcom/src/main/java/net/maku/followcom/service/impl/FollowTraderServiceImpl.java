@@ -347,6 +347,17 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getFlag()) && query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())) {
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
+        //查看是否为平仓详情数据
+        if (ObjectUtil.isNotEmpty(query.getIsClose()) && query.getIsClose().equals(CloseOrOpenEnum.OPEN.getValue())) {
+            wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
+            // 使用 lambdaQuery 的嵌套条件来正确分组逻辑
+            wrapper.and(subWrapper ->
+                    subWrapper.isNotNull(FollowOrderDetailEntity::getCloseTime)
+                            .or()
+                            .isNotNull(FollowOrderDetailEntity::getRemark)
+            );
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             // 解析字符串为 LocalDateTime

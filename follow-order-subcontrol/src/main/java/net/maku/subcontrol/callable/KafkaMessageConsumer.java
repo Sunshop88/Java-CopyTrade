@@ -240,6 +240,7 @@ public class KafkaMessageConsumer {
                                                     //删除漏单数据
                                                     //删除跟单redis记录
                                                     redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(order1.MagicNumber));
+                                                    log.info("插入kafka"+order1.MagicNumber);
                                                     //创建漏平数据
                                                     redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(order1.MagicNumber),eaOrderInfo);
                                                     //发送漏单通知
