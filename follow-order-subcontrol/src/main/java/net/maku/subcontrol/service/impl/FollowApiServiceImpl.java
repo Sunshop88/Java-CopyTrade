@@ -292,7 +292,11 @@ public class FollowApiServiceImpl implements FollowApiService {
             followTraderSubscribeService.updateSubCache(vo.getId());
             //喊单关系缓存移除
             Cache cache = cacheManager.getCache("followSubOrderCache");
-            cache.evict(followTraderSubscribeEntity.getMasterId()); // 移除指定缓存条目
+          if (cache != null) {
+              cache.evict(followTraderSubscribeEntity.getMasterId()); // 移除指定缓存条目
+              log.info( "缓存对象："+followTraderSubscribeService.getSubscribeOrder(followTraderSubscribeEntity.getMasterId()).toString());
+          }
+
             //重连
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(password).equals(vo.getPassword())){
                 reconnect(vo.getId().toString(),followTraderEntity);
