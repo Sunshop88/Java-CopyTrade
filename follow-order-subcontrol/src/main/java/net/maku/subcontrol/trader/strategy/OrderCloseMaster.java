@@ -67,6 +67,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
         //保存所需要平仓的用户到redis，用备注记录 set类型存储
         subscribeEntityList.forEach(o->{
             FollowTraderEntity follow=followTraderService.getFollowById(o.getSlaveId());
+            log.info("插入orderclose"+orderInfo.getTicket().toString());
             //创建平仓redis记录
             redisUtil.hSet(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),orderInfo.getTicket().toString(),orderInfo);
             //发送漏单通知
