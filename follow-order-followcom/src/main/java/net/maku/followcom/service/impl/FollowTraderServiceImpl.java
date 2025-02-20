@@ -959,6 +959,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCloseServerName(vps.getName());
             followOrderDetailEntity.setCloseServerHost(quoteClient.Host+":"+quoteClient.Port);
             followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
+            followOrderDetailEntity.setRemark(null);
         } catch (Exception e) {
             log.error(orderNo+"平仓出错" + e.getMessage());
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {

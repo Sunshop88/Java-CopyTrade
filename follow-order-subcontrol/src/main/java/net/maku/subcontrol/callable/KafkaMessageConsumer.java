@@ -491,6 +491,7 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setCloseServerHost(ipaddr);
         followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
         followOrderDetailEntity.setCloseId(0);
+        followOrderDetailEntity.setRemark(null);
         //获取symbol信息
         Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(followOrderDetailEntity.getTraderId());
         FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(followOrderDetailEntity.getSymbol());

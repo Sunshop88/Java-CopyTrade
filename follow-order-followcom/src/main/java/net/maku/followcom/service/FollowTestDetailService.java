@@ -7,6 +7,7 @@ import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -50,4 +51,6 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
     List<FollowTestDetailVO> selectServerNode(FollowTestServerQuery query);
 
     List<FollowTestDetailVO> selectServer1(FollowTestServerQuery followTestServerQuery);
+
+    void importByExcel(MultipartFile file) throws Exception;
 }
