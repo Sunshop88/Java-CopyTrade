@@ -24,6 +24,12 @@ public class FollowTestServerQuery extends Query {
     @Schema(description = "默认节点")
     private String defaultNode;
 
+    @Schema(description = "VPS id")
+    private Integer vpsId;
+
+    @Schema(description = "是否为默认节点")
+    private Integer isDefaultServer;
+
     @Schema(description = "排序字段，默认服务器名称排序（prop1：服务器名称，prop3：账号数量，prop4：非默认节点数量）")
     String order = "prop1";
 

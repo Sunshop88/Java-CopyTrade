@@ -169,6 +169,15 @@
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name = #{query.serverName}
             </if>
+            <if test="query.serverNode != null and query.serverNode != ''">
+                AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
+            </if>
+            <if test="query.vpsId != null and query.vpsId != ''">
+                AND t1.vps_id = #{query.vpsId}
+            </if>
+            <if test="query.isDefaultServer != null and query.isDefaultServer != ''">
+                AND t1.is_default_server = #{query.isDefaultServer}
+            </if>
         </where>
     </select>
 

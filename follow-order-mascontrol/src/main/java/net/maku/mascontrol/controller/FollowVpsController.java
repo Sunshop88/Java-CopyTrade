@@ -34,7 +34,9 @@ import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -63,6 +65,7 @@ public class FollowVpsController {
     private final RedisCache redisCache;
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
+    private final  FollowTestDetailService followTestDetailService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -354,4 +357,18 @@ public class FollowVpsController {
         return Result.ok(followVpsService.list());
     }
 
+    /**
+     * 修改默认节点
+     */
+    @PutMapping("updateServerNode")
+    @Operation(summary = "修改服务器节点")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<String> importExcel(@RequestParam(value = "file") MultipartFile file) throws Exception {
+        //检查是否为Excel文件
+        if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx"))) {
+            return Result.error("请上传Excel文件");
+        }
+        followTestDetailService.importByExcel(file);
+        return Result.ok("修改完成");
+    }
 }
