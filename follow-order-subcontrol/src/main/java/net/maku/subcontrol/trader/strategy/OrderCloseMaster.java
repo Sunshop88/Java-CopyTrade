@@ -184,11 +184,20 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
                 if (o1!=null && o1.toString().trim().length()>0){
                     repairVos= JSONObject.parseObject(o1.toString(), Map.class);
                 }
+                Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+                List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
+                if (ObjectUtil.isNotEmpty(o2)) {
+                    followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+                }
+                List<OrderActiveInfoVO> finalFollowActiveInfoList = followActiveInfoList;
                 repairVos.forEach((k,v)->{
-                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
-                    if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                        OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
-                        repairCloseNewVOS.put(k,infoVO);
+                    Boolean  flag= finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
+                    if(!flag){
+                        List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
+                        if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                            repairCloseNewVOS.put(k,infoVO);
+                        }
                     }
                 });
                 if(repairCloseNewVOS==null || repairCloseNewVOS.size()==0){
