@@ -103,7 +103,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 leaderApiTrader.startTrade();
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
-           // pushRedisTask.execute(convert);
+            pushRedisTask.execute(convert,CloseOrOpenEnum.OPEN.getValue());
         } catch (Exception e) {
             log.error("保存失败{}" + e);
             if (e instanceof ServerException) {

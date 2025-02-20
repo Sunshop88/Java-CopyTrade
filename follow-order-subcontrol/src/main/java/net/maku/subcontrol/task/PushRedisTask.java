@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.ConCodeEnum;
 import net.maku.followcom.enums.PlacedTypeEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
@@ -73,11 +74,11 @@ public class PushRedisTask {
    }*/
   @Scheduled(cron = "0/5 * * * * ?")
   public void execute(){
-      execute(null);
+      execute(null,null);
   }
   //  @Scheduled(cron = "0/5 * * * * ?")
-    public void execute(Boolean mflag){
-                if (mflag!=null){
+    public void execute(FollowTraderEntity trader,Integer type){
+                if (trader!=null){
                     log.info("动态触发");
                 }
 
@@ -86,7 +87,7 @@ public class PushRedisTask {
                 FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
                 //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
                 if (one != null) {
-                    pushCache(one.getId());
+                    pushCache(one.getId(),trader,type);
                     pushRepair(one.getId());
                 } else {
                     List<FollowVpsEntity> vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
@@ -222,7 +223,8 @@ public class PushRedisTask {
     /**
      * 推送redis缓存
      */
-    private void pushCache(Integer vpsId) {
+    private void pushCache(Integer vpsId,FollowTraderEntity trader,Integer type) {
+        log.info(trader+"动态触发"+type);
        ThreadPoolUtils.execute(() -> {
            String localHost = FollowConstant.LOCAL_HOST;
            String keyl="LOCK:" + localHost;
@@ -244,6 +246,17 @@ public class PushRedisTask {
             followTraderList.sort((o1,o2)->{
                 return   o1.getType().compareTo(o2.getType());
             });
+
+            if(trader!=null){
+                log.info(followTraderList.size()+"动态触发");
+                if(type.equals(CloseOrOpenEnum.OPEN.getValue())){
+                    boolean add = followTraderList.add(trader);
+                    log.info(followTraderList.size()+"动态触发"+add);
+                }else{
+                    followTraderList = followTraderList.stream().filter(o -> !o.getId().equals(trader.getId())).toList();
+                }
+
+            }
             map.put(vpsId, followTraderList);
 
 
@@ -255,7 +268,6 @@ public class PushRedisTask {
                 //设置成功过表示超过2秒内
                 if (flag) {
                     List<AccountCacheVO> accounts = new ArrayList<>();
-                    CountDownLatch countDownLatch = new CountDownLatch(v.size());
                     //遍历账号获取持仓订单
                     for (FollowTraderEntity h : v) {
                      //   ThreadPoolUtils.execute(() -> {
@@ -449,15 +461,10 @@ public class PushRedisTask {
                             }
                             sbb.append(accountCache.getId()+",");
                             accounts.add(accountCache);
-                            countDownLatch.countDown();
 
                   //      });
                     }
-                    try {
-                        countDownLatch.await();
-                    } catch (InterruptedException e) {
-                        log.error("推送从redis数据异常:" + e);
-                    }
+
                     //转出json格式
                     String json = convertJson(accounts);
                     log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
