@@ -60,6 +60,7 @@ public class PushRedisTask {
     private CopierApiTradersAdmin copierApiTradersAdmin = SpringContextUtils.getBean(CopierApiTradersAdmin.class);
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
+    private static volatile boolean mflag=true;
   /* @PostConstruct
    public void init(){
        for (int i = 0; i <20 ; i++) {
@@ -67,15 +68,21 @@ public class PushRedisTask {
        }
 
    }*/
+  @Scheduled(cron = "0/5 * * * * ?")
+  public void execute(){
+      execute(null);
+  }
 
-    @Scheduled(cron = "0/5 * * * * ?")
-    public void execute(){
+    public void execute(Boolean bflag){
+        if(bflag!=null){
+            this.mflag=false;
+        }
       //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
         //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
         FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
         //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
         if(one!=null){
-            pushCache(one.getId());
+            pushCache(one.getId(),bflag);
             pushRepair(one.getId());
         }else{
            List<FollowVpsEntity>  vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
@@ -208,7 +215,7 @@ public class PushRedisTask {
     /**
      * 推送redis缓存
      */
-    private void pushCache(Integer vpsId) {
+    private void pushCache(Integer vpsId,Boolean bflag) {
         ThreadPoolUtils.execute(() -> {
             //查询当前vpsId所有账号
             List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
@@ -440,7 +447,13 @@ public class PushRedisTask {
                     //转出json格式
                     String json = convertJson(accounts);
                    log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
-                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+                   if (mflag){
+                       redisUtil.setSlaveRedis(Integer.toString(k), json);
+                   }
+                    if(bflag!=null && bflag){
+                        redisUtil.setSlaveRedis(Integer.toString(k), json);
+                        this.mflag = true;
+                    }
                 }
             });
         });

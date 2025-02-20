@@ -56,6 +56,21 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     @Override
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
         try {
+            switch (orderUpdateEventArgs.Action) {
+                case  Balance:
+                case Credit:
+                    Order order = orderUpdateEventArgs.Order;
+                    //发送平仓MQ
+                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                    try {
+                        producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    break;
+                default:
+                    log.error("Unexpected value: " + orderUpdateEventArgs.Action);
+            }
             //发送websocket消息标识
             if (Objects.requireNonNull(orderUpdateEventArgs.Action) == UpdateAction.PositionClose) {
                 Order order = orderUpdateEventArgs.Order;

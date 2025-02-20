@@ -173,6 +173,16 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 //推送到redis
 //                pushCache(leader.getServerId());
                 break;
+            case  Balance:
+            case Credit:
+                //发送平仓MQ
+                ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                try {
+                    producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+                break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
         }

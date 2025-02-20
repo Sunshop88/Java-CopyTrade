@@ -9,6 +9,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
 import net.maku.subcontrol.service.FollowApiService;
+import net.maku.subcontrol.task.PushRedisTask;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +20,14 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowApiController {
     private final FollowApiService followApiService;
+    private final PushRedisTask pushRedisTask;
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
     public Result<Integer> insertSource(@RequestBody @Valid SourceInsertVO vo) {
         Integer id = followApiService.insertSource(vo);
+        //触发redis
+        pushRedisTask.execute(true);
         return id!=null ? Result.ok(id) : Result.error();
     }
 
@@ -36,8 +40,10 @@ public class FollowApiController {
     @PostMapping("/source/delete")
     @Operation(summary = "喊单删除")
     public Result<Boolean> delSource(@RequestBody @Valid SourceDelVo vo) {
-
-        return followApiService.delSource(vo) ? Result.ok() : Result.error();
+        Boolean b = followApiService.delSource(vo);
+        //触发redis
+        pushRedisTask.execute(true);
+        return b ? Result.ok() : Result.error();
     }
 
 
@@ -45,6 +51,8 @@ public class FollowApiController {
     @Operation(summary = "跟单添加")
     public Result<Integer> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
         Integer id = followApiService.insertFollow(vo);
+        //触发redis
+        pushRedisTask.execute(true);
         return id!=null ? Result.ok(id) : Result.error();
 
     }
@@ -59,8 +67,11 @@ public class FollowApiController {
     @PostMapping("/follow/delete")
     @Operation(summary = "跟单删除")
     public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo) {
+        Boolean b = followApiService.delFollow(vo);
+        //触发redis
 
-        return followApiService.delFollow(vo) ? Result.ok() : Result.error();
+        pushRedisTask.execute(true);
+        return b ? Result.ok() : Result.error();
     }
 
     @PostMapping("/orderCloseList")

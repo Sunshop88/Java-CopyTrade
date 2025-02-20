@@ -152,7 +152,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             Order[] orders = quoteClient.DownloadOrderHistory(startTime, LocalDateTime.now());
             //保存历史订单
             List<FollowOrderDetailEntity> list=new ArrayList<>();
-            Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell) || order.Type.equals(Op.Balance)).forEach(order -> {
+            Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell) || order.Type.equals(Op.Balance) || order.Type.equals(Op.Credit)).forEach(order -> {
                 FollowOrderDetailEntity entity = getFollowOrderDetailEntity(quoteClient, u, order);
                 list.add(entity);
             });

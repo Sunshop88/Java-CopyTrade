@@ -69,7 +69,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowSlaveService followSlaveService;
-    private final PushRedisTask pushRedisTask;
+
 
     /**
      * 喊单账号保存
@@ -111,8 +111,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 throw new ServerException(e.getMessage());
             }
         }
-        //触发redis
-        pushRedisTask.execute();
+
         return id;
     }
 
@@ -266,44 +265,44 @@ public class FollowApiServiceImpl implements FollowApiService {
     public Boolean updateSlave(FollowUpdateSalveVo vo) {
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getId());
+            String password = followTraderEntity.getPassword();
             if (ObjectUtil.isEmpty(vo.getTemplateId())) {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
+            if(ObjectUtil.isNotEmpty(vo.getPassword())){
+                followTraderEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            }
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
                     .eq(FollowTraderSubscribeEntity::getSlaveId, vo.getId()));
-            if(ObjectUtil.isNotEmpty(followTraderSubscribeEntity)) {
+            if (ObjectUtil.isNotEmpty(followTraderSubscribeEntity)) {
                 BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
                 //更新订阅状态
                 followTraderSubscribeService.updateById(followTraderSubscribeEntity);
                 redisCache.delete(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId());
             }
-            BeanUtil.copyProperties(vo, followTraderSubscribeEntity, "id");
-            //更新订阅状态
-            followTraderSubscribeService.updateById(followTraderSubscribeEntity);
-            Map<String,Object> map=new HashMap<>();
-            map.put("followStatus",vo.getFollowStatus());
-            map.put("followOpen",vo.getFollowOpen());
-            map.put("followClose",vo.getFollowClose());
-            map.put("followRep",vo.getFollowRep());
-            redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId(),map);
-            //删除缓存
-            copierApiTradersAdmin.removeTrader(followTraderEntity.getId().toString());
-            redisCache.delete(Constant.FOLLOW_SUB_TRADER+vo.getId().toString());
+            Map<String, Object> map = new HashMap<>();
+            map.put("followStatus", vo.getFollowStatus());
+            map.put("followOpen", vo.getFollowOpen());
+            map.put("followClose", vo.getFollowClose());
+            map.put("followRep", vo.getFollowRep());
+            redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderSubscribeEntity.getMasterId() + ":" + followTraderEntity.getId(), map);
+            redisCache.delete(Constant.FOLLOW_SUB_TRADER + vo.getId().toString());
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
-            reconnectSlave(vo.getId().toString());
+            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(password).equals(vo.getPassword())){
+                reconnect(vo.getId().toString(),followTraderEntity);
+            }
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
-                copierApiTrader.startTrade();
                 FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                 //修改缓存
-                leaderApiTradersAdmin.pushRedisData(followTraderVO,copierApiTrader.quoteClient);
+                leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
             });
         } catch (Exception e) {
             throw new ServerException("修改失败" + e);
@@ -376,8 +375,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         delete(ids);
         //删除从表数据
         sourceService.del(vo.getId());
-        //触发redis
-        pushRedisTask.execute();
+
         return true;
     }
 
@@ -414,8 +412,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         //处理副表数据
         vo.setId(result);
         Integer id = followService.add(vo);
-        //触发redis
-        pushRedisTask.execute();
+
         return id;
     }
 
@@ -470,8 +467,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         delete(ids);
         //删除从表数据
         followService.del(vo.getId());
-        //触发redis
-        pushRedisTask.execute();
+
         return true;
     }
 
@@ -490,9 +486,16 @@ public class FollowApiServiceImpl implements FollowApiService {
             query.le(ObjectUtil.isNotEmpty(vo.getCloseTo()), FollowOrderDetailEntity::getCloseTime, DateUtils.format(vo.getCloseTo(), DateUtils.DATE_TIME_PATTERN));
             query.ge(ObjectUtil.isNotEmpty(vo.getOpenFrom()), FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenFrom(), DateUtils.DATE_TIME_PATTERN));
             query.le(ObjectUtil.isNotEmpty(vo.getOpenTo()), FollowOrderDetailEntity::getOpenTime, DateUtils.format(vo.getOpenTo(), DateUtils.DATE_TIME_PATTERN));
+
             if (ObjectUtil.isNotEmpty(vo.getClientId())) {
-                FollowVpsEntity vps = followVps.getById(vo.getClientId());
-                query.eq(ObjectUtil.isNotEmpty(vps), FollowOrderDetailEntity::getIpAddr, vps.getIpAddress());
+                List<FollowTraderEntity>    list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vo.getClientId()));
+                StringBuffer sb = new StringBuffer();
+                for (FollowTraderEntity followTraderEntity : list) {
+                    sb.append("'"+followTraderEntity.getAccount()+followTraderEntity.getPlatform()).append("',");
+                }
+                StringBuffer sbstr = sb.deleteCharAt(sb.length() - 1);
+                query.apply("concat(account,`server`) in (" +sbstr+")");
+
 
             }
             if (ObjectUtil.isNotEmpty(vo.getAccount())) {
@@ -504,11 +507,20 @@ public class FollowApiServiceImpl implements FollowApiService {
                     traderIds.addAll(ids);
                 }*/
                 List<Long> aids = vo.getAccount().stream().map(AccountModelVO::getId).collect(Collectors.toList());
+                StringBuffer sbstr =new StringBuffer();
                 if (ObjectUtil.isNotEmpty(aids)) {
+                    List<FollowTraderEntity>    list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, aids));
+                    StringBuffer sb = new StringBuffer();
+                    for (FollowTraderEntity followTraderEntity : list) {
+                        sb.append("'"+followTraderEntity.getAccount()+followTraderEntity.getPlatform()).append("',");
+                    }
+                     sbstr = sb.deleteCharAt(sb.length() - 1);
 
-                    traderIds.addAll(aids);
                 }
-                query.in(ObjectUtil.isNotEmpty(traderIds), FollowOrderDetailEntity::getTraderId, traderIds);
+                if(sbstr!=null && sbstr.length()>0){
+                    query.apply(" concat(account,`server`) in (" +sbstr+")");
+                }
+
 
             }
             Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, query);
