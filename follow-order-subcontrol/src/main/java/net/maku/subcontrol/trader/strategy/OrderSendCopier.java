@@ -99,14 +99,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
                 //如果没有此品种匹配，校验是否可以获取报价
-                if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(orderInfo.getOriSymbol()))){
+                if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(finalStdSymbol))){
                     //订阅
-                    trader.quoteClient.Subscribe(orderInfo.getOriSymbol());
+                    trader.quoteClient.Subscribe(finalStdSymbol);
                 }
             } catch (Exception e) {
-                log.info("品种异常,不可下单{}+++++++账号{}" , orderInfo.getOriSymbol(),copier.getId());
+                log.info("品种异常,不可下单{}+++++++账号{}" , finalStdSymbol,copier.getId());
             }
-            orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
+            orderInfo.setSymbolList(Collections.singletonList(finalStdSymbol));
         }
         log.info("请求进入时间3:"+trader.getTrader().getId());
         //  依次对备选品种进行开仓尝试
