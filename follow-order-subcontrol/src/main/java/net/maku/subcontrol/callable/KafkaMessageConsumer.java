@@ -153,7 +153,7 @@ public class KafkaMessageConsumer {
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
                 redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 //漏单检查
-                ThreadPoolUtils.getExecutor().execute(()-> {
+      /*          ThreadPoolUtils.getExecutor().execute(()-> {
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
@@ -161,7 +161,7 @@ public class KafkaMessageConsumer {
                     }
                     FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
                     repair(followTraderEntity,master,null);
-                });
+                });*/
 
             });
         });
@@ -394,9 +394,9 @@ public class KafkaMessageConsumer {
                             orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
                             orderRepairInfoVO.setSlaveId(follow.getId());
                             repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
-                            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                            log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
                         }
+                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
+                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
                     });
                 }else{
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
@@ -428,13 +428,17 @@ public class KafkaMessageConsumer {
                 }
                 List<OrderActiveInfoVO> finalFollowActiveInfoList = followActiveInfoList;
                 repairVos.forEach((k, v)->{
-                    Boolean  flag= finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
-                    if(!flag){
+                    if(finalFollowActiveInfoList.size()>1) {
+                        Boolean flag = finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
+                        if (!flag) {
+                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                            repairCloseNewVOS.put(k,infoVO);
                      /*   List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
                         if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
                             repairCloseNewVOS.put(k,infoVO);
                         }*/
+                        }
                     }
 
                 });
