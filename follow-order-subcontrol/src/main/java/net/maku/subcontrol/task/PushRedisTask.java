@@ -25,6 +25,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.trader.*;
@@ -39,6 +40,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,6 +63,7 @@ public class PushRedisTask {
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
     private static volatile boolean mflag=true;
+    private RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
   /* @PostConstruct
    public void init(){
        for (int i = 0; i <20 ; i++) {
@@ -68,30 +71,32 @@ public class PushRedisTask {
        }
 
    }*/
-  @Scheduled(cron = "0/5 * * * * ?")
+/*  @Scheduled(cron = "0/5 * * * * ?")
   public void execute(){
       execute(null);
-  }
+  }*/
+    @Scheduled(cron = "0/5 * * * * ?")
+    public void execute(){
 
-    public void execute(Boolean bflag){
-        if(bflag!=null){
-            this.mflag=false;
-        }
-      //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
-        //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
-        FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted,0));
-        //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
-        if(one!=null){
-            pushCache(one.getId(),bflag);
-            pushRepair(one.getId());
-        }else{
-           List<FollowVpsEntity>  vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
-            vpsLists.forEach(v->{
-                redisUtil.delSlaveRedis(Integer.toString(v.getId()));
-                redisUtil.delSlaveRedis(Integer.toString(v.getId())+"-Compare");
-            });
 
-        }
+                //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
+                //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
+                FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
+                //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
+                if (one != null) {
+                    pushCache(one.getId());
+                    pushRepair(one.getId());
+                } else {
+                    List<FollowVpsEntity> vpsLists = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
+                    vpsLists.forEach(v -> {
+                        redisUtil.delSlaveRedis(Integer.toString(v.getId()));
+                        redisUtil.delSlaveRedis(Integer.toString(v.getId()) + "-Compare");
+                    });
+
+                }
+
+
+
 
     }
 
@@ -215,8 +220,14 @@ public class PushRedisTask {
     /**
      * 推送redis缓存
      */
-    private void pushCache(Integer vpsId,Boolean bflag) {
-        ThreadPoolUtils.execute(() -> {
+    private void pushCache(Integer vpsId) {
+       ThreadPoolUtils.execute(() -> {
+           String localHost = FollowConstant.LOCAL_HOST;
+           String keyl="LOCK:" + localHost;
+           boolean lock = redissonLockUtil.lock(keyl, 30, -1, TimeUnit.SECONDS);
+           try {
+               if (lock) {
+
             //查询当前vpsId所有账号
             List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
             //获取
@@ -447,15 +458,14 @@ public class PushRedisTask {
                     //转出json格式
                     String json = convertJson(accounts);
                    log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
-                   if (mflag){
-                       redisUtil.setSlaveRedis(Integer.toString(k), json);
-                   }
-                    if(bflag!=null && bflag){
-                        redisUtil.setSlaveRedis(Integer.toString(k), json);
-                        this.mflag = true;
-                    }
+                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+
                 }
             });
+               }
+           }finally {
+               redissonLockUtil.unlock(keyl);
+           }
         });
     }
 

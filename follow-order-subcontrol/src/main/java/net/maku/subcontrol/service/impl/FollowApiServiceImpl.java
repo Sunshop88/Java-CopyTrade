@@ -270,9 +270,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
-            if(ObjectUtil.isNotEmpty(vo.getPassword())){
-                followTraderEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
-            }
+
             followTraderService.updateById(followTraderEntity);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
@@ -292,6 +290,9 @@ public class FollowApiServiceImpl implements FollowApiService {
             redisCache.delete(Constant.FOLLOW_SUB_TRADER + vo.getId().toString());
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
+            //喊单关系缓存移除
+            Cache cache = cacheManager.getCache("followSubOrderCache");
+            cache.evict(followTraderSubscribeEntity.getMasterId()); // 移除指定缓存条目
             //重连
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(password).equals(vo.getPassword())){
                 reconnect(vo.getId().toString(),followTraderEntity);

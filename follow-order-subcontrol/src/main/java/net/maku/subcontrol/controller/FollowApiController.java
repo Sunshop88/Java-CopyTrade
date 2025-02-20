@@ -27,7 +27,7 @@ public class FollowApiController {
     public Result<Integer> insertSource(@RequestBody @Valid SourceInsertVO vo) {
         Integer id = followApiService.insertSource(vo);
         //触发redis
-        pushRedisTask.execute(true);
+        pushRedisTask.execute();
         return id!=null ? Result.ok(id) : Result.error();
     }
 
@@ -42,7 +42,7 @@ public class FollowApiController {
     public Result<Boolean> delSource(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delSource(vo);
         //触发redis
-        pushRedisTask.execute(true);
+        pushRedisTask.execute();
         return b ? Result.ok() : Result.error();
     }
 
@@ -52,7 +52,7 @@ public class FollowApiController {
     public Result<Integer> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
         Integer id = followApiService.insertFollow(vo);
         //触发redis
-        pushRedisTask.execute(true);
+        pushRedisTask.execute();
         return id!=null ? Result.ok(id) : Result.error();
 
     }
@@ -69,8 +69,7 @@ public class FollowApiController {
     public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delFollow(vo);
         //触发redis
-
-        pushRedisTask.execute(true);
+        pushRedisTask.execute();
         return b ? Result.ok() : Result.error();
     }
 
