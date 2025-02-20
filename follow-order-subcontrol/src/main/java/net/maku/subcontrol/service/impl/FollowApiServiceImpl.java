@@ -972,6 +972,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
             followOrderDetailEntity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+            followOrderDetailEntity.setRemark(null);
         } catch (Exception e) {
             log.error(orderNo+"平仓出错" + e.getMessage());
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
