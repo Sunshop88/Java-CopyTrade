@@ -81,7 +81,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
                         }
                         String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
-                        boolean lock1 = redissonLockUtil.lock(key1, 20, -1, TimeUnit.SECONDS);
+                        boolean lock1 = redissonLockUtil.lock(key1, 500, -1, TimeUnit.SECONDS);
                         try {
                             Thread.sleep(1000);
                         } catch (Exception e) {
@@ -113,12 +113,12 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 case PositionClose:
                     ThreadPoolUtils.getExecutor().execute(()->{
                         try {
-                            Thread.sleep(4000);
+                            Thread.sleep(2000);
                         } catch (Exception e) {
 
                         }
                         String key = Constant.REPAIR_CLOSE + "：" + follow.getAccount();
-                        boolean lock = redissonLockUtil.lock(key, 20, -1, TimeUnit.SECONDS);
+                        boolean lock = redissonLockUtil.lock(key, 500, -1, TimeUnit.SECONDS);
                         try {
                             try {
                                 Thread.sleep(1000);

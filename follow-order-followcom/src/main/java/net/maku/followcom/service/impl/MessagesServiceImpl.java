@@ -126,7 +126,7 @@ public class MessagesServiceImpl implements MessagesService {
             }*/
             //写入到redis中
             String key = Constant.REPAIR_CLOSE + "：" + follow.getAccount();
-            boolean lock = redissonLockUtil.lock(key, 10, -1, TimeUnit.SECONDS);
+            boolean lock = redissonLockUtil.lock(key, 500, -1, TimeUnit.SECONDS);
             try {
             if(lock) {
                 Object repairStr = redisCache.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount());
@@ -134,61 +134,69 @@ public class MessagesServiceImpl implements MessagesService {
                 if (repairStr != null && repairStr.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(repairStr.toString(), Map.class);
                 }
+                Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+                List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
+                if (ObjectUtil.isNotEmpty(o2)) {
+                    followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+                }
+                Boolean flag = followActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                 //通过备注查询未平仓记录
-                List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, orderInfo.getTicket()));
-                if (ObjectUtil.isNotEmpty(detailServiceList)) {
-                    Map<Integer, OrderRepairInfoVO> closeMap = new HashMap<Integer, OrderRepairInfoVO>();
-                    detailServiceList.forEach(detail -> {
-                        OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                        orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
-                        orderRepairInfoVO.setMasterCloseTime(orderInfo.getCloseTime());
-                        orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
-                        orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
-                        orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
-                        orderRepairInfoVO.setMasterLots(orderInfo.getLots());
-                        orderRepairInfoVO.setMasterProfit(orderInfo.getProfit().doubleValue());
-                        orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
-                        //orderRepairInfoVO.setMasterProfit(eaOrderInfo.getProfit());
-                        orderRepairInfoVO.setMasterType(Op.forValue(orderInfo.getType()).name());
-                        orderRepairInfoVO.setMasterTicket(orderInfo.getTicket());
-                        orderRepairInfoVO.setSlaveLots(orderInfo.getLots());
-                        orderRepairInfoVO.setSlaveType(Op.forValue(orderInfo.getType()).name());
-                        orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
-                        orderRepairInfoVO.setSlaveOpenPrice(detail.getOpenPrice().doubleValue());
-                        orderRepairInfoVO.setSlaveCloseTime(detail.getCloseTime());
-                        orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
-                        orderRepairInfoVO.setSlaveAccount(detail.getAccount());
-                        orderRepairInfoVO.setSlavePlatform(detail.getPlatform());
-                        orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
-                        orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
-                        orderRepairInfoVO.setMasterId(orderInfo.getMasterId());
-                        orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
-                        orderRepairInfoVO.setSlaveId(follow.getId());
-                        closeMap.put(orderInfo.getTicket(), orderRepairInfoVO);
-                        //发送漏单
-                        ThreadPoolUtils.getExecutor().execute(() -> {
-                            try {
-                                Thread.sleep(3000);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                            FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
-                            if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus()== CloseOrOpenEnum.CLOSE.getValue()) {
-                                FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                        vpsName(follow.getServerName())
-                                        .source(master.getAccount())
-                                        .sourceRemarks(master.getRemark())
-                                        .follow(follow.getAccount())
-                                        .symbol(orderInfo.getSymbol())
-                                        .type(Constant.NOTICE_MESSAGE_SELL).build();
-                                send(vo);
-                            }
+                if(flag) {
+                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, orderInfo.getTicket()));
+                    if (ObjectUtil.isNotEmpty(detailServiceList)) {
+                        Map<Integer, OrderRepairInfoVO> closeMap = new HashMap<Integer, OrderRepairInfoVO>();
+                        detailServiceList.forEach(detail -> {
+                            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                            orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
+                            orderRepairInfoVO.setMasterCloseTime(orderInfo.getCloseTime());
+                            orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
+                            orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
+                            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
+                            orderRepairInfoVO.setMasterLots(orderInfo.getLots());
+                            orderRepairInfoVO.setMasterProfit(orderInfo.getProfit().doubleValue());
+                            orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
+                            //orderRepairInfoVO.setMasterProfit(eaOrderInfo.getProfit());
+                            orderRepairInfoVO.setMasterType(Op.forValue(orderInfo.getType()).name());
+                            orderRepairInfoVO.setMasterTicket(orderInfo.getTicket());
+                            orderRepairInfoVO.setSlaveLots(orderInfo.getLots());
+                            orderRepairInfoVO.setSlaveType(Op.forValue(orderInfo.getType()).name());
+                            orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
+                            orderRepairInfoVO.setSlaveOpenPrice(detail.getOpenPrice().doubleValue());
+                            orderRepairInfoVO.setSlaveCloseTime(detail.getCloseTime());
+                            orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
+                            orderRepairInfoVO.setSlaveAccount(detail.getAccount());
+                            orderRepairInfoVO.setSlavePlatform(detail.getPlatform());
+                            orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
+                            orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
+                            orderRepairInfoVO.setMasterId(orderInfo.getMasterId());
+                            orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
+                            orderRepairInfoVO.setSlaveId(follow.getId());
+                            closeMap.put(orderInfo.getTicket(), orderRepairInfoVO);
+                            //发送漏单
+                            ThreadPoolUtils.getExecutor().execute(() -> {
+                                try {
+                                    Thread.sleep(3000);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
+                                if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus() == CloseOrOpenEnum.CLOSE.getValue()) {
+                                    FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                            vpsName(follow.getServerName())
+                                            .source(master.getAccount())
+                                            .sourceRemarks(master.getRemark())
+                                            .follow(follow.getAccount())
+                                            .symbol(orderInfo.getSymbol())
+                                            .type(Constant.NOTICE_MESSAGE_SELL).build();
+                                    send(vo);
+                                }
+                            });
                         });
-                    });
-                    repairInfoVOS.putAll(closeMap);
-                    redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                    log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+                        repairInfoVOS.putAll(closeMap);
+                        redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
+                        log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getTicket(), JSONObject.toJSONString(repairInfoVOS));
 
+                    }
                 }
             }
             } catch (Exception e) {
