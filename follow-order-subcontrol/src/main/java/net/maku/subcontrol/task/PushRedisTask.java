@@ -283,6 +283,7 @@ public class PushRedisTask {
                     quoteClient =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     copierApiTrader1.setTrader(followTraderVO);
+                    copierApiTrader1.startTrade();
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
                     long maxWaitTimeMillis = 10000; // 最多等待10秒
                     long startTime = System.currentTimeMillis();

@@ -163,6 +163,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader1.setTrader(followTraderEntity);
+                        copierApiTrader1.startTrade();
                     }else {
                         log.error(trader.getTrader().getId()+"掉线异常");
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
@@ -335,6 +336,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                     if (ObjectUtil.isNotEmpty(copierApiTrader1)){
                         copierApiTrader1.setTrader(followTraderEntity);
+                        copierApiTrader1.startTrade();
                     }
                 } else {
                     log.error(trader.getTrader().getId()+"掉线异常");
