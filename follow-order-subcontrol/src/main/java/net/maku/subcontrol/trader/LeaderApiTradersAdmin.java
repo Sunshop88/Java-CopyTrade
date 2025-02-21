@@ -122,6 +122,8 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         //重复提交
                         if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                             log.info(leader.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(leader.getId()+"重复提交并等待失败");
                         }
                     }else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
@@ -186,6 +188,8 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         //重复提交
                         if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                             log.info(leader.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(leader.getId()+"重复提交并等待失败");
                         }
                     } else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);

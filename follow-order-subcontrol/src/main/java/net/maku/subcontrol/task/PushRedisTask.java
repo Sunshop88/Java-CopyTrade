@@ -269,6 +269,8 @@ public class PushRedisTask {
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
                         quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 }
             } else {
@@ -304,6 +306,8 @@ public class PushRedisTask {
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(followTraderVO.getId()+"重复提交并等待完成");
                         quoteClient = copierApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }
             } else {

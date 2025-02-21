@@ -399,6 +399,8 @@ public class FollowSlaveController {
                 }
                 if (ObjectUtil.isNotEmpty(copierApiTrader)){
                     log.info(traderId+"重复提交并等待完成");
+                }else {
+                    log.info(traderId+"重复提交并等待失败");
                 }
             } else {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);

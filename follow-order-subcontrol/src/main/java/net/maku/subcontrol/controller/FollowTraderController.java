@@ -323,6 +323,8 @@ public class FollowTraderController {
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(followTraderVO.getId().toString()+"重复提交并等待完成");
                         quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }else {
                     return Result.error("账号无法登录");
@@ -361,6 +363,8 @@ public class FollowTraderController {
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(followTraderVO.getId()+"重复提交并等待完成");
                         quoteClient = copierApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }else {
                     return Result.error("账号无法登录");
@@ -486,6 +490,8 @@ public class FollowTraderController {
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(followTraderVO.getId().toString()+"重复提交并等待完成");
                         quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }
             } else {
@@ -521,6 +527,8 @@ public class FollowTraderController {
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(followTraderVO.getId()+"重复提交并等待完成");
                         quoteClient = copierApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }
             } else {
@@ -662,6 +670,8 @@ public class FollowTraderController {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -696,6 +706,8 @@ public class FollowTraderController {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 }  else {
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);

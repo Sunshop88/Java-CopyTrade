@@ -110,6 +110,8 @@ public class UpdateAllTraderInfoTask implements Runnable {
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(trader.getId().toString()+"重复提交并等待完成");
                         quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(trader.getId()+"重复提交并等待失败");
                     }
                 }
             }

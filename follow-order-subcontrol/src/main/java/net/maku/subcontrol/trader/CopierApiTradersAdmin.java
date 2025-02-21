@@ -112,6 +112,8 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         //重复提交
                         if (ObjectUtil.isNotEmpty(copierApiTrader)){
                             log.info(slave.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(slave.getId()+"重复提交并等待失败");
                         }
                     } else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
@@ -176,6 +178,8 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         //重复提交
                         if (ObjectUtil.isNotEmpty(copierApiTrader)){
                             log.info(copier.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(copier.getId()+"重复提交并等待失败");
                         }
                     }else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);

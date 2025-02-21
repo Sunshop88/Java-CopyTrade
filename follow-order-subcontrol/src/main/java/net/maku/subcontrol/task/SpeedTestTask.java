@@ -200,6 +200,8 @@ public class SpeedTestTask {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -234,6 +236,8 @@ public class SpeedTestTask {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 }  else {
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);

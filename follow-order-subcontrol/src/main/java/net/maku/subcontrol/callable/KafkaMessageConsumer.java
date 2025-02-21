@@ -212,6 +212,7 @@ public class KafkaMessageConsumer {
                                             if (conCodeEnum == ConCodeEnum.SUCCESS) {
                                                 CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveTrader.getId().toString());
                                                 copierApiTrader1.setTrader(slaveTrader);
+                                                copierApiTrader1.startTrade();
                                                 quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveTrader.getId().toString()).quoteClient;
                                             } else {
                                                 quoteClient = null;

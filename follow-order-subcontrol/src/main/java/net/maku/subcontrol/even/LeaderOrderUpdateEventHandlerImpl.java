@@ -352,6 +352,8 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                         if (ObjectUtil.isNotEmpty(leaderApiTrader)){
                                             log.info(h.getId().toString()+"重复提交并等待完成");
                                             quoteClient = leaderApiTrader.quoteClient;
+                                        }else {
+                                            log.info(h.getId()+"重复提交并等待失败");
                                         }
                                     }else {
                                         log.error("登录异常");
