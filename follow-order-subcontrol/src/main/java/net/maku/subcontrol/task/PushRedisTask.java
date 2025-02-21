@@ -471,12 +471,13 @@ public class PushRedisTask {
                     String json = convertJson(collect);
                     log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),collect.size(),sbb.toString());
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
+                    redissonLockUtil.unlock(keyl);
 
                 }
             });
                }
            }finally {
-               redissonLockUtil.unlock(keyl);
+           //    redissonLockUtil.unlock(keyl);
            }
         });
     }
@@ -647,13 +648,12 @@ public class PushRedisTask {
                 //转出json格式
                 String js = convertJson(accounts);
                 redisUtil.setSlaveRedis(Integer.toString(h.getServerId()), json);
-                long endTime = System.currentTimeMillis();
-                long executionTime = endTime - startTime;
-                log.info("代码执行时间：" + executionTime + "毫秒");
+                redissonLockUtil.unlock(keyl);
+
             }
 
       }finally {
-        redissonLockUtil.unlock(keyl);
+
      }
     }
 }

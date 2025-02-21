@@ -35,7 +35,9 @@ public class FollowApiController {
 // 代码块
         pushRedisTask.add(id);
 
-
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        log.info("代码执行时间：" + executionTime + "毫秒");
         return id!=null ? Result.ok(id) : Result.error();
     }
 
