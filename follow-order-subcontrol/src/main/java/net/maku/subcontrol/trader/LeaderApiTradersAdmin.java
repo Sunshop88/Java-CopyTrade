@@ -104,7 +104,27 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
+                        leaderApiTrader = getLeader4ApiTraderConcurrentHashMap().get(leader.getId().toString());
+                        // 开始等待直到获取到copierApiTrader1
+                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            leaderApiTrader = getLeader4ApiTraderConcurrentHashMap().get(leader.getId().toString());
+                        }
+                        //重复提交
+                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                            log.info(leader.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(leader.getId()+"重复提交并等待失败");
+                        }
                     }else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
@@ -150,7 +170,27 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(leader);
                         log.error("喊单者:[{}-{}-{}]启动失败，请校验", leader.getId(), leader.getAccount(), leader.getServerName());
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
+                        leaderApiTrader = getLeader4ApiTraderConcurrentHashMap().get(leader.getId().toString());
+                        // 开始等待直到获取到copierApiTrader1
+                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            leaderApiTrader = getLeader4ApiTraderConcurrentHashMap().get(leader.getId().toString());
+                        }
+                        //重复提交
+                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                            log.info(leader.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(leader.getId()+"重复提交并等待失败");
+                        }
                     } else {
                         log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();

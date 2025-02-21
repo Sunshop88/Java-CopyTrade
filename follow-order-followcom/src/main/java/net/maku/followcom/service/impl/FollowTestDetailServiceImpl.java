@@ -290,7 +290,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             //获取账号数量
 //            dataRow[2] = followTraderService.getAccountCount(serverName);
             dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName) : "0";
-            log.warn("账号数量：" + accountCountMap.get(serverName));
+//            log.warn("账号数量：" + accountCountMap.get(serverName));
 
             //非默认节点账号数量
             //查询该severName默认节点
