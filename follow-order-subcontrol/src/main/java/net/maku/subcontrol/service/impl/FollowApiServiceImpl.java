@@ -174,11 +174,12 @@ public class FollowApiServiceImpl implements FollowApiService {
                 cache.evict(o); // 移除指定缓存条目
             }
         });
-
         slaveList.forEach(o->{
             List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
+                redisUtil.hDel(Constant.REPAIR_SEND+o1.getMasterAccount()+":"+o1.getMasterId(),o1.getSlaveAccount().toString());
+                redisUtil.hDel(Constant.REPAIR_CLOSE+o1.getMasterAccount()+":"+o1.getMasterId(),o1.getSlaveAccount().toString());
                 String cacheKey = generateCacheKey(o1.getSlaveId(), o1.getMasterId());
                 Cache cache = cacheManager.getCache("followSubscriptionCache");
                 if (cache != null) {
@@ -879,7 +880,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                     sendVO.setMasterId(subscribeEntity.getMasterId());
                     followSlaveService.repairSend(sendVO);
                 } catch (Exception e) {
-                    log.error("外部接口批量补单失败:"+ticket);
+                    log.error("外部接口批量补单失败:"+ticket+",异常原因"+e);
                 }
             });
 
