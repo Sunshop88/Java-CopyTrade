@@ -249,7 +249,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity copier) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
-        if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 10, TimeUnit.SECONDS)) {
+        if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 120, TimeUnit.SECONDS)) {
             try{
                 //查看账号是否存在
                 FollowTraderEntity followById = followTraderService.getById(copier.getId());

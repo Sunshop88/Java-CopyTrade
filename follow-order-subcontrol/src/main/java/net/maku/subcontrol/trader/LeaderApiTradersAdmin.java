@@ -205,7 +205,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity leader) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
-        if (redissonLockUtil.tryLockForShortTime("addTrader" + leader.getId(), 0, 10, TimeUnit.SECONDS)) {
+        if (redissonLockUtil.tryLockForShortTime("addTrader" + leader.getId(), 0, 120, TimeUnit.SECONDS)) {
             try {
                 log.info("进入登录！！！" + leader.getId());
                 //查看账号是否存在

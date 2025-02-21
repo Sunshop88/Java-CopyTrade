@@ -210,6 +210,7 @@ public class KafkaMessageConsumer {
                                         if (ObjectUtil.isEmpty(copierApiTrader)) {
                                             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(slaveTrader);
                                             if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                                log.info(slaveTrader.getAccount()+"启动成功+++");
                                                 CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveTrader.getId().toString());
                                                 copierApiTrader1.setTrader(slaveTrader);
                                                 copierApiTrader1.startTrade();
