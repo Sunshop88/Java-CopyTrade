@@ -5,15 +5,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.task.PushRedisTask;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 @Tag(name = "喊单，跟单api")
@@ -21,11 +24,17 @@ import java.util.List;
 public class FollowApiController {
     private final FollowApiService followApiService;
 
+    private final PushRedisTask pushRedisTask;
+
 
     @PostMapping("/source/insert")
     @Operation(summary = "喊单添加")
     public Result<Integer> insertSource(@RequestBody @Valid SourceInsertVO vo) {
         Integer id = followApiService.insertSource(vo);
+        long startTime = System.currentTimeMillis();
+// 代码块
+        pushRedisTask.add(id);
+
 
         return id!=null ? Result.ok(id) : Result.error();
     }
@@ -40,7 +49,7 @@ public class FollowApiController {
     @Operation(summary = "喊单删除")
     public Result<Boolean> delSource(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delSource(vo);
-
+        pushRedisTask.execute();
         return b ? Result.ok() : Result.error();
     }
 
@@ -49,7 +58,7 @@ public class FollowApiController {
     @Operation(summary = "跟单添加")
     public Result<Integer> insertFollow(@RequestBody @Valid FollowInsertVO vo) {
         Integer id = followApiService.insertFollow(vo);
-
+        pushRedisTask.add(id);
         return id!=null ? Result.ok(id) : Result.error();
 
     }
@@ -65,6 +74,7 @@ public class FollowApiController {
     @Operation(summary = "跟单删除")
     public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delFollow(vo);
+        pushRedisTask.execute();
         return b ? Result.ok() : Result.error();
     }
 

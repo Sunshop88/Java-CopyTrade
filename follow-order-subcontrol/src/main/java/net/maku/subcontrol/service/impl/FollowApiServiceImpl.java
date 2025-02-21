@@ -3,9 +3,15 @@ package net.maku.subcontrol.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.convert.FollowTraderConvert;
@@ -17,6 +23,8 @@ import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.DateUtils;
@@ -42,8 +50,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -69,7 +79,8 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final FollowOrderCloseService followOrderCloseService;
     private final FollowSlaveService followSlaveService;
-    private final PushRedisTask pushRedisTask;
+    private final RedisUtil redisUtil;
+    private final RedissonLockUtil redissonLockUtil;
 
     /**
      * 喊单账号保存
@@ -103,7 +114,6 @@ public class FollowApiServiceImpl implements FollowApiService {
                 leaderApiTrader.startTrade();
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
-            pushRedisTask.execute(convert,CloseOrOpenEnum.OPEN.getValue());
         } catch (Exception e) {
             log.error("保存失败{}" + e);
             if (e instanceof ServerException) {
@@ -114,6 +124,28 @@ public class FollowApiServiceImpl implements FollowApiService {
         }
 
         return id;
+    }
+    /**
+     * 转成成json
+     */
+    private String convertJson(List<AccountCacheVO> accounts) {
+        //设置从redis数据
+        FollowTraderCacheVO cacheVO = new FollowTraderCacheVO();
+        cacheVO.setAccounts(accounts);
+        cacheVO.setUpdateAt(new Date());
+        cacheVO.setStatus(true);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        //格式化时间格式
+        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        objectMapper.registerModule(javaTimeModule);
+        String json = null;
+        try {
+            json = objectMapper.writeValueAsString(cacheVO);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return json;
     }
 
     @Override
@@ -323,6 +355,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer insertSource(SourceInsertVO vo) {
+
         String s = AesUtils.aesEncryptStr(vo.getPassword());
         vo.setPassword(s);
         //参数转换，转成主表数据

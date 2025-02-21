@@ -1,6 +1,7 @@
 package net.maku.subcontrol.task;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -78,10 +79,6 @@ public class PushRedisTask {
   }
   //  @Scheduled(cron = "0/5 * * * * ?")
     public void execute(FollowTraderEntity trader,Integer type){
-                if (trader!=null){
-                    log.info("动态触发");
-                }
-
                 //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                 //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                 FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
@@ -224,8 +221,8 @@ public class PushRedisTask {
      * 推送redis缓存
      */
     private void pushCache(Integer vpsId,FollowTraderEntity trader,Integer type) {
-        log.info(trader+"动态触发"+type);
-       ThreadPoolUtils.execute(() -> {
+
+      ThreadPoolUtils.execute(() -> {
            String localHost = FollowConstant.LOCAL_HOST;
            String keyl="LOCK:" + localHost;
            boolean lock = redissonLockUtil.lock(keyl, 30, -1, TimeUnit.SECONDS);
@@ -247,16 +244,6 @@ public class PushRedisTask {
                 return   o1.getType().compareTo(o2.getType());
             });
 
-            if(trader!=null){
-                log.info(followTraderList.size()+"动态触发");
-                if(type.equals(CloseOrOpenEnum.OPEN.getValue())){
-                    boolean add = followTraderList.add(trader);
-                    log.info(followTraderList.size()+"动态触发"+add);
-                }else{
-                    followTraderList = followTraderList.stream().filter(o -> !o.getId().equals(trader.getId())).toList();
-                }
-
-            }
             map.put(vpsId, followTraderList);
 
 
@@ -267,11 +254,16 @@ public class PushRedisTask {
                 StringBuilder sbb=new StringBuilder();
                 //设置成功过表示超过2秒内
                 if (flag) {
-                    List<AccountCacheVO> accounts = new ArrayList<>();
+                    List<AccountCacheVO> accounts = new Vector<>();
                     //遍历账号获取持仓订单
+                    CountDownLatch countDownLatch = new CountDownLatch(v.size());
                     for (FollowTraderEntity h : v) {
-                     //   ThreadPoolUtils.execute(() -> {
+
+                        ThreadPoolUtils.getExecutor().execute(()->{
+
+
                             AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
+
                             if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                 accountCache.setType("FOLLOW");
                             }else{
@@ -461,13 +453,23 @@ public class PushRedisTask {
                             }
                             sbb.append(accountCache.getId()+",");
                             accounts.add(accountCache);
+                            countDownLatch.countDown();
+                        });
 
                   //      });
                     }
+                    try {
+                        countDownLatch.await();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    List<AccountCacheVO> collect = accounts.stream().sorted(Comparator.comparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo))
+                                    .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)))
+                            .collect(Collectors.toList());
 
                     //转出json格式
-                    String json = convertJson(accounts);
-                    log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),accounts.size(),sbb.toString());
+                    String json = convertJson(collect);
+                    log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),collect.size(),sbb.toString());
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
 
                 }
@@ -543,5 +545,115 @@ public class PushRedisTask {
             throw new RuntimeException(e);
         }
         return json;
+    }
+
+    public void add(Integer id) {
+        String localHost = FollowConstant.LOCAL_HOST;
+        String keyl="LOCK:" + localHost;
+        boolean lock = redissonLockUtil.lock(keyl, 30, -1, TimeUnit.SECONDS);
+        FollowTraderEntity h = followTraderService.getById(Long.valueOf(id));
+       
+        try {
+            if (lock) {
+                long startTime = System.currentTimeMillis();
+                Object json = redisUtil.getSlaveRedis(h.getServerId().toString());
+                JSONObject jsonObject = JSONObject.parseObject(json.toString());
+                List<AccountCacheVO> accounts = JSONArray.parseArray(jsonObject.getString("Accounts"), AccountCacheVO.class);
+                AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
+                FollowTraderSubscribeEntity followTraderSubscribeEntity =null;
+                if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                    accountCache.setType("FOLLOW");
+                }else{
+                    accountCache.setType("SOURCE");
+                }
+                accountCache.setServer(h.getIpAddr());
+                List<OrderCacheVO> orderCaches = new ArrayList<>();
+                //根据id
+                String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
+                accountCache.setKey(akey);
+
+                if (h.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                    String group = h.getId() + " " + h.getAccount();
+                    accountCache.setGroup(group);
+                }else{
+                    List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, h.getId()));
+                    followTraderSubscribeEntity= list.get(0);
+                    if(followTraderSubscribeEntity!=null) {
+                        String desc = PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType() == null ? 0 : followTraderSubscribeEntity.getPlacedType());
+                        accountCache.setPlacedTypeString(desc);
+                        accountCache.setStatus(followTraderSubscribeEntity.getFollowStatus() == 0 ? false : true);
+                        if (followTraderSubscribeEntity != null) {
+                            String group = followTraderSubscribeEntity.getMasterId() + " " + followTraderSubscribeEntity.getMasterAccount();
+                            accountCache.setGroup(group);
+                        }
+                    }
+                }
+
+
+
+
+                    FollowPlatformEntity platform = followPlatformService.getById(h.getPlatformId());
+                    String platformType = platform.getPlatformType();
+                    accountCache.setPlatformType(platformType);
+
+
+                //订单信息
+                QuoteClient quoteClient = null;
+
+                //所有持仓
+                try {
+                        accountCache.setCredit(0.00);
+                        accountCache.setLots(0.00);
+                        accountCache.setCount(0);
+                        accountCache.setBuy(0.00);
+                        accountCache.setSell(0.00);
+                        accountCache.setProfit(0.00);
+                        accountCache.setFreeMargin(0.00);
+                        if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                            accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                            String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                            //  0-固定手数 1-手数比例 2-净值比例
+                            String mode =null;
+                            switch (followTraderSubscribeEntity.getFollowMode()) {
+                                case(0):
+                                    mode="固定";
+                                    break;
+                                case(1):
+                                    mode="手";
+                                    break;
+                                case(2):
+                                    mode="净";
+                                    break;
+                            }
+                            accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
+                        }
+                        if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                            accountCache.setModeString("");
+                        }
+                        accountCache.setManagerStatus("Disconnected");
+                        OrderCacheVO orderCacheVO = new OrderCacheVO();
+                        orderCaches.add(orderCacheVO);
+                        accountCache.setLots(0.00);
+                        accountCache.setProfit(0.00);
+
+                } catch (Exception e) {
+                    log.error("推送redis异常："+e);
+                }
+
+                if(ObjectUtil.isEmpty(accountCache.getOrders())){
+                    accountCache.setOrders(new ArrayList<>());
+                }
+                accounts.add(accountCache);
+                //转出json格式
+                String js = convertJson(accounts);
+                redisUtil.setSlaveRedis(Integer.toString(h.getServerId()), json);
+                long endTime = System.currentTimeMillis();
+                long executionTime = endTime - startTime;
+                log.info("代码执行时间：" + executionTime + "毫秒");
+            }
+
+      }finally {
+        redissonLockUtil.unlock(keyl);
+     }
     }
 }
