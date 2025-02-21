@@ -108,4 +108,16 @@ public class FollowVpsEntity {
 	@TableField(value = "is_syn")
 	private Integer isSyn;
 
+	/**
+	 * 是否开启flink，0为停止，1为运行
+	 */
+	@TableField(value = "is_flink")
+	private Integer isFlink;
+
+	/**
+	 * 是否允许选择账号，0为关闭，1为开启
+	 */
+	@TableField(value = "is_select_account")
+	private Integer isSelectAccount;
+
 }

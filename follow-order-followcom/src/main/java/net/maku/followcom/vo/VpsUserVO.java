@@ -19,4 +19,8 @@ public class VpsUserVO implements Serializable {
 
 	@Schema(description = "vpsid")
 	private Integer id;
+
+	@Schema(description = "vps名称")
+	private String vpsName;
+
 }

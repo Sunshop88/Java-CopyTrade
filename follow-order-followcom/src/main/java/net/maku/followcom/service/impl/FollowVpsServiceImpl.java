@@ -109,6 +109,15 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             } else {
                 o.setRemainingDay((int) daysBetween);
             }
+            //查询vps其下的用户
+            List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, o.getId()));
+            if (ObjectUtil.isNotEmpty(vpsUserEntities)){
+                List<String> vpsUserVO = new ArrayList<>();
+                vpsUserEntities.forEach(o1->{
+                    vpsUserVO.add(o1.getVpsName());
+                });
+                o.setUserList(vpsUserVO);
+            }
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }

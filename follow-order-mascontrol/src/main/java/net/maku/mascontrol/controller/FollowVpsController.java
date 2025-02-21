@@ -371,4 +371,15 @@ public class FollowVpsController {
         followTestDetailService.importByExcel(file);
         return Result.ok("修改完成");
     }
+
+    /**
+     * 查询vps下的用户
+     */
+    @GetMapping("vpsUser")
+    @Operation(summary = "查询vps下的用户")
+    @PreAuthorize("hasAuthority('mascontrol:vps')")
+    public Result<List<VpsUserVO>> vpsUser(@Parameter(description = "vpsId") Integer vpsId) {
+        List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vpsId));
+        return Result.ok(convertoVpsUser(list));
+    }
 }

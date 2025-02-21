@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.MessageFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +49,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
     private final FollowTestDetailService followTestDetailService;
+    private final FollowVpsUserService followVpsUserService;
 
 
     @Override
@@ -71,6 +73,44 @@ public class MasControlServiceImpl implements MasControlService {
 //            log.error("更新 Client 失败");
 //            return false;
 //        }
+        List<String> existingUserList = followVpsUserService.list(
+                        new LambdaQueryWrapper<FollowVpsUserEntity>()
+                                .eq(FollowVpsUserEntity::getVpsId, vo.getId())
+                ).stream()
+                .map(FollowVpsUserEntity::getVpsName)
+                .collect(Collectors.toList());
+        // 转换为 Set 以便进行集合操作
+        Set<String> existingUserSet = existingUserList.stream().collect(Collectors.toSet());
+        Set<String> userSet = vo.getUserList().stream().collect(Collectors.toSet());
+
+        // 找出需要删除的用户
+        List<String> usersToDelete = existingUserSet.stream()
+                .filter(user -> !userSet.contains(user))
+                .collect(Collectors.toList());
+
+        // 找出需要添加的用户
+        List<String> usersToAdd = userSet.stream()
+                .filter(user -> !existingUserSet.contains(user))
+                .collect(Collectors.toList());
+
+        // 删除用户
+        if (ObjectUtil.isNotEmpty(usersToDelete)) {
+            for (String userToDelete : usersToDelete) {
+                followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>()
+                        .eq(FollowVpsUserEntity::getVpsId, vo.getId())
+                        .eq(FollowVpsUserEntity::getVpsName, userToDelete));
+            }
+        }
+        if (ObjectUtil.isNotEmpty(usersToAdd)) {
+            // 添加用户
+            for (String userToAdd : usersToAdd) {
+                FollowVpsUserEntity newUser = new FollowVpsUserEntity();
+                newUser.setUserId(SecurityUser.getUserId());
+                newUser.setVpsId(vo.getId());
+                newUser.setVpsName(userToAdd);
+                followVpsUserService.save(newUser);
+            }
+        }
         followVpsService.update(vo);
         log.info("成功更新 Client 和 FollowVps");
         return true;
