@@ -88,17 +88,24 @@
         ON t1.id = t2.id
         LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         <where>
-            <if test="query.brokerName != null and query.brokerName != ''">
-                AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
-            </if>
+            <choose>
+                <when test="query.brokerName == null or query.brokerName == ''">
+                    <!-- 不添加任何条件 -->
+                </when>
+                <when test="query.brokerName != null and query.brokerName.trim() == ''">
+                    AND fp.broker_name IS NULL
+                </when>
+                <otherwise>
+                    <if test="query.brokerName != null and query.brokerName.trim() != ''">
+                        AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
+                    </if>
+                </otherwise>
+            </choose>
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name LIKE CONCAT('%', #{query.serverName}, '%')
             </if>
             <if test="query.serverNode != null and query.serverNode != ''">
                 AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
-            </if>
-            <if test="query.brokerName == ' '">
-                AND fp.broker_name IS NULL
             </if>
         </where>
         ORDER BY fp.broker_name
