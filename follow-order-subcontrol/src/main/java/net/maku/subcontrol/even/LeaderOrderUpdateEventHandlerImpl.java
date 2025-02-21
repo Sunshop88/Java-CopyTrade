@@ -333,9 +333,24 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                         LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
                                         leaderApiTrader1.startTrade();
                                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
-                                        //重复提交
+                                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                                        long startTime = System.currentTimeMillis();
                                         leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
+                                        // 开始等待直到获取到copierApiTrader1
+                                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                                            try {
+                                                // 每次自旋等待500ms后再检查
+                                                Thread.sleep(500);
+                                            } catch (InterruptedException e) {
+                                                // 处理中断
+                                                Thread.currentThread().interrupt();
+                                                break;
+                                            }
+                                            leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(h.getId().toString());
+                                        }
+                                        //重复提交
                                         if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                                            log.info(h.getId().toString()+"重复提交并等待完成");
                                             quoteClient = leaderApiTrader.quoteClient;
                                         }
                                     }else {
