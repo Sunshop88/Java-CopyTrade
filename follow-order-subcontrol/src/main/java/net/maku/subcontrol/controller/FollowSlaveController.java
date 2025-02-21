@@ -82,6 +82,7 @@ public class FollowSlaveController {
     @Operation(summary = "新增跟单账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
+        long newID = 0;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity) || !followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
@@ -121,7 +122,7 @@ public class FollowSlaveController {
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
-
+            newID=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
@@ -172,7 +173,7 @@ public class FollowSlaveController {
                             EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), followTraderEntity);
                             redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
                             //发送漏单通知
-                            FollowTraderVO master = followTraderService.get(eaOrderInfo.getMasterId());
+                            FollowTraderEntity master = followTraderService.getFollowById(eaOrderInfo.getMasterId());
                             messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
                         });
                     }
@@ -180,6 +181,7 @@ public class FollowSlaveController {
             });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);
+            followTraderService.removeById(newID);
             if (e instanceof ServerException) {
                 throw e;
             } else {
@@ -242,7 +244,12 @@ public class FollowSlaveController {
                 leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
             });
         } catch (Exception e) {
-            throw new ServerException("修改失败" + e);
+            if (e instanceof ServerException) {
+                throw e;
+            }else{
+                throw new ServerException("修改失败" + e);
+            }
+
         }
 
         return Result.ok();

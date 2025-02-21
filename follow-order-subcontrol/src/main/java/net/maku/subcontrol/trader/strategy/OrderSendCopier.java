@@ -99,14 +99,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
                 //如果没有此品种匹配，校验是否可以获取报价
-                if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(orderInfo.getOriSymbol()))){
+                if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(finalStdSymbol))){
                     //订阅
-                    trader.quoteClient.Subscribe(orderInfo.getOriSymbol());
+                    trader.quoteClient.Subscribe(finalStdSymbol);
                 }
             } catch (Exception e) {
-                log.info("品种异常,不可下单{}+++++++账号{}" , orderInfo.getOriSymbol(),copier.getId());
+                log.info("品种异常,不可下单{}+++++++账号{}" , finalStdSymbol,copier.getId());
             }
-            orderInfo.setSymbolList(Collections.singletonList(orderInfo.getOriSymbol()));
+            orderInfo.setSymbolList(Collections.singletonList(finalStdSymbol));
         }
         log.info("请求进入时间3:"+trader.getTrader().getId());
         //  依次对备选品种进行开仓尝试
@@ -147,7 +147,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
     }
 
     public boolean sendOrderAsy(AbstractApiTrader trader, EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier,
-                                FollowSubscribeOrderEntity openOrderMapping, Integer flag,String brokeName) {
+                             FollowSubscribeOrderEntity openOrderMapping, Integer flag,String brokeName) {
         log.info("请求进入时间4:"+trader.getTrader().getId());
         CompletableFuture.runAsync(() -> {
             FollowTraderEntity followTraderEntity =followTraderService.getFollowById(Long.valueOf(trader.getTrader().getId()));
@@ -163,13 +163,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
                         CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
                         copierApiTrader1.setTrader(followTraderEntity);
-                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        //重复提交
-                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        if (ObjectUtil.isNotEmpty(copierApiTrader1)){
-                            quoteClient = copierApiTrader1.quoteClient;
-                        }
-                    } else {
+                    }else {
+                        log.error(trader.getTrader().getId()+"掉线异常");
                         throw new RuntimeException("登录异常" + trader.getTrader().getId());
                     }
                 }
@@ -209,7 +204,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 // 记录开始时间
                 LocalDateTime startTime=LocalDateTime.now();
                 long start = System.currentTimeMillis();
-                Order order = quoteClient.OrderClient.OrderSend(
+                OrderClient oc;
+                if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
+                    oc = quoteClient.OrderClient;
+                } else {
+                    oc = new OrderClient(quoteClient);
+                }
+                oc.PlacedType=PlacedType.forValue(leaderCopier.getPlacedType());
+                Order order = oc.OrderSend(
                         orderInfo.getSymbol(),
                         op,
                         openOrderMapping.getSlaveLots().doubleValue(),
@@ -243,18 +245,15 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 // 保存到批量发送队列
                 kafkaMessages.add(jsonEvent);
-                //漏单删除
-                FollowTraderEntity master = followTraderService.getById(openOrderMapping.getMasterId());
-                redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + followTraderEntity.getPlatform() + "#" + master.getPlatform() + "#" + openOrderMapping.getSlaveAccount() + "#" + openOrderMapping.getMasterAccount(), orderInfo.getTicket()+"");
                 //删除漏单redis记录
                 Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
                 Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
                 if (o2 != null && o2.toString().trim().length() > 0) {
                     repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
                 }
-                repairInfoVOS.remove(orderInfo.getTicket());
+               repairInfoVOS.remove(orderInfo.getTicket());
                 if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                    redisUtil.del(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId());
+                    redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
                 }else{
                     redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                 }
@@ -338,6 +337,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                         copierApiTrader1.setTrader(followTraderEntity);
                     }
                 } else {
+                    log.error(trader.getTrader().getId()+"掉线异常");
                     throw new RuntimeException("登录异常" + trader.getTrader().getId());
                 }
             }
@@ -368,7 +368,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             // 记录开始时间
             LocalDateTime startTime=LocalDateTime.now();
             long start = System.currentTimeMillis();
-            Order order = quoteClient.OrderClient.OrderSend(
+            OrderClient oc;
+            if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
+                oc = quoteClient.OrderClient;
+            } else {
+                oc = new OrderClient(quoteClient);
+            }
+            oc.PlacedType=PlacedType.forValue(leaderCopier.getPlacedType());
+            Order order = oc.OrderSend(
                     orderInfo.getSymbol(),
                     op,
                     openOrderMapping.getSlaveLots().doubleValue(),
@@ -410,7 +417,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
             repairInfoVOS.remove(orderInfo.getTicket());
             if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                redisUtil.del(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId());
+                redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(),openOrderMapping.getSlaveAccount().toString());
             }else{
                 redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
             }

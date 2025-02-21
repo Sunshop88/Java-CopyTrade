@@ -105,18 +105,14 @@ public abstract class AbstractApiTrader extends ApiTrader {
             this.orderClient = new OrderClient(quoteClient);
         }
         boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
-        if (isLeader){
-            //检查是否存在订单变化
-            log.info("重连后漏单检查"+trader.getId());
-            kafkaTemplate.send("order-repair",String.valueOf(trader.getId()));
-        }
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听
                 this.orderUpdateHandler = new LeaderOrderUpdateEventHandlerImpl(this);
                 log.info("添加监听"+trader.getId());
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
-            }else {
+            }
+            else {
                 this.orderUpdateHandler = new CopierOrderUpdateEventHandlerImpl(this);
                 this.quoteClient.OnOrderUpdate.addListener(orderUpdateHandler);
             }
@@ -204,7 +200,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
             }
             freshTimeWhenConnected();
         } catch (Exception e) {
-            log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), AesUtils.decryptStr(trader.getPassword()), eurusd, e.getMessage());
+            log.error("[MT4{}:{}-{}-{}-{}-{}] {}抛出需要重连的异常：{}",  trader.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ? "喊单者" : "跟单者", trader.getId(), trader.getAccount(), trader.getServerName(),trader.getPlatform(), trader.getPassword(), eurusd, e.getMessage());
             traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
             String serverNode;
             //优先查看平台默认节点
@@ -218,7 +214,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 try {
                     //处理节点格式
                     String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()),  split[0], Integer.valueOf(split[1]));
+                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), trader.getPassword(),  split[0], Integer.valueOf(split[1]));
                     quoteClient.Connect();
                 }catch (Exception e1){
                     if (e.getMessage().contains("Invalid account")){
@@ -238,7 +234,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 serverEntityList.stream().anyMatch(address->{
                     try {
                         this.quoteClient.Disconnect();
-                        this.quoteClient.Password = AesUtils.decryptStr(trader.getPassword());
+                        this.quoteClient.Password = trader.getPassword();
                         this.quoteClient.Host = address.getServerNode();
                         this.quoteClient.Port = Integer.valueOf(address.getServerPort());
                     } catch (Exception ex) {

@@ -70,7 +70,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
         if (currentTime - lastInvokeTime >= interval) {
             try {
                 lastInvokeTime = currentTime;
-                QuoteClient qc = (QuoteClient) sender;
+                QuoteClient qc=abstractApiTrader.quoteClient;
 
                 // 缓存经常变动的三个值信息
                 followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());

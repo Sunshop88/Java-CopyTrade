@@ -235,14 +235,12 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 for (FollowVarietyEntity recordToUpdate : existingRecords) {
                     log.info("Updating record: {}", recordToUpdate);
                     recordToUpdate.setStdContract(stdContract);
-//                    baseMapper.updateById(recordToUpdate);
                     int updateResult = baseMapper.updateById(recordToUpdate);
-
                     log.info("Update result: {}", updateResult);
-
                 }
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
-                for (int i = 2; i < record.size(); i++) {
+                int headerSize = brokerNames.size();
+                for (int i = 2; i < Math.min(headerSize, record.size()); i++) { // 添加边界检查
                     String brokerName = brokerNames.get(i);
                     String brokerSymbol = record.get(i);
                     // 删除已有的相同 stdSymbol 和 brokerName 对应的 brokerSymbol，即便 brokerSymbol 为 null
@@ -288,16 +286,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                     FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
                     baseMapper.insert(entity);
                 }
-//                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
-//                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
-//                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
-//                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
-//                // 根据 template 查询数据库中的数据
-//                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
-//                for (FollowVarietyEntity recordToUpdate : existingRecords) {
-//                    recordToUpdate.setStdContract(stdContract);
-//                    baseMapper.updateById(recordToUpdate);
-//                }
             }
             if (!ObjectUtil.isEmpty(templateName)) {
                 //根据template更新templateName
@@ -310,6 +298,112 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             log.error("导入失败", e);
         }
     }
+
+//    public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
+//        try {
+//            InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
+//            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+//            List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
+//            for (CSVRecord record : csvParser) {
+//                String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
+//                String stdSymbol = record.get(1);      // 第二个字段是 stdSymbol
+//                Integer stdContract = null;
+//                if (ObjectUtil.isEmpty(stdSymbol)) continue;
+//                // 解析 stdContract 字段
+//                if (!ObjectUtil.isEmpty(stdContractStr)) {
+//                    try {
+//                        stdContract = Integer.valueOf(stdContractStr.trim());
+//                    } catch (NumberFormatException e) {
+//                        log.warn("Invalid stdContract value: " + stdContractStr);
+//                    }
+//                }
+//                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+//                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+//                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
+//                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+//                // 根据 template 查询数据库中的数据
+//                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+//                log.info("template: {}", template);
+//                log.info("stdSymbol: {}", stdSymbol);
+//                log.info("existingRecords size: {}", existingRecords.size());
+//                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+//                    log.info("Updating record: {}", recordToUpdate);
+//                    recordToUpdate.setStdContract(stdContract);
+////                    baseMapper.updateById(recordToUpdate);
+//                    int updateResult = baseMapper.updateById(recordToUpdate);
+//
+//                    log.info("Update result: {}", updateResult);
+//
+//                }
+//                // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
+//                for (int i = 2; i < record.size(); i++) {
+//                    String brokerName = brokerNames.get(i);
+//                    String brokerSymbol = record.get(i);
+//                    // 删除已有的相同 stdSymbol 和 brokerName 对应的 brokerSymbol，即便 brokerSymbol 为 null
+//                    LambdaQueryWrapper<FollowVarietyEntity> deleteQueryWrapper = Wrappers.lambdaQuery();
+//                    deleteQueryWrapper.eq(FollowVarietyEntity::getStdSymbol, stdSymbol)
+//                            .eq(FollowVarietyEntity::getBrokerName, brokerName.trim())
+//                            .eq(FollowVarietyEntity::getTemplateId, template);
+//                    baseMapper.delete(deleteQueryWrapper);
+//
+//                    FollowVarietyVO brokerData = new FollowVarietyVO();
+//                    brokerData.setStdContract(stdContract);
+//                    brokerData.setStdSymbol(stdSymbol);
+//                    brokerData.setBrokerName(brokerName.trim());
+//                    brokerData.setTemplateId(template); // 设置 template 字段
+//
+//                    if (ObjectUtil.isEmpty(brokerSymbol)) {
+//                        // brokerSymbol 为空的情况
+//                        brokerData.setBrokerSymbol(null);
+//                        FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+//                        baseMapper.insert(entity);
+//                    } else {
+//                        // brokerSymbol 不为空的情况，可能包含多个符号
+//                        String[] brokerSymbolParts = brokerSymbol.split("/");
+//                        for (String symbol : brokerSymbolParts) {
+//                            brokerData.setBrokerSymbol(symbol.trim());
+//                            FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+//                            try {
+//                                baseMapper.insert(entity);
+//                            } catch (Exception e) {
+//                                log.info("插入失败: " + brokerData.getBrokerName() + "-" + brokerData.getBrokerSymbol());
+//                            }
+//                        }
+//                    }
+//                }
+//                // 只有 stdSymbol 和 stdContract，没有 brokerName 和 brokerSymbol时保存
+//                if (record.size() == 2 || (stdContract != null && record.size() == 3 && brokerNames.size() < 3)) {
+//                    FollowVarietyVO brokerData = new FollowVarietyVO();
+//                    brokerData.setStdSymbol(stdSymbol);
+//                    brokerData.setStdContract(stdContract);
+//                    brokerData.setBrokerName(null);
+//                    brokerData.setBrokerSymbol(null);
+//                    brokerData.setTemplateId(template); // 设置 template 字段
+//                    FollowVarietyEntity entity = FollowVarietyConvert.INSTANCE.convert(brokerData);
+//                    baseMapper.insert(entity);
+//                }
+////                // 根据template更新所有具有相同 stdSymbol 的记录的 stdContract 值
+////                LambdaQueryWrapper<FollowVarietyEntity> wrapper = Wrappers.lambdaQuery();
+////                wrapper.eq(FollowVarietyEntity::getTemplateId, template)
+////                        .eq(FollowVarietyEntity::getStdSymbol, stdSymbol);
+////                // 根据 template 查询数据库中的数据
+////                List<FollowVarietyEntity> existingRecords = baseMapper.selectList(wrapper);
+////                for (FollowVarietyEntity recordToUpdate : existingRecords) {
+////                    recordToUpdate.setStdContract(stdContract);
+////                    baseMapper.updateById(recordToUpdate);
+////                }
+//            }
+//            if (!ObjectUtil.isEmpty(templateName)) {
+//                //根据template更新templateName
+//                LambdaUpdateWrapper<FollowVarietyEntity> updateWrapper = Wrappers.lambdaUpdate();
+//                updateWrapper.eq(FollowVarietyEntity::getTemplateId, template)
+//                        .set(FollowVarietyEntity::getTemplateName, templateName);
+//                baseMapper.update(updateWrapper);
+//            }
+//        } catch (Exception e) {
+//            log.error("导入失败", e);
+//        }
+//    }
 
     public void importExcel(MultipartFile file, Integer template, String templateName) throws IOException {
         try {
@@ -454,12 +548,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     public void addCsv(MultipartFile file, Integer template, String templateName) throws Exception {
-        try {
-            InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
-            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
 
             List<String> brokerNames = new ArrayList<>(csvParser.getHeaderMap().keySet());
-//            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader());
+
             for (CSVRecord record : csvParser) {
                 String stdContractStr = record.get(0); // 第一个字段可能是 stdContract
                 String stdSymbol = record.get(1);      // 第二个字段是 stdSymbol
@@ -479,7 +572,8 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 baseMapper.updateStdContractByStdSymbol(stdSymbol, stdContract);
 
                 // 遍历 brokerName 列，处理 brokerSymbol 和 brokerName
-                for (int i = 2; i < record.size(); i++) {
+                int headerSize = brokerNames.size();
+                for (int i = 2; i < Math.min(headerSize, record.size()); i++) { // 添加边界检查
                     String brokerName = brokerNames.get(i);
                     String brokerSymbol = record.get(i);
 

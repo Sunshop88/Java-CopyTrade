@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -225,7 +226,7 @@ public class PushRedisTask {
       ThreadPoolUtils.execute(() -> {
            String localHost = FollowConstant.LOCAL_HOST;
            String keyl="LOCK:" + localHost;
-           boolean lock = redissonLockUtil.lock(keyl, 30, -1, TimeUnit.SECONDS);
+           boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
            try {
                if (lock) {
 
@@ -471,13 +472,13 @@ public class PushRedisTask {
                     String json = convertJson(collect);
                     log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),collect.size(),sbb.toString());
                     redisUtil.setSlaveRedis(Integer.toString(k), json);
-                    redissonLockUtil.unlock(keyl);
+                 //   redissonLockUtil.unlock(keyl);
 
                 }
             });
                }
            }finally {
-           //    redissonLockUtil.unlock(keyl);
+               redissonLockUtil.unlock(keyl);
            }
         });
     }
@@ -551,7 +552,7 @@ public class PushRedisTask {
     public void add(Integer id) {
         String localHost = FollowConstant.LOCAL_HOST;
         String keyl="LOCK:" + localHost;
-        boolean lock = redissonLockUtil.lock(keyl, 30, -1, TimeUnit.SECONDS);
+        boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
         FollowTraderEntity h = followTraderService.getById(Long.valueOf(id));
        
         try {
@@ -631,7 +632,7 @@ public class PushRedisTask {
                         if(ObjectUtil.isEmpty(accountCache.getModeString())){
                             accountCache.setModeString("");
                         }
-                        accountCache.setManagerStatus("Disconnected");
+                        accountCache.setManagerStatus("Connected");
                         OrderCacheVO orderCacheVO = new OrderCacheVO();
                         orderCaches.add(orderCacheVO);
                         accountCache.setLots(0.00);
@@ -645,15 +646,34 @@ public class PushRedisTask {
                     accountCache.setOrders(new ArrayList<>());
                 }
                 accounts.add(accountCache);
+                List<AccountCacheVO> collect = accounts.stream().sorted(Comparator.comparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo))
+                                .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)))
+                        .collect(Collectors.toList());
                 //转出json格式
-                String js = convertJson(accounts);
+                String js = convertJson(collect);
                 redisUtil.setSlaveRedis(Integer.toString(h.getServerId()), json);
-                redissonLockUtil.unlock(keyl);
+
 
             }
 
       }finally {
-
+            redissonLockUtil.unlock(keyl);
      }
+    }
+
+    public void del(Long id) {
+        String localHost = FollowConstant.LOCAL_HOST;
+        String keyl="LOCK:" + localHost;
+        boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
+        try {
+            if (lock) {
+
+            }
+            }finally {
+                redissonLockUtil.unlock(keyl);
+            }
+
+
+
     }
 }

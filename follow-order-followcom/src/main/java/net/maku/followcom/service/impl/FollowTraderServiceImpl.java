@@ -82,6 +82,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final CacheManager cacheManager;
     private final RedisUtil redisUtil;
 
+
+    @Autowired
+    @Qualifier(value = "commonThreadPool")
+    private ExecutorService commonThreadPool;
+
     @Override
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -143,8 +148,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         }
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
-     //  FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
-        FollowVpsEntity followVpsEntity =followVpsService.getById(49);
+        FollowVpsEntity followVpsEntity = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, vo.getServerIp()).eq(FollowVpsEntity::getDeleted, VpsSpendEnum.FAILURE.getType()));
         if (ObjectUtil.isEmpty(followVpsEntity)) {
             throw new ServerException("请先添加VPS");
         }
@@ -321,6 +325,17 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(query.getFlag()) && query.getFlag().equals(CloseOrOpenEnum.OPEN.getValue())) {
             wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
         }
+        //查看是否为平仓详情数据
+        if (ObjectUtil.isNotEmpty(query.getIsClose()) && query.getIsClose().equals(CloseOrOpenEnum.OPEN.getValue())) {
+            wrapper.isNotNull(FollowOrderDetailEntity::getOpenTime);
+            // 使用 lambdaQuery 的嵌套条件来正确分组逻辑
+            wrapper.and(subWrapper ->
+                    subWrapper.isNotNull(FollowOrderDetailEntity::getCloseTime)
+                            .or()
+                            .isNotNull(FollowOrderDetailEntity::getRemark)
+            );
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             // 解析字符串为 LocalDateTime
@@ -534,7 +549,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderCloseEntity.setType(TraderCloseEnum.BUYANDSELL.getType());
             //全平
             orderActive = orderActiveInfoVOS.stream().sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
-            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId()).isNotNull(FollowOrderDetailEntity::getOpenTime).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
+            list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
+                    .eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).isNotNull(FollowOrderDetailEntity::getOpenTime)
+                    .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue()).isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime));
             // 提取 list 中的订单号
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
             log.info("持仓数量{},平台持仓数量{}", orderActive.size(), listOrderNos.size());
@@ -920,6 +937,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCloseServerName(vps.getName());
             followOrderDetailEntity.setCloseServerHost(quoteClient.Host+":"+quoteClient.Port);
             followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
+            followOrderDetailEntity.setRemark(null);
         } catch (Exception e) {
             log.error(orderNo+"平仓出错" + e.getMessage());
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
@@ -1071,12 +1089,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 BigDecimal max = new BigDecimal(o1.toString());
                 BigDecimal lots = new BigDecimal(lotsPerOrder);
                 if (lots.compareTo(max)>0) {
-                   throw  new ServerException("超过最大手数限制");
+                    throw  new ServerException("超过最大手数限制");
                 }
             }
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             Order order;
+            followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
+            followOrderDetailEntity.setSourceUser(account);
+            followOrderDetailEntity.setServerHost(quoteClient.Host+":"+quoteClient.Port);
             if (type.equals(Buy.getValue())) {
                 long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);

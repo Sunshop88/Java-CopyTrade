@@ -73,8 +73,11 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
             if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())){
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
+                if (master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                    throw new ServerException("请开启补仓开关");
+                }
                 //下单
-                String key=  Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
+                 String key=  Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
                 Map<Object,Object> sendRepair=redisUtil.hGetAll(key);
                 List<Object> sendRepairToExtract = new ArrayList<>();
                 for (Object repairObj : sendRepair.keySet()) {
@@ -82,7 +85,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (!existsInActive) {
                         sendRepairToExtract.add(repairComment);
-                        //  redisUtil.hDel(key,repairObj.toString());
+                      //  redisUtil.hDel(key,repairObj.toString());
                     }
                 }
                 sendRepairToExtract.stream().toList().forEach(o->{
@@ -96,7 +99,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                 FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
                 List<Object> closeRepairToExtract = new ArrayList<>();
-                String key=Constant.FOLLOW_REPAIR_CLOSE+ FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
+                 String key=Constant.FOLLOW_REPAIR_CLOSE+ FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+subscription.getSlaveAccount()+"#"+subscription.getMasterAccount();
                 Map<Object,Object> closeRepair=redisUtil.hGetAll(key);
                 for (Object repairObj : closeRepair.keySet()) {
 
@@ -104,7 +107,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
                     if (existsInActive) {
                         closeRepairToExtract.add(repairComment);
-                        //  redisUtil.hDel(key,repairObj.toString());
+                      //  redisUtil.hDel(key,repairObj.toString());
                     }
                 }
                 closeRepairToExtract.stream().toList().forEach(o->{
@@ -131,6 +134,9 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                     if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())&&subscription.getFollowOpen().equals(CloseOrOpenEnum.OPEN.getValue())) {
                         FollowTraderEntity slave = followTraderService.getFollowById(repairSendVO.getSlaveId());
                         FollowTraderEntity master = followTraderService.getFollowById(repairSendVO.getMasterId());
+                        if (master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                            throw new ServerException("请开启补仓开关");
+                        }
                         //获取redis内的下单信息
                         if (ObjectUtil.isNotEmpty(redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString()))){
                             EaOrderInfo objects = (EaOrderInfo)redisUtil.hGet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+traderSubscribeEntity.getSlaveAccount()+"#"+traderSubscribeEntity.getMasterAccount(),repairSendVO.getOrderNo().toString());
@@ -219,10 +225,10 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     @Override
     public Boolean batchRepairSend(List<RepairSendVO> repairSendVO,HttpServletRequest req) {
         repairSendVO.forEach(repair -> {
-            Long slaveId = repair.getSlaveId();
-            FollowTraderEntity trader = followTraderService.getById(slaveId);
-            FollowVpsEntity vps = followVpsService.getById(trader.getServerId());
-            sendRequest(req,vps.getIpAddress(),"/subcontrol/follow/repairSend",repair);
+                Long slaveId = repair.getSlaveId();
+                FollowTraderEntity trader = followTraderService.getById(slaveId);
+                FollowVpsEntity vps = followVpsService.getById(trader.getServerId());
+                sendRequest(req,vps.getIpAddress(),"/subcontrol/follow/repairSend",repair);
             //repairSend(repair);
         });
         return true;

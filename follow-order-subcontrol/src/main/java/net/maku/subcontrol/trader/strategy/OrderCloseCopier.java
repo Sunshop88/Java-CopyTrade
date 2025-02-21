@@ -16,6 +16,7 @@ import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.OrderRepairInfoVO;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -39,6 +40,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static net.maku.followcom.enums.CopyTradeFlag.CPOS;
 import static net.maku.followcom.enums.CopyTradeFlag.POF;
@@ -56,6 +58,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
 
     private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final CacheManager cacheManager;
+    private final RedissonLockUtil redissonLockUtil;
     @Override
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
@@ -128,13 +131,8 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
                     copierApiTrader1.setTrader(copier);
                     copier=copierApiTrader1.getTrader();
-                }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                    //重复提交
-                    CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
-                    if (ObjectUtil.isNotEmpty(copierApiTrader1)) {
-                        quoteClient = copierApiTrader1.quoteClient;
-                    }
                 }else {
+                    log.error(trader.getTrader().getId()+"掉线异常");
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
                 }
             }
@@ -190,22 +188,31 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             //删除漏单
             FollowTraderEntity master = followTraderService.getById(leaderCopier.getMasterId());
             //String mapKey = copierApiTrader.getTrader().getId() + "#" + copierApiTrader.getTrader().getAccount();
-            redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+copier.getPlatform()+"#"+master.getPlatform()+ "#" + leaderCopier.getSlaveAccount() + "#" + leaderCopier.getMasterAccount(), orderInfo.getTicket().toString());
-            //删除漏单redis记录
-            Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount());
-            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
-            if (o1!=null && o1.toString().trim().length()>0){
-                repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
-            }
-            repairInfoVOS.remove(orderInfo.getTicket());
-            if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                redisUtil.del(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId());
-            }else{
-                redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount(),JSONObject.toJSONString(repairInfoVOS));
-            }
+            String closekey = Constant.REPAIR_CLOSE + "：" + copier.getAccount();
+            boolean closelock = redissonLockUtil.lock(closekey, 10, -1, TimeUnit.SECONDS);
+            try {
+                if(closelock) {
+                    redisUtil.hDel(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST +"#"+copier.getPlatform()+"#"+master.getPlatform()+ "#" + leaderCopier.getSlaveAccount() + "#" + leaderCopier.getMasterAccount(), orderInfo.getTicket().toString());
+                    //删除漏单redis记录
+                    Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount().toString());
+                    Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                    if (o1!=null && o1.toString().trim().length()>0){
+                        repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                    }
+                    repairInfoVOS.remove(orderInfo.getTicket());
+                    if(repairInfoVOS==null || repairInfoVOS.size()==0){
+                        redisUtil.hDel(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount().toString());
+                    }else{
+                        redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), copier.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
+                    }
 
-            log.info("漏平删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), leaderCopier.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
-
+                    log.info("漏平删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), leaderCopier.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
+                }
+            } catch (Exception e) {
+            log.error("漏平检查写入异常{0}",e);
+        }finally {
+            redissonLockUtil.unlock(closekey);
+        }
 
         } catch (Exception e) {
             followSubscribeOrderService.update(Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate()
@@ -238,8 +245,6 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             followTraderLogEntity.setLogDetail(remark);
             followTraderLogEntity.setCreator(ObjectUtil.isNotEmpty(SecurityUser.getUserId())?SecurityUser.getUserId():null);
             followTraderLogService.save(followTraderLogEntity);
-
-            redisUtil.hDel(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
             log.error("跟单者完全平仓订单最终尝试失败，[原因：{}],[跟单者{}-{}-{}]完全平仓{}订单失败，[喊单者{}-{}-{}],喊单者订单信息[{}]", e.getMessage(), orderId, copier.getAccount(), copier.getServerName(), cachedCopierOrderInfo.getSlaveTicket(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         }
     }

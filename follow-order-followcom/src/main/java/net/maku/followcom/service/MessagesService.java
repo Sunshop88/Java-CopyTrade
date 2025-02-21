@@ -14,6 +14,6 @@ import online.mtapi.mt4.QuoteClient;
 public interface MessagesService {
 
     public void send(FixTemplateVO vo);
-    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master, QuoteClient quoteClient);
-    public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderVO master);
+    public void isRepairSend(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderEntity master, QuoteClient quoteClient);
+    public void isRepairClose(EaOrderInfo orderInfo, FollowTraderEntity follow, FollowTraderEntity master);
 }

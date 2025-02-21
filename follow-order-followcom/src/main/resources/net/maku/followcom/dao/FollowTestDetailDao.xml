@@ -63,17 +63,13 @@
         t1.*,
         fp.broker_name
         FROM follow_test_detail t1
-        JOIN (
-        SELECT server_name, platform_type, COALESCE(server_node, '') AS server_node, MAX(create_time) AS latest_time, vps_id
+        RIGHT JOIN (
+        SELECT  MAX(id) AS id
         FROM follow_test_detail
         WHERE deleted = 0
         GROUP BY server_name, platform_type, COALESCE(server_node, ''), vps_id
         ) t2
-        ON t1.server_name = t2.server_name
-        AND t1.platform_type = t2.platform_type
-        AND COALESCE(t1.server_node, '') = COALESCE(t2.server_node, '')
-        AND t1.create_time = t2.latest_time
-        AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
+        ON t1.id = t2.id
         LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         <where>
             <if test="query.brokerName != null and query.brokerName != ''">
@@ -122,35 +118,49 @@
         t1.`test_id`,
         t1.`server_update_time`,
         t1.`is_default_server`
-        FROM
-        follow_test_detail t1
-        JOIN (
-        SELECT
-        server_name,
-        platform_type,
-        server_node AS server_node,
-        MAX(create_time) AS latest_time,
-        vps_id
-        FROM
-        follow_test_detail
-        WHERE
-        deleted = 0
-        GROUP BY
-        server_name,
-        platform_type,
-        server_node,
-        vps_id
-        ) t2 ON t1.server_name = t2.server_name
-        AND t1.platform_type = t2.platform_type
-        AND t1.server_node = t2.server_node
-        AND t1.create_time = t2.latest_time
-        AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
-        <!--        <if test="query.brokerName != null and query.brokerName != ''">-->
-        <!--            LEFT JOIN follow_platform fp ON t1.server_name = fp.server-->
-        <!--        </if>-->
+        FROM follow_test_detail t1
+        RIGHT JOIN (
+        SELECT MAX(id) AS id
+        FROM follow_test_detail
+        WHERE deleted = 0
+        GROUP BY server_name, platform_type, COALESCE(server_node, ''), vps_id
+        ) t2
+        ON t1.id = t2.id
+        --         FROM
+        --             follow_test_detail t1
+        --                 JOIN (
+        --                 SELECT
+        --                     server_name,
+        --                     platform_type,
+        --                     server_node AS server_node,
+        --                     MAX(create_time) AS latest_time,
+        --                     vps_id
+        --                 FROM
+        --                     follow_test_detail
+        --                 WHERE
+        --                     deleted = 0
+        --                 GROUP BY
+        --                     server_name,
+        --                     platform_type,
+        --                     server_node,
+        --                     vps_id
+        --             ) t2 ON t1.server_name = t2.server_name
+        --                 AND t1.platform_type = t2.platform_type
+        --                 AND t1.server_node = t2.server_node
+        --                 AND t1.create_time = t2.latest_time
+        --                 AND (t1.vps_id = t2.vps_id OR (t1.vps_id IS NULL AND t2.vps_id IS NULL))
         <where>
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name = #{query.serverName}
+            </if>
+            <if test="query.serverNode != null and query.serverNode != ''">
+                AND COALESCE(t1.server_node, '') LIKE CONCAT('%', #{query.serverNode}, '%')
+            </if>
+            <if test="query.vpsId != null and query.vpsId != ''">
+                AND t1.vps_id = #{query.vpsId}
+            </if>
+            <if test="query.isDefaultServer != null and query.isDefaultServer != ''">
+                AND t1.is_default_server = #{query.isDefaultServer}
             </if>
         </where>
     </select>

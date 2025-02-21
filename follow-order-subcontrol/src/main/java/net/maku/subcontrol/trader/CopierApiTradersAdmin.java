@@ -17,6 +17,7 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
@@ -28,6 +29,7 @@ import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderClient;
 import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -59,7 +61,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
      * 显示mt4账户管理器是否启动完成
      */
     private Boolean launchOn = false;
-
+    private KafkaTemplate<Object, Object> kafkaTemplate = SpringContextUtils.getBean(KafkaTemplate.class);
     public CopierApiTradersAdmin(FollowTraderService followTraderService, FollowBrokeServerService followBrokeServerService, FollowTraderSubscribeService followTraderSubscribeService, RedisUtil redisUtil) {
         this.followTraderService = followTraderService;
         this.followBrokeServerService = followBrokeServerService;
@@ -83,6 +85,9 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity slave : slaves) {
             ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
+                    if (ObjectUtil.isNotEmpty(copier4ApiTraderConcurrentHashMap.get(slave.getId().toString()))){
+                        return;
+                    }
                     ConCodeEnum conCodeEnum = addTrader(slave);
                     CopierApiTrader copierApiTrader = copier4ApiTraderConcurrentHashMap.get(slave.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
@@ -92,7 +97,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("跟单者:[{}-{}-{}]启动重复", slave.getId(), slave.getAccount(), slave.getServerName());
                     } else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), AesUtils.decryptStr(slave.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -138,7 +143,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("跟单者:[{}-{}-{}]启动重复", copier.getId(), copier.getAccount(), copier.getServerName());
                     }else {
-                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), AesUtils.decryptStr(copier.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                        log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
                         if (ObjectUtil.isEmpty(redisUtil.get(Constant.TRADER_USER+copierApiTrader.getTrader().getId()))){
                             setTraderOrder(copierApiTrader);

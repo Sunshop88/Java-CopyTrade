@@ -3,6 +3,7 @@ package net.maku.followcom.dao;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
 import net.maku.framework.mybatis.dao.BaseDao;
 import net.maku.followcom.entity.FollowOrderDetailEntity;

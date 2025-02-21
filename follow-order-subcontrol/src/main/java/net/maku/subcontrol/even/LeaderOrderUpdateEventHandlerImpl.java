@@ -1,7 +1,6 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -157,13 +156,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             case PositionClose:
                 log.info("[MT4喊单者：{}-{}-{}]监听到" + orderUpdateEventArgs.Action + ",订单信息[{}]", leader.getId(), leader.getAccount(), leader.getServerName(), new EaOrderInfo(order));
                 ThreadPoolUtils.getExecutor().execute(()->{
-                    //发送平仓MQ
-                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
-                    try {
-                        producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
                     EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, order, 0, currency, LocalDateTime.now());
                     //喊单平仓
                     //发送MT4处理请求
@@ -172,16 +164,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 flag = 1;
                 //推送到redis
 //                pushCache(leader.getServerId());
-                break;
-            case  Balance:
-            case Credit:
-                //发送平仓MQ
-                ObjectMapper mapper = JacksonConfig.getObjectMapper();
-                try {
-                    producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
                 break;
             default:
                 log.error("Unexpected value: " + orderUpdateEventArgs.Action);
@@ -264,7 +246,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             if (ObjectUtil.isEmpty(copierApiTrader)) {
                                 log.info("开平重连" + slaveId);
                                 copierApiTradersAdmin.removeTrader(slaveId);
-                                copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                    copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                    copierApiTrader.startTrade();
+                                }
                             }
                             if (orderUpdateEventArgs.Action == PositionClose) {
                                 //跟单平仓

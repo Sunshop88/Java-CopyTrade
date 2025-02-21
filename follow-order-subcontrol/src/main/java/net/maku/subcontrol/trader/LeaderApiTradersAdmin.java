@@ -36,6 +36,7 @@ import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -70,6 +71,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
     private Boolean launchOn = false;
 
     private final RedisUtil redisUtil;
+    private KafkaTemplate<Object, Object> kafkaTemplate =SpringContextUtils.getBean(KafkaTemplate.class);
 
     public LeaderApiTradersAdmin(FollowTraderService eaTraderService, FollowBrokeServerService eaBrokerService, RedisUtil redisUtil) {
         this.redisUtil = redisUtil;
@@ -93,6 +95,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
         for (FollowTraderEntity leader : leaders) {
             ThreadPoolUtils.getExecutor().submit(() -> {
                 try {
+                    if (ObjectUtil.isNotEmpty(copier4ApiTraderConcurrentHashMap.get(leader.getId().toString()))){
+                        return;
+                    }
                     ConCodeEnum conCodeEnum = addTrader(leader);
                     LeaderApiTrader leaderApiTrader = leader4ApiTraderConcurrentHashMap.get(leader.getId().toString());
                     if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
@@ -102,7 +107,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
                     }else {
-                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), AesUtils.decryptStr(leader.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -148,7 +153,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
                         log.info("喊单者:[{}-{}-{}]启动重复", leader.getId(), leader.getAccount(), leader.getServerName());
                     } else {
-                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), AesUtils.decryptStr(leader.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
+                        log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]启动成功", leader.getId(), leader.getAccount(), leader.getServerName(), leader.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                         leaderApiTrader.startTrade();
                     }
                 } catch (Exception e) {
@@ -261,6 +266,9 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                 traderUpdateEn.setLoginNode(serverNode+":"+serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
+                log.info("重连后漏单检查"+leader.getId());
+                kafkaTemplate.send("order-repair",String.valueOf(leader.getId()));
+                kafkaTemplate.send("order-repair-listener",String.valueOf(leader.getId()));
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
@@ -389,7 +397,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             redisUtil.set(Constant.TRADER_USER+followTraderVO.getId(),followRedisTraderVO);
         } catch (Exception e) {
             log.info("初始化添加{}账号推送redis数据失败:{}",followTraderVO.getAccount(),e);
-           e.printStackTrace();
+            e.printStackTrace();
 
         }
 //                qc.Disconnect();
