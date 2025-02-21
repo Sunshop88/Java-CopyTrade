@@ -51,7 +51,7 @@ public class FollowApiController {
     @Operation(summary = "喊单删除")
     public Result<Boolean> delSource(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delSource(vo);
-        pushRedisTask.del(vo.getId());
+        pushRedisTask.del(vo);
         return b ? Result.ok() : Result.error();
     }
 
@@ -76,7 +76,7 @@ public class FollowApiController {
     @Operation(summary = "跟单删除")
     public Result<String> delFollow(@RequestBody @Valid SourceDelVo vo) {
         Boolean b = followApiService.delFollow(vo);
-        pushRedisTask.del(vo.getId());
+        pushRedisTask.del(vo);
         return b ? Result.ok() : Result.error();
     }
 

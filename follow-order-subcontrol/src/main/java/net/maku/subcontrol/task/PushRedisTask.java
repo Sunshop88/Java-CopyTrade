@@ -465,13 +465,17 @@ public class PushRedisTask {
                         throw new RuntimeException(e);
                     }
                     List<AccountCacheVO> collect = accounts.stream().sorted(Comparator.comparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo))
-                                    .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)))
+                                    .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)).reversed())
                             .collect(Collectors.toList());
 
                     //转出json格式
                     String json = convertJson(collect);
                     log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),collect.size(),sbb.toString());
-                    redisUtil.setSlaveRedis(Integer.toString(k), json);
+                    List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+                    if(traders.size()==collect.size()){
+                        redisUtil.setSlaveRedis(Integer.toString(k), json);
+                    }
+
                  //   redissonLockUtil.unlock(keyl);
 
                 }
@@ -552,7 +556,7 @@ public class PushRedisTask {
     public void add(Integer id) {
         String localHost = FollowConstant.LOCAL_HOST;
         String keyl="LOCK:" + localHost;
-        boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
+        boolean lock = redissonLockUtil.lock(keyl, 5, -1, TimeUnit.SECONDS);
         FollowTraderEntity h = followTraderService.getById(Long.valueOf(id));
        
         try {
@@ -647,7 +651,7 @@ public class PushRedisTask {
                 }
                 accounts.add(accountCache);
                 List<AccountCacheVO> collect = accounts.stream().sorted(Comparator.comparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo))
-                                .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)))
+                                .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)).reversed())
                         .collect(Collectors.toList());
                 //转出json格式
                 String js = convertJson(collect);
@@ -661,13 +665,18 @@ public class PushRedisTask {
      }
     }
 
-    public void del(Long id) {
+    public void del(SourceDelVo vo) {
         String localHost = FollowConstant.LOCAL_HOST;
         String keyl="LOCK:" + localHost;
         boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
         try {
             if (lock) {
-
+                Object json = redisUtil.getSlaveRedis(vo.getServerId().toString());
+                JSONObject jsonObject = JSONObject.parseObject(json.toString());
+                List<AccountCacheVO> accounts = JSONArray.parseArray(jsonObject.getString("Accounts"), AccountCacheVO.class);
+                List<AccountCacheVO> list = accounts.stream().filter(a -> !a.getKey().equals("S" + vo.getId()) && !a.getKey().equals("F" + vo.getId())).toList();
+                String js = convertJson(list);
+                redisUtil.setSlaveRedis(Integer.toString(vo.getServerId()), js);
             }
             }finally {
                 redissonLockUtil.unlock(keyl);
