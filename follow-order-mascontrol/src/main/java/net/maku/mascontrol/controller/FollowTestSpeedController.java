@@ -759,10 +759,10 @@ public class FollowTestSpeedController {
                             HttpEntity<String> entity = new HttpEntity<>(serverName, httpHeaders);
 
                             ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                            log.info("测速ip:{}的请求响应结果: {}",vpsEntityOptional.getIpAddress(),response.getBody());
+                            log.info("连接ip:{}的请求响应结果: {}",vpsEntityOptional.getIpAddress(),response.getBody());
 
                             if (!response.getBody().getString("msg").equals("success")) {
-                                log.error("测速失败 ip: {}", vpsEntityOptional.getIpAddress());
+                                log.error("连接失败 ip: {}的请求响应结果失败", vpsEntityOptional.getIpAddress());
                             }
                         }
                     }
