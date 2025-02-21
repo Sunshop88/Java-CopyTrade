@@ -196,6 +196,7 @@ public class FollowTraderController {
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
                 redisUtil.hDel(Constant.REPAIR_SEND+o1.getMasterAccount()+":"+o1.getMasterId(),o1.getSlaveAccount().toString());
+                redisUtil.hDel(Constant.REPAIR_CLOSE+o1.getMasterAccount()+":"+o1.getMasterId(),o1.getSlaveAccount().toString());
                 FollowTraderEntity master = followTraderService.getFollowById(o1.getMasterId());
                 //删除跟单漏单缓存
                 redisCache.delete(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+master.getPlatform()+"#"+o.getPlatform()+"#"+o1.getSlaveAccount() + "#" + o1.getMasterAccount());
