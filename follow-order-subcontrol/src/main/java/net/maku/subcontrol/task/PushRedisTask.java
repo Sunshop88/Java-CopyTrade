@@ -67,11 +67,9 @@ public class PushRedisTask {
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
     private static volatile boolean mflag=true;
     private RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
-  /* @PostConstruct
+/*   @PostConstruct
    public void init(){
-       for (int i = 0; i <20 ; i++) {
-           execute();
-       }
+       execute();
 
    }*/
   @Scheduled(cron = "0/5 * * * * ?")
@@ -82,8 +80,8 @@ public class PushRedisTask {
     public void execute(FollowTraderEntity trader,Integer type){
                 //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                 //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
-                FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
-                //FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
+               FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
+              //  FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
                 if (one != null) {
                     pushCache(one.getId(),trader,type);
                     pushRepair(one.getId());
@@ -323,21 +321,23 @@ public class PushRedisTask {
                                     // accountCache.setCredit(quoteClient.Credit);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                        String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
-                                        //  0-固定手数 1-手数比例 2-净值比例
-                                        String mode =null;
-                                        switch (followTraderSubscribeEntity.getFollowMode()) {
-                                            case(0):
-                                                mode="固定";
-                                                break;
-                                            case(1):
-                                                mode="手";
-                                                break;
-                                            case(2):
-                                                mode="净";
-                                                break;
+                                        if(followTraderSubscribeEntity!=null) {
+                                            String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                            //  0-固定手数 1-手数比例 2-净值比例
+                                            String mode = null;
+                                            switch (followTraderSubscribeEntity.getFollowMode()) {
+                                                case (0):
+                                                    mode = "固定";
+                                                    break;
+                                                case (1):
+                                                    mode = "手";
+                                                    break;
+                                                case (2):
+                                                    mode = "净";
+                                                    break;
+                                            }
+                                            accountCache.setModeString(direction + "|全部|" + mode + "*" + followTraderSubscribeEntity.getFollowParam());
                                         }
-                                        accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                                     }
                                     if(ObjectUtil.isEmpty(accountCache.getModeString())){
                                         accountCache.setModeString("");
@@ -419,22 +419,24 @@ public class PushRedisTask {
                                     accountCache.setFreeMargin(0.00);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
-                                        accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
-                                        String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
-                                        //  0-固定手数 1-手数比例 2-净值比例
-                                        String mode =null;
-                                        switch (followTraderSubscribeEntity.getFollowMode()) {
-                                            case(0):
-                                                mode="固定";
-                                                break;
-                                            case(1):
-                                                mode="手";
-                                                break;
-                                            case(2):
-                                                mode="净";
-                                                break;
+                                        if(followTraderSubscribeEntity!=null) {
+                                            accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                                            String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                            //  0-固定手数 1-手数比例 2-净值比例
+                                            String mode = null;
+                                            switch (followTraderSubscribeEntity.getFollowMode()) {
+                                                case (0):
+                                                    mode = "固定";
+                                                    break;
+                                                case (1):
+                                                    mode = "手";
+                                                    break;
+                                                case (2):
+                                                    mode = "净";
+                                                    break;
+                                            }
+                                            accountCache.setModeString(direction + "|全部|" + mode + "*" + followTraderSubscribeEntity.getFollowParam());
                                         }
-                                        accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                                     }
                                     if(ObjectUtil.isEmpty(accountCache.getModeString())){
                                         accountCache.setModeString("");
@@ -616,22 +618,24 @@ public class PushRedisTask {
                         accountCache.setProfit(0.00);
                         accountCache.setFreeMargin(0.00);
                         if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
-                            accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
-                            String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
-                            //  0-固定手数 1-手数比例 2-净值比例
-                            String mode =null;
-                            switch (followTraderSubscribeEntity.getFollowMode()) {
-                                case(0):
-                                    mode="固定";
-                                    break;
-                                case(1):
-                                    mode="手";
-                                    break;
-                                case(2):
-                                    mode="净";
-                                    break;
+                            if(followTraderSubscribeEntity!=null) {
+                                accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                                String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                //  0-固定手数 1-手数比例 2-净值比例
+                                String mode = null;
+                                switch (followTraderSubscribeEntity.getFollowMode()) {
+                                    case (0):
+                                        mode = "固定";
+                                        break;
+                                    case (1):
+                                        mode = "手";
+                                        break;
+                                    case (2):
+                                        mode = "净";
+                                        break;
+                                }
+                                accountCache.setModeString(direction + "|全部|" + mode + "*" + followTraderSubscribeEntity.getFollowParam());
                             }
-                            accountCache.setModeString(direction+"|全部|"+mode+"*"+followTraderSubscribeEntity.getFollowParam());
                         }
                         if(ObjectUtil.isEmpty(accountCache.getModeString())){
                             accountCache.setModeString("");
