@@ -1,10 +1,15 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowGroupEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
 import net.maku.followcom.service.FollowGroupService;
+import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.vo.FollowGroupVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -29,6 +34,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowGroupController {
     private final FollowGroupService followGroupService;
+    private final FollowTraderUserService followTraderUserService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -93,5 +99,24 @@ public class FollowGroupController {
     @PreAuthorize("hasAuthority('mascontrol:group')")
     public void export() {
         followGroupService.export();
+    }
+
+    @GetMapping("list")
+    @Operation(summary = "列表展示")
+    @PreAuthorize("hasAuthority('mascontrol:group')")
+    public Result<List<FollowGroupEntity>> list() {
+        List<FollowGroupEntity> list = followGroupService.list();
+        for (FollowGroupEntity entity : list) {
+            LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(FollowTraderUserEntity::getGroupId, entity.getId());
+            wrapper.eq(FollowTraderUserEntity::getUploadStatus, 0);
+            //查询
+            List<FollowTraderUserEntity> listNum = followTraderUserService.list(wrapper);
+            if (ObjectUtil.isNotEmpty(listNum)){
+                long num = listNum.stream().count();
+                entity.setNumber((int) num);
+            }
+        }
+        return Result.ok(followGroupService.list());
     }
 }

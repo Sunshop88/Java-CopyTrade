@@ -40,6 +40,12 @@ public class FollowTraderUserVO implements Serializable {
 	@NotBlank(message = "平台服务器不能为空")
 	private String platform;
 
+	@Schema(description = "券商名称")
+	private String brokerName;
+
+	@Schema(description = "挂靠vps 如:IP-名称-挂靠类型")
+	private String uploadStatusName;
+
 	@Schema(description = "账号类型")
 	@NotBlank(message = "账号类型不能为空")
 	private String accountType;

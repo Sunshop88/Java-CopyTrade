@@ -61,6 +61,7 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowGroupVO vo) {
         FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
+        entity.setNumber(0);
 
         baseMapper.insert(entity);
 
