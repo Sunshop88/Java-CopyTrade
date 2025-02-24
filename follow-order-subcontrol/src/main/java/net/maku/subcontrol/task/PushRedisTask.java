@@ -39,6 +39,7 @@ import online.mtapi.mt4.QuoteClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -318,6 +319,8 @@ public class PushRedisTask {
                                     accountCache.setSell(0.00);
                                     accountCache.setProfit(0.00);
                                     accountCache.setFreeMargin(quoteClient.FreeMargin);
+                                   BigDecimal   v1 = new BigDecimal(quoteClient.Equity).divide(new BigDecimal(quoteClient.FreeMargin),5, BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal(100));
+                                    accountCache.setMarginLevel(v1);
                                     // accountCache.setCredit(quoteClient.Credit);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
