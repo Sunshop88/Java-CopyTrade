@@ -66,4 +66,10 @@ public class FollowTraderUserVO implements Serializable {
 	@Schema(description = "更新时间")
 	private Date updateTime;
 
+	@Schema(description = "上传文件id")
+	private Integer uploadId;
+
+	@Schema(description = "添加账号状态 0：成功 1：失败")
+	private Integer upload_status;
+
 }

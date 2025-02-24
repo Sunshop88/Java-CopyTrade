@@ -6,72 +6,57 @@ import com.baomidou.mybatisplus.annotation.*;
 import java.util.Date;
 
 /**
- * 账号初始表
+ * 上传账号记录表
  *
  * @author LLL babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
 
 @Data
-@TableName("follow_trader_user")
-public class FollowTraderUserEntity {
+@TableName("follow_upload_trader_user")
+public class FollowUploadTraderUserEntity {
+	/**
+	* ID
+	*/
 	@TableId
 	@TableField(value = "id")
 	private Long id;
 
 	/**
-	* 账号
+	* 文件上传时间
 	*/
-	@TableField(value = "account")
-	private String account;
+	@TableField(value = "upload_time")
+	private Date uploadTime;
 
 	/**
-	* 密码
+	* 操作人
 	*/
-	@TableField(value = "password")
-	private String password;
+	@TableField(value = "operator")
+	private String operator;
 
 	/**
-	* 平台id
-	*/
-	@TableField(value = "platform_id")
-	private Integer platformId;
-
-	/**
-	* 平台服务器
-	*/
-	@TableField(value = "platform")
-	private String platform;
-
-	/**
-	* 账号类型
-	*/
-	@TableField(value = "account_type")
-	private String accountType;
-
-	/**
-	* 服务器节点
-	*/
-	@TableField(value = "server_node")
-	private String serverNode;
-
-	/**
-	* 组别id
-	*/
-	@TableField(value = "group_id")
-	private Integer groupId;
-
-	/**
-	* 挂靠状态0-未挂靠 1-已挂靠
+	* 状态 0：处理中 1：处理完成
 	*/
 	@TableField(value = "status")
 	private Integer status;
 
 	/**
-	* 备注
+	* 上传数据数量
 	*/
-	@TableField(value = "remark")
-	private String remark;
+	@TableField(value = "upload_total")
+	private Long uploadTotal;
+
+	/**
+	* 成功数量
+	*/
+	@TableField(value = "success_count")
+	private Long successCount;
+
+	/**
+	* 失败数量
+	*/
+	@TableField(value = "failure_count")
+	private Long failureCount;
 
 	/**
 	* 版本号
@@ -109,15 +94,4 @@ public class FollowTraderUserEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private Date updateTime;
 
-	/**
-	* 上传文件id
-	*/
-	@TableField(value = "upload_id")
-	private Integer uploadId;
-
-	/**
-	* 添加账号状态 0：成功 1：失败
-	*/
-	@TableField(value = "upload_status")
-	private Integer upload_status;
 }

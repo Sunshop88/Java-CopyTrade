@@ -6,6 +6,9 @@ import net.maku.followcom.vo.FollowTraderUserVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -30,4 +33,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void importByExcel(MultipartFile file);
 
     void export();
+
+    void generateCsv(ByteArrayOutputStream outputStream) throws IOException;
 }

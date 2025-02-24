@@ -45,4 +45,10 @@ public class FollowTraderUserExcelVO implements TransPojo {
 	@ExcelProperty("备注")
 	private String remark;
 
+	@ExcelProperty("上传文件id")
+	private Integer uploadId;
+
+	@ExcelProperty("添加账号状态 0：成功 1：失败")
+	private Integer upload_status;
+
 }
