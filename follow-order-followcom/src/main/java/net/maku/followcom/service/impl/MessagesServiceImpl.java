@@ -194,7 +194,7 @@ public class MessagesServiceImpl implements MessagesService {
                         });
                         repairInfoVOS.putAll(closeMap);
                         redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getTicket(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("漏平数据写入,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getTicket(), JSONObject.toJSONString(repairInfoVOS));
 
                     }
                 }
