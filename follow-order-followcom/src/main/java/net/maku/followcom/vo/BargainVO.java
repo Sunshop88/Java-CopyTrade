@@ -8,7 +8,7 @@ public class BargainVO {
     //持仓概览
     private BargainOverviewVO bargainOverviewVO;
     //账号列表
-    //private AccountVo id;
+
     //持仓列表
 
 }
