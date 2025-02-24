@@ -44,6 +44,12 @@ public class FollowTraderUserEntity {
 	private String platform;
 
 	/**
+	* 账号类型
+	*/
+	@TableField(value = "account_type")
+	private String accountType;
+
+	/**
 	* 服务器节点
 	*/
 	@TableField(value = "server_node")

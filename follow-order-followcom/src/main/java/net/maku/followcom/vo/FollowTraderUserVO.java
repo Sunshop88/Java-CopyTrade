@@ -33,6 +33,9 @@ public class FollowTraderUserVO implements Serializable {
 	@Schema(description = "平台服务器")
 	private String platform;
 
+	@Schema(description = "账号类型")
+	private String accountType;
+
 	@Schema(description = "服务器节点")
 	private String serverNode;
 
