@@ -319,8 +319,12 @@ public class PushRedisTask {
                                     accountCache.setSell(0.00);
                                     accountCache.setProfit(0.00);
                                     accountCache.setFreeMargin(quoteClient.FreeMargin);
-                                   BigDecimal   v1 = new BigDecimal(quoteClient.Equity).divide(new BigDecimal(quoteClient.FreeMargin),5, BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal(100));
-                                    accountCache.setMarginLevel(v1);
+                                    if(quoteClient.Margin!=0) {
+                                        BigDecimal v1 = new BigDecimal(quoteClient.Equity).divide(new BigDecimal(quoteClient.Margin), 5, BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal(100));
+                                        accountCache.setMarginLevel(v1);
+                                    }
+
+                                    accountCache.setMargin(BigDecimal.valueOf(quoteClient.Margin));
                                     // accountCache.setCredit(quoteClient.Credit);
                                     if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                                         FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());

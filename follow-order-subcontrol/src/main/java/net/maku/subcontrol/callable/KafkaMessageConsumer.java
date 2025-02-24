@@ -40,6 +40,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -415,6 +416,7 @@ public class KafkaMessageConsumer {
         try {
             if(closelock) {
                 Map<Integer, OrderRepairInfoVO> repairCloseNewVOS = new HashMap();
+
                 Object o1 = redisUtil.hGetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
                 Map<Integer, JSONObject> repairVos = new HashMap();
                 if (o1!=null && o1.toString().trim().length()>0){
@@ -422,22 +424,38 @@ public class KafkaMessageConsumer {
                 }
 
                 Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+
                 List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
                 if (ObjectUtil.isNotEmpty(o2)) {
                     followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
                 }
                 List<OrderActiveInfoVO> finalFollowActiveInfoList = followActiveInfoList;
                 repairVos.forEach((k, v)->{
-                    if(finalFollowActiveInfoList.size()>1) {
-                        Boolean flag = finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
-                        if (flag) {
-                        List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
-                        if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
-                            repairCloseNewVOS.put(k,infoVO);
+                    if(quoteClient!=null){
+                        List<Order> list = Arrays.stream(quoteClient.GetOpenedOrders()).toList();
+                        if(list.size()>1) {
+                            Boolean flag = list.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.MagicNumber + ""));
+                            if (flag) {
+                                List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
+                                if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                    OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                                    repairCloseNewVOS.put(k,infoVO);
+                                }
+                            }
                         }
+                    }else{
+                        if(finalFollowActiveInfoList.size()>1) {
+                            Boolean flag = finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
+                            if (flag) {
+                                List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
+                                if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                    OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                                    repairCloseNewVOS.put(k,infoVO);
+                                }
+                            }
                         }
                     }
+
 
                 });
                 if(repairCloseNewVOS==null || repairCloseNewVOS.size()==0){
