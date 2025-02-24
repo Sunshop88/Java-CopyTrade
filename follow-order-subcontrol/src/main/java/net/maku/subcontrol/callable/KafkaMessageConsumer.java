@@ -430,16 +430,31 @@ public class KafkaMessageConsumer {
                 }
                 List<OrderActiveInfoVO> finalFollowActiveInfoList = followActiveInfoList;
                 repairVos.forEach((k, v)->{
-                    if(finalFollowActiveInfoList.size()>1) {
-                        Boolean flag = finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
-                        if (flag) {
-                        List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
-                        if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
-                            OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
-                            repairCloseNewVOS.put(k,infoVO);
+                    if(quoteClient!=null){
+                        List<Order> list = Arrays.stream(quoteClient.GetOpenedOrders()).toList();
+                        if(list.size()>1) {
+                            Boolean flag = list.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.MagicNumber + ""));
+                            if (flag) {
+                                List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
+                                if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                    OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                                    repairCloseNewVOS.put(k,infoVO);
+                                }
+                            }
                         }
+                    }else{
+                        if(finalFollowActiveInfoList.size()>1) {
+                            Boolean flag = finalFollowActiveInfoList.stream().anyMatch(order -> String.valueOf(k).equalsIgnoreCase(order.getMagicNumber().toString()));
+                            if (flag) {
+                                List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, follow.getId()).eq(FollowOrderDetailEntity::getMagical, k));
+                                if (ObjectUtil.isNotEmpty(detailServiceList) && detailServiceList.get(0).getCloseStatus().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                                    OrderRepairInfoVO infoVO = JSONObject.parseObject(v.toJSONString(), OrderRepairInfoVO.class);
+                                    repairCloseNewVOS.put(k,infoVO);
+                                }
+                            }
                         }
                     }
+
 
                 });
                 if(repairCloseNewVOS==null || repairCloseNewVOS.size()==0){
