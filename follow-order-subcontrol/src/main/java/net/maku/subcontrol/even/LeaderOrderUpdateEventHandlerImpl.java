@@ -138,6 +138,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 try {
                     producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                    log.info("监听信用或者出入金:{},{} ",leader.getAccount(),  orderUpdateEventArgs.Action);
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }

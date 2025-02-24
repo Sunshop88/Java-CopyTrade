@@ -59,6 +59,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
     @Override
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
+        FollowTraderEntity follow = copier4ApiTrader.getTrader();
         try {
             switch (orderUpdateEventArgs.Action) {
                 case  Balance:
@@ -68,6 +69,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     ObjectMapper mapper = JacksonConfig.getObjectMapper();
                     try {
                         producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                        log.info("监听信用或者出入金:{},{} ",follow.getAccount(),  orderUpdateEventArgs.Action);
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
@@ -85,7 +87,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 //                });
 //            }
             Order order = orderUpdateEventArgs.Order;
-            FollowTraderEntity follow = copier4ApiTrader.getTrader();
+
             FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
             FollowTraderEntity master = followTraderService.getFollowById(subscribeEntity.getMasterId());
             List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
