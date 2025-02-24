@@ -18,4 +18,9 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "账号初始表查询")
 public class FollowTraderUserQuery extends Query {
+    @Schema(description = "上传文件id")
+    private int uploadId;
+
+    @Schema(description = "添加账号状态 0：成功 1：失败")
+    private int uploadStatus;
 }

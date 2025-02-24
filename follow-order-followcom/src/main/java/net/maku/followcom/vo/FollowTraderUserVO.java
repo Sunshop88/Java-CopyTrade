@@ -2,7 +2,11 @@ package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
+
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
@@ -22,22 +26,30 @@ public class FollowTraderUserVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "账号")
+	@NotBlank(message = "账号不能为空")
 	private String account;
 
 	@Schema(description = "密码")
+	@NotBlank(message = "密码不能为空")
 	private String password;
 
 	@Schema(description = "平台id")
 	private Integer platformId;
 
 	@Schema(description = "平台服务器")
+	@NotBlank(message = "平台服务器不能为空")
 	private String platform;
 
 	@Schema(description = "账号类型")
+	@NotBlank(message = "账号类型不能为空")
 	private String accountType;
 
 	@Schema(description = "服务器节点")
+	@NotBlank(message = "服务器节点不能为空")
 	private String serverNode;
+
+	@Schema(description = "组别名称")
+	private String groupName;
 
 	@Schema(description = "组别id")
 	private Integer groupId;
@@ -58,13 +70,13 @@ public class FollowTraderUserVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 	@Schema(description = "上传文件id")
 	private Integer uploadId;

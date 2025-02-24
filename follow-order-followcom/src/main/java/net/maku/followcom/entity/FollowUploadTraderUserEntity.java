@@ -3,6 +3,8 @@ package net.maku.followcom.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -26,7 +28,7 @@ public class FollowUploadTraderUserEntity {
 	* 文件上传时间
 	*/
 	@TableField(value = "upload_time")
-	private Date uploadTime;
+	private LocalDateTime uploadTime;
 
 	/**
 	* 操作人
@@ -80,7 +82,7 @@ public class FollowUploadTraderUserEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -92,6 +94,6 @@ public class FollowUploadTraderUserEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

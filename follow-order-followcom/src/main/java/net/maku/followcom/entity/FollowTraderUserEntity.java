@@ -1,8 +1,11 @@
 package net.maku.followcom.entity;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -56,6 +59,12 @@ public class FollowTraderUserEntity {
 	private String serverNode;
 
 	/**
+	 * 组别名称
+	 */
+	@TableField(value = "group_name")
+	private String groupName;
+
+	/**
 	* 组别id
 	*/
 	@TableField(value = "group_id")
@@ -95,7 +104,7 @@ public class FollowTraderUserEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -107,7 +116,7 @@ public class FollowTraderUserEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 	/**
 	* 上传文件id
@@ -119,5 +128,5 @@ public class FollowTraderUserEntity {
 	* 添加账号状态 0：成功 1：失败
 	*/
 	@TableField(value = "upload_status")
-	private Integer upload_status;
+	private Integer uploadStatus;
 }
