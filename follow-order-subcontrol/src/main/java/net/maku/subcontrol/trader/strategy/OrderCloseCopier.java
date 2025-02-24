@@ -209,6 +209,8 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
 
                     log.info("漏平删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), leaderCopier.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
                 }
+
+
             } catch (Exception e) {
             log.error("漏平检查写入异常{0}",e);
         }finally {

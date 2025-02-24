@@ -1,5 +1,6 @@
 package net.maku.subcontrol.even;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -8,11 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.service.FollowOrderDetailService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
@@ -24,13 +27,12 @@ import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
+import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.UpdateAction;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Samson Bruce
@@ -146,8 +148,9 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             redissonLockUtil.unlock(key);
                         }
                         log.info("监听跟单漏平删除:跟单账号{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
-                    });
 
+                    });
+                    repairSend(follow,master,copier4ApiTrader.quoteClient);
                     break;
                 default:
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);
@@ -157,5 +160,60 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         }
     }
 
+    public void repairSend(FollowTraderEntity follow, FollowTraderEntity master, QuoteClient quoteClient){
+        String openKey = Constant.REPAIR_SEND + "：" + follow.getAccount();
+        boolean lock = redissonLockUtil.lock(openKey, 30, -1, TimeUnit.SECONDS);
+        try {
+            if(lock) {
+                //如果主账号这边都平掉了,就删掉这笔订单
+                Object o1 = redisUtil.get(Constant.TRADER_ACTIVE + master.getId());
+                List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+                if (ObjectUtil.isNotEmpty(o1)) {
+                    orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                }
+                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap<Integer, OrderRepairInfoVO>();
+                if(orderActiveInfoList!=null && orderActiveInfoList.size()>0) {
+                    orderActiveInfoList.stream().forEach(orderInfo -> {
+                        AtomicBoolean existsInActive = new AtomicBoolean(true);
+                        if (quoteClient != null) {
+                            existsInActive.set(Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.MagicNumber + "")));
+                        } else {
+                            Object o2 = redisUtil.get(Constant.TRADER_ACTIVE + follow.getId());
+                            List<OrderActiveInfoVO> followActiveInfoList = new ArrayList<>();
+                            if (ObjectUtil.isNotEmpty(o2)) {
+                                followActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+                            }
+                            existsInActive.set(followActiveInfoList.stream().anyMatch(order -> String.valueOf(orderInfo.getOrderNo()).equalsIgnoreCase(order.getMagicNumber().toString())));
+                        }
+                        if (!existsInActive.get()) {
+                            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
+                            orderRepairInfoVO.setMasterLots(orderInfo.getLots());
+                            orderRepairInfoVO.setMasterOpenTime(orderInfo.getOpenTime());
+                            orderRepairInfoVO.setMasterProfit(orderInfo.getProfit());
+                            orderRepairInfoVO.setMasterSymbol(orderInfo.getSymbol());
+                            orderRepairInfoVO.setMasterTicket(orderInfo.getOrderNo());
+                            orderRepairInfoVO.setMasterOpenPrice(orderInfo.getOpenPrice());
+                            orderRepairInfoVO.setMasterType(orderInfo.getType());
+                            orderRepairInfoVO.setMasterId(master.getId());
+                            orderRepairInfoVO.setSlaveAccount(follow.getAccount());
+                            orderRepairInfoVO.setSlaveType(orderInfo.getType());
+                            orderRepairInfoVO.setSlavePlatform(follow.getPlatform());
+                            orderRepairInfoVO.setSlaveId(follow.getId());
+                            repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
+                        }
+                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
+                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                    });
+                }else{
+                    redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("漏单检查写入异常"+e);
+        }finally {
+            redissonLockUtil.unlock(openKey);
+        }
+    }
 
 }
