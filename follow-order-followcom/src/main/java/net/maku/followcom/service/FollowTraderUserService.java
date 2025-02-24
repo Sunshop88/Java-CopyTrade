@@ -30,9 +30,9 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void delete(List<Long> idList);
 
-    void importByExcel(MultipartFile file);
-
     void export();
 
     void generateCsv(ByteArrayOutputStream outputStream) throws IOException;
+
+    void addByExcel(MultipartFile file, Long savedId);
 }

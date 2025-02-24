@@ -36,6 +36,9 @@ public class FollowTraderUserExcelVO implements TransPojo {
 	@ExcelProperty("服务器节点")
 	private String serverNode;
 
+	@ExcelProperty("组别名称")
+	private String groupName;
+
 	@ExcelProperty("组别id")
 	private Integer groupId;
 

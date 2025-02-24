@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
+import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
+import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.vo.FollowTraderUserExcelVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
@@ -26,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,6 +43,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUserDao, FollowTraderUserEntity> implements FollowTraderUserService {
     private final TransService transService;
+    private final FollowPlatformService followPlatformService;
 
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
@@ -50,6 +55,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     private LambdaQueryWrapper<FollowTraderUserEntity> getWrapper(FollowTraderUserQuery query){
         LambdaQueryWrapper<FollowTraderUserEntity> wrapper = Wrappers.lambdaQuery();
+        if (ObjectUtil.isNotEmpty(query.getUploadId())){
+            wrapper.eq(FollowTraderUserEntity::getUploadId,query.getUploadId());
+        }
+        if (ObjectUtil.isNotEmpty(query.getUploadStatus())){
+            wrapper.eq(FollowTraderUserEntity::getUploadStatus,query.getUploadStatus());
+        }
 
         return wrapper;
     }
@@ -67,6 +78,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowTraderUserVO vo) {
         FollowTraderUserEntity entity = FollowTraderUserConvert.INSTANCE.convert(vo);
+        FollowPlatformEntity first = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst();
+        if (ObjectUtil.isNotEmpty(first)){
+            entity.setPlatformId(Math.toIntExact(first.getId()));
+        }
 
         baseMapper.insert(entity);
 
@@ -88,17 +103,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     public void delete(List<Long> idList) {
         removeByIds(idList);
 
-    }
-
-    @Override
-    public void importByExcel(MultipartFile file) {
-        ExcelUtils.readAnalysis(file, FollowTraderUserExcelVO.class, new ExcelFinishCallBack<>() {
-            @Override
-            public void doSaveBatch(List<FollowTraderUserExcelVO> resultList) {
-                ExcelUtils.parseDict(resultList);
-                saveBatch(FollowTraderUserConvert.INSTANCE.convertExcelList2(resultList));
-            }
-        });
     }
 
     @Override
@@ -139,6 +143,70 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 csvPrinter.printRecord(account, password, accountType, server, node, remark);
             }
         }
+    }
+
+    @Override
+    public void addByExcel(MultipartFile file, Long savedId) {
+        List<FollowTraderUserEntity> entityList = new ArrayList<>();
+        try (InputStream inputStream = file.getInputStream();
+             InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName("GBK"));
+//             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
+
+            for (CSVRecord record : csvParser) {
+                String account = record.get(0);
+                String password = record.get(1);
+                String accountType = record.get(2).isEmpty() ? "MT4" : record.get(2).toUpperCase();
+                String platform = record.get(3);
+                String node = record.get(4);
+                String remark = record.get(5);
+
+                // 校验必填字段
+                StringBuilder errorMsg = new StringBuilder();
+                if (account.isEmpty()) {
+                    errorMsg.append("账号不能为空; ");
+                }
+                if (password.isEmpty()) {
+                    errorMsg.append("密码不能为空; ");
+                }
+                if (platform.isEmpty()) {
+                    errorMsg.append("服务器不能为空; ");
+                }
+                if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
+                    errorMsg.append("账号类型必须是MT4或MT5; ");
+                }
+
+                // 生成备注信息
+                String errorRemark = errorMsg.length() > 0 ? errorMsg.toString() : remark;
+                // 如果有错误，设置 upload_status 为 1
+                int uploadStatus = errorMsg.length() > 0 ? 1 : 0;
+                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, uploadStatus,savedId));
+
+            }
+            saveBatch(entityList);
+        } catch (Exception e) {
+            log.error("处理Excel文件时发生错误: ", e);
+        }
+    }
+
+
+    private FollowTraderUserEntity insertAccount(String account, String password, String accountType, String platform, String node, String errorRemark, int uploadStatus, Long savedId) {
+        FollowTraderUserEntity entity = new FollowTraderUserEntity();
+        entity.setAccount(account);
+        entity.setPassword(password);
+        entity.setAccountType(accountType);
+        entity.setPlatform(platform);
+        if (ObjectUtil.isNotEmpty(platform)){
+            FollowPlatformEntity first = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform)).getFirst();
+            if (ObjectUtil.isNotEmpty(first)){
+                entity.setPlatformId(Math.toIntExact(first.getId()));
+            }
+        }
+        entity.setServerNode(node);
+        entity.setRemark(errorRemark);
+        entity.setUploadStatus(uploadStatus);
+        entity.setUploadId(Math.toIntExact(savedId));
+        return entity;
     }
 
 }
