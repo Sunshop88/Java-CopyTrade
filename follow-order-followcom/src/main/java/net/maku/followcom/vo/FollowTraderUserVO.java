@@ -33,6 +33,9 @@ public class FollowTraderUserVO implements Serializable {
 	@NotBlank(message = "密码不能为空")
 	private String password;
 
+	@Schema(description = "连接状态 0：正常 1：密码错误 2：连接异常 3：未挂靠VPS")
+	private Integer connectionStatus;
+
 	@Schema(description = "平台id")
 	private Integer platformId;
 
@@ -87,7 +90,13 @@ public class FollowTraderUserVO implements Serializable {
 	@Schema(description = "上传文件id")
 	private Integer uploadId;
 
-	@Schema(description = "添加账号状态 0：成功 1：失败")
+	@Schema(description = "添加账号状态 0：失败 1：成功")
 	private Integer upload_status;
+
+	@Schema(description = "修改密码 0：失败 1：成功")
+	private Integer updateStatusId;
+
+	@Schema(description = "二次确认密码")
+	private String confirmPassword;
 
 }

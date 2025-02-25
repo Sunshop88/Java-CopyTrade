@@ -61,6 +61,12 @@ public class FollowUploadTraderUserEntity {
 	private Long failureCount;
 
 	/**
+	* 类型 0：新增账号 1：修改密码
+	*/
+	@TableField(value = "type")
+	private Integer type;
+
+	/**
 	* 版本号
 	*/
 	@TableField(value = "version", fill = FieldFill.INSERT)

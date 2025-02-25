@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.FollowTraderUserVO;
@@ -35,4 +36,10 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void generateCsv(ByteArrayOutputStream outputStream) throws IOException;
 
     void addByExcel(MultipartFile file, Long savedId);
+
+    void updateGroup(List<Long> idList, String group);
+
+    void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req);
+
+    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req);
 }

@@ -747,6 +747,13 @@ public class FollowTraderController {
         return Result.ok(reconnectResults);
     }
 
+    @PostMapping("reconnectionTrader")
+    @Operation(summary = "重连账号")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<Boolean> reconnectionTrader(@RequestBody String traderId) {
+        return Result.ok(reconnect(traderId));
+    }
+
     @PostMapping("test")
     @Operation(summary = "手动定时测速任务")
     @PreAuthorize("hasAuthority('mascontrol:speed')")

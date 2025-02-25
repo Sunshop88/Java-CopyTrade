@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderUserConvert;
@@ -139,7 +140,7 @@ public class FollowTraderUserController {
     }
 
     @GetMapping("uploadPage")
-    @Operation(summary = "分页")
+    @Operation(summary = "批量记录")
     @PreAuthorize("hasAuthority('mascontrol:uploadTraderUser')")
     public Result<PageResult<FollowUploadTraderUserVO>> page(@ParameterObject @Valid FollowUploadTraderUserQuery query){
         PageResult<FollowUploadTraderUserVO> page = followUploadTraderUserService.page(query);
@@ -213,7 +214,40 @@ public class FollowTraderUserController {
     @Operation(summary = "查询节点列表")
     public Result<List<FollowTestDetailVO>> listHavingServer(@Parameter FollowTestServerQuery query) {
         List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
+
         return Result.ok(list);
+    }
+
+    @PutMapping("updateGroup")
+    @Operation(summary = "批量修改分组")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updateGroup(@RequestBody List<Long> idList,@RequestBody String group) {
+        followTraderUserService.updateGroup(idList,group);
+
+        return Result.ok("批量修改分组成功");
+    }
+
+    @PutMapping("updatePasswords")
+    @Operation(summary = "批量修改密码")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) {
+
+        followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
+
+        return Result.ok("批量修改密码成功");
+    }
+
+    @PutMapping("updatePassword")
+    @Operation(summary = "批量修改密码")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) {
+
+        followTraderUserService.updatePassword(vo,req);
+
+        return Result.ok("修改密码成功");
     }
 
 }

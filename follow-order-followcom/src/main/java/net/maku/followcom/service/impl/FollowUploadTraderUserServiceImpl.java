@@ -38,7 +38,9 @@ public class FollowUploadTraderUserServiceImpl extends BaseServiceImpl<FollowUpl
 
     private LambdaQueryWrapper<FollowUploadTraderUserEntity> getWrapper(FollowUploadTraderUserQuery query){
         LambdaQueryWrapper<FollowUploadTraderUserEntity> wrapper = Wrappers.lambdaQuery();
-
+        if (ObjectUtil.isNotEmpty(query.getType())){
+            wrapper.eq(FollowUploadTraderUserEntity::getType,query.getType());
+        }
         return wrapper;
     }
 
