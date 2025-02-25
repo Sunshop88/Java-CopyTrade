@@ -47,6 +47,18 @@ public class FollowTraderUserEntity {
 	private String platform;
 
 	/**
+	* 券商名称
+	*/
+	@TableField(value = "broker_name")
+	private String brokerName;
+
+	/**
+	* 挂靠vps 如:IP-名称-挂靠类型
+	*/
+	@TableField(value = "upload_status_name")
+	private String uploadStatusName;
+
+	/**
 	* 账号类型
 	*/
 	@TableField(value = "account_type")

@@ -30,6 +30,12 @@ public class FollowTraderUserExcelVO implements TransPojo {
 	@ExcelProperty("平台服务器")
 	private String platform;
 
+	@ExcelProperty("券商名称")
+	private String brokerName;
+
+	@ExcelProperty("挂靠vps 如:IP-名称-挂靠类型")
+	private String uploadStatusName;
+
 	@ExcelProperty("账号类型")
 	private String accountType;
 

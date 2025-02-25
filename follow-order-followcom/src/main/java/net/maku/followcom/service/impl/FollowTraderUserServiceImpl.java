@@ -61,6 +61,20 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (ObjectUtil.isNotEmpty(query.getUploadStatus())){
             wrapper.eq(FollowTraderUserEntity::getUploadStatus,query.getUploadStatus());
         }
+        if (ObjectUtil.isNotEmpty(query.getPlatform())){
+            wrapper.like(FollowTraderUserEntity::getPlatform,query.getPlatform());
+        }
+        if (ObjectUtil.isNotEmpty(query.getAccount())){
+            wrapper.like(FollowTraderUserEntity::getAccount,query.getAccount());
+        }
+        if (ObjectUtil.isNotEmpty(query.getBrokerName())){
+            wrapper.like(FollowTraderUserEntity::getBrokerName,query.getBrokerName());
+        }
+        if (ObjectUtil.isNotEmpty(query.getGroupName())){
+            wrapper.in(FollowTraderUserEntity::getGroupName,query.getGroupName());
+        }
+
+
 
         return wrapper;
     }
