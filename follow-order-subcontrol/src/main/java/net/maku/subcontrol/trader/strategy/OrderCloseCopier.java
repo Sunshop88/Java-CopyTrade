@@ -32,6 +32,7 @@ import online.mtapi.mt4.QuoteEventArgs;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
@@ -60,6 +61,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     private final CacheManager cacheManager;
     private final RedissonLockUtil redissonLockUtil;
     @Override
+    @Transactional
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
 

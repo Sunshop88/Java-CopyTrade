@@ -13,6 +13,7 @@ import net.maku.followcom.enums.FollowRemainderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowSysmbolSpecificationService;
 import net.maku.followcom.service.FollowVarietyService;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.subcontrol.trader.AbstractApiTrader;
@@ -27,6 +28,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author X.T. LI
@@ -121,20 +124,34 @@ public abstract class AbstractFollowRule {
     public double getPr(AbstractApiTrader copierApiTrader,long traderId,String symbol){
         double pr = 1;
         // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
-        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerSymbol()) && o.getBrokerSymbol().equals(symbol)).findFirst()
-                .map(FollowVarietyEntity::getStdContract)
-                .orElse(0);
-        log.info("账号标准合约大小{}", contract);
-        if (contract != 0) {
-            //查询合约手数比例
-            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(traderId);
-            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.get(symbol);
-            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
-                log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
-                pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
+        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(traderId).stream().filter(item -> item.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&item.getSymbol().contains(symbol)).findFirst();
+        if (specificationEntity.isPresent()){
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
+            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(specificationEntity.get().getStdSymbol())).findFirst()
+                    .map(FollowVarietyEntity::getStdContract)
+                    .orElse(0);
+            log.info("规格账号标准合约大小{}", contract);
+            log.info("品种规格对应合约值{}", specificationEntity.get().getContractSize());
+            if (ObjectUtil.isNotEmpty(contract)) {
+                pr = (double) contract / specificationEntity.get().getContractSize();
+            }
+        }else {
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
+            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerSymbol()) && o.getBrokerSymbol().equals(symbol)).findFirst()
+                    .map(FollowVarietyEntity::getStdContract)
+                    .orElse(0);
+            log.info("账号标准合约大小{}", contract);
+            if (contract != 0) {
+                //查询合约手数比例
+                List<FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(traderId);
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(symbol);
+                if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                    log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
+                    pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
+                }
             }
         }
+
         return pr;
     }
 

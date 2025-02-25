@@ -26,6 +26,7 @@ import online.mtapi.mt4.Op;
 import online.mtapi.mt4.QuoteClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -43,6 +44,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
     private final MessagesService messagesService;
     private final RedissonLockUtil redissonLockUtil;
     @Override
+    @Transactional
     public void operate(AbstractApiTrader abstractApiTrader,EaOrderInfo orderInfo,int flag) {
         FollowTraderEntity trader = abstractApiTrader.getTrader();
         //修改喊单订单记录

@@ -28,6 +28,7 @@ import online.mtapi.mt4.*;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
 
     @Override
+    @Transactional
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
         log.info(":请求进入时间1"+trader.getTrader().getId()+":"+orderInfo.getMasterId());
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
@@ -60,42 +62,68 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowTraderEntity copier = followTraderService.getFollowById(trader.getTrader().getId());
 
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
-        // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
-        List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
-        log.info("collect"+collect);
+        // 先查询品种规格是否可以匹配
         String stdSymbol =orderInfo.getOriSymbol();
-        if (ObjectUtil.isNotEmpty(collect)) {
-            stdSymbol = collect.get(0).getStdSymbol();
+        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(followTraderEntity.getId()).stream().filter(o ->o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getSymbol().equals(orderInfo.getOriSymbol())).findFirst();
+        if (specificationEntity.isPresent()&&ObjectUtil.isNotEmpty(specificationEntity.get().getStdSymbol())){
+            //查找到标准品种
+            stdSymbol=specificationEntity.get().getStdSymbol();
+            log.info("OrderSendCopier 主账号 品种规格标准品种"+stdSymbol);
         }else {
-            log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+            List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
+            log.info("collect"+collect);
+            if (ObjectUtil.isNotEmpty(collect)) {
+                stdSymbol = collect.get(0).getStdSymbol();
+            }else {
+                log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
+            }
+
         }
         //获得跟单账号对应品种
         FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         String finalStdSymbol = stdSymbol;
-        // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityListCopier= followVarietyService.getListByTemplated(copier.getTemplateId());
-        List<FollowVarietyEntity> collectCopy = followVarietyEntityListCopier.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
-        log.info("跟单品种匹配"+collectCopy+"服务商:"+copyPlat.getBrokerName()+"模板:"+copier.getTemplateId()+"类型:"+finalStdSymbol);
         List<String> symbolList = orderInfo.getSymbolList();
-        collectCopy.forEach(o-> {
-            if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                //校验品种是否可以获取报价
-                try{
-                    //如果没有此品种匹配，校验是否可以获取报价
-                    if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getBrokerSymbol()))){
-                        //订阅
-                        trader.quoteClient.Subscribe(o.getBrokerSymbol());
+
+        //查询品种规格数据
+        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(finalStdSymbol)).toList();
+        if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
+            sysmbolSpecificationEntity.forEach(o->{
+                        try{
+                            //如果没有此品种匹配，校验是否可以获取报价
+                            if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getSymbol()))){
+                                //订阅
+                                trader.quoteClient.Subscribe(o.getSymbol());
+                            }
+                            symbolList.add(o.getSymbol());
+                        } catch (Exception e) {
+                            log.info("品种规格异常,不可下单{}+++++++账号{}" , o.getSymbol(),copier.getId());
+                        }
                     }
-                    symbolList.add(o.getBrokerSymbol());
-                } catch (Exception e) {
-                    log.info("品种异常,不可下单{}+++++++账号{}" , o.getBrokerSymbol(),copier.getId());
+            );
+        }else {
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityListCopier= followVarietyService.getListByTemplated(copier.getTemplateId());
+            List<FollowVarietyEntity> collectCopy = followVarietyEntityListCopier.stream().filter(o -> ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getStdSymbol().equals(finalStdSymbol) && o.getBrokerName().equals(copyPlat.getBrokerName())).collect(Collectors.toList());
+            log.info("跟单品种匹配"+collectCopy+"服务商:"+copyPlat.getBrokerName()+"模板:"+copier.getTemplateId()+"类型:"+finalStdSymbol);
+            collectCopy.forEach(o-> {
+                if(ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                    //校验品种是否可以获取报价
+                    try{
+                        //如果没有此品种匹配，校验是否可以获取报价
+                        if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getBrokerSymbol()))){
+                            //订阅
+                            trader.quoteClient.Subscribe(o.getBrokerSymbol());
+                        }
+                        symbolList.add(o.getBrokerSymbol());
+                    } catch (Exception e) {
+                        log.info("品种异常,不可下单{}+++++++账号{}" , o.getBrokerSymbol(),copier.getId());
+                    }
                 }
-            }
-        });
-        if (ObjectUtil.isNotEmpty(collectCopy)){
-            orderInfo.setSymbolList(symbolList);
+            });
         }
+
         if (ObjectUtil.isEmpty(orderInfo.getSymbolList())){
             try{
                 //如果没有此品种匹配，校验是否可以获取报价

@@ -941,10 +941,10 @@ public class FollowApiServiceImpl implements FollowApiService {
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
         //获取symbol信息
-        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
+        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //开始平仓
         list.parallelStream().forEach(o -> {
-            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
             BigDecimal hd;
             if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
                 //如果forex 并包含JPY 也是100

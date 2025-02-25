@@ -7,13 +7,16 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
@@ -25,13 +28,12 @@ import net.maku.subcontrol.task.UpdateTraderInfoTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -80,6 +82,7 @@ public class InitRunner implements ApplicationRunner {
     private CacheManager cacheManager;
     @Autowired
     private RedisUtil redisUtil;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("=============启动时加载示例内容开始=============");
@@ -121,9 +124,7 @@ public class InitRunner implements ApplicationRunner {
     private void getCache() {
         //品种匹配缓存
         followVarietyService.getListByTemplate().forEach(o->{
-            ThreadPoolUtils.getExecutor().execute(()->{
-                followVarietyService.getListByTemplated(o.getTemplateId());
-            });
+            followVarietyService.getListByTemplated(o.getTemplateId());
         });
 
         List<FollowTraderEntity> list = followTraderService.list();
@@ -134,7 +135,17 @@ public class InitRunner implements ApplicationRunner {
                 //账户信息缓存
                 followTraderService.getFollowById(o.getId());
                 //品种规格缓存
-                followSysmbolSpecificationService.getByTraderId(o.getId());
+                List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList=new ArrayList<>();
+                followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getProfitMode,FollowConstant.PROFIT_MODE).eq(FollowSysmbolSpecificationEntity::getTraderId, o.getId())).stream().toList().stream().forEach(sy->{
+                    if (ObjectUtil.isEmpty(sy.getStdSymbol())){
+                        log.info("品种"+sy.getSymbol());
+                        //标准品种保存
+                        sy.setStdSymbol(processString(sy.getSymbol()));
+                        followSysmbolSpecificationEntityList.add(sy);
+                    }
+                });
+                //保存数据
+                followSysmbolSpecificationService.saveOrUpdateBatch(followSysmbolSpecificationEntityList);
             });
         });
 
@@ -161,5 +172,24 @@ public class InitRunner implements ApplicationRunner {
             });
         });
 
+    }
+
+    public static String processString(String input) {
+        // 如果字符串包含 '.'，截取 . 后面的部分
+        if (input.contains(".")) {
+            return input.substring(0, input.indexOf("."));
+        }
+
+        // 如果不包含 '.', 判断是否包含需要截取的字符
+        String[] substringsToRemove = {"-", "'", "zero","+", "dec24","ft","r","#","i"};
+
+        for (String substr : substringsToRemove) {
+            if (input.contains(substr)) {
+                // 一旦找到包含的字符串，截取掉
+                input = input.substring(0, input.indexOf(substr));
+            }
+        }
+
+        return input;
     }
 }

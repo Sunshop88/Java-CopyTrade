@@ -295,8 +295,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         double pr = 1;
         if (contract != 0) {
             //查询合约手数比例
-            Map<String, FollowSysmbolSpecificationEntity> symbolSpecification = followSysmbolSpecificationService.getByTraderId(vo.getTraderId());
-            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = symbolSpecification.get(vo.getSymbol());
+            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(vo.getTraderId());
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationServiceByTraderId.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(vo.getSymbol());
             if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
                 log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
                 pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
@@ -880,11 +880,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
         //获取symbol信息
-        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
+        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //开始平仓
         list.forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
                 BigDecimal hd;
                 if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
                     //如果forex 并包含JPY 也是100
@@ -1036,7 +1036,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
     private void updateSendOrder(long traderId, String orderNo, Integer flag) {
         //获取symbol信息
-        Map<String, FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
+        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         if (ObjectUtil.isNotEmpty(sendServiceOne)) {
             //查看下单所有数据
@@ -1065,7 +1065,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             //进行滑点分析
             list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
                 ThreadPoolUtils.getExecutor().execute(()->{
-                    FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.get(o.getSymbol());
+                    FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
                     BigDecimal hd;
                     if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
                         //如果forex 并包含JPY 也是100

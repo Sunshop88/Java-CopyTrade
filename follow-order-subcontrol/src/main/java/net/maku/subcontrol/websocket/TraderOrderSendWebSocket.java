@@ -19,6 +19,7 @@ import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
@@ -176,22 +177,36 @@ public class TraderOrderSendWebSocket {
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException(traderId+"登录异常");
             }
+            QuoteEventArgs eventArgs = null;
+
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
-            Map<String, FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.valueOf(traderId));
-            // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
-            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
-            log.info("匹配品种"+listv);
-            QuoteEventArgs eventArgs = null;
-            if (ObjectUtil.isEmpty(listv)){
-                eventArgs = getEventArgs(quoteClient);
+            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(symbol)).toList();
+            if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
+                for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
+                    this.symbol=o.getSymbol();
+                    eventArgs = getEventArgs(quoteClient);
+                    log.info("品种规格symbol"+this.symbol);
+                    if (ObjectUtil.isNotEmpty(eventArgs)){
+                        break;
+                    }
+                }
+                if (ObjectUtil.isEmpty(eventArgs)){
+                    this.symbol=symbol;
+                    eventArgs = getEventArgs(quoteClient);
+                }
             }else {
-                for (FollowVarietyEntity o:listv){
-                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                        //查看品种规格
-                        if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
+                // 查看品种匹配 模板
+                List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+                List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
+                log.info("匹配品种"+listv);
+                if (ObjectUtil.isEmpty(listv)){
+                    eventArgs = getEventArgs(quoteClient);
+                }else {
+                    for (FollowVarietyEntity o:listv){
+                        if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                            //查看品种规格
                             log.info("匹配symbol"+o.getBrokerSymbol());
                             this.symbol=o.getBrokerSymbol();
                             eventArgs = getEventArgs(quoteClient);
@@ -200,12 +215,13 @@ public class TraderOrderSendWebSocket {
                             }
                         }
                     }
-                }
-                if (ObjectUtil.isEmpty(eventArgs)){
-                    this.symbol=symbol;
-                    eventArgs = getEventArgs(quoteClient);
+                    if (ObjectUtil.isEmpty(eventArgs)){
+                        this.symbol=symbol;
+                        eventArgs = getEventArgs(quoteClient);
+                    }
                 }
             }
+
             //开启定时任务
             QuoteEventArgs finalEventArgs = eventArgs;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
