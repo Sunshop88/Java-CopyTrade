@@ -228,15 +228,26 @@ public class FollowTraderUserController {
         return Result.ok("批量修改分组成功");
     }
 
+    @PutMapping("updatePasswords")
+    @Operation(summary = "批量修改密码")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) {
+
+        followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
+
+        return Result.ok("批量修改密码成功");
+    }
+
     @PutMapping("updatePassword")
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) {
+    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) {
 
-        followTraderUserService.updatePassword(voList,password,confirmPassword,req);
+        followTraderUserService.updatePassword(vo,req);
 
-        return Result.ok("批量修改密码成功");
+        return Result.ok("修改密码成功");
     }
 
 }

@@ -1,7 +1,6 @@
 package net.maku.followcom.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -270,7 +269,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public void updatePassword(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) {
+    public void updatePasswords(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) {
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
@@ -355,6 +354,50 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setFailureCount(failureCount);
         followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
         followUploadTraderUserService.update(followUploadTraderUserVO);
+    }
+
+    @Override
+    public void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) {
+        if (!vo.getPassword().equals(vo.getConfirmPassword())) {
+            throw new ServerException("两次密码输入不一致");
+        }
+        LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
+        FollowTraderEntity followTraderEntity = followTraderService.list(queryWrapper).getLast();
+        if (ObjectUtil.isNotEmpty(followTraderEntity) && followTraderEntity.getStatus() == 0) {
+            String token = req.getHeader("Authorization");
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", token);
+            headers.put("Content-Type", "application/json");
+            // 账号正常登录
+            followTraderEntity.setPassword(vo.getPassword());
+            followTraderService.updateById(followTraderEntity);
+
+            QuoteClient quoteClient = null;
+            try {
+                // 修改 MT4 密码
+                quoteClient.ChangePassword(vo.getPassword(), false);
+            } catch (IOException e) {
+                log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
+            } catch (online.mtapi.mt4.Exception.ServerException e) {
+                log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
+            }
+
+            String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+            RestTemplate restTemplate = new RestTemplate();
+
+            // 使用提前提取的 headers 构建请求头
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setAll(headers);  // 注入提前获取的请求头
+            HttpEntity<String> entity = new HttpEntity<>(followTraderEntity.getId().toString(), httpHeaders);
+
+            ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+            if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+                log.error("账号重连失败: " + followTraderEntity.getAccount());
+            }
+        }
+        vo.setPassword(vo.getPassword());
+        this.update(vo);
     }
 
 }

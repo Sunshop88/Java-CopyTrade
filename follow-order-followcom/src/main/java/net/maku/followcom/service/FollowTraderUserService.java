@@ -39,5 +39,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void updateGroup(List<Long> idList, String group);
 
-    void updatePassword(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req);
+    void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req);
+
+    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req);
 }

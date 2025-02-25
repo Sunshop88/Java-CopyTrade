@@ -96,4 +96,7 @@ public class FollowTraderUserVO implements Serializable {
 	@Schema(description = "修改密码 0：失败 1：成功")
 	private Integer updateStatusId;
 
+	@Schema(description = "二次确认密码")
+	private String confirmPassword;
+
 }
