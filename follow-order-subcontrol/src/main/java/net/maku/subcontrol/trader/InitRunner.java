@@ -181,7 +181,7 @@ public class InitRunner implements ApplicationRunner {
         }
 
         // 如果不包含 '.', 判断是否包含需要截取的字符
-        String[] substringsToRemove = {"-", "'", "zero","+", "dec24","ft","r","#","i"};
+        String[] substringsToRemove = {"-", "'", "zero","+", "dec24","ft","r","#","i","x"};
 
         for (String substr : substringsToRemove) {
             if (input.contains(substr)) {
