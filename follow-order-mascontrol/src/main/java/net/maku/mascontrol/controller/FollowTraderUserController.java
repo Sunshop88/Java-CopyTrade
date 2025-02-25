@@ -139,7 +139,7 @@ public class FollowTraderUserController {
     }
 
     @GetMapping("uploadPage")
-    @Operation(summary = "分页")
+    @Operation(summary = "批量记录")
     @PreAuthorize("hasAuthority('mascontrol:uploadTraderUser')")
     public Result<PageResult<FollowUploadTraderUserVO>> page(@ParameterObject @Valid FollowUploadTraderUserQuery query){
         PageResult<FollowUploadTraderUserVO> page = followUploadTraderUserService.page(query);
@@ -213,7 +213,28 @@ public class FollowTraderUserController {
     @Operation(summary = "查询节点列表")
     public Result<List<FollowTestDetailVO>> listHavingServer(@Parameter FollowTestServerQuery query) {
         List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
+
         return Result.ok(list);
+    }
+
+    @PutMapping
+    @Operation(summary = "批量修改分组")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updateGroup(@RequestBody List<Long> idList,@RequestBody String group) {
+        followTraderUserService.updateGroup(idList,group);
+
+        return Result.ok("批量修改分组成功");
+    }
+
+    @PutMapping
+    @Operation(summary = "批量修改密码")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> updatePassword(@RequestBody List<FollowTraderUserVO> voList,String password,String confirmPassword) {
+        followTraderUserService.updatePassword(voList,password,confirmPassword);
+
+        return Result.ok("批量修改密码成功");
     }
 
 }

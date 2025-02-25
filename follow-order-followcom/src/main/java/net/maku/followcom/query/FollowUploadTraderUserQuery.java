@@ -18,4 +18,6 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "上传账号记录表查询")
 public class FollowUploadTraderUserQuery extends Query {
+    @Schema(description = "类型 0：新增账号 1：修改密码")
+    private Integer type;
 }

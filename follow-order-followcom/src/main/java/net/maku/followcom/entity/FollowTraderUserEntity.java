@@ -35,6 +35,12 @@ public class FollowTraderUserEntity {
 	private String password;
 
 	/**
+	* 连接状态 0：正常 1：密码错误 2：连接异常 3：未挂靠VPS
+	*/
+	@TableField(value = "connection_status")
+	private Integer connectionStatus;
+
+	/**
 	* 平台id
 	*/
 	@TableField(value = "platform_id")

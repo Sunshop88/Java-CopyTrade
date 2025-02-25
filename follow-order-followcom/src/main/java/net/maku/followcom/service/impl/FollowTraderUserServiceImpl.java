@@ -1,23 +1,26 @@
 package net.maku.followcom.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
+import net.maku.followcom.entity.FollowGroupEntity;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
+import net.maku.followcom.service.FollowGroupService;
 import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.vo.FollowTraderUserExcelVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.framework.common.excel.ExcelFinishCallBack;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
@@ -32,6 +35,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 账号初始表
@@ -44,6 +48,7 @@ import java.util.List;
 public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUserDao, FollowTraderUserEntity> implements FollowTraderUserService {
     private final TransService transService;
     private final FollowPlatformService followPlatformService;
+    private final FollowGroupService followGroupService;
 
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
@@ -203,7 +208,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
     }
 
-
     private FollowTraderUserEntity insertAccount(String account, String password, String accountType, String platform, String node, String errorRemark, int uploadStatus, Long savedId) {
         FollowTraderUserEntity entity = new FollowTraderUserEntity();
         entity.setAccount(account);
@@ -221,6 +225,48 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         entity.setUploadStatus(uploadStatus);
         entity.setUploadId(Math.toIntExact(savedId));
         return entity;
+    }
+
+    @Override
+    public void updateGroup(List<Long> idList, String group) {
+        LambdaQueryWrapper<FollowGroupEntity> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FollowGroupEntity::getName, group);
+        long groupId = followGroupService.list(queryWrapper).getFirst().getId();
+        for (Long id : idList) {
+            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderUserEntity::getId, id)
+                    .set(FollowTraderUserEntity::getGroupName, group)
+                    .set(FollowTraderUserEntity::getGroupId, groupId);
+            baseMapper.update(updateWrapper);
+        }
+    }
+
+    @Override
+    public void updatePassword(List<FollowTraderUserVO> voList, String password, String confirmPassword) {
+        if (!password.equals(confirmPassword)){
+            throw new ServerException("两次密码输入不一致");
+        }
+        //根据connection_status筛选出正常还是异常
+        List<FollowTraderUserVO> normalList = voList.stream().filter(vo -> vo.getConnectionStatus() == 0).collect(Collectors.toList());
+        List<FollowTraderUserVO> exceptionList = voList.stream().filter(vo -> vo.getConnectionStatus() != 0).collect(Collectors.toList());
+        //1.账号正常登录
+        for (FollowTraderUserVO normal : normalList) {
+            //TODO MT4密码修改并重连
+
+            //更新密码
+            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderUserEntity::getId, normal.getId())
+                    .set(FollowTraderUserEntity::getPassword, password);
+            baseMapper.update(updateWrapper);
+        }
+        //2.账号异常
+        for (FollowTraderUserVO exception : exceptionList) {
+            //更新密码
+            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderUserEntity::getId, exception.getId())
+                    .set(FollowTraderUserEntity::getPassword, password);
+            baseMapper.update(updateWrapper);
+        }
     }
 
 }

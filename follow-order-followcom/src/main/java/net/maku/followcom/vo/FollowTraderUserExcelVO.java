@@ -24,6 +24,9 @@ public class FollowTraderUserExcelVO implements TransPojo {
 	@ExcelProperty("密码")
 	private String password;
 
+	@ExcelProperty("连接状态 0：正常 1：密码错误 2：连接异常 3：未挂靠VPS")
+	private Integer connectionStatus;
+
 	@ExcelProperty("平台id")
 	private Integer platformId;
 

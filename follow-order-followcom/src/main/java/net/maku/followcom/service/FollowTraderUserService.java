@@ -35,4 +35,8 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void generateCsv(ByteArrayOutputStream outputStream) throws IOException;
 
     void addByExcel(MultipartFile file, Long savedId);
+
+    void updateGroup(List<Long> idList, String group);
+
+    void updatePassword(List<FollowTraderUserVO> idList, String password, String confirmPassword);
 }

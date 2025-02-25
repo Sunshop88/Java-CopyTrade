@@ -42,6 +42,9 @@ public class FollowUploadTraderUserVO implements Serializable {
 	@Schema(description = "失败数量")
 	private Long failureCount;
 
+	@Schema(description = "类型 0：新增账号 1：修改密码")
+	private Integer type;
+
 	@Schema(description = "版本号")
 	private Integer version;
 
