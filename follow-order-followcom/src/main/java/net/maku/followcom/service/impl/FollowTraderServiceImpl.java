@@ -23,6 +23,7 @@ import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.SymbolUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
@@ -223,6 +224,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setFreezeLevel(symbolInfo.FreezeLevel);
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
+                        if (followSysmbolSpecificationVO.getProfitMode().equals(FollowConstant.PROFIT_MODE)){
+                            String stdSymbol = SymbolUtils.processString(followSysmbolSpecificationVO.getSymbol());
+                            followSysmbolSpecificationVO.setStdSymbol(stdSymbol);
+                        }
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
                     } catch (InvalidSymbolException |ConnectException e) {
                         log.error(traderId+"添加品种规格异常"+o+"异常信息"+e.getMessage());

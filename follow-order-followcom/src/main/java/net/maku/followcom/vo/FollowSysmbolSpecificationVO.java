@@ -92,7 +92,5 @@ public class FollowSysmbolSpecificationVO implements Serializable {
 	@Schema(description = "标准品种")
 	private String stdSymbol;
 
-	@Schema(description = "标准合约")
-	private Integer stdContract;
 
 }
