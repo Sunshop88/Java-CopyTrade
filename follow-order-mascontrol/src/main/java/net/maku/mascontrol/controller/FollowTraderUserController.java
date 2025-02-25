@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderUserConvert;
@@ -217,7 +218,7 @@ public class FollowTraderUserController {
         return Result.ok(list);
     }
 
-    @PutMapping
+    @PutMapping("updateGroup")
     @Operation(summary = "批量修改分组")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
@@ -227,12 +228,13 @@ public class FollowTraderUserController {
         return Result.ok("批量修改分组成功");
     }
 
-    @PutMapping
+    @PutMapping("updatePassword")
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody List<FollowTraderUserVO> voList,String password,String confirmPassword) {
-        followTraderUserService.updatePassword(voList,password,confirmPassword);
+    public Result<String> updatePassword(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) {
+
+        followTraderUserService.updatePassword(voList,password,confirmPassword,req);
 
         return Result.ok("批量修改密码成功");
     }

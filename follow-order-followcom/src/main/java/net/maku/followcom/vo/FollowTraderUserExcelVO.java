@@ -60,7 +60,10 @@ public class FollowTraderUserExcelVO implements TransPojo {
 	@ExcelProperty("上传文件id")
 	private Integer uploadId;
 
-	@ExcelProperty("添加账号状态 0：成功 1：失败")
-	private Integer upload_status;
+	@ExcelProperty("添加账号状态 0：失败 1：成功")
+	private Integer uploadStatus;
+
+	@ExcelProperty("修改密码 0：失败 1：成功")
+	private Integer updateStatusId;
 
 }

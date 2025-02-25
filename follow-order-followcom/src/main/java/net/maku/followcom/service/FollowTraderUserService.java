@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.FollowTraderUserVO;
@@ -38,5 +39,5 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void updateGroup(List<Long> idList, String group);
 
-    void updatePassword(List<FollowTraderUserVO> idList, String password, String confirmPassword);
+    void updatePassword(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req);
 }

@@ -1,30 +1,39 @@
 package net.maku.followcom.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
-import net.maku.followcom.entity.FollowGroupEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowTraderUserEntity;
+import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.query.FollowTraderUserQuery;
-import net.maku.followcom.service.FollowGroupService;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTraderUserService;
+import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowTraderUserExcelVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
+import net.maku.followcom.vo.FollowUploadTraderUserVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
+import net.maku.framework.security.user.SecurityUser;
+import online.mtapi.mt4.QuoteClient;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import cn.hutool.core.util.ObjectUtil;
 import org.springframework.stereotype.Service;
@@ -33,9 +42,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
  * 账号初始表
@@ -49,6 +61,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     private final TransService transService;
     private final FollowPlatformService followPlatformService;
     private final FollowGroupService followGroupService;
+    private final FollowTraderService followTraderService;
+    private final FollowUploadTraderUserService followUploadTraderUserService;
 
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
@@ -167,6 +181,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void addByExcel(MultipartFile file, Long savedId) {
         List<FollowTraderUserEntity> entityList = new ArrayList<>();
+        long successCount = 0;
+        long failureCount = 0;
         try (InputStream inputStream = file.getInputStream();
              InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName("GBK"));
 //             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
@@ -197,12 +213,24 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
                 // 生成备注信息
                 String errorRemark = errorMsg.length() > 0 ? errorMsg.toString() : remark;
-                // 如果有错误，设置 upload_status 为 1
-                int uploadStatus = errorMsg.length() > 0 ? 1 : 0;
-                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, uploadStatus,savedId));
+                // 如果有错误，设置 upload_status 为 0
+                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
+                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, uploadStatus, savedId));
 
+                if (uploadStatus == 1) {
+                    successCount++;
+                } else {
+                    failureCount++;
+                }
             }
             saveBatch(entityList);
+            LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.set(FollowUploadTraderUserEntity::getSuccessCount, successCount)
+                    .set(FollowUploadTraderUserEntity::getFailureCount, failureCount)
+                    .set(FollowUploadTraderUserEntity::getUploadTotal, failureCount + successCount)
+                    .set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.SUCCESS.getType())
+                    .eq(FollowUploadTraderUserEntity::getId, savedId);
+            followUploadTraderUserService.update(updateWrapper);
         } catch (Exception e) {
             log.error("处理Excel文件时发生错误: ", e);
         }
@@ -242,31 +270,91 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public void updatePassword(List<FollowTraderUserVO> voList, String password, String confirmPassword) {
-        if (!password.equals(confirmPassword)){
+    public void updatePassword(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) {
+        if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
-        //根据connection_status筛选出正常还是异常
-        List<FollowTraderUserVO> normalList = voList.stream().filter(vo -> vo.getConnectionStatus() == 0).collect(Collectors.toList());
-        List<FollowTraderUserVO> exceptionList = voList.stream().filter(vo -> vo.getConnectionStatus() != 0).collect(Collectors.toList());
-        //1.账号正常登录
-        for (FollowTraderUserVO normal : normalList) {
-            //TODO MT4密码修改并重连
 
-            //更新密码
-            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(FollowTraderUserEntity::getId, normal.getId())
-                    .set(FollowTraderUserEntity::getPassword, password);
-            baseMapper.update(updateWrapper);
+        // 设置状态
+        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+        followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+        followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
+        followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+        followUploadTraderUserService.save(followUploadTraderUserVO);
+
+        long uploadTotal = voList.size();
+        long successCount = 0;
+        long failureCount = 0;
+
+        // 提前在主线程中获取 Token 和其他需要的头信息
+        String token = req.getHeader("Authorization");
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", token);
+        headers.put("Content-Type", "application/json");
+
+        // 根据account去follow_trader查询status筛选出正常还是异常
+        for (FollowTraderUserVO vo : voList) {
+            // 查询账号状态
+            LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
+            FollowTraderEntity followTraderEntity = followTraderService.list(queryWrapper).getLast();
+            String remark ="";
+            if (ObjectUtil.isNotEmpty(followTraderEntity)) {
+                if (followTraderEntity.getStatus() == 0) {
+                    // 账号正常登录
+                    followTraderEntity.setPassword(password);
+                    followTraderService.updateById(followTraderEntity);
+
+                    QuoteClient quoteClient = null;
+                    try {
+                        // 修改 MT4 密码
+                        quoteClient.ChangePassword(vo.getPassword(), false);
+                    } catch (IOException e) {
+                        remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
+                    } catch (online.mtapi.mt4.Exception.ServerException e) {
+                        remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
+                    }
+
+                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+                    RestTemplate restTemplate = new RestTemplate();
+
+                    // 使用提前提取的 headers 构建请求头
+                    HttpHeaders httpHeaders = new HttpHeaders();
+                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
+                    HttpEntity<String> entity = new HttpEntity<>(followTraderEntity.getId().toString(), httpHeaders);
+
+                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+                        log.error("账号重连失败: " + followTraderEntity.getIpAddr());
+                        remark += "重连失败; ";
+                    }
+
+                    // 更新traderUser密码并记录备注
+                    LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                    updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
+                            .set(FollowTraderUserEntity::getPassword, password)
+                            .set(FollowTraderUserEntity::getUploadId, Math.toIntExact(followUploadTraderUserVO.getId()));
+
+                    // 仅在有备注时设置备注
+                    if (!remark.isEmpty()) {
+                        updateWrapper.set(FollowTraderUserEntity::getRemark, remark);
+                        updateWrapper.set(FollowTraderUserEntity::getUpdateStatusId, 0);
+                        failureCount++; // 记录失败
+                    } else {
+                        updateWrapper.set(FollowTraderUserEntity::getRemark, vo.getRemark());
+                        updateWrapper.set(FollowTraderUserEntity::getUpdateStatusId, 1);
+                        successCount++; // 如果没有备注，算作成功
+                    }
+                    baseMapper.update(updateWrapper);
+                }
+            }
         }
-        //2.账号异常
-        for (FollowTraderUserVO exception : exceptionList) {
-            //更新密码
-            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(FollowTraderUserEntity::getId, exception.getId())
-                    .set(FollowTraderUserEntity::getPassword, password);
-            baseMapper.update(updateWrapper);
-        }
+
+        followUploadTraderUserVO.setUploadTotal(uploadTotal);
+        followUploadTraderUserVO.setSuccessCount(successCount);
+        followUploadTraderUserVO.setFailureCount(failureCount);
+        followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+        followUploadTraderUserService.update(followUploadTraderUserVO);
     }
 
 }

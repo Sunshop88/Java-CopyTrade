@@ -57,6 +57,8 @@ public class FollowConstant {
 
     public static String VPS_RECONNECTION= "/subcontrol/trader/reconnectionServer";
 
+    public static String VPS_RECONNECTION_Trader= "/subcontrol/trader/reconnectionTrader";
+
     /**
      * 更新缓存
      */

@@ -143,8 +143,14 @@ public class FollowTraderUserEntity {
 	private Integer uploadId;
 
 	/**
-	* 添加账号状态 0：成功 1：失败
+	* 添加账号状态 0：失败 1：成功
 	*/
 	@TableField(value = "upload_status")
 	private Integer uploadStatus;
+
+	/**
+	* 修改密码 0：失败 1：成功
+	*/
+	@TableField(value = "update_status_id")
+	private Integer updateStatusId;
 }
