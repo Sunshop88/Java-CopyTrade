@@ -180,15 +180,15 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             ThreadPoolUtils.getExecutor().execute(() -> {
                                 String slaveId = o.getSlaveId().toString();
                                 if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                    log.info("未开通跟单状态");
+                                    log.info(order.Ticket+"未开通跟单状态");
                                     return;
                                 }
                                 if (orderUpdateEventArgs.Action == PositionClose && o.getFollowClose().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                    log.info("未开通跟单平仓状态");
+                                    log.info(order.Ticket+":"+slaveId+"未开通跟单平仓状态");
                                     return;
                                 }
                                 if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                    log.info("未开通跟单下单状态");
+                                    log.info(order.Ticket+":"+slaveId+"未开通跟单下单状态");
                                     return;
                                 }
                                 // 构造订单信息并发布
@@ -198,45 +198,72 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 if (ObjectUtil.isEmpty(copierApiTrader)) {
                                     log.info("开平重连" + slaveId);
                                     copierApiTradersAdmin.removeTrader(slaveId);
-                                    copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                    FollowTraderEntity slaveTrader = followTraderService.getById(slaveId);
+                                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(slaveTrader);
+                                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                        copierApiTrader1.setTrader(slaveTrader);
+                                        copierApiTrader1.startTrade();
+                                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                                        long startTime = System.currentTimeMillis();
+                                        CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                        // 开始等待直到获取到copierApiTrader1
+                                        while (copierApiTrader1 == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                                            try {
+                                                // 每次自旋等待500ms后再检查
+                                                Thread.sleep(500);
+                                            } catch (InterruptedException e) {
+                                                // 处理中断
+                                                Thread.currentThread().interrupt();
+                                                break;
+                                            }
+                                            copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                        }
+                                        //重复提交
+                                        if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                                            log.info(slaveId+"重复提交并等待完成");
+                                        }else {
+                                            log.info(slaveId+"重复提交并等待失败");
+                                        }
+                                    }
                                 }
                                 if (orderUpdateEventArgs.Action == PositionClose) {
                                     //跟单平仓
                                     //发送MT4处理请求
-                                    log.info("发送平仓请求" + slaveId);
+                                    log.info(order.Ticket+"发送平仓请求" + slaveId);
                                     Integer serverId = leader.getServerId();
                                     FollowVpsEntity vps = followVpsService.getById(serverId);
                                     if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                        log.info("开始平仓请求" + slaveId);
+                                        log.info(order.Ticket+"开始平仓请求" + slaveId);
                                         strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                     }
                                 } else {
                                     //跟单开仓
                                     //发送MT4处理请求
-                                    log.info("发送下单请求" + slaveId);
+                                    log.info(order.Ticket+"发送下单请求" + slaveId);
                                     Integer serverId = leader.getServerId();
                                     FollowVpsEntity vps = followVpsService.getById(serverId);
                                     if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                        log.info("开始下单请求" + slaveId);
+                                        log.info(order.Ticket+"开始下单请求" + slaveId);
                                         strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                     }
                                 }
-
                             });
                         });
                     } else {
                         followTraderSubscribeEntityList.forEach(o -> {
                             String slaveId = o.getSlaveId().toString();
                             if (o.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单状态");
+                                log.info(order.Ticket+"未开通跟单状态");
                                 return;
                             }
                             if (orderUpdateEventArgs.Action == PositionClose && o.getFollowClose().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单平仓状态");
+                                log.info(order.Ticket+":"+slaveId+"未开通跟单平仓状态");
                                 return;
                             }
                             if ((orderUpdateEventArgs.Action == PositionOpen || orderUpdateEventArgs.Action == PendingFill) && o.getFollowOpen().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                log.info("未开通跟单下单状态");
+                                log.info(order.Ticket+":"+slaveId+"未开通跟单下单状态");
                                 return;
                             }
                             // 构造订单信息并发布
@@ -246,30 +273,54 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             if (ObjectUtil.isEmpty(copierApiTrader)) {
                                 log.info("开平重连" + slaveId);
                                 copierApiTradersAdmin.removeTrader(slaveId);
-                                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(slaveId));
+                                FollowTraderEntity slaveTrader = followTraderService.getById(slaveId);
+                                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(slaveTrader);
                                 if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                                    copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
-                                    copierApiTrader.startTrade();
+                                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                    copierApiTrader1.setTrader(slaveTrader);
+                                    copierApiTrader1.startTrade();
+                                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                                    long startTime = System.currentTimeMillis();
+                                    CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                    // 开始等待直到获取到copierApiTrader1
+                                    while (copierApiTrader1 == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                                        try {
+                                            // 每次自旋等待500ms后再检查
+                                            Thread.sleep(500);
+                                        } catch (InterruptedException e) {
+                                            // 处理中断
+                                            Thread.currentThread().interrupt();
+                                            break;
+                                        }
+                                        copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId);
+                                    }
+                                    //重复提交
+                                    if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                                        log.info(slaveId+"重复提交并等待完成");
+                                    }else {
+                                        log.info(slaveId+"重复提交并等待失败");
+                                    }
                                 }
                             }
                             if (orderUpdateEventArgs.Action == PositionClose) {
                                 //跟单平仓
                                 //发送MT4处理请求
-                                log.info("发送平仓请求" + slaveId);
+                                log.info(order.Ticket+"发送平仓请求" + slaveId);
                                 Integer serverId = leader.getServerId();
                                 FollowVpsEntity vps = followVpsService.getById(serverId);
                                 if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                    log.info("开始平仓请求" + slaveId);
+                                    log.info(order.Ticket+"开始平仓请求" + slaveId);
                                     strategyMap.get(AcEnum.CLOSED).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
                             } else {
                                 //跟单开仓
                                 //发送MT4处理请求
-                                log.info("发送下单请求" + slaveId);
+                                log.info(order.Ticket+"发送下单请求" + slaveId);
                                 Integer serverId = leader.getServerId();
                                 FollowVpsEntity vps = followVpsService.getById(serverId);
                                 if (ObjectUtil.isNotEmpty(vps) && !vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
-                                    log.info("开始下单请求" + slaveId);
+                                    log.info(order.Ticket+"开始下单请求" + slaveId);
                                     strategyMap.get(AcEnum.NEW).operate(copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(slaveId), eaOrderInfo, 0);
                                 }
                             }
