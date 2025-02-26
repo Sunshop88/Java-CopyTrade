@@ -9,21 +9,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.maku.followcom.convert.FollowTraderUserConvert;
-import net.maku.followcom.convert.FollowUploadTraderUserConvert;
-import net.maku.followcom.entity.FollowPlatformEntity;
-import net.maku.followcom.entity.FollowUploadTraderUserEntity;
-import net.maku.followcom.entity.FollowVarietyEntity;
+import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
-import net.maku.followcom.vo.FollowFailureDetailVO;
-import net.maku.followcom.vo.FollowTestDetailVO;
-import net.maku.followcom.vo.FollowTraderUserVO;
-import net.maku.followcom.vo.FollowUploadTraderUserVO;
+import net.maku.followcom.vo.*;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -40,8 +37,13 @@ import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 账号初始表
@@ -60,12 +62,118 @@ public class FollowTraderUserController {
     private final FollowPlatformService followPlatformService;
     private final FollowTestDetailService followTestDetailService;
     private final FollowFailureDetailService followFailureDetailService;
+    private final FollowTraderService followTraderService;
+    private final FollowTraderSubscribeService followTraderSubscribeService;
+    private final FollowVpsService followVpsService;
+    private final RedisCache redisCache;
 
+/*   @PostConstruct
+    public void init() {
+        List<FollowTraderEntity> list = followTraderService.list();
+       List<FollowPlatformEntity> list1 = followPlatformService.list();
+       Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
+       List<FollowTraderUserEntity> ls=new ArrayList<FollowTraderUserEntity>();
+        list.forEach(t->{
+            FollowTraderUserEntity entity =new FollowTraderUserEntity();
+            entity.setId(t.getId());
+            entity.setAccount(t.getAccount());
+            entity.setPassword(t.getPassword());
+            entity.setPlatformId(t.getPlatformId());
+            entity.setPlatform(t.getPlatform());
+            entity.setPassword(t.getPassword());
+            entity.setAccountType("MT4");
+            entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
+            entity.setGroupName("默认");
+            entity.setGroupId(1);
+            entity.setStatus(1);
+            entity.setDeleted(0);
+            ls.add(entity);
+        });
+        followTraderUserService.saveBatch(ls);
+    }*/
+    
     @GetMapping("page")
     @Operation(summary = "分页")
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<PageResult<FollowTraderUserVO>> page(@ParameterObject @Valid FollowTraderUserQuery query){
         PageResult<FollowTraderUserVO> page = followTraderUserService.page(query);
+        List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
+        List<FollowTraderEntity> traders = followTraderService.list();
+        List<FollowVpsEntity> vpsList = followVpsService.list();
+        Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
+        Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
+        Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
+        subscribes.stream().forEach(s->{
+            subscribeMap.put(s.getSlaveId(),s);
+        });
+        traders.stream().forEach(t->{
+            List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
+           if (ObjectUtil.isEmpty(followTraderEntities)) {
+               followTraderEntities = new ArrayList<>();
+
+           }
+            followTraderEntities.add(t);
+            traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
+        });
+        vpsList.forEach(v->{
+            vpsMap.put(v.getId(),v);
+        });
+        LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
+        List<FollowTraderUserVO> list = page.getList();
+        StringBuilder sb=new StringBuilder();
+        list.forEach(o->{
+            String key=o.getAccount() + "-" + o.getPlatformId();
+            ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
+            List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
+            if(o.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
+                AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
+                  followTraderEntities.forEach(f->{
+                    if(f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                            followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
+                    }
+                    if(f.getType().equals(TraderTypeEnum.MASTER_REAL)){
+                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                        vpsDesc.add(vo);
+                    }else{
+                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr()+vpsMap.get(f.getServerId()).getName()+"-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                        vpsDesc.add(vo);
+
+                    }
+                }) ;
+                  if(ObjectUtil.isEmpty(followRedisTraderVO.get())){
+                      Object o1 = redisCache.get(Constant.TRADER_USER + followTraderEntities.get(0).getId());
+                      followRedisTraderVO.set((FollowRedisTraderVO) o1);
+                  }
+                FollowRedisTraderVO redisTraderVo = followRedisTraderVO.get();
+                  if(ObjectUtil.isNotEmpty(redisTraderVo)){
+                      BigDecimal euqit = redisTraderVo.getEuqit();
+                      o.setEuqit(euqit);
+                      BigDecimal balance = redisTraderVo.getBalance();
+                      o.setBalance(balance);
+                      BigDecimal marginProportion = redisTraderVo.getMarginProportion();
+                      o.setMarginProportion(marginProportion);
+                      o.setFreeMargin(redisTraderVo.getFreeMargin());
+                      o.setMargin(redisTraderVo.getMargin());
+                      o.setTotal(redisTraderVo.getTotal());
+                      o.setSellNum(redisTraderVo.getSellNum());
+                      o.setBuyNum(redisTraderVo.getBuyNum());
+
+                  }
+                o.setVpsDesc(vpsDesc);
+           }else{
+                if(ObjectUtil.isEmpty(followTraderEntities)) {
+                    VpsDescVO vo = VpsDescVO.builder().desc("-交易分配").build();
+                    vpsDesc.add(vo);
+                }else{
+                    followTraderEntities.forEach(f->{
+                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr()+vpsMap.get(f.getServerId()).getName()+"-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                        vpsDesc.add(vo);
+                    });
+                }
+
+               o.setVpsDesc(vpsDesc);
+           }
+
+        });
 
         return Result.ok(page);
     }

@@ -3,6 +3,7 @@ package net.maku.followcom.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,7 +25,8 @@ public class FollowTraderUserVO implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private Long id;
-
+	@Schema(description = "挂号的vps")
+	private List<VpsDescVO> vpsDesc;
 	@Schema(description = "账号")
 	@NotBlank(message = "账号不能为空")
 	private String account;
@@ -80,5 +82,25 @@ public class FollowTraderUserVO implements Serializable {
 
 	@Schema(description = "二次确认密码")
 	private String confirmPassword;
+
+	@Schema(description = "净值")
+	private	BigDecimal euqit;
+	@Schema(description = "余额")
+	private	BigDecimal balance;
+	@Schema(description = "款比例")
+	private	BigDecimal marginProportion;
+	@Schema(description = "可用预付款")
+	private BigDecimal freeMargin;
+	@Schema(description = "已用预付款")
+	private  Double margin;
+	@Schema(description = "总持仓订单数量")
+	private Integer total;
+
+	@Schema(description = "做空订单手数数量")
+	private double sellNum;
+
+	@Schema(description = "做多订单手数数量")
+	private double buyNum;
+
 
 }

@@ -39,6 +39,13 @@ public class FollowTraderUserQuery extends Query {
 
     @Schema(description = "挂靠类型")
     private String uploadStatusName;
+    @Schema(description = "备注")
+    private String remark;
+    @Schema(description = "挂号的vps")
+    private List<Integer> vpsIds;
+
+    @Schema(description = "连接状态")
+    private List<Integer> status;
 
 
 
