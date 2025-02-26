@@ -17,6 +17,9 @@ import net.maku.framework.common.query.Query;
 public class FollowOrderHistoryQuery extends Query {
 
     @Schema(description = "账号ID")
+    private Long traderUserId;
+
+    @Schema(description = "账号ID")
     private Long traderId;
 
     @Schema(description = "时间-开始")

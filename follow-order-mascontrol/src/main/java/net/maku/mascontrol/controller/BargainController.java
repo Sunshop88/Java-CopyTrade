@@ -4,14 +4,21 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tencentcloudapi.privatedns.v20201028.PrivatednsErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.BargainService;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -34,6 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.Map;
 
 
@@ -49,20 +57,41 @@ public class BargainController {
     private static final Logger log = LoggerFactory.getLogger(BargainController.class);
     private final FollowVpsService followVpsService;
     private BargainService bargainService;
+    private final FollowTraderUserService followTraderUserService;
+    private final FollowTraderService followTraderService;
 
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderHistoryVO>> histotyOrderList(@ParameterObject FollowOrderHistoryQuery followOrderHistoryQuery,HttpServletRequest request) {
         Integer vpsId = followOrderHistoryQuery.getVpsId();
-        FollowVpsEntity vps = followVpsService.getById(vpsId);
-        if (vps==null) {
+        Long userId = followOrderHistoryQuery.getTraderUserId();
+        List<FollowTraderEntity> list = getByUserId(userId);
+        if(list==null||list.size()<=0){
             throw new ServerException("vps不存在");
         }
-        Result result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery);
-
+    /*    FollowVpsEntity vps = followVpsService.getById(vpsId);
+        if (vps==null) {
+            throw new ServerException("vps不存在");
+        }*/
+        Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery);
         return result;
     }
 
+    
+    private List<FollowTraderEntity> getByUserId(Long traderUserId) {
+        FollowTraderUserEntity traderUser = followTraderUserService.getById(traderUserId);
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
+        return list;
+    }
+    @GetMapping("reconnection")
+    @Operation(summary = "重连账号")
+    public Result<Boolean> reconnection(@Parameter(description = "traderUserId") String traderUserId,HttpServletRequest request) {
+        List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
+        users.forEach(user -> {
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, null);
+        });
+        return Result.ok();
+    }
 
 }

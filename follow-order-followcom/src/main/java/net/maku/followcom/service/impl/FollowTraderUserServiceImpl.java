@@ -79,6 +79,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     private LambdaQueryWrapper<FollowTraderUserEntity> getWrapper(FollowTraderUserQuery query){
         LambdaQueryWrapper<FollowTraderUserEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(FollowTraderUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue());
         //备注
         if (ObjectUtil.isNotEmpty(query.getRemark())){
             wrapper.like(FollowTraderUserEntity::getRemark,query.getRemark());

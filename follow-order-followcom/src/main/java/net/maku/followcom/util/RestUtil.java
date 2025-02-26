@@ -358,7 +358,10 @@ public class RestUtil {
         // 将对象序列化为 JSON
         String jsonBody = null;
         try {
-            jsonBody = objectMapper.writeValueAsString(t);
+            if(t!=null) {
+                jsonBody = objectMapper.writeValueAsString(t);
+            }
+
         } catch (JsonProcessingException e) {
             return Result.error("参数转换异常");
 
@@ -366,18 +369,21 @@ public class RestUtil {
         ResponseEntity<byte[]> response =null;
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
         if(HttpMethod.GET.equals(method)) {
-            Map<String, Object> map = BeanUtil.beanToMap(t);
-            StringBuilder sb=new StringBuilder();
-            if(ObjectUtil.isNotEmpty(map)) {
-                map.forEach((k,v)->{
-                    if (v!=null ){
-                        sb.append(k).append("=").append(v).append("&");
-                    }
+            Map<String, Object> map =null;
+            if(t!=null) {
+                 map = BeanUtil.beanToMap(t);
+                StringBuilder sb=new StringBuilder();
+                if(ObjectUtil.isNotEmpty(map)) {
+                    map.forEach((k,v)->{
+                        if (v!=null ){
+                            sb.append(k).append("=").append(v).append("&");
+                        }
 
-                });
-            }
-            if(!sb.isEmpty()){
-                url=url+"?"+sb.toString();
+                    });
+                }
+                if(!sb.isEmpty()){
+                    url=url+"?"+sb.toString();
+                }
             }
             response=  restTemplate.exchange(url, method, entity, byte[].class,map);
         }else{

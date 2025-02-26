@@ -99,6 +99,8 @@ public class FollowConstant {
     public static String SYMBOLPARAMS = "/api/symbolParams";
     public static String HISTOTY_ORDER_LIST = "/subcontrol/follow/histotyOrderList";
 
+    public static String RECONNECTION = "/subcontrol/trader/reconnection";
+
 
     /**
      * AES key
