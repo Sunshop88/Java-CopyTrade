@@ -765,7 +765,7 @@ public class FollowTraderController {
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
             // 先查品种规格
-            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getStdSymbol().contains(symbol)).toList();
+            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> ObjectUtil.isNotEmpty(item.getStdSymbol())&&item.getStdSymbol().contains(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationEntity)){
                 for (FollowSysmbolSpecificationEntity o : specificationEntity) {
                     log.info("品种规格获取报价"+o.getStdSymbol());
