@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
@@ -78,18 +79,59 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     private LambdaQueryWrapper<FollowTraderUserEntity> getWrapper(FollowTraderUserQuery query){
         LambdaQueryWrapper<FollowTraderUserEntity> wrapper = Wrappers.lambdaQuery();
+        //备注
         if (ObjectUtil.isNotEmpty(query.getRemark())){
             wrapper.like(FollowTraderUserEntity::getRemark,query.getRemark());
         }
-        //挂号的vpsId
-        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType())){
+        //挂号的vpsId和连接状态和账号类型
+        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus())){
             LambdaQueryWrapper<FollowTraderEntity> wp = new LambdaQueryWrapper<>();
             wp.in(ObjectUtil.isNotEmpty(query.getVpsIds()),FollowTraderEntity::getServerId, query.getVpsIds());
             if (ObjectUtil.isNotEmpty(query.getAccountType()) && !query.getAccountType().contains(TraderTypeEnum.ALL.getType())){
-
+                    if(query.getAccountType().contains(TraderTypeEnum.MASTER_REAL) && !query.getAccountType().contains(TraderTypeEnum.SLAVE_REAL)){
+                       wp.eq(FollowTraderEntity::getType,TraderTypeEnum.MASTER_REAL.getType());
+                    }
+                if(!query.getAccountType().contains(TraderTypeEnum.MASTER_REAL) && query.getAccountType().contains(TraderTypeEnum.SLAVE_REAL)){
+                    wp.eq(FollowTraderEntity::getType,TraderTypeEnum.SLAVE_REAL.getType());
+                }
+            }
+            if(ObjectUtil.isNotEmpty(query.getStatus())){
+                 wp.in(FollowTraderEntity::getStatus,query.getStatus());
+                if(query.getStatus().contains(CloseOrOpenEnum.OPEN) && !query.getStatus().contains(2)){
+                    wp.eq(FollowTraderEntity::getStatusExtra,"账号异常");
+                }
+                 if(!query.getStatus().contains(CloseOrOpenEnum.OPEN) && query.getStatus().contains(2)){
+                     wp.eq(FollowTraderEntity::getStatusExtra,"账户密码错误");
+                 }
+                if(query.getStatus().contains(CloseOrOpenEnum.OPEN) && query.getStatus().contains(2)){
+                    ArrayList<String> strings = new ArrayList<>();
+                    strings.add("账号异常");
+                    strings.add("账户密码错误");
+                    wp.in(FollowTraderEntity::getStatusExtra,strings);
+                }
             }
             List<FollowTraderEntity> list = followTraderService.list(wp);
+            //再通过list
+            StringBuilder sb = new StringBuilder();
+            list.forEach(o->{
+                sb.append("'"+o.getAccount()+"-"+o.getPlatformId()+"',");
+            });
+            String sql =sb.substring(0, sb.length() - 1);
+            wrapper.apply("concat(account,'-',platform_id) in (" +sql+")");
         }
+        //组别
+        if(ObjectUtil.isNotEmpty(query.getGroupIds()) ){
+            wrapper.in(FollowTraderUserEntity::getGroupId,query.getGroupIds());
+        }
+        //劵商名称
+        if(ObjectUtil.isNotEmpty(query.getBrokerName())){
+            List<FollowPlatformEntity> list = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().like(FollowPlatformEntity::getBrokerName, query.getBrokerName()));
+              if(ObjectUtil.isNotEmpty(list)){
+                  List<Long> platformIds = list.stream().map(FollowPlatformEntity::getId).toList();
+                  wrapper.in(FollowTraderUserEntity::getPlatformId,platformIds);
+              }
+        }
+        //  服务器
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
             wrapper.like(FollowTraderUserEntity::getPlatform,query.getPlatform());
         }

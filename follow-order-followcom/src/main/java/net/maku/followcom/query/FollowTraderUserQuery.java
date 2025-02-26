@@ -44,7 +44,7 @@ public class FollowTraderUserQuery extends Query {
     @Schema(description = "挂号的vps")
     private List<Integer> vpsIds;
 
-    @Schema(description = "连接状态")
+    @Schema(description = "连接状态 0正常 1错误 2异常")
     private List<Integer> status;
     @Schema(description = "账号类型 0策略 1跟单 2交易分配 不传全部")
     private List<Integer> accountType;

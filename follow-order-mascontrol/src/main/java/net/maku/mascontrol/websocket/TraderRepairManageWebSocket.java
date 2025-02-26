@@ -126,13 +126,13 @@ public class TraderRepairManageWebSocket {
                     list.add(Integer.valueOf(split[i]));
                 }
             }
-            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list));
+            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
         }else {
 
             if(ObjectUtil.isEmpty(vpsList)){
                 followVpsEntityList=new ArrayList<>();
             }else{
-                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds));
+                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
             }
         
         }
