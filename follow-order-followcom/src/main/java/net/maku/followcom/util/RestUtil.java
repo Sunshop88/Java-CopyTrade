@@ -1,8 +1,14 @@
 package net.maku.followcom.util;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.framework.common.utils.Result;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -11,6 +17,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -336,5 +343,55 @@ public class RestUtil {
         HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
         header.add("Authorization", request.getHeader("Authorization"));
         return header;
+    }
+
+    /**
+     * 远程调用方法封装
+     */
+    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t) {
+        //远程调用
+        String url = MessageFormat.format("http://{0}:{1}{2}", "127.0.0.1", FollowConstant.VPS_PORT, uri);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
+        ObjectMapper objectMapper = new ObjectMapper();
+        // 将对象序列化为 JSON
+        String jsonBody = null;
+        try {
+            jsonBody = objectMapper.writeValueAsString(t);
+        } catch (JsonProcessingException e) {
+            return Result.error("参数转换异常");
+
+        }
+        ResponseEntity<byte[]> response =null;
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+        if(HttpMethod.GET.equals(method)) {
+            Map<String, Object> map = BeanUtil.beanToMap(t);
+            StringBuilder sb=new StringBuilder();
+            if(ObjectUtil.isNotEmpty(map)) {
+                map.forEach((k,v)->{
+                    if (v!=null ){
+                        sb.append(k).append("=").append(v).append("&");
+                    }
+
+                });
+            }
+            if(!sb.isEmpty()){
+                url=url+"?"+sb.toString();
+            }
+            response=  restTemplate.exchange(url, method, entity, byte[].class,map);
+        }else{
+            response = restTemplate.exchange(url, method, entity, byte[].class);
+        }
+
+        byte[] data = response.getBody();
+        JSONObject body = JSON.parseObject(new String(data));
+        log.info("远程调用响应:{}", body);
+        if (body != null && !body.getString("code").equals("0")) {
+            String msg = body.getString("msg");
+            log.error("远程调用异常: {}", body.get("msg"));
+            return    Result.error("远程调用异常: " + body.get("msg"));
+        }
+        return Result.ok(body.get("data"));
     }
 }

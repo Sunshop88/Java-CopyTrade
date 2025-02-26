@@ -157,6 +157,7 @@ public class FollowTraderUserController {
                       o.setSellNum(redisTraderVo.getSellNum());
                       o.setBuyNum(redisTraderVo.getBuyNum());
 
+
                   }
                 o.setVpsDesc(vpsDesc);
            }else{

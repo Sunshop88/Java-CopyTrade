@@ -46,6 +46,11 @@ public class FollowTraderUserQuery extends Query {
 
     @Schema(description = "连接状态")
     private List<Integer> status;
+    @Schema(description = "账号类型 0策略 1跟单 2交易分配 不传全部")
+    private List<Integer> accountType;
+    @Schema(description = "组别")
+    private List<Integer> groupIds;
+
 
 
 

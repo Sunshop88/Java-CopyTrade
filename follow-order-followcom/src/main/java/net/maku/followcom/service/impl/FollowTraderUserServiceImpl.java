@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowTraderUserQuery;
@@ -77,6 +78,18 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     private LambdaQueryWrapper<FollowTraderUserEntity> getWrapper(FollowTraderUserQuery query){
         LambdaQueryWrapper<FollowTraderUserEntity> wrapper = Wrappers.lambdaQuery();
+        if (ObjectUtil.isNotEmpty(query.getRemark())){
+            wrapper.like(FollowTraderUserEntity::getRemark,query.getRemark());
+        }
+        //挂号的vpsId
+        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType())){
+            LambdaQueryWrapper<FollowTraderEntity> wp = new LambdaQueryWrapper<>();
+            wp.in(ObjectUtil.isNotEmpty(query.getVpsIds()),FollowTraderEntity::getServerId, query.getVpsIds());
+            if (ObjectUtil.isNotEmpty(query.getAccountType()) && !query.getAccountType().contains(TraderTypeEnum.ALL.getType())){
+
+            }
+            List<FollowTraderEntity> list = followTraderService.list(wp);
+        }
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
             wrapper.like(FollowTraderUserEntity::getPlatform,query.getPlatform());
         }
