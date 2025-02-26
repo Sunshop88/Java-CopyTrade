@@ -25,6 +25,7 @@ import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -66,6 +67,7 @@ public class FollowVpsController {
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
     private final  FollowTestDetailService followTestDetailService;
+    private final RedisUtil redisUtil;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -369,6 +371,16 @@ public class FollowVpsController {
             return Result.error("请上传Excel文件");
         }
         followTestDetailService.importByExcel(file);
+        return Result.ok("修改完成");
+    }
+
+    @PutMapping("updateServer")
+    @Operation(summary = "修改服务器节点")
+    public Result<String> updateServer(@RequestParam(value = "oldVpsId") Integer oldVpsId ,@RequestParam(value = "vpsId") Integer vpsId ) {
+        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +oldVpsId);
+        objectObjectMap.forEach((k,v)->{
+            redisUtil.hSet(Constant.VPS_NODE_SPEED +vpsId,String.valueOf(k),String.valueOf(v));
+        });
         return Result.ok("修改完成");
     }
 }
