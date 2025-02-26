@@ -11,6 +11,7 @@ import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.TraderUserEnum;
+import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
@@ -62,6 +63,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     private final FollowGroupService followGroupService;
     private final FollowTraderService followTraderService;
     private final FollowUploadTraderUserService followUploadTraderUserService;
+    private final FollowFailureDetailServiceImpl followFailureDetailServiceImpl;
 
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
@@ -73,20 +75,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     private LambdaQueryWrapper<FollowTraderUserEntity> getWrapper(FollowTraderUserQuery query){
         LambdaQueryWrapper<FollowTraderUserEntity> wrapper = Wrappers.lambdaQuery();
-        if (ObjectUtil.isNotEmpty(query.getUploadId())){
-            wrapper.eq(FollowTraderUserEntity::getUploadId,query.getUploadId());
-        }
-        if (ObjectUtil.isNotEmpty(query.getUploadStatus())){
-            wrapper.eq(FollowTraderUserEntity::getUploadStatus,query.getUploadStatus());
-        }
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
             wrapper.like(FollowTraderUserEntity::getPlatform,query.getPlatform());
         }
         if (ObjectUtil.isNotEmpty(query.getAccount())){
             wrapper.like(FollowTraderUserEntity::getAccount,query.getAccount());
-        }
-        if (ObjectUtil.isNotEmpty(query.getBrokerName())){
-            wrapper.like(FollowTraderUserEntity::getBrokerName,query.getBrokerName());
         }
         if (ObjectUtil.isNotEmpty(query.getGroupName())){
             wrapper.in(FollowTraderUserEntity::getGroupName,query.getGroupName());
@@ -179,7 +172,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     @Override
     public void addByExcel(MultipartFile file, Long savedId) {
+        //成功
         List<FollowTraderUserEntity> entityList = new ArrayList<>();
+        //失败
+        List<FollowFailureDetailEntity> failureList = new ArrayList<>();
         long successCount = 0;
         long failureCount = 0;
         try (InputStream inputStream = file.getInputStream();
@@ -213,16 +209,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 // 生成备注信息
                 String errorRemark = errorMsg.length() > 0 ? errorMsg.toString() : remark;
                 // 如果有错误，设置 upload_status 为 0
-                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
-                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, uploadStatus, savedId));
-
-                if (uploadStatus == 1) {
+//                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
+                if (errorMsg.length() == 0) {
+                    entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark));
                     successCount++;
                 } else {
+                    failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark,savedId));
                     failureCount++;
                 }
             }
-            saveBatch(entityList);
+            this.saveBatch(entityList);
+            followFailureDetailServiceImpl.saveBatch(failureList);
             LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(FollowUploadTraderUserEntity::getSuccessCount, successCount)
                     .set(FollowUploadTraderUserEntity::getFailureCount, failureCount)
@@ -235,7 +232,21 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
     }
 
-    private FollowTraderUserEntity insertAccount(String account, String password, String accountType, String platform, String node, String errorRemark, int uploadStatus, Long savedId) {
+    // 插入失败详情
+    private FollowFailureDetailEntity insertFailureDetail(String account, String accountType, String platform, String node, String errorRemark, Long savedId) {
+        FollowFailureDetailEntity entity = new FollowFailureDetailEntity();
+        entity.setPlatformType(accountType);
+        entity.setServer(platform);
+        entity.setNode(node);
+        entity.setAccount(account);
+        entity.setRemark(errorRemark);
+        entity.setRecordId(Math.toIntExact(savedId));
+        entity.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
+        return entity;
+    }
+
+    // 插入账号
+    private FollowTraderUserEntity insertAccount(String account, String password, String accountType, String platform, String node, String errorRemark) {
         FollowTraderUserEntity entity = new FollowTraderUserEntity();
         entity.setAccount(account);
         entity.setPassword(password);
@@ -249,8 +260,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
         entity.setServerNode(node);
         entity.setRemark(errorRemark);
-        entity.setUploadStatus(uploadStatus);
-        entity.setUploadId(Math.toIntExact(savedId));
         return entity;
     }
 
@@ -332,16 +341,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                     updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
                             .set(FollowTraderUserEntity::getPassword, password)
-                            .set(FollowTraderUserEntity::getUploadId, Math.toIntExact(followUploadTraderUserVO.getId()));
+                            ;
 
                     // 仅在有备注时设置备注
                     if (!remark.isEmpty()) {
                         updateWrapper.set(FollowTraderUserEntity::getRemark, remark);
-                        updateWrapper.set(FollowTraderUserEntity::getUpdateStatusId, 0);
                         failureCount++; // 记录失败
                     } else {
                         updateWrapper.set(FollowTraderUserEntity::getRemark, vo.getRemark());
-                        updateWrapper.set(FollowTraderUserEntity::getUpdateStatusId, 1);
                         successCount++; // 如果没有备注，算作成功
                     }
                     baseMapper.update(updateWrapper);

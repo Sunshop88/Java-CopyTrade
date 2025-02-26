@@ -38,7 +38,7 @@ public class FollowGroupController {
 
     @GetMapping("page")
     @Operation(summary = "分页")
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<PageResult<FollowGroupVO>> page(@ParameterObject @Valid FollowGroupQuery query){
         PageResult<FollowGroupVO> page = followGroupService.page(query);
 
@@ -48,7 +48,7 @@ public class FollowGroupController {
 
     @GetMapping("{id}")
     @Operation(summary = "信息")
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<FollowGroupVO> get(@PathVariable("id") Long id){
         FollowGroupVO data = followGroupService.get(id);
 
@@ -58,7 +58,7 @@ public class FollowGroupController {
     @PostMapping
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<String> save(@RequestBody FollowGroupVO vo){
         //确保名字唯一性
         followGroupService.list().stream()
@@ -75,7 +75,7 @@ public class FollowGroupController {
     @PutMapping
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<String> update(@RequestBody @Valid FollowGroupVO vo){
         followGroupService.update(vo);
 
@@ -85,7 +85,7 @@ public class FollowGroupController {
     @DeleteMapping
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<String> delete(@RequestBody List<Long> idList){
         followGroupService.delete(idList);
 
@@ -96,20 +96,20 @@ public class FollowGroupController {
     @GetMapping("export")
     @Operation(summary = "导出")
     @OperateLog(type = OperateTypeEnum.EXPORT)
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public void export() {
         followGroupService.export();
     }
 
     @GetMapping("list")
     @Operation(summary = "列表展示")
-    @PreAuthorize("hasAuthority('mascontrol:group')")
+    @PreAuthorize("hasAuthority('mascontrol:platform')")
     public Result<List<FollowGroupEntity>> list() {
         List<FollowGroupEntity> list = followGroupService.list();
         for (FollowGroupEntity entity : list) {
             LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(FollowTraderUserEntity::getGroupId, entity.getId());
-            wrapper.eq(FollowTraderUserEntity::getUploadStatus, 0);
+//            wrapper.eq(FollowTraderUserEntity::getUploadStatus, 0);
             //查询
             List<FollowTraderUserEntity> listNum = followTraderUserService.list(wrapper);
             if (ObjectUtil.isNotEmpty(listNum)){

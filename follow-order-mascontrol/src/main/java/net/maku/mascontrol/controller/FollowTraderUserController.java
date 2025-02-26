@@ -15,13 +15,12 @@ import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowUploadTraderUserEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.enums.TraderUserEnum;
+import net.maku.followcom.query.FollowFailureDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTestDetailService;
-import net.maku.followcom.service.FollowTraderUserService;
-import net.maku.followcom.service.FollowUploadTraderUserService;
+import net.maku.followcom.service.*;
+import net.maku.followcom.vo.FollowFailureDetailVO;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
 import net.maku.followcom.vo.FollowUploadTraderUserVO;
@@ -60,6 +59,7 @@ public class FollowTraderUserController {
     private final FollowUploadTraderUserService followUploadTraderUserService;
     private final FollowPlatformService followPlatformService;
     private final FollowTestDetailService followTestDetailService;
+    private final FollowFailureDetailService followFailureDetailService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -198,8 +198,8 @@ public class FollowTraderUserController {
     @GetMapping("pageDetail")
     @Operation(summary = "失败详情")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<PageResult<FollowTraderUserVO>> pageDetail(@ParameterObject @Valid FollowTraderUserQuery query){
-        PageResult<FollowTraderUserVO> page = followTraderUserService.page(query);
+    public Result<PageResult<FollowFailureDetailVO>> pageDetail(@ParameterObject @Valid FollowFailureDetailQuery query){
+        PageResult<FollowFailureDetailVO> page = followFailureDetailService.page(query);
 
         return Result.ok(page);
     }
