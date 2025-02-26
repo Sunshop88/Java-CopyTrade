@@ -308,22 +308,37 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             FollowTraderEntity followTraderEntity = followTraderService.list(queryWrapper).getLast();
             String remark ="";
             if (ObjectUtil.isNotEmpty(followTraderEntity)) {
-                if (followTraderEntity.getStatus() == 0) {
-                    // 账号正常登录
-                    followTraderEntity.setPassword(password);
-                    followTraderService.updateById(followTraderEntity);
+                String originalPassword = followTraderEntity.getPassword(); // 保存原始密码
+                followTraderEntity.setPassword(password);
+                followTraderService.updateById(followTraderEntity);
 
-                    QuoteClient quoteClient = null;
+                QuoteClient quoteClient = null;
+                try {
+                    // 修改 MT4 密码
+                    quoteClient.ChangePassword(vo.getPassword(), false);
+                } catch (IOException e) {
+                    remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
                     try {
-                        // 修改 MT4 密码
-                        quoteClient.ChangePassword(vo.getPassword(), false);
-                    } catch (IOException e) {
-                        remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
-                    } catch (online.mtapi.mt4.Exception.ServerException e) {
-                        remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
+                        // 恢复 MT4 密码
+                        quoteClient.ChangePassword(originalPassword, false);
+                    } catch (Exception ex) {
+                        log.error("恢复MT4密码失败: " + followTraderEntity.getIpAddr(), ex);
+                        remark += "恢复MT4密码失败; ";
                     }
+                } catch (online.mtapi.mt4.Exception.ServerException e) {
+                    remark = "MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e;
+                    try {
+                        // 恢复 MT4 密码
+                        quoteClient.ChangePassword(originalPassword, false);
+                    } catch (Exception ex) {
+                        log.error("恢复MT4密码失败: " + followTraderEntity.getIpAddr(), ex);
+                        remark += "恢复MT4密码失败; ";
+                    }
+                }
 
-                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+
+
+                String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
                     RestTemplate restTemplate = new RestTemplate();
 
                     // 使用提前提取的 headers 构建请求头
@@ -353,7 +368,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     }
                     baseMapper.update(updateWrapper);
                 }
-            }
+
         }
 
         followUploadTraderUserVO.setUploadTotal(uploadTotal);
