@@ -232,7 +232,7 @@ public class FollowTraderUserController {
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) {
+    public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) throws Exception {
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
 

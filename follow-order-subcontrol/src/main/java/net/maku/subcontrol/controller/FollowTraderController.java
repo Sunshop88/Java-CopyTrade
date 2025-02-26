@@ -899,6 +899,13 @@ public class FollowTraderController {
         return Result.ok("手动测速成功");
     }
 
+    @PostMapping("reconnectionTrader")
+    @Operation(summary = "重连账号")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<Boolean> reconnectionTrader(@RequestBody String traderId) {
+        return Result.ok(reconnect(traderId));
+    }
+
     @PostMapping("/synchData/{traderId}")
     @Operation(summary = "同步数据")
     public Result<String> synchData(@PathVariable("traderId") Long traderId) throws IOException {
