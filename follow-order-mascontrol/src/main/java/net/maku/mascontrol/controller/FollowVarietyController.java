@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowPlatformEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.query.FollowVarietyQuery;
 import net.maku.followcom.service.FollowPlatformService;
+import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
@@ -20,6 +22,7 @@ import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -61,6 +64,7 @@ public class FollowVarietyController {
     private final FollowPlatformService followPlatformService;
     private final RedisCache redisCache;
     private final FollowVpsService followVpsService;
+    private final FollowTraderService followTraderService;
     @GetMapping("pageSymbol")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -351,7 +355,11 @@ public class FollowVarietyController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> deleteTemplate(@RequestBody List<Integer> idList){
-        if(followVarietyService.checkTemplate(idList)) {
+        for (Integer id : idList) {
+            if (followTraderService.exists(new LambdaQueryWrapper<FollowTraderEntity>()
+                    .eq(FollowTraderEntity::getTemplateId, id))){
+                throw new ServerException("策略者或者跟单者绑定了该模板不能删除");
+            }
             boolean b = followVarietyService.deleteTemplate(idList);
             if (b) {
                 return Result.ok();

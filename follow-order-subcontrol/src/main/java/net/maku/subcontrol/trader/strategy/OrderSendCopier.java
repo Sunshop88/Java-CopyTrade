@@ -64,7 +64,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         // 先查询品种规格是否可以匹配
         String stdSymbol =orderInfo.getOriSymbol();
-        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(followTraderEntity.getId()).stream().filter(o ->o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getSymbol().equals(orderInfo.getOriSymbol())).findFirst();
+        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(followTraderEntity.getId()).stream().filter(o ->o.getSymbol().equals(orderInfo.getOriSymbol())).findFirst();
         if (specificationEntity.isPresent()&&ObjectUtil.isNotEmpty(specificationEntity.get().getStdSymbol())){
             //查找到标准品种
             stdSymbol=specificationEntity.get().getStdSymbol();
@@ -87,7 +87,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         List<String> symbolList = orderInfo.getSymbolList();
 
         //查询品种规格数据
-        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(finalStdSymbol)).toList();
+        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getStdSymbol().equals(finalStdSymbol)).toList();
         if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
             sysmbolSpecificationEntity.forEach(o->{
                         try{

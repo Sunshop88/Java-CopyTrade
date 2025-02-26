@@ -182,7 +182,7 @@ public class TraderOrderSendWebSocket {
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
-            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(symbol)).toList();
+            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getStdSymbol().equals(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
                 for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
                     this.symbol=o.getSymbol();

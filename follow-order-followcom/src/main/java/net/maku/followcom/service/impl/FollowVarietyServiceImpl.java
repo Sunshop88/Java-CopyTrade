@@ -173,18 +173,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public boolean checkTemplate(List<Integer> idList) {
-        //策略者或者跟单者绑定了该模板就不能删除
-        for (Integer id : idList) {
-            if (followTraderService.exists(new LambdaQueryWrapper<FollowTraderEntity>()
-                    .eq(FollowTraderEntity::getTemplateId, id))){
-               throw new ServerException("策略者或者跟单者绑定了该模板不能删除");
-            }
-        }
-        return true;
-    }
-
-    @Override
     @CacheEvict(
             value = "followVarietyCache", // 缓存名称
             key = "#template"

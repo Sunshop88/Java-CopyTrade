@@ -81,6 +81,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final CacheManager cacheManager;
     private final RedisUtil redisUtil;
+    private final FollowVarietyService followVarietyService;
 
 
     @Autowired
@@ -194,7 +195,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return followTraderVO;
     }
 
-    private void addSysmbolSpecification(long traderId, QuoteClient quoteClient) {
+    private void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient) {
         Long userId = SecurityUser.getUserId();
         LocalDateTime localDateTime = LocalDateTime.now();
         ThreadPoolUtils.execute(() -> {
@@ -205,7 +206,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         SymbolInfo symbolInfo = quoteClient.GetSymbolInfo(o);
                         ConGroupSec conGroupSec = quoteClient.GetSymbolGroupParams(o);
                         FollowSysmbolSpecificationVO followSysmbolSpecificationVO = new FollowSysmbolSpecificationVO();
-                        followSysmbolSpecificationVO.setTraderId(traderId);
+                        followSysmbolSpecificationVO.setTraderId(entity.getId());
                         followSysmbolSpecificationVO.setDigits(symbolInfo.Digits);
                         followSysmbolSpecificationVO.setContractSize(symbolInfo.ContractSize);
                         followSysmbolSpecificationVO.setLotStep(Double.valueOf(conGroupSec.lot_step)*0.01);
@@ -224,18 +225,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setFreezeLevel(symbolInfo.FreezeLevel);
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
-                        if (followSysmbolSpecificationVO.getProfitMode().equals(FollowConstant.PROFIT_MODE)){
-                            String stdSymbol = SymbolUtils.processString(followSysmbolSpecificationVO.getSymbol());
-                            followSysmbolSpecificationVO.setStdSymbol(stdSymbol);
-                        }
+                        List<FollowVarietyEntity> listByTemplated = followVarietyService.getListByTemplated(entity.getTemplateId());
+                        //模糊匹配标准品种保存入库
+                        Optional<FollowVarietyEntity> followVarietyEntity = listByTemplated.stream().filter(ls -> followSysmbolSpecificationVO.getSymbol().contains(ls.getStdSymbol())).findFirst();
+                        followVarietyEntity.ifPresent(varietyEntity -> followSysmbolSpecificationVO.setStdSymbol(varietyEntity.getStdSymbol()));
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
                     } catch (InvalidSymbolException |ConnectException e) {
-                        log.error(traderId+"添加品种规格异常"+o+"异常信息"+e.getMessage());
+                        log.error(entity.getId()+"添加品种规格异常"+o+"异常信息"+e.getMessage());
                     }
                 });
                 //查询改账号的品种规格
-                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-                redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, list);
+                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, entity.getId()));
+                redisCache.set(Constant.SYMBOL_SPECIFICATION + entity.getId(), list);
             } catch (TimeoutException e) {
                 throw new RuntimeException(e);
             } catch (ConnectException e) {
@@ -781,7 +782,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             entity.setCreateTime(LocalDateTime.now());
             this.updateById(entity);
             //增加品种规格记录
-            addSysmbolSpecification(entity.getId(), quoteClient);
+            addSysmbolSpecification(entity, quoteClient);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
