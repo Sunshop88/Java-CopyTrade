@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static net.maku.followcom.util.RestUtil.getHeader;
 
@@ -255,69 +256,63 @@ public class FollowVarietyController {
     @GetMapping("listSmybol")
     @Operation(summary = "页面展示")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<PageResult<String[]>> listSmybol(@ParameterObject @Valid FollowVarietyQuery query) {
-        PageResult<FollowVarietyVO> list = followVarietyService.pageSmybol(query);
-        List<FollowPlatformEntity> followPlatformEntityList = followPlatformService.list();
-
-        // 去重后的券商名称列表
-        List<String> platformBrokerNames = followPlatformEntityList.stream()
-                .map(FollowPlatformEntity::getBrokerName)
-                .distinct() // 去重
-                .collect(Collectors.toList());
-        //品种列表的平台名称
-        List<String> varietyBrokerNames = followVarietyService.list().stream()
+    public Result<PageResult<String[]>> listSymbol(@ParameterObject @Valid FollowVarietyQuery query) {
+        // 合并数据库查询
+        List<FollowVarietyEntity> allVarietyEntities = followVarietyService.list();
+        List<FollowVarietyEntity> filteredVarietyEntities = allVarietyEntities.stream()
                 .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
-                .map(FollowVarietyEntity::getBrokerName)
-                .distinct() // 去重
                 .collect(Collectors.toList());
-        //两者共同有的平台名称
+
+        // 获取唯一券商名称
+        Set<String> platformBrokerNames = followPlatformService.list().stream()
+                .map(FollowPlatformEntity::getBrokerName)
+                .collect(Collectors.toSet());
+        Set<String> varietyBrokerNames = filteredVarietyEntities.stream()
+                .map(FollowVarietyEntity::getBrokerName)
+                .collect(Collectors.toSet());
         List<String> uniqueBrokerNames = platformBrokerNames.stream()
                 .filter(varietyBrokerNames::contains)
                 .collect(Collectors.toList());
 
-        // 根据 template 过滤 FollowVarietyEntity
-        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.list()
-                .stream()
-                .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
-                .collect(Collectors.toList());
-
-        // 构建映射关系：<StdSymbol + BrokerName, BrokerSymbol列表>
-        Map<String, List<String>> varietyMap = followVarietyEntityList.stream()
+        // 构建映射关系
+        Map<String, List<String>> varietyMap = filteredVarietyEntities.stream()
                 .collect(Collectors.groupingBy(
-                        va -> va.getStdSymbol() + "_" + va.getBrokerName(),
+                        entity -> entity.getStdSymbol() + "_" + entity.getBrokerName(),
                         Collectors.mapping(FollowVarietyEntity::getBrokerSymbol, Collectors.toList())
                 ));
 
-        List<String[]> listString = new ArrayList<>();
-        String[] header = new String[uniqueBrokerNames.size() + 2]; // +2 for stdContract and stdSymbol
-        header[0] = "标准合约";
-        header[1] = "品种名称";
-        for (int i = 0; i < uniqueBrokerNames.size(); i++) {
-            header[i + 2] = uniqueBrokerNames.get(i); // 唯一的券商名称
-        }
-        listString.add(header);
+        // 构建表头
+        String[] header = Stream.concat(
+                Stream.of("标准合约","品种名称"),
+                uniqueBrokerNames.stream()
+        ).toArray(String[]::new);
 
-        // 填充数据
-        for (FollowVarietyVO o : list.getList()) {
-            String[] strings = new String[uniqueBrokerNames.size() + 2];
-            strings[0] = o.getStdContract() != null ? o.getStdContract().toString() : ""; // 品种合约
-            strings[1] = o.getStdSymbol(); // 标准品种
-
-            for (int i = 0; i < uniqueBrokerNames.size(); i++) {
-                String brokerName = uniqueBrokerNames.get(i);
-                String key = o.getStdSymbol() + "_" + brokerName;
-                List<String> collect = varietyMap.getOrDefault(key, Collections.emptyList());
-
-                // 检查是否有数据，如果有数据但含有 "null"，则替换为空字符串
-                String brokerSymbol = collect.isEmpty() ? "" : String.join("/", collect);
-                strings[i + 2] = "null".equals(brokerSymbol) ? "" : brokerSymbol;
-            }
-            listString.add(strings);
+        // 构建数据行
+        List<String[]> rows = new ArrayList<>();
+        rows.add(header);
+        PageResult<FollowVarietyVO> pageData = followVarietyService.pageSmybol(query);
+        for (FollowVarietyVO varietyVO : pageData.getList()) {
+            rows.add(buildRow(varietyVO, uniqueBrokerNames, varietyMap));
         }
 
-        // 构造分页结果
-        PageResult<String[]> pageResult = new PageResult<>(listString, list.getTotal());
+        // 返回分页结果
+        PageResult<String[]> pageResult = new PageResult<>(rows, pageData.getTotal());
         return Result.ok(pageResult);
+    }
+
+    private String[] buildRow(FollowVarietyVO varietyVO, List<String> uniqueBrokerNames, Map<String, List<String>> varietyMap) {
+        String[] row = new String[uniqueBrokerNames.size() + 2];
+        row[0] = Optional.ofNullable(varietyVO.getStdContract()).map(Object::toString).orElse("");
+        row[1] = varietyVO.getStdSymbol();
+
+        for (int i = 0; i < uniqueBrokerNames.size(); i++) {
+            String brokerName = uniqueBrokerNames.get(i);
+            String key = varietyVO.getStdSymbol() + "_" + brokerName;
+            List<String> symbols = varietyMap.getOrDefault(key, Collections.emptyList());
+            String symbolStr = String.join("/", symbols);
+            row[i + 2] = "null".equalsIgnoreCase(symbolStr) ? "" : symbolStr;
+        }
+        return row;
     }
 
     @GetMapping("listBySymbol")

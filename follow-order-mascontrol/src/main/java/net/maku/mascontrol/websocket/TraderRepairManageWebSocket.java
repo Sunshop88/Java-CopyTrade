@@ -9,22 +9,13 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import net.maku.followcom.entity.FollowOrderDetailEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
-import net.maku.followcom.service.FollowOrderDetailService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowVpsService;
-import net.maku.followcom.service.impl.FollowOrderDetailServiceImpl;
-import net.maku.followcom.service.impl.FollowTraderServiceImpl;
-import net.maku.followcom.service.impl.FollowTraderSubscribeServiceImpl;
-import net.maku.followcom.service.impl.FollowVpsServiceImpl;
+import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.OrderActiveInfoVO;
@@ -49,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Component
-@ServerEndpoint("/socket/trader/repair/{vpsId}/{masterAccount}/{slaveAccount}") //此注解相当于设置访问URL
+@ServerEndpoint("/socket/trader/repair/{vpsId}/{masterAccount}/{slaveAccount}/{userId}") //此注解相当于设置访问URL
 public class TraderRepairManageWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderRepairManageWebSocket.class);
@@ -57,6 +48,7 @@ public class TraderRepairManageWebSocket {
     private String vpsId;
     private Integer masterAccount;
     private Integer slaveAccount;
+    private Long userId;
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
 
     private RedisUtil redisUtil = SpringContextUtils.getBean(RedisUtil.class);
@@ -67,18 +59,20 @@ public class TraderRepairManageWebSocket {
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
     private FollowVpsService followVpsService = SpringContextUtils.getBean(FollowVpsServiceImpl.class);
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
+    private FollowVpsUserService followVpsUserService=SpringContextUtils.getBean(FollowVpsUserServiceImpl.class);
 
 
     @OnOpen
-    public void onOpen(Session session,@PathParam(value = "vpsId") String vpsId,@PathParam(value = "masterAccount") Integer masterAccount,@PathParam(value = "slaveAccount") Integer slaveAccount) {
+    public void onOpen(Session session,@PathParam(value = "vpsId") String vpsId,@PathParam(value = "masterAccount") Integer masterAccount,@PathParam(value = "slaveAccount") Integer slaveAccount,@PathParam(value = "userId") Long userId) {
         try {
             this.session = session;
             this.vpsId = vpsId;
             this.masterAccount=masterAccount;
             this.slaveAccount=slaveAccount;
-            Set<Session> sessionSet = sessionPool.getOrDefault(vpsId+masterAccount+slaveAccount+"", ConcurrentHashMap.newKeySet());
+            this.userId = userId;
+            Set<Session> sessionSet = sessionPool.getOrDefault(vpsId+masterAccount+slaveAccount+userId+"", ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
-            sessionPool.put(vpsId+masterAccount+slaveAccount+"", sessionSet);
+            sessionPool.put(vpsId+masterAccount+slaveAccount+userId+"", sessionSet);
             //开启定时任务
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
@@ -96,15 +90,51 @@ public class TraderRepairManageWebSocket {
 
     public void sendPeriodicMessage() {
         List<FollowVpsEntity> followVpsEntityList;
+        //除了admin都需要判断
+        //查看当前用户拥有的vps
+        List<VpsUserVO> vpsList = new ArrayList<>();
+        if (!ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId).eq(FollowVpsUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+                if(ObjectUtil.isNotEmpty(vpsUserEntityList)){
+                    for (FollowVpsUserEntity followVpsUserEntity : vpsUserEntityList) {
+                        VpsUserVO vpsUserVO = new VpsUserVO();
+                        vpsUserVO.setName(followVpsUserEntity.getVpsName());
+                        vpsUserVO.setId(followVpsUserEntity.getVpsId());
+                        vpsList.add(vpsUserVO);
+                    }
+                }
+
+
+        }else{
+            List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+            if(ObjectUtil.isNotEmpty(list)){
+                for (FollowVpsEntity vs : list) {
+                    VpsUserVO vpsUserVO = new VpsUserVO();
+                    vpsUserVO.setName(vs.getName());
+                    vpsUserVO.setId(vs.getId());
+                    vpsList.add(vpsUserVO);
+                }
+            }
+        }
+
+        List<Integer> vpsIds = vpsList.stream().map(VpsUserVO::getId).toList();
         if (!vpsId.equals("0")){
             String[] split = vpsId.split("-");
             List<Integer> list=new ArrayList<>();
             for (int i = 0; i < split.length; i++) {
-                list.add(Integer.valueOf(split[i]));
+                if(vpsIds.contains(Integer.valueOf(split[i]))){
+                    list.add(Integer.valueOf(split[i]));
+                }
             }
             followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list));
         }else {
-            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+
+            if(ObjectUtil.isEmpty(vpsList)){
+                followVpsEntityList=new ArrayList<>();
+            }else{
+                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds));
+            }
+        
         }
         RepairDataVo repairDataVo=RepairDataVo.builder().build();
         //总漏单数量
@@ -351,7 +381,7 @@ public class TraderRepairManageWebSocket {
 
     public void pushMessage(String message) {
         try {
-            Set<Session> sessionSet = sessionPool.get(vpsId+masterAccount+slaveAccount+"");
+            Set<Session> sessionSet = sessionPool.get(vpsId+masterAccount+slaveAccount+userId+"");
             if (ObjectUtil.isEmpty(sessionSet)) {
                 return;
             }
@@ -378,8 +408,8 @@ public class TraderRepairManageWebSocket {
     @OnClose
     public void onClose() {
         stopPeriodicTask();
-        if(sessionPool.get(vpsId+masterAccount+slaveAccount+"")!=null){
-            sessionPool.get(vpsId+masterAccount+slaveAccount+"").remove(session);
+        if(sessionPool.get(vpsId+masterAccount+slaveAccount+userId+"")!=null){
+            sessionPool.get(vpsId+masterAccount+slaveAccount+userId+"").remove(session);
         }
     }
 

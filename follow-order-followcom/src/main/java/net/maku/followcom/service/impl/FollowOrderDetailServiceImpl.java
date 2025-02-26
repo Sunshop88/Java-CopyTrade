@@ -192,10 +192,6 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             }
 
         }
-
-
-
-        entity.setSize(BigDecimal.valueOf(order.Lots));
         entity.setSl(BigDecimal.valueOf(order.StopLoss));
         entity.setSwap(BigDecimal.valueOf(order.Swap));
         entity.setTp(BigDecimal.valueOf(order.TakeProfit));
@@ -204,14 +200,15 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         // entity.setPlacedType(order);
         //   entity.setBrokeName();
         entity.setPlatform(u.getPlatform());
-      //  entity.setIpAddr(u.getIpAddr());
-        //entity.setServerName(u.getServerName());
+        entity.setIpAddr(u.getIpAddr());
+        entity.setServerName(u.getServerName());
         entity.setRateMargin(order.RateMargin);
-        entity.setMagical(order.Ticket);
-        entity.setRemark(order.Comment);
+       // entity.setMagical(order.Ticket);
+        entity.setComment(order.Comment);
         entity.setIsExternal(1);
+     //   entity.setPlacedType(order.p);
         // entity.setBrokeName(u.get);
-        //    entity.setSourceUser(account);
+         //  entity.setSourceUser(u.getAccount());
         entity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
 
         return entity;

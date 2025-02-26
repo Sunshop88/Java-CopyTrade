@@ -10,6 +10,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * vps列表
@@ -82,5 +83,14 @@ public class FollowVpsVO implements Serializable {
 	private BigDecimal profit;
 	@Schema(description = "总手数")
 	private BigDecimal lots;
+
+	@Schema(description = "是否开启flink，0为停止，1为运行")
+	private Integer isFlink;
+
+	@Schema(description = "是否选择账号，0为否，1为是")
+	private Integer isSelectAccount;
+
+	@Schema(description = "vps用户")
+	private List<String> userList;
 
 }

@@ -204,7 +204,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         return this.list(new LambdaQueryWrapper<FollowVarietyEntity>().eq(FollowVarietyEntity::getTemplateId, templateId));
     }
 
-//为什么修改stdContract时，要是有数值就能全部更新，但是stdContract为空就不能全部更新，就算为空也要全部更新，那应该怎么做
     public void importCsv(MultipartFile file, Integer template, String templateName) throws IOException {
         try {
             InputStreamReader reader = new InputStreamReader(file.getInputStream(), Charset.forName("GBK"));
