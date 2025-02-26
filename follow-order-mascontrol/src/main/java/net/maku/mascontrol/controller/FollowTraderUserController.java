@@ -44,6 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 账号初始表
@@ -99,6 +101,7 @@ public class FollowTraderUserController {
         List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
         List<FollowTraderEntity> traders = followTraderService.list();
         List<FollowVpsEntity> vpsList = followVpsService.list();
+        List<FollowPlatformEntity> platforms = followPlatformService.list();
         Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
         Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
         Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
@@ -117,10 +120,13 @@ public class FollowTraderUserController {
         vpsList.forEach(v->{
             vpsMap.put(v.getId(),v);
         });
+        Map<Long, FollowPlatformEntity> platformMap = platforms.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
         LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
         List<FollowTraderUserVO> list = page.getList();
         StringBuilder sb=new StringBuilder();
         list.forEach(o->{
+            FollowPlatformEntity followPlatformEntity = platformMap.get(Long.parseLong(o.getPlatformId().toString()));
+            o.setBrokerName(followPlatformEntity.getBrokerName());
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
             List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
@@ -178,7 +184,13 @@ public class FollowTraderUserController {
 
         return Result.ok(page);
     }
+    @GetMapping("getStatInfo")
+    @Operation(summary = "信息")
+    public Result<TraderUserStatVO> getStatInfo(){
+        TraderUserStatVO data = followTraderUserService.getStatInfo();
 
+        return Result.ok(data);
+    }
 
     @GetMapping("{id}")
     @Operation(summary = "信息")

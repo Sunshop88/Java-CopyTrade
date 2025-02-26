@@ -22,6 +22,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowTraderUserExcelVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
 import net.maku.followcom.vo.FollowUploadTraderUserVO;
+import net.maku.followcom.vo.TraderUserStatVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -497,6 +498,24 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
         vo.setPassword(s);
         this.update(vo);
+    }
+
+    @Override
+    public TraderUserStatVO getStatInfo() {
+        List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+        int size = followTraderUserEntities.size();
+        List<FollowTraderUserEntity> list = followTraderUserEntities.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).toList();
+        List<FollowTraderEntity> traders = followTraderService.list();
+        Map<String,Integer> traderMap=new HashMap<>();
+        TraderUserStatVO vo = TraderUserStatVO.builder().total(size).noVpsNum(list.size()).conNum(0).errNum(0).build();
+        traders.stream().forEach(t->{
+           if(t.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+               traderMap.put(t.getAccount() + "-" + t.getPlatformId(), 1);
+           }
+        });
+        vo.setConNum(traderMap.size());
+        vo.setErrNum(size-list.size()-traderMap.size());
+        return vo;
     }
 
 }

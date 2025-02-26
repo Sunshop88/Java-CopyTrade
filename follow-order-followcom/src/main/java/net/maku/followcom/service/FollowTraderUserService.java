@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.FollowTraderUserVO;
+import net.maku.followcom.vo.TraderUserStatVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,4 +43,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
     void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
+
+    TraderUserStatVO getStatInfo();
 }

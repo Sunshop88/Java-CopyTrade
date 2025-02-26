@@ -61,4 +61,6 @@ public class FollowOrderSendCloseVO implements Serializable {
 
     @Schema(description = "mt4全平 0-盈利 1-亏损")
     private Integer profitOrLoss;
+    //账号列表id
+    private Long traderUserId;
 }

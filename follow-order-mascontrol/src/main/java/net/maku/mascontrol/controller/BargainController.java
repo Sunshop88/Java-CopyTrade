@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
@@ -22,6 +23,7 @@ import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
+import net.maku.followcom.vo.FollowOrderSendCloseVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
@@ -35,9 +37,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.MessageFormat;
@@ -88,8 +88,25 @@ public class BargainController {
     @Operation(summary = "重连账号")
     public Result<Boolean> reconnection(@Parameter(description = "traderUserId") String traderUserId,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
+        if(ObjectUtil.isEmpty(users)){
+            throw new ServerException("账号未挂靠vps");
+
+        }
         users.forEach(user -> {
             Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, null);
+        });
+        return Result.ok();
+    }
+
+    @PostMapping("orderClose")
+    @Operation(summary = "平仓")
+    public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo,HttpServletRequest request) {
+        List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
+        if(ObjectUtil.isEmpty(users)){
+            throw new ServerException("账号未挂靠vps");
+        }
+        users.forEach(user -> {
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, vo);
         });
         return Result.ok();
     }
