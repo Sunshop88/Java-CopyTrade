@@ -19,6 +19,7 @@ import net.maku.followcom.service.FollowPlatformService;
 import net.maku.followcom.service.impl.FollowOrderSendServiceImpl;
 import net.maku.followcom.service.impl.FollowSysmbolSpecificationServiceImpl;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
@@ -104,10 +105,27 @@ public class TraderOrderSendWebSocket {
                         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                         leaderApiTrader.startTrade();
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        //重复提交
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
                         LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                        // 开始等待直到获取到copierApiTrader1
+                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                        }
+                        //重复提交
                         if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                            log.info(traderId+"重复提交并等待完成");
                             quoteClient = leaderApiTrader.quoteClient;
+                        }else {
+                            log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
                         quoteClient = null;
@@ -126,10 +144,27 @@ public class TraderOrderSendWebSocket {
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
                         copierApiTrader.startTrade();
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        //重复提交
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+                        // 开始等待直到获取到copierApiTrader1
+                        while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+                        }
+                        //重复提交
                         if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                            log.info(traderId+"重复提交并等待完成");
                             quoteClient = copierApiTrader.quoteClient;
+                        }else {
+                            log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
                         quoteClient = null;
@@ -142,42 +177,56 @@ public class TraderOrderSendWebSocket {
             if (ObjectUtil.isEmpty(quoteClient)){
                 throw new ServerException(traderId+"登录异常");
             }
+            QuoteEventArgs eventArgs = null;
+
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
-            Map<String, FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.valueOf(traderId));
-            // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(abstractApiTrader.getTrader().getTemplateId());
-            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
-            log.info("匹配品种"+listv);
-            QuoteEventArgs eventArgs = null;
-            if (ObjectUtil.isEmpty(listv)){
-                eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(symbol)).toList();
+            if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
+                for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
+                    this.symbol=o.getSymbol();
+                    eventArgs = getEventArgs(quoteClient);
+                    log.info("品种规格symbol"+this.symbol);
+                    if (ObjectUtil.isNotEmpty(eventArgs)){
+                        break;
+                    }
+                }
+                if (ObjectUtil.isEmpty(eventArgs)){
+                    this.symbol=symbol;
+                    eventArgs = getEventArgs(quoteClient);
+                }
             }else {
-                for (FollowVarietyEntity o:listv){
-                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                        //查看品种规格
-                        if (ObjectUtil.isNotEmpty(specificationServiceByTraderId.get(o.getBrokerSymbol()))){
+                // 查看品种匹配 模板
+                List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+                List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
+                log.info("匹配品种"+listv);
+                if (ObjectUtil.isEmpty(listv)){
+                    eventArgs = getEventArgs(quoteClient);
+                }else {
+                    for (FollowVarietyEntity o:listv){
+                        if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                            //查看品种规格
                             log.info("匹配symbol"+o.getBrokerSymbol());
                             this.symbol=o.getBrokerSymbol();
-                            eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+                            eventArgs = getEventArgs(quoteClient);
                             if (ObjectUtil.isNotEmpty(eventArgs)){
                                 break;
                             }
                         }
                     }
-                }
-                if (ObjectUtil.isEmpty(eventArgs)){
-                    this.symbol=symbol;
-                    eventArgs = getEventArgs(abstractApiTrader,quoteClient);
+                    if (ObjectUtil.isEmpty(eventArgs)){
+                        this.symbol=symbol;
+                        eventArgs = getEventArgs(quoteClient);
+                    }
                 }
             }
+
             //开启定时任务
             QuoteEventArgs finalEventArgs = eventArgs;
-            AbstractApiTrader finalLeaderApiTrader = abstractApiTrader;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(finalLeaderApiTrader, finalEventArgs);
+                    sendPeriodicMessage(followTraderEntity, finalEventArgs,symbol);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -190,12 +239,13 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private QuoteEventArgs getEventArgs(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient){
+    private QuoteEventArgs getEventArgs(QuoteClient quoteClient){
         QuoteEventArgs eventArgs = null;
         try {
-            if (ObjectUtil.isEmpty(abstractApiTrader.quoteClient.GetQuote(this.symbol))){
+            log.info("quoteClient.GetQuote(this.symbol)"+quoteClient.GetQuote(this.symbol)+quoteClient.Connected());
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
                 //订阅
-                abstractApiTrader.quoteClient.Subscribe(this.symbol);
+                quoteClient.Subscribe(this.symbol);
             }
             while (eventArgs==null && quoteClient.Connected()) {
                 try {
@@ -205,19 +255,18 @@ public class TraderOrderSendWebSocket {
                 }
                 eventArgs=quoteClient.GetQuote(this.symbol);
             }
-            eventArgs = abstractApiTrader.quoteClient.GetQuote(this.symbol);
             return eventArgs;
-        }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
+        }catch (Exception e) {
             log.info("获取报价失败,品种不正确,请先配置品种");
             return eventArgs;
         }
     }
 
-    private void sendPeriodicMessage(AbstractApiTrader abstractApiTrader,QuoteEventArgs eventArgs){
+    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs,String symbol){
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
-            List<FollowOrderSendEntity> list= followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,abstractApiTrader.getTrader().getId()));
+            List<FollowOrderSendEntity> list= followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getTraderId,trader.getId()));
             FollowOrderSendSocketVO followOrderSendSocketVO=new FollowOrderSendSocketVO();
             followOrderSendSocketVO.setSellPrice(eventArgs.Bid);
             followOrderSendSocketVO.setBuyPrice(eventArgs.Ask);
@@ -232,7 +281,7 @@ public class TraderOrderSendWebSocket {
                     followOrderSendSocketVO.setScheduleSuccessNum(followOrderSendEntity.getSuccessNum());
                 }
             }
-            pushMessage(abstractApiTrader.getTrader().getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
+            pushMessage(trader.getId().toString(),symbol, JsonUtils.toJsonString(followOrderSendSocketVO));
         }
     }
 

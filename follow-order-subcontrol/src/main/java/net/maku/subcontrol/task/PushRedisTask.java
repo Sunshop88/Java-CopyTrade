@@ -508,10 +508,27 @@ public class PushRedisTask {
                     LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     leaderApiTrader1.startTrade();
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                    long startTime = System.currentTimeMillis();
+                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());
+                    // 开始等待直到获取到copierApiTrader1
+                    while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                        try {
+                            // 每次自旋等待500ms后再检查
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            // 处理中断
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());
+                    }
                     //重复提交
-                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        log.info(traderId+"重复提交并等待完成");
                         quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(traderId+"重复提交并等待失败");
                     }
                 }
             } else {
@@ -526,11 +543,29 @@ public class PushRedisTask {
                     quoteClient =copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId.toString()).quoteClient;
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
                     copierApiTrader1.setTrader(followTraderVO);
+                    copierApiTrader1.startTrade();
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                    long startTime = System.currentTimeMillis();
+                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    // 开始等待直到获取到copierApiTrader1
+                    while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                        try {
+                            // 每次自旋等待500ms后再检查
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            // 处理中断
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    }
                     //重复提交
-                    CopierApiTrader copierApiTrader1  = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-                    if (ObjectUtil.isNotEmpty(copierApiTrader1)){
-                        quoteClient = copierApiTrader1.quoteClient;
+                    if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                        log.info(followTraderVO.getId()+"重复提交并等待完成");
+                        quoteClient = copierApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
                     }
                 }
             } else {

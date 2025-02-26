@@ -141,4 +141,7 @@ public class FollowSysmbolSpecificationEntity {
 	@TableField(value = "margin_divider")
 	private Double marginDivider;
 
+	@TableField(value = "std_symbol")
+	private String stdSymbol;
+
 }

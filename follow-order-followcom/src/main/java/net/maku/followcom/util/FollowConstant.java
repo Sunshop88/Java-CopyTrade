@@ -102,4 +102,9 @@ public class FollowConstant {
      */
     public static String MT4_KEY="FOLLOWERSHIP4KEY";
 
+    /**
+     * 品种匹配使用
+     */
+    public static String PROFIT_MODE = "Forex";
+
 }

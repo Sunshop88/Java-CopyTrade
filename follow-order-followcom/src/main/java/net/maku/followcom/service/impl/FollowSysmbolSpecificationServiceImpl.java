@@ -102,8 +102,8 @@ public class FollowSysmbolSpecificationServiceImpl extends BaseServiceImpl<Follo
             key = "#traderId ?: 'defaultKey'",
             unless = "#result == null"
     )
-    public Map<String, FollowSysmbolSpecificationEntity> getByTraderId(long traderId) {
-        return this.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId)).stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i));
+    public List<FollowSysmbolSpecificationEntity> getByTraderId(long traderId) {
+        return this.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId)).stream().toList();
     }
 
 }

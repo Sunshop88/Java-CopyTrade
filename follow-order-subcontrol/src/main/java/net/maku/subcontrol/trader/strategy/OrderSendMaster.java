@@ -26,6 +26,7 @@ import net.maku.subcontrol.trader.CopierApiTrader;
 import net.maku.subcontrol.trader.CopierApiTradersAdmin;
 import online.mtapi.mt4.Op;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -50,6 +51,7 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
      * 收到开仓信号处理操作
      */
     @Override
+    @Transactional
     public void operate(AbstractApiTrader abstractApiTrader, EaOrderInfo orderInfo, int flag) {
         FollowTraderEntity trader = abstractApiTrader.getTrader();
         //查看跟单关系

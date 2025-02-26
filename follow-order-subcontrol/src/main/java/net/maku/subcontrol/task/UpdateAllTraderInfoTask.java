@@ -92,10 +92,27 @@ public class UpdateAllTraderInfoTask implements Runnable {
                     quoteClient = newTrader.quoteClient;
                     newTrader.startTrade();
                 }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                    long startTime = System.currentTimeMillis();
+                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(trader.getId().toString());
+                    // 开始等待直到获取到copierApiTrader1
+                    while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                        try {
+                            // 每次自旋等待500ms后再检查
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            // 处理中断
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(trader.getId().toString());
+                    }
                     //重复提交
-                    abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(trader.getId().toString());
-                    if (ObjectUtil.isNotEmpty(abstractApiTrader)){
-                        quoteClient = abstractApiTrader.quoteClient;
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        log.info(trader.getId().toString()+"重复提交并等待完成");
+                        quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(trader.getId()+"重复提交并等待失败");
                     }
                 }
             }

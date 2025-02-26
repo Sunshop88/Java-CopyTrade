@@ -30,5 +30,5 @@ public interface FollowSysmbolSpecificationService extends BaseService<FollowSys
 
     void export();
 
-    Map<String, FollowSysmbolSpecificationEntity> getByTraderId(long traderId);
+    List<FollowSysmbolSpecificationEntity> getByTraderId(long traderId);
 }

@@ -95,7 +95,27 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(slave);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", slave.getId(), slave.getAccount(), slave.getServerName());
                     }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        log.info("跟单者:[{}-{}-{}]启动重复", slave.getId(), slave.getAccount(), slave.getServerName());
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
+                        copierApiTrader = getCopier4ApiTraderConcurrentHashMap().get(slave.getId().toString());
+                        // 开始等待直到获取到copierApiTrader1
+                        while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            copierApiTrader = getCopier4ApiTraderConcurrentHashMap().get(slave.getId().toString());
+                        }
+                        //重复提交
+                        if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                            log.info(slave.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(slave.getId()+"重复提交并等待失败");
+                        }
                     } else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", slave.getId(), slave.getAccount(), slave.getServerName(), slave.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
@@ -141,7 +161,27 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                         followTraderService.updateById(copier);
                         log.error("跟单者:[{}-{}-{}]启动失败，请校验", copier.getId(), copier.getAccount(), copier.getServerName());
                     } else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        log.info("跟单者:[{}-{}-{}]启动重复", copier.getId(), copier.getAccount(), copier.getServerName());
+                        long maxWaitTimeMillis = 10000; // 最多等待10秒
+                        long startTime = System.currentTimeMillis();
+                        copierApiTrader = getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
+                        // 开始等待直到获取到copierApiTrader1
+                        while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                            try {
+                                // 每次自旋等待500ms后再检查
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                // 处理中断
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            copierApiTrader = getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
+                        }
+                        //重复提交
+                        if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                            log.info(copier.getId().toString()+"重复提交并等待完成");
+                        }else {
+                            log.info(copier.getId()+"重复提交并等待失败");
+                        }
                     }else {
                         log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]启动成功", copier.getId(), copier.getAccount(), copier.getServerName(), copier.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                         copierApiTrader.startTrade();
@@ -210,7 +250,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
     @Override
     public ConCodeEnum addTrader(FollowTraderEntity copier) {
         ConCodeEnum conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
-        if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 10, TimeUnit.SECONDS)) {
+        if (redissonLockUtil.tryLockForShortTime("addTrader" + copier.getId(), 0, 120, TimeUnit.SECONDS)) {
             try{
                 //查看账号是否存在
                 FollowTraderEntity followById = followTraderService.getById(copier.getId());
@@ -281,6 +321,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 }
             }
         }else {
+            log.info(copier.getId()+"重复登录");
             return ConCodeEnum.AGAIN;
         }
 
@@ -317,6 +358,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 traderUpdateEn.setLoginNode(serverNode + ":" + serverport);
                 followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.SUCCESS;
+                kafkaTemplate.send("order-repair-listener",String.valueOf(copier.getId()));
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");

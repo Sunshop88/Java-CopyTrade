@@ -32,6 +32,7 @@ import online.mtapi.mt4.QuoteEventArgs;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.math.BigDecimal;
@@ -60,6 +61,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     private final CacheManager cacheManager;
     private final RedissonLockUtil redissonLockUtil;
     @Override
+    @Transactional
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
 
@@ -131,6 +133,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                     CopierApiTrader copierApiTrader1 = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(copier.getId().toString());
                     copierApiTrader1.setTrader(copier);
                     copier=copierApiTrader1.getTrader();
+                    copierApiTrader1.startTrade();
                 }else {
                     log.error(trader.getTrader().getId()+"掉线异常");
                     throw new RuntimeException("登录异常"+trader.getTrader().getId());
