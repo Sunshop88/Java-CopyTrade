@@ -61,7 +61,6 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     private final TransService transService;
     private final ResourceLoader resourceLoader;
     private final FollowPlatformServiceImpl followPlatformServiceImpl;
-    private final FollowTraderService followTraderService;
 
     @Override
     public PageResult<FollowVarietyVO> page(FollowVarietyQuery query) {
