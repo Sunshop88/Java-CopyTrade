@@ -132,7 +132,7 @@ public abstract class AbstractFollowRule {
                     .orElse(0);
             log.info("规格账号标准合约大小{}", contract);
             log.info("品种规格对应合约值{}", specificationEntity.get().getContractSize());
-            if (ObjectUtil.isNotEmpty(contract)) {
+            if (contract != 0) {
                 pr = (double) contract / specificationEntity.get().getContractSize();
             }
         }else {
