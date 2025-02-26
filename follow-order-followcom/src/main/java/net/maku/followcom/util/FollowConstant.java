@@ -96,7 +96,7 @@ public class FollowConstant {
     public static String REPAIRORDER = "/api/repairorder";
     public static String ORDERCLOSEPROFIT = "/api/orderCloseProfit";
     public static String ORDERCLOSELOSS = "/api/orderCloseLoss";
-
+    public static String SYMBOLPARAMS = "/api/symbolParams";
     public static String HISTOTY_ORDER_LIST = "/subcontrol/follow/histotyOrderList";
 
 
