@@ -101,6 +101,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setMargin(qc.Margin);
                 followRedisTraderVO.setCredit(qc.Credit);
                 followRedisTraderVO.setConnectTrader(qc.Host + ":" + qc.Port);
+                followRedisTraderVO.setLeverage(qc.Leverage);
                 redisCache.set(Constant.TRADER_USER + abstractApiTrader.getTrader().getId(), followRedisTraderVO);
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());

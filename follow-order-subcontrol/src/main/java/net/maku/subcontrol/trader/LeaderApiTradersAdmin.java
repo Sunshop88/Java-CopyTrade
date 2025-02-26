@@ -434,6 +434,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
             followRedisTraderVO.setMargin(qc.Margin);
             followRedisTraderVO.setCredit(qc.Credit);
             followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
+            followRedisTraderVO.setLeverage(qc.Leverage);
             redisUtil.set(Constant.TRADER_USER+followTraderVO.getId(),followRedisTraderVO);
         } catch (Exception e) {
             log.info("初始化添加{}账号推送redis数据失败:{}",followTraderVO.getAccount(),e);

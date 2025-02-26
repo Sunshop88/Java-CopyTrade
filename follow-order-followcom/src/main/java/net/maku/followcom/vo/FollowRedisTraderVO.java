@@ -47,6 +47,8 @@ public class FollowRedisTraderVO implements Serializable {
 
 	@Schema(description = "服务器")
 	private  String 	connectTrader;
+	@Schema(description = "杠杆")
+	private Integer leverage;
 
 	@Schema(description = "信用")
 	private Double credit;

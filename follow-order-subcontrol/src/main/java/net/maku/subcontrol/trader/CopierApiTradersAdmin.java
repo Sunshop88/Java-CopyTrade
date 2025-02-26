@@ -221,6 +221,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             followRedisTraderVO.setMargin(qc.Margin);
             followRedisTraderVO.setCredit(qc.Credit);
             followRedisTraderVO.setConnectTrader(qc.Host+":"+qc.Port);
+            followRedisTraderVO.setLeverage(qc.Leverage);
             redisUtil.set(Constant.TRADER_USER+copierApiTrader.getTrader().getId(),followRedisTraderVO);
         } catch (ConnectException e) {
             throw new RuntimeException(e);
