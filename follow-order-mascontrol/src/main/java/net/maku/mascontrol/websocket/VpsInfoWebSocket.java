@@ -89,7 +89,7 @@ public class VpsInfoWebSocket {
         query.setUserId(userId);
         query.setIsOpen(1);
         query.setIsOpen(1);
-        query.setLimit(10);
+        query.setLimit(50);
         PageResult<FollowVpsVO> pageData = followVpsService.page(query);
         if(ObjectUtil.isNotEmpty(pageData)){
             List<Integer> ipList = pageData.getList().stream().map(FollowVpsVO::getId).toList();
