@@ -35,12 +35,6 @@ public class FollowTraderUserEntity {
 	private String password;
 
 	/**
-	* 连接状态 0：正常 1：密码错误 2：连接异常 3：未挂靠VPS
-	*/
-	@TableField(value = "connection_status")
-	private Integer connectionStatus;
-
-	/**
 	* 平台id
 	*/
 	@TableField(value = "platform_id")
@@ -53,19 +47,7 @@ public class FollowTraderUserEntity {
 	private String platform;
 
 	/**
-	* 券商名称
-	*/
-	@TableField(value = "broker_name")
-	private String brokerName;
-
-	/**
-	* 挂靠vps 如:IP-名称-挂靠类型
-	*/
-	@TableField(value = "upload_status_name")
-	private String uploadStatusName;
-
-	/**
-	* 账号类型
+	* 账号类型 MT4或MT5
 	*/
 	@TableField(value = "account_type")
 	private String accountType;
@@ -135,22 +117,4 @@ public class FollowTraderUserEntity {
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
-
-	/**
-	* 上传文件id
-	*/
-	@TableField(value = "upload_id")
-	private Integer uploadId;
-
-	/**
-	* 添加账号状态 0：失败 1：成功
-	*/
-	@TableField(value = "upload_status")
-	private Integer uploadStatus;
-
-	/**
-	* 修改密码 0：失败 1：成功
-	*/
-	@TableField(value = "update_status_id")
-	private Integer updateStatusId;
 }
