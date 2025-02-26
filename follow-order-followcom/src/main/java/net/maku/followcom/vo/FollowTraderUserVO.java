@@ -50,6 +50,9 @@ public class FollowTraderUserVO implements Serializable {
 	@NotBlank(message = "服务器节点不能为空")
 	private String serverNode;
 
+	@Schema(description = "排序 默认：1")
+	private Integer sort;
+
 	@Schema(description = "组别名称")
 	private String groupName;
 

@@ -62,4 +62,5 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     boolean updateCache(Integer template);
 
+    boolean updateSymbol(List<FollowVarietyVO> followVarietyVO);
 }

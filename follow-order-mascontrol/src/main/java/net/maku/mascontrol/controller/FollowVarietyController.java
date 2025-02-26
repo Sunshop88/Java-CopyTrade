@@ -258,10 +258,20 @@ public class FollowVarietyController {
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<PageResult<String[]>> listSymbol(@ParameterObject @Valid FollowVarietyQuery query) {
         // 合并数据库查询
-        List<FollowVarietyEntity> allVarietyEntities = followVarietyService.list();
-        List<FollowVarietyEntity> filteredVarietyEntities = allVarietyEntities.stream()
-                .filter(entity -> entity.getTemplateId() != null && entity.getTemplateId().equals(query.getTemplate()))
-                .collect(Collectors.toList());
+//        List<FollowVarietyEntity> allVarietyEntities = followVarietyService.list();
+//        List<FollowVarietyEntity> filteredVarietyEntities = allVarietyEntities.stream()
+//                .filter(entity -> entity.getTemplateId() != null
+//                        && entity.getTemplateId().equals(query.getTemplate())
+//                        && entity.getStdSymbol().equals(query.getStdSymbol()))
+//                .collect(Collectors.toList());
+        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
+        if (ObjectUtil.isNotEmpty(query.getTemplate())){
+            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplate());
+        }
+        if (ObjectUtil.isNotEmpty(query.getStdSymbol())){
+            queryWrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
+        }
+        List<FollowVarietyEntity> filteredVarietyEntities = followVarietyService.list(queryWrapper);
 
         // 获取唯一券商名称
         Set<String> platformBrokerNames = followPlatformService.list().stream()
@@ -358,5 +368,31 @@ public class FollowVarietyController {
             }
         }
         return Result.error("删除失败");
+    }
+
+    @PostMapping("listSingleSymbol")
+    @Operation(summary = "查询该品种的所有信息")
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<List<FollowVarietyEntity>> listSingleSymbol(@ParameterObject @Valid FollowVarietyQuery query){
+        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
+        if (ObjectUtil.isNotEmpty(query.getTemplate())){
+            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplate());
+        }
+        if (ObjectUtil.isNotEmpty(query.getStdSymbol())){
+            queryWrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
+        }
+        List<FollowVarietyEntity> list = followVarietyService.list(queryWrapper);
+        return Result.ok(list);
+    }
+
+    @PostMapping("updateSybol")
+    @Operation(summary = "查询该品种的所有信息")
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<String> updateSymbol(@RequestBody List<FollowVarietyVO> followVarietyVO){
+        boolean b = followVarietyService.updateSymbol(followVarietyVO);
+        if (b){
+            return Result.ok("修改成功");
+        }
+        return Result.error("修改失败");
     }
 }

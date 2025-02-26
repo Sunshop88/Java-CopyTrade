@@ -41,5 +41,5 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
-    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req);
+    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
 }
