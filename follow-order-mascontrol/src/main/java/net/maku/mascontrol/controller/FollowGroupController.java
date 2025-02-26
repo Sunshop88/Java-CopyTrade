@@ -109,7 +109,7 @@ public class FollowGroupController {
         for (FollowGroupEntity entity : list) {
             LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(FollowTraderUserEntity::getGroupId, entity.getId());
-            wrapper.eq(FollowTraderUserEntity::getUploadStatus, 0);
+//            wrapper.eq(FollowTraderUserEntity::getUploadStatus, 0);
             //查询
             List<FollowTraderUserEntity> listNum = followTraderUserService.list(wrapper);
             if (ObjectUtil.isNotEmpty(listNum)){
