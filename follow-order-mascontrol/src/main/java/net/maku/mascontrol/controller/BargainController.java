@@ -1,5 +1,7 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.MessageFormat;
-
+import java.util.Map;
 
 
 /**
@@ -66,7 +68,7 @@ public class BargainController {
      */
     private static <T> Result sendRequest(HttpServletRequest req, String host,HttpMethod method, String uri, T t) {
         //远程调用
-        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        String url = MessageFormat.format("http://{0}:{1}{2}", "127.0.0.1", FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
         headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
@@ -79,8 +81,27 @@ public class BargainController {
             return Result.error("参数转换异常");
 
         }
+        ResponseEntity<byte[]> response =null;
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-        ResponseEntity<byte[]> response = restTemplate.exchange(url, method, entity, byte[].class);
+        if(HttpMethod.GET.equals(method)) {
+            Map<String, Object> map = BeanUtil.beanToMap(t);
+            StringBuilder sb=new StringBuilder();
+            if(ObjectUtil.isNotEmpty(map)) {
+                map.forEach((k,v)->{
+                    if (v!=null ){
+                        sb.append(k).append("=").append(v).append("&");
+                    }
+
+                });
+            }
+            if(!sb.isEmpty()){
+                url=url+"?"+sb.toString();
+            }
+            response=  restTemplate.exchange(url, method, entity, byte[].class,map);
+        }else{
+            response = restTemplate.exchange(url, method, entity, byte[].class);
+        }
+
         byte[] data = response.getBody();
         JSONObject body = JSON.parseObject(new String(data));
         log.info("远程调用响应:{}", body);
