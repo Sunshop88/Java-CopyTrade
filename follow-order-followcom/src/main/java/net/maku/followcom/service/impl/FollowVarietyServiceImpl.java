@@ -194,6 +194,19 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
+    public boolean updateSymbol(List<FollowVarietyVO> followVarietyVO) {
+        List<FollowVarietyEntity> list = FollowVarietyConvert.INSTANCE.convertList2(followVarietyVO);
+        for (FollowVarietyEntity entity : list){
+            LambdaUpdateWrapper<FollowVarietyEntity> wrapper = new LambdaUpdateWrapper<>();
+            wrapper.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdSymbol,entity.getStdContract());
+            wrapper.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getStdSymbol,entity.getBrokerSymbol());
+            wrapper.eq(FollowVarietyEntity::getId,entity.getId());
+            baseMapper.update(entity,wrapper);
+        }
+        return true;
+    }
+
+    @Override
     @Cacheable(
             value = "followVarietyCache", // 缓存名称
             key = "#templateId",          // 缓存键

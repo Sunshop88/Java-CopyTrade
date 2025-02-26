@@ -71,6 +71,12 @@ public class FollowTraderUserEntity {
 	private Integer groupId;
 
 	/**
+	* 排序 默认：1
+	*/
+	@TableField(value = "sort")
+	private Integer sort;
+
+	/**
 	* 挂靠状态0-未挂靠 1-已挂靠
 	*/
 	@TableField(value = "status")

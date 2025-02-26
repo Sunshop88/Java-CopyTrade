@@ -240,10 +240,10 @@ public class FollowTraderUserController {
     }
 
     @PutMapping("updatePassword")
-    @Operation(summary = "批量修改密码")
+    @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) {
+    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) throws Exception{
 
         followTraderUserService.updatePassword(vo,req);
 

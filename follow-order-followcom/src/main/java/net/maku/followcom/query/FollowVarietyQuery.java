@@ -16,6 +16,7 @@ import net.maku.framework.common.query.Query;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "品种匹配查询")
 public class FollowVarietyQuery extends Query {
+    @Schema(description = "标准品种")
     private String StdSymbol;
     @NotNull(message = "模板类型不能为空")
     private Integer template;
