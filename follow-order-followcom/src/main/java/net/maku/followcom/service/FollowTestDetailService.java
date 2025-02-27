@@ -1,7 +1,6 @@
 package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowTestDetailEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
@@ -57,4 +56,6 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
     void importByExcel(MultipartFile file) throws Exception;
 
     CompletableFuture<Void> copyDefaultNode(FollowVpsQuery query);
+
+    void uploadDefaultNode(MultipartFile file, List<Integer> vpsId);
 }

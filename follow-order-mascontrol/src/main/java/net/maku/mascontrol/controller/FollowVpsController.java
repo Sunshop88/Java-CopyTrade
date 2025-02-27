@@ -379,17 +379,22 @@ public class FollowVpsController {
     @PutMapping("copyDefaultNode")
     @Operation(summary = "复制默认节点")
     public Result<String> copyDefaultNode(@RequestBody FollowVpsQuery query ) {
+        if(query.getNewVpsId().contains(query.getOldVpsId())){
+            return Result.error("新vps和旧vps不能相同");
+        }
         followTestDetailService.copyDefaultNode(query);
-//        FollowTestServerQuery followTestServerQuery= new FollowTestServerQuery();
-//        followTestServerQuery.setVpsId();
-//        List<FollowTestDetailVO> existingList = followTestDetailService.selectServerNode();
-//        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +query.getOldVpsId());
-//        objectObjectMap.forEach((k,v)->{
-//            redisUtil.hSet(Constant.VPS_NODE_SPEED +query.getNewVpsId(),String.valueOf(k),String.valueOf(v));
-//
-//        });
-        //根据redis修改数据库默认节点
         return Result.ok("正在进行，请稍等");
+    }
+
+    @PutMapping("uploadDefaultNode")
+    @Operation(summary = "上传默认节点")
+    public Result<String> uploadDefaultNode(@RequestParam(value = "file") MultipartFile file, @RequestParam(value = "vpsId") List<Integer> vpsId) throws Exception {
+        //检查是否为Excel文件
+        if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx"))) {
+            return Result.error("请上传Excel文件");
+        }
+        followTestDetailService.uploadDefaultNode(file,vpsId);
+        return Result.ok("修改完成");
     }
 
     @PutMapping("updateServer")

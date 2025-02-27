@@ -744,58 +744,6 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 });
     }
 
-//    @Override
-//    public CompletableFuture<Void> copyDefaultNodeAsync(FollowVpsQuery query) {
-//        // 创建一个固定大小的线程池
-//        ExecutorService executorService = Executors.newFixedThreadPool(20);
-//
-//        // 使用 CompletableFuture 进行异步处理
-//        return CompletableFuture.runAsync(() -> {
-//            // 将vps其下的默认节点全部更新为1
-//            FollowTestServerQuery serverQuery1 = new FollowTestServerQuery();
-//            serverQuery1.setVpsIdList(query.getNewVpsId());
-//            List<FollowTestDetailVO> newList1 = selectServerNode(serverQuery1);
-//
-//            if (ObjectUtil.isNotEmpty(newList1)) {
-//                newList1.forEach(vo -> {
-//                    vo.setIsDefaultServer(1);
-//                    updateById(FollowTestDetailConvert.INSTANCE.convert(vo));
-//                });
-//            }
-//
-//            // 将vps其下的节点的数据更新为0
-//            FollowTestServerQuery serverQuery2 = new FollowTestServerQuery();
-//            serverQuery2.setVpsIdList(query.getNewVpsId());
-//            List<FollowTestDetailVO> newList2 = selectServerNode(serverQuery2);
-//            Map<String, FollowTestDetailVO> map = newList2.stream()
-//                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
-//                    .collect(Collectors.toMap(
-//                            item -> item.getServerName() + "_" + item.getServerNode() + "_" + item.getVpsId(),
-//                            item -> item));
-//
-//            for (Integer vps : query.getNewVpsId()) {
-//                Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED + query.getOldVpsId());
-//                objectObjectMap.forEach((k, v) -> {
-//                    redisUtil.hSet(Constant.VPS_NODE_SPEED + vps, String.valueOf(k), String.valueOf(v));
-//                    // 将vps其下的节点的数据更新为0
-//                    if (ObjectUtil.isNotEmpty(map)) {
-//                        FollowTestDetailVO vo = map.get(String.valueOf(k) + "_" + String.valueOf(v) + "_" + vps);
-//                        if (vo != null) {
-//                            vo.setIsDefaultServer(0);
-//                            updateById(FollowTestDetailConvert.INSTANCE.convert(vo));
-//                        }
-//                    }
-//                });
-//            }
-//
-//            log.info("复制节点执行成功");
-//        }, executorService);
-//    }
-//
-//    public void copyDefaultNode(FollowVpsQuery query) {
-//        copyDefaultNodeAsync(query); // 异步执行
-//    }
-
     public CompletableFuture<Void> copyDefaultNode(FollowVpsQuery query) {
         return CompletableFuture.runAsync(() -> {
             // 创建一个固定大小的线程池
@@ -965,5 +913,113 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         update(convert);
     }
 
+    @Override
+    public void uploadDefaultNode(MultipartFile file, List<Integer> vpsId) {
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream)) {
+
+            Sheet sheet = workbook.getSheetAt(0); // 获取第一个工作表
+            List<FollowTestDetailVO> extractedData = new ArrayList<>();
+
+            // 从第二行开始遍历
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) {
+                    continue;
+                }
+
+                Cell serverNameCell = row.getCell(0); // 第一列
+                Cell serverNodeCell = row.getCell(4); // 第五列
+
+                if (serverNameCell == null || serverNodeCell == null) {
+                    continue;
+                }
+                String serverName = serverNameCell.getStringCellValue();
+                String serverNode = serverNodeCell.getStringCellValue();
+                FollowTestDetailVO followTestDetailVO = new FollowTestDetailVO();
+                followTestDetailVO.setServerName(serverName);
+                followTestDetailVO.setServerNode(serverNode);
+                extractedData.add(followTestDetailVO);
+            }
+            // 处理提取的数据
+            processData(extractedData,vpsId);
+
+        } catch (IOException e) {
+            throw new ServerException("无法读取文件");
+        }
+    }
+
+    private CompletableFuture<Void> processData(List<FollowTestDetailVO> extractedData, List<Integer> vpsId) {
+        return CompletableFuture.runAsync(() -> {
+            // 创建一个固定大小的线程池
+            ExecutorService executorService = Executors.newFixedThreadPool(20);
+
+            try {
+                // 将vps其下的默认节点全部更新为1
+                FollowTestServerQuery serverQuery1 = new FollowTestServerQuery();
+                serverQuery1.setVpsIdList(vpsId);
+                List<FollowTestDetailVO> newList1 = selectServerNode(serverQuery1);
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+                if (ObjectUtil.isNotEmpty(newList1)) {
+                    for (FollowTestDetailVO vo : newList1) {
+                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                            vo.setIsDefaultServer(1);
+                            updateById(FollowTestDetailConvert.INSTANCE.convert(vo));
+                        }, executorService);
+                        futures.add(future);
+                    }
+                }
+
+                // 将vps其下的节点的数据更新为0
+                FollowTestServerQuery serverQuery2 = new FollowTestServerQuery();
+                serverQuery2.setVpsIdList(vpsId);
+                List<FollowTestDetailVO> newList2 = selectServerNode(serverQuery2);
+                Map<String, FollowTestDetailVO> map = newList2.stream()
+                        .filter(item -> item.getServerName() != null && item.getServerNode() != null)
+                        .collect(Collectors.toMap(
+                                item -> item.getServerName() + "_" + item.getServerNode() + "_" + item.getVpsId(),
+                                item -> item));
+
+                for (Integer vps : vpsId) {
+                    for (FollowTestDetailVO extracted : extractedData) {
+                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                            // 将vps其下的节点的数据更新为0
+                            if (ObjectUtil.isNotEmpty(map)) {
+                                FollowTestDetailVO vo = map.get(extracted.getServerName() + "_" + extracted.getServerNode() + "_" + vps);
+                                if (vo != null) {
+                                    vo.setIsDefaultServer(0);
+                                    updateById(FollowTestDetailConvert.INSTANCE.convert(vo));
+                                } else {
+                                    FollowTestDetailVO followTestDetailVO = new FollowTestDetailVO();
+                                    followTestDetailVO.setServerName(extracted.getServerName());
+                                    followTestDetailVO.setServerNode(extracted.getServerNode());
+                                    followTestDetailVO.setVpsId(vps);
+                                    followTestDetailVO.setIsDefaultServer(0);
+                                    save(FollowTestDetailConvert.INSTANCE.convert(followTestDetailVO));
+                                }
+                                redisUtil.hSet(Constant.VPS_NODE_SPEED + vps, extracted.getServerName(), extracted.getServerNode());
+                            }
+                        }, executorService);
+                        futures.add(future);
+                    }
+
+                } // 关闭线程池
+                executorService.shutdown();
+
+                // 等待所有任务完成
+                CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                allFutures.get(30, TimeUnit.MINUTES);
+                log.info("所有任务执行成功");
+            } catch (Exception e) {
+                log.error("任务执行失败", e);
+                throw new RuntimeException("任务执行失败", e);
+            } finally {
+                if (!executorService.isTerminated()) {
+                    executorService.shutdownNow();
+                }
+            }
+        });
+    }
 
 }

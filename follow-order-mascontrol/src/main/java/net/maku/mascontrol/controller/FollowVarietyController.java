@@ -161,7 +161,7 @@ public class FollowVarietyController {
                     }
                 }
             });
-            return Result.ok("修改成功");
+            return Result.ok("修改进行中,请等待");
         } catch (Exception e) {
             return Result.error("修改失败：" + e.getMessage());
         }
@@ -175,7 +175,7 @@ public class FollowVarietyController {
             return false;
         }
         String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
-        return extension.equals("xlsx") || extension.equals("xls") || extension.equals("csv");
+        return extension.equals("csv");
     }
 
     @PostMapping("addTemplate")
@@ -207,7 +207,7 @@ public class FollowVarietyController {
             }
             // 导入文件
             followVarietyService.addByExcel(file,templateName);
-            return Result.ok("新增成功");
+            return Result.ok("新增进行中，请稍等");
         } catch (Exception e) {
             return Result.error("新增失败：" + e.getMessage());
         }
