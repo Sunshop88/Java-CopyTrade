@@ -82,8 +82,17 @@ public abstract class AbstractFollowRule {
         }
         //MT4平台
         LeaderApiTrader LeaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(eaOrderInfo.getMasterId().toString());
-        double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getSymbol());
-        double leaderPr = getPr(LeaderApiTrader, LeaderApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol());
+        boolean varietyLeader = getVariety(LeaderApiTrader, eaOrderInfo.getOriSymbol());
+        boolean varietyCopier = getVariety(LeaderApiTrader, eaOrderInfo.getOriSymbol());
+        double sypr;
+        if (varietyLeader&&varietyCopier){
+            double leaderPr = getPr(LeaderApiTrader, LeaderApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol());
+            double pr = getPr(copierApiTrader, copierApiTrader.getTrader().getId(), eaOrderInfo.getSymbol());
+            sypr = BigDecimal.valueOf(pr).divide(BigDecimal.valueOf(leaderPr), 2, RoundingMode.HALF_UP).doubleValue();
+        }else {
+            //存在无标准合约情况，默认计算品种规格合约值比例
+            sypr = getSyPr(LeaderApiTrader.getTrader().getId(), copierApiTrader.getTrader().getId(), eaOrderInfo.getOriSymbol(), eaOrderInfo.getSymbol()).doubleValue();
+        }
         switch (masterSlave.getFollowMode()) {
             case 0:
                 //按固定手数
@@ -91,13 +100,13 @@ public abstract class AbstractFollowRule {
                 break;
             case 1:
                 //按比例跟单
-                log.info("{}按比例下单参数:下单比例{}-下单手数{}-跟单合约比例{}-喊单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),pr,leaderPr);
-                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,pr,leaderPr);
+                log.info("{}按比例下单参数:下单比例{}-下单手数{}-跟单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),sypr);
+                lots = fixedRatio.lots(masterSlave, eaOrderInfo, 0.0, null,sypr);
                 break;
             case 2:
-                log.info("{}按净值下单参数:下单比例{}-下单手数{}-喊单净值{}-跟单净值{}-跟单合约比例{}-喊单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,pr,leaderPr);
+                log.info("{}按净值下单参数:下单比例{}-下单手数{}-喊单净值{}-跟单净值{}-跟单合约比例{}",copierApiTrader.getTrader().getAccount(), masterSlave.getFollowParam(),eaOrderInfo.getLots(),LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,sypr);
                 //按净值比例
-                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,pr,leaderPr);
+                lots = fixedEuqit.lots(eaOrderInfo, LeaderApiTrader.quoteClient.Equity, copierApiTrader.quoteClient.Equity,masterSlave,sypr);
                 break;
             case 3:
                 //按资金比例(余额
@@ -118,16 +127,36 @@ public abstract class AbstractFollowRule {
         return lots2digits.doubleValue();
     }
 
-    /***
-     * 获取合约比例
-     * */
+    private BigDecimal getSyPr(Long leaderId, Long copierId,String leaderSymbol,String copierSymbol) {
+        Optional<FollowSysmbolSpecificationEntity> specificationEntityLeader = followSysmbolSpecificationService.getByTraderId(leaderId).stream().filter(item -> item.getSymbol().equals(leaderSymbol)).findFirst();
+        Optional<FollowSysmbolSpecificationEntity> specificationEntityCopier = followSysmbolSpecificationService.getByTraderId(copierId).stream().filter(item -> item.getSymbol().equals(copierSymbol)).findFirst();
+        if (specificationEntityLeader.isPresent()&&specificationEntityCopier.isPresent()){
+            return BigDecimal.valueOf(specificationEntityLeader.get().getContractSize()).divide(BigDecimal.valueOf(specificationEntityCopier.get().getContractSize()), 2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ONE;
+    }
+
+    /**
+     * 查看是否有配置标准合约
+     */
+    public boolean getVariety(AbstractApiTrader copierApiTrader,String symbol) {
+        Optional<FollowVarietyEntity> specificationEntity = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId()).stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && symbol.contains(o.getStdSymbol())).findFirst();
+        if (specificationEntity.isPresent()){
+            return true;
+        }
+        return false;
+    }
+
+        /***
+         * 获取合约比例
+         * */
     public double getPr(AbstractApiTrader copierApiTrader,long traderId,String symbol){
         double pr = 1;
         // 查看品种匹配 模板
         Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(traderId).stream().filter(item -> item.getSymbol().equals(symbol)).findFirst();
         if (specificationEntity.isPresent()){
             List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
-            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && symbol.contains(specificationEntity.get().getSymbol())).findFirst()
+            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && specificationEntity.get().getSymbol().contains(o.getStdSymbol())).findFirst()
                     .map(FollowVarietyEntity::getStdContract)
                     .orElse(0);
             log.info("规格账号标准合约大小{}", contract);

@@ -120,6 +120,10 @@ public class TraderAccountWebSocket {
     @OnClose
     public void onClose() {
         try {
+            Set<Session> sessionSet = sessionPool.get(page + limit+number);
+            if (ObjectUtil.isEmpty(sessionSet)) {
+                return;
+            }
             sessionPool.get(page + limit+number).remove(session);
             stopPeriodicTask(); // 关闭时停止定时任务
         } catch (Exception e) {

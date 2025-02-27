@@ -66,6 +66,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         String stdSymbol =orderInfo.getOriSymbol();
         List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
         Optional<FollowVarietyEntity> first = followVarietyEntityList.stream().filter(o -> orderInfo.getOriSymbol().contains(o.getStdSymbol())).findFirst();
+        FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         if (first.isPresent()){
             //查找到标准品种
             stdSymbol=first.get().getStdSymbol();
@@ -78,14 +79,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 stdSymbol = collect.get(0).getStdSymbol();
             }else {
                 log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
+                //没有标准品种 报错
+                setOrderDetail(copier,orderInfo,stdSymbol,copyPlat);
+                return;
             }
-
         }
         //获得跟单账号对应品种
-        FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         String finalStdSymbol = stdSymbol;
         List<String> symbolList = orderInfo.getSymbolList();
-
         //查询品种规格数据
         List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->o.getSymbol().contains(finalStdSymbol)).toList();
         if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
@@ -172,6 +173,26 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
         }
 
+    }
+
+    private void setOrderDetail(FollowTraderEntity copier,EaOrderInfo orderInfo,String stdSymbol,FollowPlatformEntity copyPlat) {
+        FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
+        followOrderDetailEntity.setTraderId(copier.getId());
+        followOrderDetailEntity.setAccount(copier.getAccount());
+        followOrderDetailEntity.setSymbol(stdSymbol);
+        followOrderDetailEntity.setCreator(SecurityUser.getUserId());
+        followOrderDetailEntity.setCreateTime(LocalDateTime.now());
+        followOrderDetailEntity.setSendNo("11111");
+        followOrderDetailEntity.setType(orderInfo.getType());
+        followOrderDetailEntity.setPlacedType(orderInfo.getPlaceType());
+        followOrderDetailEntity.setPlatform(copier.getPlatform());
+        followOrderDetailEntity.setBrokeName(copyPlat.getBrokerName());
+        followOrderDetailEntity.setIpAddr(copier.getIpAddr());
+        followOrderDetailEntity.setServerName(copier.getServerName());
+        followOrderDetailEntity.setSize(BigDecimal.ZERO);
+        followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
+        followOrderDetailEntity.setRemark("主账号标准品种未配置");
+        followOrderDetailService.save(followOrderDetailEntity);
     }
 
     public boolean sendOrderAsy(AbstractApiTrader trader, EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier,

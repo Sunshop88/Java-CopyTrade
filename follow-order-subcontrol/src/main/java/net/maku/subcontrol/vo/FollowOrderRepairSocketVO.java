@@ -9,14 +9,13 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 持仓推送信息
+ * 持仓及补单推送信息
  */
 @Data
-@Schema(description = "持仓推送信息")
-public class FollowOrderActiveSocketVO implements Serializable {
+@Schema(description = "补单推送信息")
+public class FollowOrderRepairSocketVO implements Serializable {
 	private static final long serialVersionUID = 1L;
-
-	@Schema(description = "持仓订单集合")
-	private List<OrderActiveInfoVO> orderActiveInfoList;
+	@Schema(description = "补单集合")
+	private List<OrderRepairInfoVO> orderRepairInfoVOList;
 
 }

@@ -91,7 +91,7 @@ public class TraderOrderSendWebSocket {
             sessionPool.put(traderId+symbol, sessionSet);
             log.info("订阅该品种{}+++{}",symbol,traderId);
             FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(traderId));
-            QuoteClient quoteClient = null;
+            QuoteClient quoteClient;
             AbstractApiTrader abstractApiTrader;
             if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
                 abstractApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -125,6 +125,7 @@ public class TraderOrderSendWebSocket {
                             log.info(traderId+"重复提交并等待完成");
                             quoteClient = leaderApiTrader.quoteClient;
                         }else {
+                            quoteClient = null;
                             log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
@@ -164,6 +165,7 @@ public class TraderOrderSendWebSocket {
                             log.info(traderId+"重复提交并等待完成");
                             quoteClient = copierApiTrader.quoteClient;
                         }else {
+                            quoteClient = null;
                             log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
@@ -223,10 +225,9 @@ public class TraderOrderSendWebSocket {
             }
 
             //开启定时任务
-            QuoteEventArgs finalEventArgs = eventArgs;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(followTraderEntity, finalEventArgs,symbol);
+                    sendPeriodicMessage(followTraderEntity,symbol,quoteClient);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -262,7 +263,8 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs,String symbol){
+    private void sendPeriodicMessage(FollowTraderEntity trader,String symbol,QuoteClient quoteClient){
+        QuoteEventArgs eventArgs = getEventArgsSche(quoteClient);
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
@@ -285,10 +287,32 @@ public class TraderOrderSendWebSocket {
         }
     }
 
+    private QuoteEventArgs getEventArgsSche(QuoteClient quoteClient){
+        QuoteEventArgs eventArgs = null;
+        try {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
+                //订阅
+                quoteClient.Subscribe(this.symbol);
+            }
+            while (eventArgs==null && quoteClient.Connected()) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                eventArgs=quoteClient.GetQuote(this.symbol);
+            }
+            return eventArgs;
+        }catch (Exception e) {
+            return eventArgs;
+        }
+    }
 
     @OnClose
     public void onClose() {
         try {
+            Set<Session> sessionSet = sessionPool.get(traderId+symbol);
+            if (ObjectUtil.isEmpty(sessionSet))return;
             sessionPool.get(traderId+symbol).remove(session);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
         } catch (Exception e) {

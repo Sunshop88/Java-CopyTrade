@@ -215,6 +215,10 @@ public class FollowTraderController {
                     cache1.evict(o1.getMasterId()); // 移除指定缓存条目
                 }
 
+                Cache cache3= cacheManager.getCache("followSubTraderCache");
+                if (cache3 != null) {
+                    cache3.evict(o1.getSlaveId()); // 移除指定缓存条目
+                }
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
         });
