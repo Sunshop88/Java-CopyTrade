@@ -135,12 +135,14 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             case  Balance:
             case Credit:
                 //发送平仓MQ
-                ObjectMapper mapper = JacksonConfig.getObjectMapper();
-                try {
-                    producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
-                    log.info("监听信用或者出入金:{},{} ",leader.getAccount(),  orderUpdateEventArgs.Action);
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
+                if(leader.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
+                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                    try {
+                        producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                        log.info("监听信用或者出入金:{},{} ", leader.getAccount(), orderUpdateEventArgs.Action);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
                 break;
             case PositionOpen:
