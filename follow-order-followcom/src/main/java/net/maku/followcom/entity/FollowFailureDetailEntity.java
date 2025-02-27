@@ -55,7 +55,7 @@ public class FollowFailureDetailEntity {
 	* 记录id
 	*/
 	@TableField(value = "record_id")
-	private Integer recordId;
+	private Long recordId;
 
 	/**
 	* 类型 0：新增账号 1：修改密码 2：挂靠VPS

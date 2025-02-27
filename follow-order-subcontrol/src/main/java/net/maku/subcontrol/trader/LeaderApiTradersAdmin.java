@@ -87,7 +87,8 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
      */
     @Override
     public void startUp() throws Exception {
-        List<FollowTraderEntity> leaders = followTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST).eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+        List<FollowTraderEntity> leaders = followTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST)
+                .in(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType(),TraderTypeEnum.BARGAIN.getType()).eq(FollowTraderEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
         log.info("{}个MT4喊单账户开始连接经纪商服务器", leaders.size());
         traderCount = leaders.size();
         //倒计时门栓，大小为mt5账户个数，添加完成一个mt5账户倒计时门栓就减1，直到所有都添加完成。

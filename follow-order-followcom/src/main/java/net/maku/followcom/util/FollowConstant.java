@@ -98,6 +98,11 @@ public class FollowConstant {
     public static String ORDERCLOSELOSS = "/api/orderCloseLoss";
     public static String SYMBOLPARAMS = "/api/symbolParams";
     public static String HISTOTY_ORDER_LIST = "/subcontrol/follow/histotyOrderList";
+    public static String ADD_TRADER = "/subcontrol/trader";
+    public static String ADD_SLAVE = "/subcontrol/follow/addSlave";
+    public static String DEL_TRADER = "/subcontrol/trader";
+
+
 
     public static String RECONNECTION = "/subcontrol/trader/reconnection";
 

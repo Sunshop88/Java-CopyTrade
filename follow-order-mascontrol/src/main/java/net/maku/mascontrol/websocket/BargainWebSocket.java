@@ -4,17 +4,27 @@ import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.service.DashboardService;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.BargainAccountVO;
+import net.maku.followcom.vo.FollowRedisTraderVO;
+import net.maku.followcom.vo.FollowTraderUserVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.PageResult;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -29,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static dm.jdbc.util.DriverUtil.log;
 
@@ -43,6 +54,8 @@ public class BargainWebSocket {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
+    private final FollowTraderUserService followTraderUserService=SpringContextUtils.getBean(FollowTraderUserService.class);
+    private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
 
     @OnOpen
     public void onOpen(Session session) throws IOException {
@@ -55,7 +68,8 @@ public class BargainWebSocket {
             JSONObject jsonObj = JSONObject.parseObject(message);
             JSONArray accountIds = jsonObj.getJSONArray("accountIds");
             String currentAccountId = jsonObj.getString("currentAccountId");
-
+            String traderUserJson = jsonObj.getString("traderUserQuery");
+            FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
 
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
             if (st != null) {
@@ -64,15 +78,12 @@ public class BargainWebSocket {
           ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
+                //账号列表
+                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery);
+                bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 //选中当前账号的持仓
                 if(ObjectUtil.isNotEmpty(currentAccountId)) {
-                Object o1 = redisCache.get(Constant.TRADER_ACTIVE + currentAccountId);
-                List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
-                if (ObjectUtil.isNotEmpty(o1)){
-                    orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
 
-                }
-                bargainAccountVO.setOrderActiveInfoList(orderActiveInfoList);
                 }
                 ObjectMapper objectMapper = new ObjectMapper();
                 JavaTimeModule javaTimeModule = new JavaTimeModule();
@@ -94,7 +105,26 @@ public class BargainWebSocket {
 
     }
     }
+   private void getActive(Integer currentAccountId,BargainAccountVO bargainAccountVO){
+       FollowTraderUserEntity traderUser = followTraderUserService.getById(currentAccountId);
+       List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
+       AtomicLong traderId=new AtomicLong(0);
+       list.forEach(o->{
+           if(o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+               traderId.set(o.getId());
+           }
+       });
+       if(traderId.get()==0l){
+           traderId.set(list.get(0).getId());
+       }
+       Object o1 = redisCache.get(Constant.TRADER_ACTIVE + traderId.get());
+       List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+       if (ObjectUtil.isNotEmpty(o1)){
+           orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
 
+       }
+       bargainAccountVO.setOrderActiveInfoList(orderActiveInfoList);
+   }
     // 当客户端断开连接时调用
     @OnClose
     public void onClose(Session session) {

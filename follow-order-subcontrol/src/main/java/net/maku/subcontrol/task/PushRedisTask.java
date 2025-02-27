@@ -230,7 +230,8 @@ public class PushRedisTask {
                if (lock) {
 
             //查询当前vpsId所有账号
-            List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+            List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
+                    .eq(FollowTraderEntity::getServerId, vpsId).in(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType(),TraderTypeEnum.MASTER_REAL.getType()));
             //获取
             List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
             Map<Long, FollowTraderSubscribeEntity> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, Function.identity()));

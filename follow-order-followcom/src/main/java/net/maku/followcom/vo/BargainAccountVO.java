@@ -3,6 +3,7 @@ package net.maku.followcom.vo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.maku.framework.common.utils.PageResult;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,5 +25,7 @@ public class BargainAccountVO {
     private Integer accountDisconnectedNum;
     //总可用款
     private BigDecimal paragraph;
+    //账号列表
+   private PageResult<FollowTraderUserVO>  traderUserPage;
     private List<OrderActiveInfoVO> orderActiveInfoList;
 }

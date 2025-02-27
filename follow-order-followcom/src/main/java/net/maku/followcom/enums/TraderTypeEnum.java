@@ -11,7 +11,7 @@ public enum TraderTypeEnum implements IEnum<String> {
 
     SLAVE_REAL(1,"SLAVE_REAL", "跟单者"),
     MASTER_REAL(0,"MASTER_REAL", "喊单者"),
-    ALL(2,"ALL", "交易分配");
+    BARGAIN(2,"BARGAIN", "交易分配");
 
     private Integer type;
 

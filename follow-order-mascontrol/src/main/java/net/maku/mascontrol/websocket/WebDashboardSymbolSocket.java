@@ -223,7 +223,7 @@ public class WebDashboardSymbolSocket {
                     if (o.getType() == TraderTypeEnum.MASTER_REAL.getType()) {
                         sourceMapNum.put(o.getAccount() + o.getPlatform(), 1);
                         statData.setSourceActiveNum(sourceMapNum.keySet().size());
-                    } else {
+                    } else if(o.getType() == TraderTypeEnum.SLAVE_REAL.getType()){
                         followMapNum.put(o.getAccount() + o.getPlatform(), 0);
                         statData.setFollowActiveNum(followMapNum.keySet().size());
                     }

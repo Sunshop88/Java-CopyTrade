@@ -1,9 +1,11 @@
 package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.FollowTraderUserVO;
+import net.maku.followcom.vo.HangVpsVO;
 import net.maku.followcom.vo.TraderUserStatVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
@@ -45,4 +47,10 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
 
     TraderUserStatVO getStatInfo();
+
+    PageResult<FollowTraderUserVO> searchPage(@Valid FollowTraderUserQuery query);
+
+    void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request);
+
+    void belowVps(List<Long> traderUserIds, HttpServletRequest request);
 }

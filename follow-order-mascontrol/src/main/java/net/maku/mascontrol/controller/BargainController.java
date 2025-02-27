@@ -74,6 +74,7 @@ public class BargainController {
         if (vps==null) {
             throw new ServerException("vps不存在");
         }*/
+        followOrderHistoryQuery.setTraderId(list.get(0).getId());
         Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery);
         return result;
     }
@@ -81,6 +82,9 @@ public class BargainController {
     
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
         FollowTraderUserEntity traderUser = followTraderUserService.getById(traderUserId);
+        if(traderUser==null){
+            throw  new ServerException("账号用户不存在");
+        }
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
         return list;
     }

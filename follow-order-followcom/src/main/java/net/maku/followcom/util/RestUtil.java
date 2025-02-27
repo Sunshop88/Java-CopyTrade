@@ -350,7 +350,7 @@ public class RestUtil {
      */
     public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t) {
         //远程调用
-        String url = MessageFormat.format("http://{0}:{1}{2}", "127.0.0.1", FollowConstant.VPS_PORT, uri);
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");

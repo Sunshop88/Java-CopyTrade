@@ -104,7 +104,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
         if (this.quoteClient.OrderClient == null) {
             this.orderClient = new OrderClient(quoteClient);
         }
-        boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType());
+        boolean isLeader = Objects.equals(trader.getType(), TraderTypeEnum.MASTER_REAL.getType()) ||  Objects.equals(trader.getType(), TraderTypeEnum.BARGAIN.getType());
         if (this.orderUpdateHandler==null) {
             if (isLeader) {
                 //订单变化监听

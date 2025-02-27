@@ -1,6 +1,5 @@
 package net.maku.mascontrol.controller;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,8 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
@@ -19,13 +16,12 @@ import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
-import net.maku.framework.common.cache.RedisCache;
-import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
+import net.maku.followcom.vo.HangVpsVO;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,15 +33,8 @@ import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * 账号初始表
@@ -64,10 +53,7 @@ public class FollowTraderUserController {
     private final FollowPlatformService followPlatformService;
     private final FollowTestDetailService followTestDetailService;
     private final FollowFailureDetailService followFailureDetailService;
-    private final FollowTraderService followTraderService;
-    private final FollowTraderSubscribeService followTraderSubscribeService;
-    private final FollowVpsService followVpsService;
-    private final RedisCache redisCache;
+
 
 /*   @PostConstruct
     public void init() {
@@ -97,92 +83,23 @@ public class FollowTraderUserController {
     @GetMapping("page")
     @Operation(summary = "分页")
     public Result<PageResult<FollowTraderUserVO>> page(@ParameterObject @Valid FollowTraderUserQuery query){
-        PageResult<FollowTraderUserVO> page = followTraderUserService.page(query);
-        List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
-        List<FollowTraderEntity> traders = followTraderService.list();
-        List<FollowVpsEntity> vpsList = followVpsService.list();
-        List<FollowPlatformEntity> platforms = followPlatformService.list();
-        Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
-        Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
-        Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
-        subscribes.stream().forEach(s->{
-            subscribeMap.put(s.getSlaveId(),s);
-        });
-        traders.stream().forEach(t->{
-            List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
-           if (ObjectUtil.isEmpty(followTraderEntities)) {
-               followTraderEntities = new ArrayList<>();
-
-           }
-            followTraderEntities.add(t);
-            traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
-        });
-        vpsList.forEach(v->{
-            vpsMap.put(v.getId(),v);
-        });
-        Map<Long, FollowPlatformEntity> platformMap = platforms.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
-        LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
-        List<FollowTraderUserVO> list = page.getList();
-        StringBuilder sb=new StringBuilder();
-        list.forEach(o->{
-            FollowPlatformEntity followPlatformEntity = platformMap.get(Long.parseLong(o.getPlatformId().toString()));
-            o.setBrokerName(followPlatformEntity.getBrokerName());
-            String key=o.getAccount() + "-" + o.getPlatformId();
-            ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
-            List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
-            if(o.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
-                AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
-                  followTraderEntities.forEach(f->{
-                    if(f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
-                            followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
-                    }
-                    if(f.getType().equals(TraderTypeEnum.MASTER_REAL)){
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
-                    }else{
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName()+"-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
-
-                    }
-                }) ;
-                  if(ObjectUtil.isEmpty(followRedisTraderVO.get())){
-                      Object o1 = redisCache.get(Constant.TRADER_USER + followTraderEntities.get(0).getId());
-                      followRedisTraderVO.set((FollowRedisTraderVO) o1);
-                  }
-                FollowRedisTraderVO redisTraderVo = followRedisTraderVO.get();
-                  if(ObjectUtil.isNotEmpty(redisTraderVo)){
-                      BigDecimal euqit = redisTraderVo.getEuqit();
-                      o.setEuqit(euqit);
-                      BigDecimal balance = redisTraderVo.getBalance();
-                      o.setBalance(balance);
-                      BigDecimal marginProportion = redisTraderVo.getMarginProportion();
-                      o.setMarginProportion(marginProportion);
-                      o.setFreeMargin(redisTraderVo.getFreeMargin());
-                      o.setMargin(redisTraderVo.getMargin());
-                      o.setTotal(redisTraderVo.getTotal());
-                      o.setSellNum(redisTraderVo.getSellNum());
-                      o.setBuyNum(redisTraderVo.getBuyNum());
-
-
-                  }
-                o.setVpsDesc(vpsDesc);
-           }else{
-                if(ObjectUtil.isEmpty(followTraderEntities)) {
-                    VpsDescVO vo = VpsDescVO.builder().desc("-交易分配").build();
-                    vpsDesc.add(vo);
-                }else{
-                    followTraderEntities.forEach(f->{
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName()+"-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
-                    });
-                }
-
-               o.setVpsDesc(vpsDesc);
-           }
-
-        });
-
+        PageResult<FollowTraderUserVO> page =followTraderUserService.searchPage(query);
         return Result.ok(page);
+    }
+
+    //挂靠vps
+    @PostMapping("hangVps")
+    @Operation(summary = "挂靠vps")
+    public Result<String> hangVps(@RequestBody HangVpsVO hangVpsVO,HttpServletRequest request){
+        followTraderUserService.hangVps(hangVpsVO,request);
+        return Result.ok();
+    }
+    //挂靠vps
+    @PostMapping("belowVps")
+    @Operation(summary = "下架vps")
+    public Result<String> belowVps(@RequestBody List<Long>  traderUserIds,HttpServletRequest request){
+        followTraderUserService.belowVps(traderUserIds,request);
+        return Result.ok();
     }
     @GetMapping("getStatInfo")
     @Operation(summary = "信息")
@@ -262,7 +179,7 @@ public class FollowTraderUserController {
 
     @GetMapping("uploadPage")
     @Operation(summary = "批量记录")
-    @PreAuthorize("hasAuthority('mascontrol:uploadTraderUser')")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<PageResult<FollowUploadTraderUserVO>> page(@ParameterObject @Valid FollowUploadTraderUserQuery query){
         PageResult<FollowUploadTraderUserVO> page = followUploadTraderUserService.page(query);
 

@@ -107,6 +107,8 @@ public class FollowTraderUserVO implements Serializable {
 
 	@Schema(description = "券商名称")
 	private String brokerName;
+	@Schema(description = "杠杆")
+	private Integer leverage;
 
 
 }

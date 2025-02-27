@@ -27,7 +27,7 @@ public class FollowOrderDetailQuery extends Query {
 
     @Schema(description = "时间-结束")
     private String endTime;
-
+    @Schema(description = "0-bug 1-sell 6出入金 7信用")
     private Integer type;
 
     private Boolean isHistory=false;

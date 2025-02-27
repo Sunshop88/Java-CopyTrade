@@ -174,7 +174,7 @@ public class SpeedTestTask {
         Boolean result=false;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderEntity.getType().equals(TraderTypeEnum.BARGAIN.getType())){
                 leaderApiTradersAdmin.removeTrader(traderId);
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
                 if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {

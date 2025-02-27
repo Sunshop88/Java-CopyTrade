@@ -130,15 +130,18 @@ public class FollowTraderController {
                 followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
             });
             //保存从表数据
-            SourceInsertVO sourceInsertVO=new SourceInsertVO();
-            sourceInsertVO.setServerId(Integer.valueOf(convert.getServerId()));
-            sourceInsertVO.setPlatformId(convert.getPlatformId());
-            sourceInsertVO.setAccount(Long.valueOf(vo.getAccount()));
-            sourceInsertVO.setPassword(vo.getPassword());
-            sourceInsertVO.setRemark(vo.getRemark());
-            sourceInsertVO.setStatus(true);
-            sourceInsertVO.setId(followTraderVO.getId());
-           sourceService.add(sourceInsertVO);
+            if(TraderTypeEnum.MASTER_REAL.getType().equals(vo.getType())){
+                SourceInsertVO sourceInsertVO=new SourceInsertVO();
+                sourceInsertVO.setServerId(Integer.valueOf(convert.getServerId()));
+                sourceInsertVO.setPlatformId(convert.getPlatformId());
+                sourceInsertVO.setAccount(Long.valueOf(vo.getAccount()));
+                sourceInsertVO.setPassword(vo.getPassword());
+                sourceInsertVO.setRemark(vo.getRemark());
+                sourceInsertVO.setStatus(true);
+                sourceInsertVO.setId(followTraderVO.getId());
+                sourceService.add(sourceInsertVO);
+            }
+
         } catch (Exception e) {
             log.error("保存失败" + e);
             if (e instanceof ServerException) {
@@ -320,7 +323,7 @@ public class FollowTraderController {
             throw new ServerException("VPS服务异常，请检查");
         }
 
-        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderVO.getType().equals(TraderTypeEnum.BARGAIN.getType())){
             abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
                     .get(vo.getTraderId().toString());
 
@@ -489,7 +492,7 @@ public class FollowTraderController {
         }
         AbstractApiTrader abstractApiTrader;
         QuoteClient quoteClient = null;
-        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderVO.getType().equals(TraderTypeEnum.BARGAIN.getType())){
             abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString());
             if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient) || !abstractApiTrader.quoteClient.Connected()) {
                 leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
@@ -671,7 +674,7 @@ public class FollowTraderController {
         Boolean result=false;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderEntity.getType().equals(TraderTypeEnum.BARGAIN.getType())){
                 leaderApiTradersAdmin.removeTrader(traderId);
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
                 if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {

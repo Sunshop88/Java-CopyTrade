@@ -337,7 +337,7 @@ public class KafkaMessageConsumer {
                                 log.error("消费异常");
                             }
                        //跟单账号重连
-                    }else {
+                    }else if(trader.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
                         CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(Long.valueOf(message));
                         FollowTraderEntity slaveTrader = followTraderService.getFollowById(Long.valueOf(message));
                         FollowTraderSubscribeEntity subscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, slaveTrader.getId()));

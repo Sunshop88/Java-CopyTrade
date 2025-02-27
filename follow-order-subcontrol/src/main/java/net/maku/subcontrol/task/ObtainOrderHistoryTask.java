@@ -58,7 +58,7 @@ public class ObtainOrderHistoryTask {
 
     public void update(FollowTraderEntity u, List<FollowTraderEntity> newList){
         QuoteClient quoteClient = null;
-        if (u.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+        if (u.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || u.getType().equals(TraderTypeEnum.BARGAIN.getType())  ){
             LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
                     .get(u.getId().toString());
             if (ObjectUtil.isEmpty(leaderApiTrader) || ObjectUtil.isEmpty(leaderApiTrader.quoteClient)
