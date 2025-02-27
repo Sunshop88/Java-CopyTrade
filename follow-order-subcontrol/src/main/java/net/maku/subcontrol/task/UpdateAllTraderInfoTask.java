@@ -73,7 +73,7 @@ public class UpdateAllTraderInfoTask implements Runnable {
         QuoteClient quoteClient = null;
         AbstractApiTrader abstractApiTrader=null;
         try {
-            if (flag.equals(TraderTypeEnum.MASTER_REAL.getType())){
+            if (flag.equals(TraderTypeEnum.MASTER_REAL.getType()) || flag.equals(TraderTypeEnum.BARGAIN.getType())){
                 abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(trader.getId().toString());
             }else {
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(trader.getId().toString());

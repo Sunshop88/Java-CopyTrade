@@ -67,7 +67,7 @@ public class BargainWebSocket {
             String id = session.getId();
             JSONObject jsonObj = JSONObject.parseObject(message);
             JSONArray accountIds = jsonObj.getJSONArray("accountIds");
-            String currentAccountId = jsonObj.getString("currentAccountId");
+            Long currentAccountId = jsonObj.getLong("currentAccountId");
             String traderUserJson = jsonObj.getString("traderUserQuery");
             FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
 
@@ -83,7 +83,7 @@ public class BargainWebSocket {
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 //选中当前账号的持仓
                 if(ObjectUtil.isNotEmpty(currentAccountId)) {
-
+                    getActive(currentAccountId,bargainAccountVO);
                 }
                 ObjectMapper objectMapper = new ObjectMapper();
                 JavaTimeModule javaTimeModule = new JavaTimeModule();
@@ -105,7 +105,7 @@ public class BargainWebSocket {
 
     }
     }
-   private void getActive(Integer currentAccountId,BargainAccountVO bargainAccountVO){
+   private void getActive(Long currentAccountId,BargainAccountVO bargainAccountVO){
        FollowTraderUserEntity traderUser = followTraderUserService.getById(currentAccountId);
        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
        AtomicLong traderId=new AtomicLong(0);

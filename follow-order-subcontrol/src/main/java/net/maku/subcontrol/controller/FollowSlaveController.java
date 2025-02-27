@@ -312,7 +312,7 @@ public class FollowSlaveController {
     public Result<Boolean> startNewVps() {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, FollowConstant.LOCAL_HOST));
         try {
-            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).forEach(o->{
+            list.stream().filter(o->o.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) ||o.getType().equals(TraderTypeEnum.BARGAIN.getType()) ).forEach(o->{
                 leaderApiTradersAdmin.removeTrader(o.getId().toString());
             });
             leaderApiTradersAdmin.startUp(list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList());
