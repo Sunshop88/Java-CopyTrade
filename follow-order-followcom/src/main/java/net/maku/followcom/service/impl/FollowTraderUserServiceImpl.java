@@ -210,22 +210,27 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             if (inputStream == null) {
                 throw new FileNotFoundException("未找到指定的模板文件：" + inputFilePath);
             }
+
             // 获取第一行记录
             List<CSVRecord> records = parser.getRecords();
-            if (!records.isEmpty()) {
-                CSVRecord firstRecord = records.get(0);
 
-                // 提取数据
-                String account = firstRecord.get("账号");
-                String password = firstRecord.get("密码");
-                String accountType = firstRecord.get("账号类型");
-                String server = firstRecord.get("服务器");
-                String node = firstRecord.get("节点");
-                String remark = firstRecord.get("备注");
-                String sort = firstRecord.get("排序");
+            // 检查是否有记录
+            if (records.isEmpty()) {
+                // 如果 CSV 文件为空，可以返回一个默认记录
+                csvPrinter.printRecord("账号","密码","账号类型","服务器","节点","备注","排序");
+            } else {
+                CSVRecord firstRecord = records.get(0);
+                String account = firstRecord.get("account");
+                String password = firstRecord.get("password");
+                String accountType = firstRecord.get("accountType");
+                String server = firstRecord.get("server");
+                String node = firstRecord.get("node");
+                String remark = firstRecord.get("remark");
+                String sort = firstRecord.get("sort");
 
                 // 写入到输出流
-                csvPrinter.printRecord(account, password, accountType, server, node, remark,sort);
+                csvPrinter.printRecord(account, password, accountType, server, node, remark, sort);
+
             }
         }
     }

@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
@@ -25,6 +26,7 @@ import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -32,6 +34,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
+import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -58,6 +61,7 @@ import java.util.stream.Stream;
 @RequestMapping("/mascontrol/vps")
 @Tag(name = "vps列表")
 @AllArgsConstructor
+@Slf4j
 public class FollowVpsController {
     private final FollowVpsService followVpsService;
     private final FollowTraderService followTraderService;
@@ -66,6 +70,7 @@ public class FollowVpsController {
     private final FollowVpsUserService followVpsUserService;
     private final MasControlService masControlService;
     private final  FollowTestDetailService followTestDetailService;
+    private final RedisUtil redisUtil;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -363,7 +368,7 @@ public class FollowVpsController {
     @PutMapping("updateServerNode")
     @Operation(summary = "修改服务器节点")
     @PreAuthorize("hasAuthority('mascontrol:vps')")
-    public Result<String> importExcel(@RequestParam(value = "file") MultipartFile file) throws Exception {
+    public Result<String> importExcel(@RequestParam(value = "file") MultipartFile file ) throws Exception {
         //检查是否为Excel文件
         if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx"))) {
             return Result.error("请上传Excel文件");
@@ -371,4 +376,15 @@ public class FollowVpsController {
         followTestDetailService.importByExcel(file);
         return Result.ok("修改完成");
     }
+
+    @PutMapping("updateServer")
+    @Operation(summary = "修改服务器节点")
+    public Result<String> updateServer(@RequestParam(value = "oldVpsId") Integer oldVpsId ,@RequestParam(value = "vpsId") Integer vpsId ) {
+        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +oldVpsId);
+        objectObjectMap.forEach((k,v)->{
+            redisUtil.hSet(Constant.VPS_NODE_SPEED +vpsId,String.valueOf(k),String.valueOf(v));
+        });
+        return Result.ok("修改完成");
+    }
+
 }

@@ -242,7 +242,7 @@ public class FollowTraderUserController {
     @GetMapping("download")
     @Operation(summary = "下载模板")
     @OperateLog(type = OperateTypeEnum.EXPORT)
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public ResponseEntity<byte[]> generateCsv() {
         try {
             // 使用 ByteArrayOutputStream 来生成 CSV 数据
@@ -262,7 +262,7 @@ public class FollowTraderUserController {
 
     @GetMapping("uploadPage")
     @Operation(summary = "批量记录")
-    @PreAuthorize("hasAuthority('mascontrol:uploadTraderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:uploadTraderUser')")
     public Result<PageResult<FollowUploadTraderUserVO>> page(@ParameterObject @Valid FollowUploadTraderUserQuery query){
         PageResult<FollowUploadTraderUserVO> page = followUploadTraderUserService.page(query);
 
@@ -272,7 +272,7 @@ public class FollowTraderUserController {
     @PostMapping("import")
     @Operation(summary = "导入")
     @OperateLog(type = OperateTypeEnum.IMPORT)
-    @PreAuthorize("hasAuthority('mascontrol:variety')")
+//    @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> addExcel(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {
             return Result.error("请选择需要上传的文件");
@@ -318,7 +318,7 @@ public class FollowTraderUserController {
 
     @GetMapping("pageDetail")
     @Operation(summary = "失败详情")
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<PageResult<FollowFailureDetailVO>> pageDetail(@ParameterObject @Valid FollowFailureDetailQuery query){
         PageResult<FollowFailureDetailVO> page = followFailureDetailService.page(query);
 
@@ -342,7 +342,7 @@ public class FollowTraderUserController {
     @PutMapping("updateGroup")
     @Operation(summary = "批量修改分组")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updateGroup(@RequestBody List<Long> idList,@RequestBody String group) {
         followTraderUserService.updateGroup(idList,group);
 
@@ -352,7 +352,7 @@ public class FollowTraderUserController {
     @PutMapping("updatePasswords")
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) throws Exception {
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
@@ -363,7 +363,7 @@ public class FollowTraderUserController {
     @PutMapping("updatePassword")
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+//    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) throws Exception{
 
         followTraderUserService.updatePassword(vo,req);
