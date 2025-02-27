@@ -25,6 +25,7 @@
         <module>follow-order-server</module>
         <module>follow-order-mascontrol</module>
         <module>follow-order-followcom</module>
+        <module>follow-flink</module>
     </modules>
 
     <distributionManagement>
