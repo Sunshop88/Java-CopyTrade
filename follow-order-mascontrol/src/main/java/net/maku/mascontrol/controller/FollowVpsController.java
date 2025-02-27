@@ -21,6 +21,8 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
+import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
@@ -374,12 +376,28 @@ public class FollowVpsController {
         return Result.ok("修改完成");
     }
 
+    @PutMapping("copyDefaultNode")
+    @Operation(summary = "复制默认节点")
+    public Result<String> copyDefaultNode(@RequestBody FollowVpsQuery query ) {
+        followTestDetailService.copyDefaultNode(query);
+//        FollowTestServerQuery followTestServerQuery= new FollowTestServerQuery();
+//        followTestServerQuery.setVpsId();
+//        List<FollowTestDetailVO> existingList = followTestDetailService.selectServerNode();
+//        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +query.getOldVpsId());
+//        objectObjectMap.forEach((k,v)->{
+//            redisUtil.hSet(Constant.VPS_NODE_SPEED +query.getNewVpsId(),String.valueOf(k),String.valueOf(v));
+//
+//        });
+        //根据redis修改数据库默认节点
+        return Result.ok("正在进行，请稍等");
+    }
+
     @PutMapping("updateServer")
     @Operation(summary = "修改服务器节点")
     public Result<String> updateServer(@RequestParam(value = "oldVpsId") Integer oldVpsId ,@RequestParam(value = "vpsId") Integer vpsId ) {
-        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +oldVpsId);
-        objectObjectMap.forEach((k,v)->{
-            redisUtil.hSet(Constant.VPS_NODE_SPEED +vpsId,String.valueOf(k),String.valueOf(v));
+        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED + oldVpsId);
+        objectObjectMap.forEach((k, v) -> {
+            redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, String.valueOf(k), String.valueOf(v));
         });
         return Result.ok("修改完成");
     }

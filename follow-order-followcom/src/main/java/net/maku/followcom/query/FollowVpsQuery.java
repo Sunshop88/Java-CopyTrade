@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
 
+import java.util.List;
+
 /**
  * vps列表查询
  *
@@ -31,4 +33,8 @@ public class FollowVpsQuery extends Query {
     private Integer isOpen;
 
     private Long userId;
+
+    private List<Integer> newVpsId;
+
+    private Integer oldVpsId;
 }

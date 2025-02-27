@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
 
+import java.util.List;
+
 /**
  * 服务器管理查询
  */
@@ -29,6 +31,9 @@ public class FollowTestServerQuery extends Query {
 
     @Schema(description = "是否为默认节点")
     private Integer isDefaultServer;
+
+    private List<Integer> vpsIdList;
+
 
     @Schema(description = "排序字段，默认服务器名称排序（prop1：服务器名称，prop3：账号数量，prop4：非默认节点数量）")
     String order = "prop1";

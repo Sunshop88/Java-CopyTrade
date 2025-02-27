@@ -188,6 +188,12 @@
             <if test="query.isDefaultServer != null and query.isDefaultServer != ''">
                 AND t1.is_default_server = #{query.isDefaultServer}
             </if>
+            <if test="query.vpsIdList != null and query.vpsIdList.size() > 0">
+                AND t1.vps_id IN
+                <foreach item="item" collection="query.vpsIdList" separator="," open="(" close=")" index="">
+                    #{item}
+                </foreach>
+            </if>
         </where>
     </select>
 
