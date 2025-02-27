@@ -269,9 +269,10 @@ public class FollowVarietyController {
             queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplate());
         }
         if (ObjectUtil.isNotEmpty(query.getStdSymbol())){
-            queryWrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
+            queryWrapper.like(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
         }
         List<FollowVarietyEntity> filteredVarietyEntities = followVarietyService.list(queryWrapper);
+        log.info(String.valueOf(filteredVarietyEntities.size()));
 
         // 获取唯一券商名称
         Set<String> platformBrokerNames = followPlatformService.list().stream()
@@ -386,7 +387,7 @@ public class FollowVarietyController {
     }
 
     @PostMapping("updateSybol")
-    @Operation(summary = "查询该品种的所有信息")
+    @Operation(summary = "修改该品种的信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> updateSymbol(@RequestBody List<FollowVarietyVO> followVarietyVO){
         boolean b = followVarietyService.updateSymbol(followVarietyVO);
