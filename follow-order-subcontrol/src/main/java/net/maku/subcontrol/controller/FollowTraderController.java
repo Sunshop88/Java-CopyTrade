@@ -268,8 +268,8 @@ public class FollowTraderController {
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<String>> listSymbol() {
-        List<FollowOrderDetailEntity> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getSymbol).eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).groupBy(FollowOrderDetailEntity::getSymbol)).stream().toList();
-        return Result.ok(collect.stream().map(FollowOrderDetailEntity::getSymbol).toList());
+        List<FollowOrderSendEntity> collect = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().select(FollowOrderSendEntity::getSymbol).eq(FollowOrderSendEntity::getIpAddr,FollowConstant.LOCAL_HOST)).stream().distinct().toList();
+        return Result.ok(collect.stream().map(FollowOrderSendEntity::getSymbol).toList());
     }
 
     @PostMapping("orderSend")
@@ -765,10 +765,10 @@ public class FollowTraderController {
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
             // 先查品种规格
-            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> ObjectUtil.isNotEmpty(item.getStdSymbol())&&item.getStdSymbol().contains(symbol)).toList();
+            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationEntity)){
                 for (FollowSysmbolSpecificationEntity o : specificationEntity) {
-                    log.info("品种规格获取报价"+o.getStdSymbol());
+                    log.info("品种规格获取报价"+o.getSymbol());
                     //获取报价
                     QuoteEventArgs eventArgs= getEventArgs(abstractApiTrader,quoteClient,o.getSymbol());
                     if (ObjectUtil.isNotEmpty(eventArgs)) {

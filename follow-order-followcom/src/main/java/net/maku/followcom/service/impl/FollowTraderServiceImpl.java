@@ -225,10 +225,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setFreezeLevel(symbolInfo.FreezeLevel);
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
-                        List<FollowVarietyEntity> listByTemplated = followVarietyService.getListByTemplated(entity.getTemplateId());
-                        //模糊匹配标准品种保存入库
-                        Optional<FollowVarietyEntity> followVarietyEntity = listByTemplated.stream().filter(ls -> followSysmbolSpecificationVO.getSymbol().contains(ls.getStdSymbol())).findFirst();
-                        followVarietyEntity.ifPresent(varietyEntity -> followSysmbolSpecificationVO.setStdSymbol(varietyEntity.getStdSymbol()));
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
                     } catch (InvalidSymbolException |ConnectException e) {
                         log.error(entity.getId()+"添加品种规格异常"+o+"异常信息"+e.getMessage());

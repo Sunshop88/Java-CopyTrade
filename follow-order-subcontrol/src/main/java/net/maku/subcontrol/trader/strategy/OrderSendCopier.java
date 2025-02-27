@@ -64,14 +64,14 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         // 先查询品种规格是否可以匹配
         String stdSymbol =orderInfo.getOriSymbol();
-        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(followTraderEntity.getId()).stream().filter(o ->o.getSymbol().equals(orderInfo.getOriSymbol())).findFirst();
-        if (specificationEntity.isPresent()&&ObjectUtil.isNotEmpty(specificationEntity.get().getStdSymbol())){
+        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+        Optional<FollowVarietyEntity> first = followVarietyEntityList.stream().filter(o -> orderInfo.getOriSymbol().contains(o.getStdSymbol())).findFirst();
+        if (first.isPresent()){
             //查找到标准品种
-            stdSymbol=specificationEntity.get().getStdSymbol();
-            log.info("OrderSendCopier 主账号 品种规格标准品种"+stdSymbol);
+            stdSymbol=first.get().getStdSymbol();
+            log.info("OrderSendCopier 主账号 标准品种"+stdSymbol);
         }else {
             // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
             List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
             log.info("collect"+collect);
             if (ObjectUtil.isNotEmpty(collect)) {
@@ -87,7 +87,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         List<String> symbolList = orderInfo.getSymbolList();
 
         //查询品种规格数据
-        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getStdSymbol().equals(finalStdSymbol)).toList();
+        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->o.getSymbol().contains(finalStdSymbol)).toList();
         if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
             sysmbolSpecificationEntity.forEach(o->{
                         try{

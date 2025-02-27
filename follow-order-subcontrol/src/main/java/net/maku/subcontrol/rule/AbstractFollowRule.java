@@ -124,15 +124,15 @@ public abstract class AbstractFollowRule {
     public double getPr(AbstractApiTrader copierApiTrader,long traderId,String symbol){
         double pr = 1;
         // 查看品种匹配 模板
-        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(traderId).stream().filter(item -> item.getSymbol().contains(symbol)).findFirst();
+        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(traderId).stream().filter(item -> item.getSymbol().equals(symbol)).findFirst();
         if (specificationEntity.isPresent()){
             List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(copierApiTrader.getTrader().getTemplateId());
-            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(specificationEntity.get().getStdSymbol())).findFirst()
+            Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && symbol.contains(specificationEntity.get().getSymbol())).findFirst()
                     .map(FollowVarietyEntity::getStdContract)
                     .orElse(0);
             log.info("规格账号标准合约大小{}", contract);
             log.info("品种规格对应合约值{}", specificationEntity.get().getContractSize());
-            if (contract != 0) {
+            if (ObjectUtil.isNotEmpty(contract)) {
                 pr = (double) contract / specificationEntity.get().getContractSize();
             }
         }else {
@@ -151,7 +151,6 @@ public abstract class AbstractFollowRule {
                 }
             }
         }
-
         return pr;
     }
 

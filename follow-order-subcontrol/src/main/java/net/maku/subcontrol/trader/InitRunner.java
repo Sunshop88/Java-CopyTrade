@@ -135,22 +135,7 @@ public class InitRunner implements ApplicationRunner {
                 //账户信息缓存
                 followTraderService.getFollowById(o.getId());
                 //品种规格缓存
-                List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList=new ArrayList<>();
-                followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, o.getId())).stream().toList().stream().forEach(sy->{
-                    if (ObjectUtil.isEmpty(sy.getStdSymbol())){
-                        log.info("品种"+sy.getSymbol());
-                        //当前模版模糊查询标准品种
-                        List<FollowVarietyEntity> listByTemplated = followVarietyService.getListByTemplated(o.getTemplateId());
-                        Optional<FollowVarietyEntity> followVarietyEntity = listByTemplated.stream().filter(ls -> sy.getSymbol().contains(ls.getStdSymbol())).findFirst();
-                        if (followVarietyEntity.isPresent()){
-                            //标准品种保存
-                            sy.setStdSymbol(followVarietyEntity.get().getStdSymbol());
-                            followSysmbolSpecificationEntityList.add(sy);
-                        }
-                    }
-                });
-                //保存数据
-                followSysmbolSpecificationService.saveOrUpdateBatch(followSysmbolSpecificationEntityList);
+                followSysmbolSpecificationService.getByTraderId(o.getId());
             });
         });
 
