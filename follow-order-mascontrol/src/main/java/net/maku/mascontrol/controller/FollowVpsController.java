@@ -382,6 +382,7 @@ public class FollowVpsController {
         if(query.getNewVpsId().contains(query.getOldVpsId())){
             return Result.error("新vps和旧vps不能相同");
         }
+        //根据oloVpsId更改
         followTestDetailService.copyDefaultNode(query);
         return Result.ok("正在进行，请稍等");
     }

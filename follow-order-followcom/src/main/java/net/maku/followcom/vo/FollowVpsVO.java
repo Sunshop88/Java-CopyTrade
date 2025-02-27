@@ -83,4 +83,7 @@ public class FollowVpsVO implements Serializable {
 	@Schema(description = "总手数")
 	private BigDecimal lots;
 
+	@Schema(description = "复制状态，0：失败 1：进行中 2：成功")
+	private String copyStatus;
+
 }
