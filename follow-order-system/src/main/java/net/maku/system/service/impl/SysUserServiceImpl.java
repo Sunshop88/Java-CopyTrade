@@ -7,9 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
-import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
-import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -27,7 +25,6 @@ import net.maku.system.dao.SysUserDao;
 import net.maku.system.entity.SysLogLoginEntity;
 import net.maku.system.entity.SysRoleEntity;
 import net.maku.system.entity.SysUserEntity;
-import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.enums.SuperAdminEnum;
 import net.maku.system.query.SysRoleUserQuery;
 import net.maku.system.query.SysUserQuery;
@@ -362,6 +359,15 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     public SysUserVO getByUsername(String username) {
         SysUserEntity user = baseMapper.selectOne(Wrappers.<SysUserEntity>lambdaQuery().eq(SysUserEntity::getUsername, username));
         return SysUserConvert.INSTANCE.convert(user);
+    }
+
+    @Override
+    public List<Integer> getUser(String creator) {
+        List<Long> list =list(new LambdaQueryWrapper<SysUserEntity>().like(SysUserEntity::getUsername, creator))
+                .stream()
+                .map(SysUserEntity::getId)
+                .collect(Collectors.toList());
+        return list.stream().map(Long::intValue).collect(Collectors.toList());
     }
 
 }
