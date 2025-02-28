@@ -70,7 +70,7 @@ public class FollowVpsEntity {
 	 * 复制状态，0：失败 1：进行中 2：成功
 	 */
 	@TableField(value = "copy_status")
-	private String copyStatus;
+	private Integer copyStatus;
 
 	/**
 	* 版本号
