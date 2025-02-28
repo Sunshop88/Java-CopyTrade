@@ -23,6 +23,10 @@ import online.mtapi.mt4.OrderUpdateEventHandler;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * @author samson bruce
@@ -41,7 +45,8 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
     protected Boolean running = Boolean.TRUE;
     protected TraderOrderActiveWebSocket traderOrderActiveWebSocket;
 //    protected RabbitMQProducer producer;
-
+    protected final ConcurrentHashMap<String, ScheduledFuture<?>> pendingMessages = new ConcurrentHashMap<>();
+    protected final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
     public OrderUpdateHandler() {
         this.followSubscribeOrderService = SpringContextUtils.getBean(FollowSubscribeOrderService.class);
         this.traderOrderActiveWebSocket=SpringContextUtils.getBean(TraderOrderActiveWebSocket .class);
@@ -135,4 +140,7 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
         return messagePayload;
     }
 
+    public void shutdown() {
+        scheduler.close(); // 关闭虚拟线程池
+    }
 }

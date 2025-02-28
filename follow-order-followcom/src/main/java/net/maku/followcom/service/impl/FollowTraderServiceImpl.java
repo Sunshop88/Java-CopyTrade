@@ -233,6 +233,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 //查询改账号的品种规格
                 List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, entity.getId()));
                 redisCache.set(Constant.SYMBOL_SPECIFICATION + entity.getId(), list);
+                Cache cache = cacheManager.getCache("followSymbolCache");
+                if (cache != null) {
+                    cache.evict(entity.getId()); // 移除指定缓存条目
+                }
             } catch (TimeoutException e) {
                 throw new RuntimeException(e);
             } catch (ConnectException e) {
@@ -483,7 +487,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
                 }
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
             } catch (Exception e) {
                 log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
             }
@@ -937,13 +941,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
                 long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
             log.info("订单 " + orderNo + ": 平仓 " + orderResult);

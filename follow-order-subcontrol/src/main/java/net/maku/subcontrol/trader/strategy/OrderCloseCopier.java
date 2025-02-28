@@ -168,7 +168,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), ask, Integer.MAX_VALUE);
             }
             long end = System.currentTimeMillis();
-            log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
+            log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
             LocalDateTime endTime = LocalDateTime.now();
             if (flag == 1) {
                 log.info("补单平仓开始");

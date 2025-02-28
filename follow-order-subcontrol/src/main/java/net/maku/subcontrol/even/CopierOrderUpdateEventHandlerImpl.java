@@ -58,8 +58,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private final RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);;
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
-    private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingMessages = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+
     private TraderOrderActiveWebSocket traderOrderActiveWebSocket;
 
 
@@ -89,6 +88,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     List<Order> openedOrders = Arrays.stream(copier4ApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
                     FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
                     followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,follow.getAccount()));
+                    log.info("发送消息"+follow.getId());
                     traderOrderActiveWebSocket.pushMessage(followSub.getMasterId().toString(),follow.getId().toString(), JsonUtils.toJsonString(followOrderActiveSocketVO));
                     pendingMessages.remove(follow.getId().toString());
                 }, 100, TimeUnit.MILLISECONDS);
@@ -268,5 +268,6 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         vo.setTakeProfit(order.TakeProfit);
         return vo;
     }
+
 
 }

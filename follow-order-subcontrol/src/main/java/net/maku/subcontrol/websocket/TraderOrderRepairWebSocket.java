@@ -112,85 +112,19 @@ public class TraderOrderRepairWebSocket {
             if (slaveId.equals("0")) {
                 //喊单
                 accountId = traderId;
-                followTraderEntity = followTraderService.getFollowById(Long.valueOf(accountId));
                 abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
-                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
-                        || !abstractApiTrader.quoteClient.Connected()) {
-                    leaderApiTradersAdmin.removeTrader(accountId);
-                    log.info("activeWebsockaddTrader"+accountId);
-                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
-                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                        quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        leaderApiTrader1.startTrade();
-                    }else  if (conCodeEnum == ConCodeEnum.AGAIN){
-                        long maxWaitTimeMillis = 10000; // 最多等待10秒
-                        long startTime = System.currentTimeMillis();
-                        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                        // 开始等待直到获取到copierApiTrader1
-                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
-                            try {
-                                // 每次自旋等待500ms后再检查
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                // 处理中断
-                                Thread.currentThread().interrupt();
-                                break;
-                            }
-                            leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                        }
-                        //重复提交
-                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
-                            log.info(traderId+"重复提交并等待完成");
-                            quoteClient = leaderApiTrader.quoteClient;
-                        }else {
-                            log.info(traderId+"重复提交并等待失败");
-                        }
-                    }
-                } else {
+                if (ObjectUtil.isNotEmpty(abstractApiTrader)){
                     quoteClient = abstractApiTrader.quoteClient;
                 }
             } else {
-                followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
-                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
-                        || !abstractApiTrader.quoteClient.Connected()) {
-                    copierApiTradersAdmin.removeTrader(accountId);
-                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
-                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                        quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        copierApiTrader.startTrade();
-                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        long maxWaitTimeMillis = 10000; // 最多等待10秒
-                        long startTime = System.currentTimeMillis();
-                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        // 开始等待直到获取到copierApiTrader1
-                        while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
-                            try {
-                                // 每次自旋等待500ms后再检查
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                // 处理中断
-                                Thread.currentThread().interrupt();
-                                break;
-                            }
-                            copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        }
-                        //重复提交
-                        if (ObjectUtil.isNotEmpty(copierApiTrader)){
-                            log.info(followTraderEntity.getId().toString()+"重复提交并等待完成");
-                            quoteClient = copierApiTrader.quoteClient;
-                        }else {
-                            log.info(followTraderEntity.getId()+"重复提交并等待失败");
-                        }
-                    }
-                } else {
+                if (ObjectUtil.isNotEmpty(abstractApiTrader)){
                     quoteClient = abstractApiTrader.quoteClient;
                 }
             }
             if (ObjectUtil.isEmpty(quoteClient)) {
-                throw new ServerException(accountId + "登录异常");
+                log.info(accountId + "登录异常");
+                return;
             }
             FollowOrderRepairSocketVO followOrderRepairSocketVO = new FollowOrderRepairSocketVO();
             Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);

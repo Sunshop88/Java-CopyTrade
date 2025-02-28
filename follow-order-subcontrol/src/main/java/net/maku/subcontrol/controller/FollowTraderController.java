@@ -679,6 +679,7 @@ public class FollowTraderController {
                     }else {
                         log.info(traderId+"重复提交并等待失败");
                     }
+                    result=true;
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
@@ -712,6 +713,7 @@ public class FollowTraderController {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                        result=true;
                     }else {
                         log.info(traderId+"重复提交并等待失败");
                     }

@@ -64,7 +64,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private long lastInvokeTime = 0;
 
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingMessages = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
 
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
@@ -138,6 +138,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order1 ->(order1.Type == Buy || order1.Type == Sell)).collect(Collectors.toList());
                 FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
                 followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,leader.getAccount()));
+                log.info("发送消息"+leader.getId());
                 traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
                 pendingMessages.remove(leader.getId().toString());
             }, 100, TimeUnit.MILLISECONDS);

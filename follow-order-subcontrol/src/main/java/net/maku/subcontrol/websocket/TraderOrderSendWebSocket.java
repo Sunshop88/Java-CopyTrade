@@ -180,7 +180,6 @@ public class TraderOrderSendWebSocket {
                 throw new ServerException(traderId+"登录异常");
             }
             QuoteEventArgs eventArgs = null;
-
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
@@ -196,16 +195,13 @@ public class TraderOrderSendWebSocket {
                 }
                 if (ObjectUtil.isEmpty(eventArgs)){
                     this.symbol=symbol;
-                    eventArgs = getEventArgs(quoteClient);
                 }
             }else {
                 // 查看品种匹配 模板
                 List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
                 List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
                 log.info("匹配品种"+listv);
-                if (ObjectUtil.isEmpty(listv)){
-                    eventArgs = getEventArgs(quoteClient);
-                }else {
+                if (ObjectUtil.isNotEmpty(listv)){
                     for (FollowVarietyEntity o:listv){
                         if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
                             //查看品种规格
@@ -219,7 +215,6 @@ public class TraderOrderSendWebSocket {
                     }
                     if (ObjectUtil.isEmpty(eventArgs)){
                         this.symbol=symbol;
-                        eventArgs = getEventArgs(quoteClient);
                     }
                 }
             }
