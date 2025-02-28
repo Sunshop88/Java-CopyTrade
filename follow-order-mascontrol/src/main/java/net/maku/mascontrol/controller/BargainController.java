@@ -1,22 +1,16 @@
 package net.maku.mascontrol.controller;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tencentcloudapi.privatedns.v20201028.PrivatednsErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.BargainService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderUserService;
@@ -32,17 +26,10 @@ import net.maku.mascontrol.vo.FollowOrderHistoryVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
-
-import java.text.MessageFormat;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -79,7 +66,7 @@ public class BargainController {
         return result;
     }
 
-    
+
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
         FollowTraderUserEntity traderUser = followTraderUserService.getById(traderUserId);
         if(traderUser==null){
@@ -115,4 +102,11 @@ public class BargainController {
         return Result.ok();
     }
 
+    @PostMapping("masOrderSend")
+    @Operation(summary = "交易下单")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
+        bargainService.masOrderSend(vo,request);
+        return Result.ok();
+    }
 }
