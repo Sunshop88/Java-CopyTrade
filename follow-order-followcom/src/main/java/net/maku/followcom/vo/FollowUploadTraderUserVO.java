@@ -42,7 +42,7 @@ public class FollowUploadTraderUserVO implements Serializable {
 	@Schema(description = "失败数量")
 	private Integer failureCount;
 
-	@Schema(description = "类型 0：新增账号 1：修改密码")
+	@Schema(description = "类型 0：新增账号 1：修改密码 2：挂靠VPS")
 	private Integer type;
 
 	@Schema(description = "版本号")

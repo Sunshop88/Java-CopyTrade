@@ -254,7 +254,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
             for (CSVRecord record : csvParser) {
                 String account = record.get(0);
-                String password = record.get(1);
+                String password = AesUtils.aesEncryptStr(record.get(1));
                 String accountType = record.get(2).isEmpty() ? "MT4" : record.get(2).toUpperCase();
                 String platform = record.get(3);
                 String node = record.get(4);
@@ -265,12 +265,20 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 StringBuilder errorMsg = new StringBuilder();
                 if (account.isEmpty()) {
                     errorMsg.append("账号不能为空; ");
+                }else {
+                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {
+                        errorMsg.append("账号已存在; ");
+                    }
                 }
                 if (password.isEmpty()) {
                     errorMsg.append("密码不能为空; ");
                 }
                 if (platform.isEmpty()) {
                     errorMsg.append("服务器不能为空; ");
+                }else {
+                    if (followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform)).size() == 0) {
+                        errorMsg.append("服务器不存在; ");
+                    }
                 }
                 if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
                     errorMsg.append("账号类型必须是MT4或MT5; ");
@@ -348,6 +356,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
     }
 
+    public static void main(String[] args) {
+        String s = AesUtils.decryptStr("d4d66868f72b8838ed2a450a529657fc");
+        System.out.println(s);
+    }
     @Override
     public void updatePasswords(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) throws Exception {
         if (!password.equals(confirmPassword)) {
