@@ -809,7 +809,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             } catch (Exception e) {
                 LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
                 wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
-                        .set(FollowVpsEntity::getCopyStatus, "1");
+                        .set(FollowVpsEntity::getCopyStatus, "0");
                 followVpsService.update(wrapper);
                 log.error("任务执行失败", e);
                 throw new RuntimeException("任务执行失败", e);

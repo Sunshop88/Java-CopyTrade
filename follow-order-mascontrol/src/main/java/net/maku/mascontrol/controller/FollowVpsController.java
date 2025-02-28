@@ -382,7 +382,7 @@ public class FollowVpsController {
         //根据oloVpsId更改copyStatus
         LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
-                .set(FollowVpsEntity::getCopyStatus, "0");
+                .set(FollowVpsEntity::getCopyStatus, "1");
         followVpsService.update(wrapper);
         followTestDetailService.copyDefaultNode(query);
         return Result.ok("正在进行，请稍等");
