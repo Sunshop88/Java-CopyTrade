@@ -69,7 +69,7 @@ public class FollowTraderUserController {
     private final FollowTraderService followTraderService;
 
 
-  /* @PostConstruct
+  /*
     public void init() {
         List<FollowTraderEntity> list = followTraderService.list();
        List<FollowPlatformEntity> list1 = followPlatformService.list();
@@ -107,9 +107,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 }
     @GetMapping("page")
     @Operation(summary = "分页")
-    public Result<PageResult<FollowTraderUserVO>> page(@ParameterObject @Valid FollowTraderUserQuery query){
-        PageResult<FollowTraderUserVO> page =followTraderUserService.searchPage(query);
-        return Result.ok(page);
+    public Result<TraderUserStatVO> page(@ParameterObject @Valid FollowTraderUserQuery query){
+        TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(query);
+        return Result.ok(traderUserStatVO);
     }
 
     //挂靠vps
@@ -129,7 +129,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("getStatInfo")
     @Operation(summary = "信息")
     public Result<TraderUserStatVO> getStatInfo(){
-        TraderUserStatVO data = followTraderUserService.getStatInfo();
+        TraderUserStatVO data = followTraderUserService.getStatInfo(null);
 
         return Result.ok(data);
     }

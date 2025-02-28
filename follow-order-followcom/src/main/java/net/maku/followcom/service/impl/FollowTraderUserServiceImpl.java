@@ -492,16 +492,24 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public TraderUserStatVO getStatInfo() {
-        List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+    public TraderUserStatVO getStatInfo(FollowTraderUserQuery query) {
+        List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(getWrapper(query));
         int size = followTraderUserEntities.size();
+        Map<String,FollowTraderUserEntity> traderUserMap=new HashMap<>();
+        followTraderUserEntities.forEach(o->{
+            traderUserMap.put(o.getAccount() + "-" + o.getPlatformId(),o);
+        });
         List<FollowTraderUserEntity> list = followTraderUserEntities.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).toList();
         List<FollowTraderEntity> traders = followTraderService.list();
         Map<String,Integer> traderMap=new HashMap<>();
         TraderUserStatVO vo = TraderUserStatVO.builder().total(size).noVpsNum(list.size()).conNum(0).errNum(0).build();
         traders.stream().forEach(t->{
            if(t.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
-               traderMap.put(t.getAccount() + "-" + t.getPlatformId(), 1);
+               FollowTraderUserEntity followTraderUserEntity = traderUserMap.get(t.getAccount() + "-" + t.getPlatformId());
+               if(followTraderUserEntity!=null){
+                   traderMap.put(t.getAccount() + "-" + t.getPlatformId(), 1);
+               }
+
            }
         });
         vo.setConNum(traderMap.size());
@@ -510,7 +518,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public PageResult<FollowTraderUserVO> searchPage(FollowTraderUserQuery query) {
+    public TraderUserStatVO searchPage(FollowTraderUserQuery query) {
         PageResult<FollowTraderUserVO> page = page(query);
         List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
         List<FollowTraderEntity> traders = followTraderService.list();
@@ -538,7 +546,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
         List<FollowTraderUserVO> list = page.getList();
         StringBuilder sb=new StringBuilder();
+        TraderUserStatVO statInfo = getStatInfo(query);
         list.forEach(o->{
+
             FollowPlatformEntity followPlatformEntity = platformMap.get(Long.parseLong(o.getPlatformId().toString()));
             o.setBrokerName(followPlatformEntity.getBrokerName());
             String key=o.getAccount() + "-" + o.getPlatformId();
@@ -548,7 +558,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
                 followTraderEntities.forEach(f->{
                     if(f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
-                        followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
+                            followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
                     }
                     if(f.getType().equals(TraderTypeEnum.MASTER_REAL)){
                         VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
@@ -580,13 +590,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     o.setSellNum(redisTraderVo.getSellNum());
                     o.setBuyNum(redisTraderVo.getBuyNum());
                     o.setLeverage(redisTraderVo.getLeverage());
-
-
                 }
                 o.setVpsDesc(vpsDesc);
             }
         });
-        return page;
+        statInfo.setPageResult(page);
+        return statInfo;
     }
 
     @Override
@@ -609,6 +618,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserService.save(followUploadTraderUserVO);
         //转发请求，检索账号
         List<FollowTraderUserEntity> followTraderUserEntities = listByIds(hangVpsVO.getTraderUserIds());
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         //不用等待
         ThreadPoolUtils.getExecutor().execute(()-> {
             AtomicInteger sum = new AtomicInteger(0);
@@ -630,7 +640,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
                         vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
                     } else {
                         //策略转发
                         FollowAddSalveVo vo = new FollowAddSalveVo();
@@ -650,7 +660,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setTraderId(hangVpsVO.getTraderId());
                         vo.setTemplateId(hangVpsVO.getTemplateId());
                         //策略新增
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
                     }
                    if (result.getCode()==0){
                        sum.set(sum.get()+1);
@@ -681,7 +691,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
 
             });
-        });
+       });
 
     }
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
@@ -709,7 +719,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         });
         if(ObjectUtil.isNotEmpty(map)){
             map.forEach((k,v)->{
-                Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.ADD_SLAVE, v);
+                Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.ADD_SLAVE, v,null);
             });
         }
 

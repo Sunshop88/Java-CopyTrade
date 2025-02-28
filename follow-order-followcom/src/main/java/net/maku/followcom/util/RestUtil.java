@@ -349,11 +349,17 @@ public class RestUtil {
     /**
      * 远程调用方法封装
      */
-    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t) {
+    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t,HttpHeaders header) {
         //远程调用
         String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
         RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        HttpHeaders headers =null;
+        if(ObjectUtil.isNotEmpty(header)) {
+             headers =header;
+        }else{
+             headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+        }
+
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
         ObjectMapper objectMapper = new ObjectMapper();
         // 将对象序列化为 JSON
@@ -361,6 +367,14 @@ public class RestUtil {
         try {
             if(t!=null) {
                 jsonBody = objectMapper.writeValueAsString(t);
+                JSONObject jsonObject = JSONObject.parseObject(jsonBody);
+                JSONObject newjson = new JSONObject();
+                jsonObject.forEach((key, value) -> {
+                    if(ObjectUtil.isNotEmpty(value)) {
+                        newjson.put(key, value);
+                    }
+                });
+                jsonBody=newjson.toJSONString();
             }
 
         } catch (JsonProcessingException e) {
@@ -387,11 +401,13 @@ public class RestUtil {
                 }
             }
             try {
+
                 response=  restTemplate.exchange(url, method, entity, byte[].class,map);
             } catch (Exception e) {
                 log.error("response远程调用异常: {}", e);
             }
         }else{
+
             response = restTemplate.exchange(url, method, entity, byte[].class);
         }
 
