@@ -103,28 +103,34 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 wp.in(FollowTraderEntity::getType,query.getAccountType());
             }
             if(ObjectUtil.isNotEmpty(query.getStatus())){
-                 wp.in(FollowTraderEntity::getStatus,query.getStatus());
-                if(query.getStatus().contains(CloseOrOpenEnum.OPEN) && !query.getStatus().contains(2)){
-                    wp.eq(FollowTraderEntity::getStatusExtra,"账号异常");
+               List<String> statusExtra=new ArrayList<>();
+
+                if(query.getStatus().contains(CloseOrOpenEnum.OPEN.getValue())){
+                    statusExtra.add("账户密码错误");
+
                 }
-                 if(!query.getStatus().contains(CloseOrOpenEnum.OPEN) && query.getStatus().contains(2)){
-                     wp.eq(FollowTraderEntity::getStatusExtra,"账户密码错误");
+                 if(query.getStatus().contains(CloseOrOpenEnum.CLOSE.getValue()) ){
+                     statusExtra.add("账号在线");
+                     statusExtra.add("启动成功");
                  }
-                if(query.getStatus().contains(CloseOrOpenEnum.OPEN) && query.getStatus().contains(2)){
-                    ArrayList<String> strings = new ArrayList<>();
-                    strings.add("账号异常");
-                    strings.add("账户密码错误");
-                    wp.in(FollowTraderEntity::getStatusExtra,strings);
+                if(query.getStatus().contains(2) ){
+                    statusExtra.add("账号异常");
                 }
+                wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
             }
             List<FollowTraderEntity> list = followTraderService.list(wp);
-            //再通过list
-            StringBuilder sb = new StringBuilder();
-            list.forEach(o->{
-                sb.append("'"+o.getAccount()+"-"+o.getPlatformId()+"',");
-            });
-            String sql =sb.substring(0, sb.length() - 1);
-            wrapper.apply("concat(account,'-',platform_id) in (" +sql+")");
+            if(ObjectUtil.isNotEmpty(list)){
+                //再通过list
+                StringBuilder sb = new StringBuilder();
+                list.forEach(o->{
+                    sb.append("'"+o.getAccount()+"-"+o.getPlatformId()+"',");
+                });
+                String sql =sb.substring(0, sb.length() - 1);
+                wrapper.apply("concat(account,'-',platform_id) in (" +sql+")");
+            }else{
+                wrapper.eq(FollowTraderUserEntity::getDeleted,2);
+            }
+
         }
         //组别
         if(ObjectUtil.isNotEmpty(query.getGroupIds()) ){
