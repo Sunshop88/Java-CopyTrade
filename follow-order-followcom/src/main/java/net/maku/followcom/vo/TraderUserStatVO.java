@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.maku.framework.common.utils.PageResult;
 
 /**
  * Author:  zsd
@@ -22,4 +23,6 @@ public class TraderUserStatVO {
     private int conNum;
     //连接异常
     private int errNum;
+
+   private PageResult<FollowTraderUserVO> pageResult;
 }

@@ -27,9 +27,10 @@ public class BargainAccountVO {
     private Integer accountDisconnectedNum;
     //总可用款
     private BigDecimal paragraph;
-    //持仓概览统计
+
 
     //账号列表
    private PageResult<FollowTraderUserVO>  traderUserPage;
+    //持仓概览统计
     private List<OrderActiveInfoVO> orderActiveInfoList;
 }

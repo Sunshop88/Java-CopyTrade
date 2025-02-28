@@ -46,9 +46,9 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
 
-    TraderUserStatVO getStatInfo();
+    TraderUserStatVO getStatInfo(FollowTraderUserQuery query);
 
-    PageResult<FollowTraderUserVO> searchPage(@Valid FollowTraderUserQuery query);
+    TraderUserStatVO searchPage(@Valid FollowTraderUserQuery query);
 
     void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request);
 

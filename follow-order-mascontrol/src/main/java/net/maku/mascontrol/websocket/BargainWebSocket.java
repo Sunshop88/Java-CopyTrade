@@ -75,7 +75,7 @@ public class BargainWebSocket {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
                 //账号列表
-                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery);
+                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery).getPageResult();
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 //选中当前账号的持仓
                 if(ObjectUtil.isNotEmpty(currentAccountId)) {

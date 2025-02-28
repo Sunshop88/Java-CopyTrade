@@ -67,7 +67,7 @@ public class BargainController {
             throw new ServerException("vps不存在");
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
-        Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery);
+        Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
         return result;
     }
 
@@ -91,7 +91,7 @@ public class BargainController {
         users.forEach(user -> {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("traderId", user.getId());
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,null);
         });
         return Result.ok();
     }
@@ -109,7 +109,7 @@ public class BargainController {
             closeVO.setTraderId(user.getId());
             closeVO.setAccount(user.getAccount());
             BeanUtil.copyProperties(vo, closeVO);
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, closeVO);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, closeVO,null);
         });
         return Result.ok();
     }

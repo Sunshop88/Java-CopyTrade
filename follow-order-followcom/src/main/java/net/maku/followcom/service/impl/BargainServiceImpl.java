@@ -49,7 +49,7 @@ public class BargainServiceImpl implements BargainService {
                 MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
                 BeanUtil.copyProperties(fo,masToSubOrderSendDto);
                 masToSubOrderSendDto.setTraderId(fo.getId());
-                Result result = RestUtil.sendRequest(request, fo.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto);
+                Result result = RestUtil.sendRequest(request, fo.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,null);
             });
         });
     }

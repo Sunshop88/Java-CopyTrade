@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,27 +69,33 @@ public class FollowTraderUserController {
     private final FollowTraderService followTraderService;
 
 
-/*   @PostConstruct
+  /*
     public void init() {
         List<FollowTraderEntity> list = followTraderService.list();
        List<FollowPlatformEntity> list1 = followPlatformService.list();
        Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
        List<FollowTraderUserEntity> ls=new ArrayList<FollowTraderUserEntity>();
+       Map<String,FollowTraderEntity> map=new HashMap<>();
         list.forEach(t->{
-            FollowTraderUserEntity entity =new FollowTraderUserEntity();
-            entity.setId(t.getId());
-            entity.setAccount(t.getAccount());
-            entity.setPassword(t.getPassword());
-            entity.setPlatformId(t.getPlatformId());
-            entity.setPlatform(t.getPlatform());
-            entity.setPassword(t.getPassword());
-            entity.setAccountType("MT4");
-            entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
-            entity.setGroupName("默认");
-            entity.setGroupId(1);
-            entity.setStatus(1);
-            entity.setDeleted(0);
-            ls.add(entity);
+            FollowTraderEntity one = map.put(t.getAccount() + t.getPlatformId(), t);
+            if(one==null){
+                FollowTraderUserEntity entity =new FollowTraderUserEntity();
+                entity.setId(t.getId());
+                entity.setAccount(t.getAccount());
+                entity.setPassword(t.getPassword());
+                entity.setPlatformId(t.getPlatformId());
+                entity.setPlatform(t.getPlatform());
+                entity.setPassword(t.getPassword());
+                entity.setAccountType("MT4");
+                entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
+                entity.setGroupName("默认");
+                entity.setGroupId(1);
+                entity.setStatus(1);
+                entity.setDeleted(0);
+                ls.add(entity);
+                map.put(t.getAccount() + t.getPlatformId(), t);
+            }
+
         });
         followTraderUserService.saveBatch(ls);
     }*/
@@ -100,9 +107,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 }
     @GetMapping("page")
     @Operation(summary = "分页")
-    public Result<PageResult<FollowTraderUserVO>> page(@ParameterObject @Valid FollowTraderUserQuery query){
-        PageResult<FollowTraderUserVO> page =followTraderUserService.searchPage(query);
-        return Result.ok(page);
+    public Result<TraderUserStatVO> page(@ParameterObject @Valid FollowTraderUserQuery query){
+        TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(query);
+        return Result.ok(traderUserStatVO);
     }
 
     //挂靠vps
@@ -122,7 +129,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("getStatInfo")
     @Operation(summary = "信息")
     public Result<TraderUserStatVO> getStatInfo(){
-        TraderUserStatVO data = followTraderUserService.getStatInfo();
+        TraderUserStatVO data = followTraderUserService.getStatInfo(null);
 
         return Result.ok(data);
     }
