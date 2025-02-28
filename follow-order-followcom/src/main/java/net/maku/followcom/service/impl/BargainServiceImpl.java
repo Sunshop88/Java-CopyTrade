@@ -5,17 +5,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.dto.MasOrderSendDto;
+import net.maku.followcom.entity.FollowOrderInstructEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.security.user.SecurityUser;
 import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,7 +37,8 @@ public class BargainServiceImpl implements BargainService {
     @Override
     public void masOrderSend(MasOrderSendDto vo, HttpServletRequest request) {
         //创建父指令
-
+        FollowOrderInstructEntity followOrderInstructEntity = FollowOrderInstructEntity.builder().instructionType(vo.getType()).creator(SecurityUser.getUserId()).createTime(LocalDateTime.now()).build();
+        followOrderInstructService.save(followOrderInstructEntity);
         vo.getTraderList().forEach(o->{
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(o);
             List<FollowTraderEntity> followTraderEntityList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()));

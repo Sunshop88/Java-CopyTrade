@@ -1,9 +1,11 @@
 package net.maku.followcom.entity;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -15,6 +17,7 @@ import java.util.Date;
 
 @Data
 @TableName("follow_order_instruct")
+@Builder
 public class FollowOrderInstructEntity {
 	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")
@@ -108,7 +111,7 @@ public class FollowOrderInstructEntity {
 	* 创建时间
 	*/
 	@TableField(value = "create_time", fill = FieldFill.INSERT)
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	/**
 	* 更新者
@@ -120,6 +123,12 @@ public class FollowOrderInstructEntity {
 	* 更新时间
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
+
+	/**
+	 * 指令结束时间
+	 */
+	@TableField(value = "end_time")
+	private LocalDateTime endTime;
 }

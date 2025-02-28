@@ -2,6 +2,8 @@ package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
@@ -46,11 +48,8 @@ public class FollowOrderInstructSubVO implements Serializable {
 	@Schema(description = "手数")
 	private BigDecimal lots;
 
-	@Schema(description = "指令开始时间")
-	private Date startTime;
-
 	@Schema(description = "指令结束时间")
-	private Date endTime;
+	private LocalDateTime endTime;
 
 	@Schema(description = "版本号")
 	private Integer version;
@@ -62,12 +61,12 @@ public class FollowOrderInstructSubVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }
