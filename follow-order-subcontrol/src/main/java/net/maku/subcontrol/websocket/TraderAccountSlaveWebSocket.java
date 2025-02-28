@@ -8,7 +8,10 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.service.impl.FollowTraderServiceImpl;
@@ -22,6 +25,7 @@ import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import online.mtapi.mt4.PlacedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -89,7 +93,10 @@ public class TraderAccountSlaveWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId), 0, 2, TimeUnit.SECONDS);
+        List<Long> list = listFollow.stream().map(o -> o.getId()).toList();
+        Map<Long, FollowTraderEntity> collect = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, list)).stream().collect(Collectors.toMap(FollowTraderEntity::getId, i -> i));
+        Map<Long, FollowTraderSubscribeEntity> collect1 = followTraderSubscribeService.getSubscribeOrder(Long.valueOf(traderId)).stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, i -> i));
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId,collect,collect1), 0, 2, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
@@ -99,13 +106,25 @@ public class TraderAccountSlaveWebSocket {
     }
 
 
-    private void sendPeriodicMessage(String page ,String limit,String traderId) {
+    private void sendPeriodicMessage(String page , String limit, String traderId, Map<Long, FollowTraderEntity> traderEntityMap,Map<Long, FollowTraderSubscribeEntity>  followTraderSubscribeEntity) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
         listFollow.forEach(o->{
+            FollowTraderEntity trader = traderEntityMap.get(o.getId());
+            FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeEntity.get(o.getId());
             FollowRedisTraderVO followRedisTraderVO =new FollowRedisTraderVO();
             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_USER + o.getId()))) {
                 followRedisTraderVO = (FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + o.getId());
+                if (ObjectUtil.isEmpty(followRedisTraderVO.getAccount())){
+                    followRedisTraderVO.setFollowMode(getfollowMode(followTraderSubscribe));
+                    followRedisTraderVO.setFollowStatus(followTraderSubscribe.getFollowStatus());
+                    followRedisTraderVO.setAccount(trader.getAccount());
+                    followRedisTraderVO.setConnectionStatus(trader.getStatus());
+                    followRedisTraderVO.setPlacedType(ObjectUtil.isNotEmpty( followTraderSubscribe.getPlacedType())? PlacedType.forValue(followTraderSubscribe.getPlacedType()).name():"Client");
+                    followRedisTraderVO.setRemark(trader.getRemark());
+                    followRedisTraderVO.setPlatform(trader.getPlatform());
+                    followRedisTraderVO.setLeverage(trader.getLeverage());
+                }
                 List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(followRedisTraderVO.getTraderId());
                 followRedisTraderVO.setSlaveNum(subscribeOrder.size());
             }
@@ -154,4 +173,21 @@ public class TraderAccountSlaveWebSocket {
         return sessionPool.containsKey(page + limit+traderId);
     }
 
+    private String getfollowMode(FollowTraderSubscribeEntity followSub) {
+        String direction = followSub.getFollowDirection() == 0 ? "正" : "反";
+        //  0-固定手数 1-手数比例 2-净值比例
+        String mode =null;
+        switch (followSub.getFollowMode()) {
+            case(0):
+                mode="固定";
+                break;
+            case(1):
+                mode="手";
+                break;
+            case(2):
+                mode="净";
+                break;
+        }
+        return direction+"|"+mode+"*"+followSub.getFollowParam();
+    }
 }

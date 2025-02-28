@@ -141,7 +141,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info("发送消息"+leader.getId());
                 traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
                 pendingMessages.remove(leader.getId().toString());
-            }, 100, TimeUnit.MILLISECONDS);
+            }, 50, TimeUnit.MILLISECONDS);
             // 更新缓存中的任务
             pendingMessages.put(leader.getId().toString(), newTask);
         }
