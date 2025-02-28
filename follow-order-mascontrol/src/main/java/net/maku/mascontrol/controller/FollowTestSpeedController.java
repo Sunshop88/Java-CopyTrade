@@ -154,6 +154,9 @@ public class FollowTestSpeedController {
             try {
                 extracted(vps, servers, overallResult, headers);
             } catch (Exception e) {
+                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+                overallResult.setId(overallResult.getId());
+                followTestSpeedService.update(overallResult);
                 log.error("测速过程出现异常: {}", e.getMessage());
             }
         });
@@ -217,6 +220,7 @@ public class FollowTestSpeedController {
         // 更新 overallResult 状态
         overallResult.setStatus(allSuccess ? VpsSpendEnum.SUCCESS.getType() : VpsSpendEnum.FAILURE.getType());
         update(overallResult); // 更新数据库中的状态
+        log.info("异步测速任务结束");
         executorService.shutdown(); // 关闭线程池
     }
 
