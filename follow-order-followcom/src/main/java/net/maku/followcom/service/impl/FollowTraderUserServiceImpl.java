@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
 import net.maku.followcom.entity.*;
@@ -373,6 +374,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
         followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
         followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+        followUploadTraderUserVO.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
         followUploadTraderUserService.save(followUploadTraderUserVO);
         Long savedId = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
 
@@ -393,49 +395,22 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
             List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
             if (ObjectUtil.isNotEmpty(followTraderEntities)) {
-                String originalPassword = AesUtils.decryptStr(followTraderEntities.getFirst().getPassword()); // 保存原始密码
                 for (FollowTraderEntity followTraderEntity : followTraderEntities) {
-                    followTraderEntity.setPassword(s);
-                    followTraderService.updateById(followTraderEntity);
-
-                    QuoteClient quoteClient = null;
-                    try {
-                        // 修改 MT4 密码
-                        quoteClient.ChangePassword(vo.getPassword(), false);
-                    } catch (IOException e) {
-                        log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
-                        try {
-                            // 恢复 MT4 密码
-                            quoteClient.ChangePassword(originalPassword, false);
-                        } catch (Exception ex) {
-                            log.error("恢复MT4密码失败: " + followTraderEntity.getIpAddr(), ex);
-//                        remark = "恢复MT4密码失败; ";
-                        }
-                    } catch (online.mtapi.mt4.Exception.ServerException e) {
-                        log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
-                        try {
-                            // 恢复 MT4 密码
-                            quoteClient.ChangePassword(originalPassword, false);
-                        } catch (Exception ex) {
-                            log.error("恢复MT4密码失败: " + followTraderEntity.getIpAddr(), ex);
-//                        remark = "恢复MT4密码失败; ";
-                        }
-                    }
-
+                    // 账号正常登录
+                    FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+                    followTraderVO.setNewPassword(password);
                     String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
                     RestTemplate restTemplate = new RestTemplate();
 
                     // 使用提前提取的 headers 构建请求头
                     HttpHeaders httpHeaders = new HttpHeaders();
                     httpHeaders.setAll(headers);  // 注入提前获取的请求头
-                    HttpEntity<String> entity = new HttpEntity<>(followTraderEntity.getId().toString(), httpHeaders);
+                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
 
                     ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                     if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
-                        // 恢复 MT4 密码
-                        quoteClient.ChangePassword(originalPassword, false);
-                        log.error("账号重连失败: " + followTraderEntity.getIpAddr());
-//                    remark = "重连失败; ";
+//                    quoteClient.ChangePassword(originalPassword, false);
+                        log.error("账号重连失败: " + followTraderEntity.getAccount());
                     }
                 }
             }
@@ -468,6 +443,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setSuccessCount(successCount);
         followUploadTraderUserVO.setFailureCount(failureCount);
         followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+        followUploadTraderUserVO.setId(savedId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
     }
 
@@ -488,31 +464,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             String originalPassword = AesUtils.decryptStr(followTraderEntities.getFirst().getPassword()); // 保存原始密码
             for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                 // 账号正常登录
-                followTraderEntity.setPassword(s);
-                followTraderService.updateById(followTraderEntity);
-
-                QuoteClient quoteClient = null;
-                try {
-                    // 修改 MT4 密码
-                    quoteClient.ChangePassword(vo.getPassword(), false);
-                } catch (IOException e) {
-                    quoteClient.ChangePassword(originalPassword, false);
-                    log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
-                } catch (online.mtapi.mt4.Exception.ServerException e) {
-                    log.error("MT4修改密码异常, 检查参数" + "密码：" + vo.getPassword() + "是否投资密码" + false + ", 异常原因" + e);
-                }
-
+                FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+                followTraderVO.setNewPassword(vo.getPassword());
                 String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
                 RestTemplate restTemplate = new RestTemplate();
 
                 // 使用提前提取的 headers 构建请求头
                 HttpHeaders httpHeaders = new HttpHeaders();
                 httpHeaders.setAll(headers);  // 注入提前获取的请求头
-                HttpEntity<String> entity = new HttpEntity<>(followTraderEntity.getId().toString(), httpHeaders);
+                HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
 
                 ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                 if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
-                    quoteClient.ChangePassword(originalPassword, false);
+//                    quoteClient.ChangePassword(originalPassword, false);
                     log.error("账号重连失败: " + followTraderEntity.getAccount());
                 }
             }

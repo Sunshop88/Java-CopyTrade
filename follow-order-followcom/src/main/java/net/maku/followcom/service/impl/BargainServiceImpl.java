@@ -7,10 +7,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
-import net.maku.followcom.service.BargainService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderUserService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.framework.common.utils.Result;
@@ -32,9 +29,12 @@ public class BargainServiceImpl implements BargainService {
     private final FollowVpsService followVpsService;
     private final FollowTraderUserService followTraderUserService;
     private final FollowTraderService followTraderService;
+    private final FollowOrderInstructService followOrderInstructService;
+
     @Override
     public void masOrderSend(MasOrderSendDto vo, HttpServletRequest request) {
         //创建父指令
+
         vo.getTraderList().forEach(o->{
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(o);
             List<FollowTraderEntity> followTraderEntityList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()));

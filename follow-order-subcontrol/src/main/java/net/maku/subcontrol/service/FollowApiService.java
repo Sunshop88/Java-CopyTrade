@@ -2,7 +2,9 @@ package net.maku.subcontrol.service;
 
 
 import jakarta.validation.Valid;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.vo.*;
+import online.mtapi.mt4.QuoteClient;
 
 import java.util.List;
 
@@ -51,4 +53,6 @@ public interface FollowApiService {
     Boolean repairOrder(RepairOrderVO vo);
 
     List<OpenOrderInfoVO> openedOrders(OpenOrderVO vo);
+
+    QuoteClient getQuoteClient(Long traderId, FollowTraderEntity entity, QuoteClient quoteClient);
 }
