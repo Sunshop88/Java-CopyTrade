@@ -13,10 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowVpsConvert;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
@@ -382,7 +379,11 @@ public class FollowVpsController {
         if(query.getNewVpsId().contains(query.getOldVpsId())){
             return Result.error("新vps和旧vps不能相同");
         }
-        //根据oloVpsId更改
+        //根据oloVpsId更改copyStatus
+        LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
+                .set(FollowVpsEntity::getCopyStatus, "0");
+        followVpsService.update(wrapper);
         followTestDetailService.copyDefaultNode(query);
         return Result.ok("正在进行，请稍等");
     }

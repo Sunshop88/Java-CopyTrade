@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
@@ -15,10 +16,7 @@ import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTestDetailService;
-import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowTestDetailExcelVO;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTraderCountVO;
@@ -62,6 +60,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
     private final FollowVpsServiceImpl followVpsServiceImpl;
     private final RedisUtil redisUtil;
     private  final FollowBrokeServerService followBrokeServerService;
+    private final FollowVpsService followVpsService;
 
     public PageResult<String[]> page(FollowTestDetailQuery query) {
         List<FollowTestDetailEntity> allRecords = baseMapper.selectList(getWrapper(query));
@@ -802,8 +801,16 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 // 等待所有任务完成
                 CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
                 allFutures.get(30, TimeUnit.MINUTES);
+                LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
+                wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
+                        .set(FollowVpsEntity::getCopyStatus, "2");
+                followVpsService.update(wrapper);
                 log.info("所有任务执行成功");
             } catch (Exception e) {
+                LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
+                wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
+                        .set(FollowVpsEntity::getCopyStatus, "1");
+                followVpsService.update(wrapper);
                 log.error("任务执行失败", e);
                 throw new RuntimeException("任务执行失败", e);
             } finally {
