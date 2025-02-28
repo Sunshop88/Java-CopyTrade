@@ -64,6 +64,7 @@ public class FollowTraderUserController {
     private final FollowPlatformService followPlatformService;
     private final FollowTestDetailService followTestDetailService;
     private final FollowFailureDetailService followFailureDetailService;
+    private final FollowTraderService followTraderService;
 
 
 /*   @PostConstruct
@@ -90,7 +91,12 @@ public class FollowTraderUserController {
         });
         followTraderUserService.saveBatch(ls);
     }*/
-    
+@GetMapping("/getTrader/info")
+@Operation(summary = "获取账号列表")
+public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer type,@RequestParam("vpsId") Integer vpsId){
+    List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(type != null, FollowTraderEntity::getType, type).eq(vpsId != null, FollowTraderEntity::getServerId, vpsId));
+    return Result.ok(list);
+}
     @GetMapping("page")
     @Operation(summary = "分页")
     public Result<PageResult<FollowTraderUserVO>> page(@ParameterObject @Valid FollowTraderUserQuery query){

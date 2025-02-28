@@ -97,7 +97,9 @@ public class BargainController {
 
         }
         users.forEach(user -> {
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, null);
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("traderId", user.getId());
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject);
         });
         return Result.ok();
     }

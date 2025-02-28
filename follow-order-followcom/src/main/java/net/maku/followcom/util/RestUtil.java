@@ -14,6 +14,7 @@ import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -382,22 +383,29 @@ public class RestUtil {
                     });
                 }
                 if(!sb.isEmpty()){
-                    url=url+"?"+sb.toString();
+                    url=url+"?"+sb.toString().substring(0,sb.toString().length()-1);
                 }
             }
-            response=  restTemplate.exchange(url, method, entity, byte[].class,map);
+            try {
+                response=  restTemplate.exchange(url, method, entity, byte[].class,map);
+            } catch (Exception e) {
+                log.error("response远程调用异常: {}", e);
+            }
         }else{
             response = restTemplate.exchange(url, method, entity, byte[].class);
         }
 
-        byte[] data = response.getBody();
-        JSONObject body = JSON.parseObject(new String(data));
-        log.info("远程调用响应:{}", body);
-        if (body != null && !body.getString("code").equals("0")) {
-            String msg = body.getString("msg");
-            log.error("远程调用异常: {}", body.get("msg"));
-            return    Result.error("远程调用异常: " + body.get("msg"));
+        if(response!=null && response.getBody()!=null) {
+            byte[] data = response.getBody();
+            JSONObject body = JSON.parseObject(new String(data));
+            log.info("远程调用响应:{}", body);
+            if (body != null && !body.getString("code").equals("0")) {
+                String msg = body.getString("msg");
+                log.error("远程调用异常: {}", body.get("msg"));
+                return Result.error("远程调用异常: " + body.get("msg"));
+            }
+            return Result.ok(body.get("data")==null?"成功":body.get("data"));
         }
-        return Result.ok(body.get("data"));
+       return Result.error();
     }
 }

@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import net.maku.framework.common.utils.PageResult;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,6 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 public class BargainAccountVO {
 
+    List<List<BigDecimal>> statList;
     //账号列表 数量
     private Integer accountNum;
    //账号连接
@@ -25,6 +27,8 @@ public class BargainAccountVO {
     private Integer accountDisconnectedNum;
     //总可用款
     private BigDecimal paragraph;
+    //持仓概览统计
+
     //账号列表
    private PageResult<FollowTraderUserVO>  traderUserPage;
     private List<OrderActiveInfoVO> orderActiveInfoList;

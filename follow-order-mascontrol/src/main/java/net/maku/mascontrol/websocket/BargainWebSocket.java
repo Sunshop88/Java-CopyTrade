@@ -28,17 +28,12 @@ import net.maku.framework.common.utils.PageResult;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.rmi.ServerException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static dm.jdbc.util.DriverUtil.log;
@@ -85,6 +80,34 @@ public class BargainWebSocket {
                 if(ObjectUtil.isNotEmpty(currentAccountId)) {
                     getActive(currentAccountId,bargainAccountVO);
                 }
+                //概览
+                List<List<BigDecimal>> statList = new ArrayList<>();
+                List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<FollowTraderEntity> traders = followTraderService.list();
+                Map<String,JSONObject> map = new ConcurrentHashMap<>();
+                traders.forEach(t->{
+                    JSONObject json = map.get(t.getAccount() + "-" + t.getPlatformId());
+                    if(json == null) {
+                        //判断是否连接成功
+                        if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
+                            json = new JSONObject();
+                            BigDecimal tBuylots = json.getBigDecimal("tBuylots");
+                            FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
+                            //多单
+                            tBuylots.add(new BigDecimal(o1.getBuyNum()+o1.getSellNum()));
+                            //
+                        }
+
+
+                       // tlots.add(tlots.);
+                    }
+
+                    
+                });
+              //  ls1.set(0, new BigDecimal(masterTotal.toString()));
+                statList.add(ls1);
+                statList.add(ls2);
                 ObjectMapper objectMapper = new ObjectMapper();
                 JavaTimeModule javaTimeModule = new JavaTimeModule();
                 //格式化时间格式
