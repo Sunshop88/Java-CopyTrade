@@ -28,6 +28,7 @@ import net.maku.subcontrol.task.UpdateTraderInfoTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -151,17 +152,7 @@ public class InitRunner implements ApplicationRunner {
                 //账户信息缓存
                 followTraderService.getFollowById(o.getId());
                 //品种规格缓存
-                List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList=new ArrayList<>();
-                followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getProfitMode,FollowConstant.PROFIT_MODE).eq(FollowSysmbolSpecificationEntity::getTraderId, o.getId())).stream().toList().stream().forEach(sy->{
-                    if (ObjectUtil.isEmpty(sy.getStdSymbol())){
-                        log.info("品种"+sy.getSymbol());
-                        //标准品种保存
-                        sy.setStdSymbol(processString(sy.getSymbol()));
-                        followSysmbolSpecificationEntityList.add(sy);
-                    }
-                });
-                //保存数据
-                followSysmbolSpecificationService.saveOrUpdateBatch(followSysmbolSpecificationEntityList);
+                followSysmbolSpecificationService.getByTraderId(o.getId());
             });
         });
 
@@ -188,24 +179,5 @@ public class InitRunner implements ApplicationRunner {
             });
         });
 
-    }
-
-    public static String processString(String input) {
-        // 如果字符串包含 '.'，截取 . 后面的部分
-        if (input.contains(".")) {
-            return input.substring(0, input.indexOf("."));
-        }
-
-        // 如果不包含 '.', 判断是否包含需要截取的字符
-        String[] substringsToRemove = {"-", "'", "zero","+", "dec24","ft","r","#","i","x"};
-
-        for (String substr : substringsToRemove) {
-            if (input.contains(substr)) {
-                // 一旦找到包含的字符串，截取掉
-                input = input.substring(0, input.indexOf(substr));
-            }
-        }
-
-        return input;
     }
 }

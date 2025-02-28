@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.query.FollowOrderSpliListQuery;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.FollowOrderSlipPointVO;
@@ -189,6 +190,8 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
             if(!"1970-01-01".equals(time)){
                 entity.setCloseTime(order.CloseTime);
                 entity.setCloseServerHost(quoteClient.Host+":"+ quoteClient.Port);
+                entity.setCloseStatus(CloseOrOpenEnum.OPEN.getValue());
+                entity.setRemark(null);
             }
 
         }

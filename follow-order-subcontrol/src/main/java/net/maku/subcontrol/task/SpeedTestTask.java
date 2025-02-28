@@ -237,6 +237,7 @@ public class SpeedTestTask {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                        result=true;
                     }else {
                         log.info(traderId+"重复提交并等待失败");
                     }

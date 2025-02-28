@@ -1,15 +1,16 @@
 package net.maku.followcom.service;
 
 import net.maku.followcom.entity.FollowTestDetailEntity;
-import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
+import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 测速详情
@@ -53,4 +54,8 @@ public interface FollowTestDetailService extends BaseService<FollowTestDetailEnt
     List<FollowTestDetailVO> selectServer1(FollowTestServerQuery followTestServerQuery);
 
     void importByExcel(MultipartFile file) throws Exception;
+
+    CompletableFuture<Void> copyDefaultNode(FollowVpsQuery query);
+
+    void uploadDefaultNode(MultipartFile file, List<Integer> vpsId);
 }

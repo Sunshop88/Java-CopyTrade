@@ -88,9 +88,19 @@
         ON t1.id = t2.id
         LEFT JOIN follow_platform fp ON t1.server_name = fp.server
         <where>
-            <if test="query.brokerName != null and query.brokerName != ''">
-                AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
-            </if>
+            <choose>
+                <when test="query.brokerName == null or query.brokerName == ''">
+                    <!-- 不添加任何条件 -->
+                </when>
+                <when test="query.brokerName != null and query.brokerName.trim() == ''">
+                    AND fp.broker_name IS NULL
+                </when>
+                <otherwise>
+                    <if test="query.brokerName != null and query.brokerName.trim() != ''">
+                        AND fp.broker_name LIKE CONCAT('%', #{query.brokerName}, '%')
+                    </if>
+                </otherwise>
+            </choose>
             <if test="query.serverName != null and query.serverName != ''">
                 AND t1.server_name LIKE CONCAT('%', #{query.serverName}, '%')
             </if>
@@ -177,6 +187,12 @@
             </if>
             <if test="query.isDefaultServer != null and query.isDefaultServer != ''">
                 AND t1.is_default_server = #{query.isDefaultServer}
+            </if>
+            <if test="query.vpsIdList != null and query.vpsIdList.size() > 0">
+                AND t1.vps_id IN
+                <foreach item="item" collection="query.vpsIdList" separator="," open="(" close=")" index="">
+                    #{item}
+                </foreach>
             </if>
         </where>
     </select>

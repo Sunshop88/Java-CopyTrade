@@ -91,7 +91,7 @@ public class TraderOrderSendWebSocket {
             sessionPool.put(traderId+symbol, sessionSet);
             log.info("订阅该品种{}+++{}",symbol,traderId);
             FollowTraderEntity followTraderEntity=followTraderService.getById(Long.valueOf(traderId));
-            QuoteClient quoteClient = null;
+            QuoteClient quoteClient;
             AbstractApiTrader abstractApiTrader;
             if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
                 abstractApiTrader =leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -125,6 +125,7 @@ public class TraderOrderSendWebSocket {
                             log.info(traderId+"重复提交并等待完成");
                             quoteClient = leaderApiTrader.quoteClient;
                         }else {
+                            quoteClient = null;
                             log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
@@ -164,6 +165,7 @@ public class TraderOrderSendWebSocket {
                             log.info(traderId+"重复提交并等待完成");
                             quoteClient = copierApiTrader.quoteClient;
                         }else {
+                            quoteClient = null;
                             log.info(traderId+"重复提交并等待失败");
                         }
                     } else {
@@ -178,11 +180,10 @@ public class TraderOrderSendWebSocket {
                 throw new ServerException(traderId+"登录异常");
             }
             QuoteEventArgs eventArgs = null;
-
             //查询平台信息
             FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
             //获取symbol信息
-            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(symbol)).toList();
+            List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->o.getSymbol().contains(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
                 for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
                     this.symbol=o.getSymbol();
@@ -194,16 +195,13 @@ public class TraderOrderSendWebSocket {
                 }
                 if (ObjectUtil.isEmpty(eventArgs)){
                     this.symbol=symbol;
-                    eventArgs = getEventArgs(quoteClient);
                 }
             }else {
                 // 查看品种匹配 模板
                 List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
                 List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(followPlatform.getBrokerName())&&o.getStdSymbol().equals(symbol)).toList();
                 log.info("匹配品种"+listv);
-                if (ObjectUtil.isEmpty(listv)){
-                    eventArgs = getEventArgs(quoteClient);
-                }else {
+                if (ObjectUtil.isNotEmpty(listv)){
                     for (FollowVarietyEntity o:listv){
                         if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
                             //查看品种规格
@@ -217,16 +215,14 @@ public class TraderOrderSendWebSocket {
                     }
                     if (ObjectUtil.isEmpty(eventArgs)){
                         this.symbol=symbol;
-                        eventArgs = getEventArgs(quoteClient);
                     }
                 }
             }
 
             //开启定时任务
-            QuoteEventArgs finalEventArgs = eventArgs;
             this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    sendPeriodicMessage(followTraderEntity, finalEventArgs,symbol);
+                    sendPeriodicMessage(followTraderEntity,symbol,quoteClient);
                 } catch (Exception e) {
                     log.info("WebSocket建立连接异常" + e);
                     throw new RuntimeException();
@@ -262,7 +258,8 @@ public class TraderOrderSendWebSocket {
         }
     }
 
-    private void sendPeriodicMessage(FollowTraderEntity trader,QuoteEventArgs eventArgs,String symbol){
+    private void sendPeriodicMessage(FollowTraderEntity trader,String symbol,QuoteClient quoteClient){
+        QuoteEventArgs eventArgs = getEventArgsSche(quoteClient);
         if (eventArgs != null) {
             //立即查询
             //查看当前账号订单完成进度
@@ -285,10 +282,32 @@ public class TraderOrderSendWebSocket {
         }
     }
 
+    private QuoteEventArgs getEventArgsSche(QuoteClient quoteClient){
+        QuoteEventArgs eventArgs = null;
+        try {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
+                //订阅
+                quoteClient.Subscribe(this.symbol);
+            }
+            while (eventArgs==null && quoteClient.Connected()) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                eventArgs=quoteClient.GetQuote(this.symbol);
+            }
+            return eventArgs;
+        }catch (Exception e) {
+            return eventArgs;
+        }
+    }
 
     @OnClose
     public void onClose() {
         try {
+            Set<Session> sessionSet = sessionPool.get(traderId+symbol);
+            if (ObjectUtil.isEmpty(sessionSet))return;
             sessionPool.get(traderId+symbol).remove(session);
             log.info("取消订阅该品种{}++++{}",symbol,traderId);
         } catch (Exception e) {

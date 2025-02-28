@@ -14,14 +14,13 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowVpsConvert;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.VpsSpendEnum;
+import net.maku.followcom.query.FollowTestDetailQuery;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.vo.*;
@@ -34,7 +33,6 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
-import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -377,12 +375,38 @@ public class FollowVpsController {
         return Result.ok("修改完成");
     }
 
+    @PutMapping("copyDefaultNode")
+    @Operation(summary = "复制默认节点")
+    public Result<String> copyDefaultNode(@RequestBody FollowVpsQuery query ) {
+        if(query.getNewVpsId().contains(query.getOldVpsId())){
+            return Result.error("新vps和旧vps不能相同");
+        }
+        //根据oloVpsId更改copyStatus
+        LambdaUpdateWrapper<FollowVpsEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(FollowVpsEntity::getId, query.getOldVpsId())
+                .set(FollowVpsEntity::getCopyStatus, "1");
+        followVpsService.update(wrapper);
+        followTestDetailService.copyDefaultNode(query);
+        return Result.ok("正在进行，请稍等");
+    }
+
+    @PutMapping("uploadDefaultNode")
+    @Operation(summary = "上传默认节点")
+    public Result<String> uploadDefaultNode(@RequestParam(value = "file") MultipartFile file, @RequestParam(value = "vpsId") List<Integer> vpsId) throws Exception {
+        //检查是否为Excel文件
+        if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx"))) {
+            return Result.error("请上传Excel文件");
+        }
+        followTestDetailService.uploadDefaultNode(file,vpsId);
+        return Result.ok("修改完成");
+    }
+
     @PutMapping("updateServer")
     @Operation(summary = "修改服务器节点")
     public Result<String> updateServer(@RequestParam(value = "oldVpsId") Integer oldVpsId ,@RequestParam(value = "vpsId") Integer vpsId ) {
-        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED +oldVpsId);
-        objectObjectMap.forEach((k,v)->{
-            redisUtil.hSet(Constant.VPS_NODE_SPEED +vpsId,String.valueOf(k),String.valueOf(v));
+        Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED + oldVpsId);
+        objectObjectMap.forEach((k, v) -> {
+            redisUtil.hSet(Constant.VPS_NODE_SPEED + vpsId, String.valueOf(k), String.valueOf(v));
         });
         return Result.ok("修改完成");
     }

@@ -51,7 +51,6 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
      * 收到开仓信号处理操作
      */
     @Override
-    @Transactional
     public void operate(AbstractApiTrader abstractApiTrader, EaOrderInfo orderInfo, int flag) {
         FollowTraderEntity trader = abstractApiTrader.getTrader();
         //查看跟单关系

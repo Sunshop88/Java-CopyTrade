@@ -154,6 +154,9 @@ public class FollowTestSpeedController {
             try {
                 extracted(vps, servers, overallResult, headers);
             } catch (Exception e) {
+                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+                overallResult.setId(overallResult.getId());
+                followTestSpeedService.update(overallResult);
                 log.error("测速过程出现异常: {}", e.getMessage());
             }
         });
@@ -217,6 +220,7 @@ public class FollowTestSpeedController {
         // 更新 overallResult 状态
         overallResult.setStatus(allSuccess ? VpsSpendEnum.SUCCESS.getType() : VpsSpendEnum.FAILURE.getType());
         update(overallResult); // 更新数据库中的状态
+        log.info("异步测速任务结束");
         executorService.shutdown(); // 关闭线程池
     }
 
@@ -759,10 +763,10 @@ public class FollowTestSpeedController {
                             HttpEntity<String> entity = new HttpEntity<>(serverName, httpHeaders);
 
                             ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                            log.info("测速ip:{}的请求响应结果: {}",vpsEntityOptional.getIpAddress(),response.getBody());
+                            log.info("连接ip:{}的请求响应结果: {}",vpsEntityOptional.getIpAddress(),response.getBody());
 
                             if (!response.getBody().getString("msg").equals("success")) {
-                                log.error("测速失败 ip: {}", vpsEntityOptional.getIpAddress());
+                                log.error("连接失败 ip: {}的请求响应结果失败", vpsEntityOptional.getIpAddress());
                             }
                         }
                     }

@@ -172,7 +172,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return followTraderVO;
     }
 
-    private void addSysmbolSpecification(long traderId, QuoteClient quoteClient) {
+    private void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient) {
         Long userId = SecurityUser.getUserId();
         LocalDateTime localDateTime = LocalDateTime.now();
         ThreadPoolUtils.execute(() -> {
@@ -183,7 +183,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         SymbolInfo symbolInfo = quoteClient.GetSymbolInfo(o);
                         ConGroupSec conGroupSec = quoteClient.GetSymbolGroupParams(o);
                         FollowSysmbolSpecificationVO followSysmbolSpecificationVO = new FollowSysmbolSpecificationVO();
-                        followSysmbolSpecificationVO.setTraderId(traderId);
+                        followSysmbolSpecificationVO.setTraderId(entity.getId());
                         followSysmbolSpecificationVO.setDigits(symbolInfo.Digits);
                         followSysmbolSpecificationVO.setContractSize(symbolInfo.ContractSize);
                         followSysmbolSpecificationVO.setLotStep(Double.valueOf(conGroupSec.lot_step)*0.01);
@@ -202,18 +202,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setFreezeLevel(symbolInfo.FreezeLevel);
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
-                        if (followSysmbolSpecificationVO.getProfitMode().equals(FollowConstant.PROFIT_MODE)){
-                            String stdSymbol = SymbolUtils.processString(followSysmbolSpecificationVO.getSymbol());
-                            followSysmbolSpecificationVO.setStdSymbol(stdSymbol);
-                        }
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
                     } catch (InvalidSymbolException |ConnectException e) {
-                        log.error(traderId+"添加品种规格异常"+o+"异常信息"+e.getMessage());
+                        log.error(entity.getId()+"添加品种规格异常"+o+"异常信息"+e.getMessage());
                     }
                 });
                 //查询改账号的品种规格
-                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-                redisCache.set(Constant.SYMBOL_SPECIFICATION + traderId, list);
+                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, entity.getId()));
+                redisCache.set(Constant.SYMBOL_SPECIFICATION + entity.getId(), list);
+                Cache cache = cacheManager.getCache("followSymbolCache");
+                if (cache != null) {
+                    cache.evict(entity.getId()); // 移除指定缓存条目
+                }
             } catch (TimeoutException e) {
                 throw new RuntimeException(e);
             } catch (ConnectException e) {
@@ -464,7 +464,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     oc.OrderClose(vo.getSymbol(), vo.getOrderNo(), vo.getSize(), ask, 0);
                 }
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
             } catch (Exception e) {
                 log.error(vo.getOrderNo()+"平仓出错" + e.getMessage());
             }
@@ -759,7 +759,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             entity.setCreateTime(LocalDateTime.now());
             this.updateById(entity);
             //增加品种规格记录
-            addSysmbolSpecification(entity.getId(), quoteClient);
+            addSysmbolSpecification(entity, quoteClient);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -918,13 +918,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
                 long start = System.currentTimeMillis();
                 orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
                 long end = System.currentTimeMillis();
-                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.closeTimeDifference+"外部时间差:"+(end-start));
+                log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));
             }
             log.info("订单 " + orderNo + ": 平仓 " + orderResult);

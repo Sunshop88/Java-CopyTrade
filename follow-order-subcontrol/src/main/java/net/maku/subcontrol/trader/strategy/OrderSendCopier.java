@@ -49,7 +49,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
 
 
     @Override
-    @Transactional
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
         log.info(":请求进入时间1"+trader.getTrader().getId()+":"+orderInfo.getMasterId());
         orderInfo.setSlaveReceiveOpenTime(LocalDateTime.now());
@@ -64,30 +63,31 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
         // 先查询品种规格是否可以匹配
         String stdSymbol =orderInfo.getOriSymbol();
-        Optional<FollowSysmbolSpecificationEntity> specificationEntity = followSysmbolSpecificationService.getByTraderId(followTraderEntity.getId()).stream().filter(o ->o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getSymbol().equals(orderInfo.getOriSymbol())).findFirst();
-        if (specificationEntity.isPresent()&&ObjectUtil.isNotEmpty(specificationEntity.get().getStdSymbol())){
+        List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+        Optional<FollowVarietyEntity> first = followVarietyEntityList.stream().filter(o -> orderInfo.getOriSymbol().contains(o.getStdSymbol())).findFirst();
+        FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
+        if (first.isPresent()){
             //查找到标准品种
-            stdSymbol=specificationEntity.get().getStdSymbol();
-            log.info("OrderSendCopier 主账号 品种规格标准品种"+stdSymbol);
+            stdSymbol=first.get().getStdSymbol();
+            log.info("OrderSendCopier 主账号 标准品种"+stdSymbol);
         }else {
             // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList= followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
             List<FollowVarietyEntity> collect = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&&ObjectUtil.isNotEmpty(o.getBrokerSymbol())&&o.getBrokerSymbol().equals(orderInfo.getOriSymbol())&&o.getBrokerName().equals(followPlatform.getBrokerName())).collect(Collectors.toList());
             log.info("collect"+collect);
             if (ObjectUtil.isNotEmpty(collect)) {
                 stdSymbol = collect.get(0).getStdSymbol();
             }else {
                 log.info("未发现此订单品种匹配{},品种{}",orderInfo.getTicket(),orderInfo.getOriSymbol());
+                //没有标准品种 报错
+                setOrderDetail(copier,orderInfo,stdSymbol,copyPlat);
+                return;
             }
-
         }
         //获得跟单账号对应品种
-        FollowPlatformEntity copyPlat = followPlatformService.getPlatFormById(copier.getPlatformId().toString());
         String finalStdSymbol = stdSymbol;
         List<String> symbolList = orderInfo.getSymbolList();
-
         //查询品种规格数据
-        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->ObjectUtil.isNotEmpty(o.getStdSymbol())&&o.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&o.getStdSymbol().equals(finalStdSymbol)).toList();
+        List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->o.getSymbol().contains(finalStdSymbol)).toList();
         if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
             sysmbolSpecificationEntity.forEach(o->{
                         try{
@@ -172,6 +172,26 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
         }
 
+    }
+
+    private void setOrderDetail(FollowTraderEntity copier,EaOrderInfo orderInfo,String stdSymbol,FollowPlatformEntity copyPlat) {
+        FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
+        followOrderDetailEntity.setTraderId(copier.getId());
+        followOrderDetailEntity.setAccount(copier.getAccount());
+        followOrderDetailEntity.setSymbol(stdSymbol);
+        followOrderDetailEntity.setCreator(SecurityUser.getUserId());
+        followOrderDetailEntity.setCreateTime(LocalDateTime.now());
+        followOrderDetailEntity.setSendNo("11111");
+        followOrderDetailEntity.setType(orderInfo.getType());
+        followOrderDetailEntity.setPlacedType(orderInfo.getPlaceType());
+        followOrderDetailEntity.setPlatform(copier.getPlatform());
+        followOrderDetailEntity.setBrokeName(copyPlat.getBrokerName());
+        followOrderDetailEntity.setIpAddr(copier.getIpAddr());
+        followOrderDetailEntity.setServerName(copier.getServerName());
+        followOrderDetailEntity.setSize(BigDecimal.ZERO);
+        followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
+        followOrderDetailEntity.setRemark("主账号标准品种未配置");
+        followOrderDetailService.save(followOrderDetailEntity);
     }
 
     public boolean sendOrderAsy(AbstractApiTrader trader, EaOrderInfo orderInfo, FollowTraderSubscribeEntity leaderCopier,
@@ -274,19 +294,19 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 // 保存到批量发送队列
                 kafkaMessages.add(jsonEvent);
-                //删除漏单redis记录
-                Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
-                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
-                if (o2 != null && o2.toString().trim().length() > 0) {
-                    repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
-                }
-               repairInfoVOS.remove(orderInfo.getTicket());
-                if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                    redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
-                }else{
-                    redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
-                }
-                log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
+//                //删除漏单redis记录
+//                Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
+//                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+//                if (o2 != null && o2.toString().trim().length() > 0) {
+//                    repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
+//                }
+//               repairInfoVOS.remove(orderInfo.getTicket());
+//                if(repairInfoVOS==null || repairInfoVOS.size()==0){
+//                    redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
+//                }else{
+//                    redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
+//                }
+//                log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
             } catch (Exception e) {
                 openOrderMapping.setExtra("开仓失败"+e.getMessage());
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping, Wrappers.<FollowSubscribeOrderEntity>lambdaUpdate().eq(FollowSubscribeOrderEntity::getMasterId, openOrderMapping.getMasterId()).eq(FollowSubscribeOrderEntity::getMasterTicket, openOrderMapping.getMasterTicket()).eq(FollowSubscribeOrderEntity::getSlaveId, openOrderMapping.getSlaveId()));
@@ -439,19 +459,19 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
             // 保存到批量发送队列
             kafkaMessages.add(jsonEvent);
-            //删除漏单redis记录
-            Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
-            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
-            if (o2 != null && o2.toString().trim().length() > 0) {
-                repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
-            }
-            repairInfoVOS.remove(orderInfo.getTicket());
-            if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(),openOrderMapping.getSlaveAccount().toString());
-            }else{
-                redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
-            }
-            log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
+//            //删除漏单redis记录
+//            Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
+//            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
+//            if (o2 != null && o2.toString().trim().length() > 0) {
+//                repairInfoVOS = JSONObject.parseObject(o2.toString(), Map.class);
+//            }
+//            repairInfoVOS.remove(orderInfo.getTicket());
+//            if(repairInfoVOS==null || repairInfoVOS.size()==0){
+//                redisUtil.hDel(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(),openOrderMapping.getSlaveAccount().toString());
+//            }else{
+//                redisUtil.hSetStr(Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
+//            }
+//            log.info("漏单删除,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +openOrderMapping.getMasterAccount() + ":" + openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
 
         } catch (Exception e) {
             openOrderMapping.setExtra("开仓失败"+e.getMessage());

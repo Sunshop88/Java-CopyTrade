@@ -84,6 +84,9 @@ public class FollowVpsVO implements Serializable {
 	@Schema(description = "总手数")
 	private BigDecimal lots;
 
+	@Schema(description = "复制状态，0：失败 1：进行中 2：成功")
+	private Integer copyStatus;
+
 	@Schema(description = "是否开启flink，0为停止，1为运行")
 	private Integer isFlink;
 

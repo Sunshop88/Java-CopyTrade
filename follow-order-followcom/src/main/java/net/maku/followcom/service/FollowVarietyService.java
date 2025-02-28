@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 品种匹配
@@ -42,9 +43,9 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
 
-    void addByExcel(MultipartFile file,String templateName) throws Exception;
+    CompletableFuture<Void> addByExcel(MultipartFile file, String templateName) throws Exception;
 
-    void importByExcel(MultipartFile file, Integer template,String templateName) throws Exception;
+    CompletableFuture<Void> importByExcel(MultipartFile file, Integer template,String templateName) throws Exception;
 
     List<FollowVarietyEntity> getListByTemplated(Integer templateId);
 
@@ -58,9 +59,7 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     int getBeginTemplateId();
 
-    boolean checkTemplate(List<Integer> idList);
-
     boolean updateCache(Integer template);
-
     boolean updateSymbol(List<FollowVarietyVO> followVarietyVO);
+
 }

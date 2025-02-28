@@ -42,8 +42,11 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
+
 @Component
-@ServerEndpoint("/socket/trader/orderRepair/{traderId}/{slaveId}") //此注解相当于设置访问URL
+@ServerEndpoint("/socket/trader/orderActive/{traderId}/{slaveId}") //此注解相当于设置访问URL
 public class TraderOrderActiveWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderOrderActiveWebSocket.class);
@@ -110,168 +113,23 @@ public class TraderOrderActiveWebSocket {
                 accountId = traderId;
                 followTraderEntity = followTraderService.getFollowById(Long.valueOf(accountId));
                 abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(accountId);
-                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
-                        || !abstractApiTrader.quoteClient.Connected()) {
-                    leaderApiTradersAdmin.removeTrader(accountId);
-                    log.info("activeWebsockaddTrader"+accountId);
-                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderEntity);
-                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                        quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        leaderApiTrader1.startTrade();
-                    }else  if (conCodeEnum == ConCodeEnum.AGAIN){
-                        long maxWaitTimeMillis = 10000; // 最多等待10秒
-                        long startTime = System.currentTimeMillis();
-                        LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                        // 开始等待直到获取到copierApiTrader1
-                        while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
-                            try {
-                                // 每次自旋等待500ms后再检查
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                // 处理中断
-                                Thread.currentThread().interrupt();
-                                break;
-                            }
-                            leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                        }
-                        //重复提交
-                        if (ObjectUtil.isNotEmpty(leaderApiTrader)){
-                            log.info(traderId+"重复提交并等待完成");
-                            quoteClient = leaderApiTrader.quoteClient;
-                        }else {
-                            log.info(traderId+"重复提交并等待失败");
-                        }
-                    }
-                } else {
+                if (ObjectUtil.isNotEmpty(abstractApiTrader)){
                     quoteClient = abstractApiTrader.quoteClient;
                 }
             } else {
                 followTraderEntity = followTraderService.getById(Long.valueOf(accountId));
                 abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(accountId);
-                if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
-                        || !abstractApiTrader.quoteClient.Connected()) {
-                    copierApiTradersAdmin.removeTrader(accountId);
-                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderEntity);
-                    if (conCodeEnum == ConCodeEnum.SUCCESS) {
-                        quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString()).quoteClient;
-                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        copierApiTrader.startTrade();
-                    }else if (conCodeEnum == ConCodeEnum.AGAIN){
-                        long maxWaitTimeMillis = 10000; // 最多等待10秒
-                        long startTime = System.currentTimeMillis();
-                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        // 开始等待直到获取到copierApiTrader1
-                        while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
-                            try {
-                                // 每次自旋等待500ms后再检查
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                // 处理中断
-                                Thread.currentThread().interrupt();
-                                break;
-                            }
-                            copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
-                        }
-                        //重复提交
-                        if (ObjectUtil.isNotEmpty(copierApiTrader)){
-                            log.info(followTraderEntity.getId().toString()+"重复提交并等待完成");
-                            quoteClient = copierApiTrader.quoteClient;
-                        }else {
-                            log.info(followTraderEntity.getId()+"重复提交并等待失败");
-                        }
-                    }
-                } else {
+                if (ObjectUtil.isNotEmpty(abstractApiTrader)){
                     quoteClient = abstractApiTrader.quoteClient;
                 }
             }
             if (ObjectUtil.isEmpty(quoteClient)) {
-                throw new ServerException(accountId + "登录异常");
+                log.info(accountId + "登录异常");
+                return;
             }
+            List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order1 -> order1.Type == Buy || order1.Type == Sell).collect(Collectors.toList());
             FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
-            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
-            List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
-            if (ObjectUtil.isNotEmpty(o1)){
-                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
-                followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoList);
-            }
-            //持仓不为空并且为跟单账号 校验漏单信息
-            if (!slaveId.equals("0")) {
-                FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
-                FollowTraderEntity master = followTraderService.getFollowById(Long.valueOf(traderId));
-                FollowTraderEntity slave = followTraderService.getFollowById(Long.valueOf(slaveId));
-                Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
-                Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
-
-                List<Object> sendRepairToExtract = new ArrayList<>();
-
-                for (Object repairObj : sendRepair.keySet()) {
-                    EaOrderInfo repairComment = (EaOrderInfo) sendRepair.get(repairObj);
-                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order ->String.valueOf(repairComment.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-                    if (!existsInActive) {
-                        sendRepairToExtract.add(repairComment);
-                    }
-                }
-                List<Object> closeRepairToRemove = new ArrayList<>();
-                List<Object> closeRepairToExtract = new ArrayList<>();
-                for (Object repairObj : closeRepair.keySet()) {
-                    EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
-                    boolean existsInActive = orderActiveInfoList.stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-                    if (!existsInActive) {
-                        closeRepairToRemove.add(repairComment);
-                    } else {
-                        closeRepairToExtract.add(repairComment);
-                    }
-                }
-                String repairKey = Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform()+ "#" +
-                        master.getPlatform()+ "#" + followTraderSubscribe.getSlaveAccount() + "#" + followTraderSubscribe.getMasterAccount();
-
-                redisUtil.pipeline(connection -> {
-                    closeRepairToRemove.forEach(ticket -> connection.hDel(repairKey.getBytes(), ticket.toString().getBytes()));
-                });
-
-                List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
-                sendRepairToExtract.forEach(o -> {
-                    EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
-                    OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                    orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
-                    orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
-                    orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
-                    orderRepairInfoVO.setMasterProfit(eaOrderInfo.getProfit().doubleValue());
-                    orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
-                    orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
-                    orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
-                    list.add(orderRepairInfoVO);
-                });
-                closeRepairToExtract.forEach(o -> {
-                    EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
-                    //通过备注查询未平仓记录
-                    List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).isNull(FollowOrderDetailEntity::getCloseTime).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
-                    if (ObjectUtil.isNotEmpty(detailServiceList)) {
-                        for (FollowOrderDetailEntity detail : detailServiceList) {
-                            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
-                            orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
-                            orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
-                            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
-                            orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
-                            orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
-                            orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
-                            orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
-                            orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
-                            orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
-                            orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
-                            orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
-                            orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
-                            orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
-                            list.add(orderRepairInfoVO);
-                        }
-                    }
-                });
-                if (list.size()>=2){
-                    list.sort((m1, m2) -> m2.getMasterOpenTime().compareTo(m1.getMasterOpenTime()));
-                }
-                followOrderActiveSocketVO.setOrderRepairInfoVOList(list);
-            }
+            followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,followTraderEntity.getAccount()));
             pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderActiveSocketVO));
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
@@ -294,6 +152,10 @@ public class TraderOrderActiveWebSocket {
     public void onClose() {
         try {
             stopPeriodicTask();
+            Set<Session> sessionSet = sessionPool.get(traderId + slaveId);
+            if (ObjectUtil.isEmpty(sessionSet)) {
+                return;
+            }
             sessionPool.get(traderId + slaveId).remove(session);
         } catch (Exception e) {
             e.printStackTrace();
@@ -362,5 +224,33 @@ public class TraderOrderActiveWebSocket {
         // vo.setOpenTime(order.OpenTime);
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
+    }
+
+
+    private List<OrderActiveInfoVO> convertOrderActive(List<Order> openedOrders, String account) {
+        return openedOrders.stream()
+                .map(order -> createOrderActiveInfoVO(order, account))
+                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
+                .collect(Collectors.toList());
+    }
+
+    private OrderActiveInfoVO createOrderActiveInfoVO(Order order, String account) {
+        OrderActiveInfoVO vo = new OrderActiveInfoVO();
+        vo.setAccount(account);
+        vo.setLots(order.Lots);
+        vo.setComment(order.Comment);
+        vo.setOrderNo(order.Ticket);
+        vo.setCommission(order.Commission);
+        vo.setSwap(order.Swap);
+        vo.setProfit(order.Profit);
+        vo.setSymbol(order.Symbol);
+        vo.setOpenPrice(order.OpenPrice);
+        vo.setMagicNumber(order.MagicNumber);
+        vo.setType(order.Type.name());
+        // 增加五小时
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
+        vo.setStopLoss(order.StopLoss);
+        vo.setTakeProfit(order.TakeProfit);
+        return vo;
     }
 }

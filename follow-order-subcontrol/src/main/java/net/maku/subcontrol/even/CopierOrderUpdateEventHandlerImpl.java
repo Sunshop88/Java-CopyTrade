@@ -1,5 +1,6 @@
 package net.maku.subcontrol.even;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
@@ -17,24 +18,34 @@ import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.FollowOrderSendCloseVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
+import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
+import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
+import net.maku.subcontrol.websocket.TraderOrderActiveWebSocket;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.UpdateAction;
+import org.springframework.beans.BeanUtils;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+import static online.mtapi.mt4.Op.Buy;
+import static online.mtapi.mt4.Op.Sell;
 
 /**
  * @author Samson Bruce
@@ -50,13 +61,17 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private final RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);;
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
-    private net.maku.framework.common.config.JacksonConfig JacksonConfig;
+
+    private TraderOrderActiveWebSocket traderOrderActiveWebSocket;
+
 
     public CopierOrderUpdateEventHandlerImpl(AbstractApiTrader abstract4ApiTrader) {
         super();
         this.leader = abstract4ApiTrader.getTrader();
         this.copier4ApiTrader = abstract4ApiTrader;
         this.followOrderHistoryService = SpringContextUtils.getBean(FollowOrderHistoryServiceImpl.class);
+        this.traderOrderActiveWebSocket = SpringContextUtils.getBean(TraderOrderActiveWebSocket.class);
+
     }
 
     @Override
@@ -80,14 +95,25 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);
             }
             //发送websocket消息标识
-//            if (Objects.requireNonNull(orderUpdateEventArgs.Action) == UpdateAction.PositionClose) {
-//                Order x = orderUpdateEventArgs.Order;
-//                log.info("跟单发送平仓mq" + leader.getId());
-//                ThreadPoolUtils.getExecutor().execute(()-> {
-//                    //发送平仓MQ
-//                    producer.sendMessage(JSONUtil.toJsonStr(getMessagePayload(x)));
-//                });
-//            }
+            if (orderUpdateEventArgs.Action == UpdateAction.PositionClose||orderUpdateEventArgs.Action == UpdateAction.PositionOpen||orderUpdateEventArgs.Action == UpdateAction.PendingFill) {
+                ScheduledFuture<?> existingTask = pendingMessages.get(follow.getId().toString());
+                if (existingTask != null) {
+                    existingTask.cancel(false); // 不强制中断，允许任务自然结束
+                }
+
+                // 新建延迟任务，等待 100ms 后发送消息
+                ScheduledFuture<?> newTask = scheduler.schedule(() -> {
+                    FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(follow.getId());
+                    List<Order> openedOrders = Arrays.stream(copier4ApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+                    FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
+                    followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,follow.getAccount()));
+                    log.info("发送消息"+follow.getId());
+                    traderOrderActiveWebSocket.pushMessage(followSub.getMasterId().toString(),follow.getId().toString(), JsonUtils.toJsonString(followOrderActiveSocketVO));
+                    pendingMessages.remove(follow.getId().toString());
+                }, 100, TimeUnit.MILLISECONDS);
+                // 更新缓存中的任务
+                pendingMessages.put(follow.getId().toString(), newTask);
+            }
             Order order = orderUpdateEventArgs.Order;
             FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
             FollowTraderEntity master = followTraderService.getFollowById(subscribeEntity.getMasterId());
@@ -234,5 +260,33 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             redissonLockUtil.unlock(openKey);
         }
     }
+
+    private List<OrderActiveInfoVO> convertOrderActive(List<Order> openedOrders, String account) {
+        return openedOrders.stream()
+                .map(order -> createOrderActiveInfoVO(order, account))
+                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
+                .collect(Collectors.toList());
+    }
+
+    private OrderActiveInfoVO createOrderActiveInfoVO(Order order, String account) {
+        OrderActiveInfoVO vo = new OrderActiveInfoVO();
+        vo.setAccount(account);
+        vo.setLots(order.Lots);
+        vo.setComment(order.Comment);
+        vo.setOrderNo(order.Ticket);
+        vo.setCommission(order.Commission);
+        vo.setSwap(order.Swap);
+        vo.setProfit(order.Profit);
+        vo.setSymbol(order.Symbol);
+        vo.setOpenPrice(order.OpenPrice);
+        vo.setMagicNumber(order.MagicNumber);
+        vo.setType(order.Type.name());
+        // 增加五小时
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
+        vo.setStopLoss(order.StopLoss);
+        vo.setTakeProfit(order.TakeProfit);
+        return vo;
+    }
+
 
 }

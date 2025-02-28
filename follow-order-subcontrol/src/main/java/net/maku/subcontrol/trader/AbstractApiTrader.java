@@ -291,6 +291,7 @@ public abstract class AbstractApiTrader extends ApiTrader {
     public Boolean stopTrade() {
         if (orderUpdateHandler != null) {
             try {
+                orderUpdateHandler.shutdown();
                 orderUpdateHandler.setRunning(Boolean.FALSE);
             } catch (Exception e) {
                 log.error("设置orderUpdateHandler running 为false", e);

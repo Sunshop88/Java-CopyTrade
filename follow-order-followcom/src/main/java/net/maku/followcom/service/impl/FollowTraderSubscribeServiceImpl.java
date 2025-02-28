@@ -205,7 +205,21 @@ public class FollowTraderSubscribeServiceImpl extends BaseServiceImpl<FollowTrad
             if (cache2 != null) {
                 cache2.evict(id); // 修改指定缓存条目
             }
+            Cache cache3= cacheManager.getCache("followSubTraderCache");
+            if (cache3 != null) {
+                cache3.evict(id); // 移除指定缓存条目
+            }
         });
+    }
+
+    @Override
+    @Cacheable(
+            value = "followSubTraderCache",
+            key = "#id ?: 'defaultKey'",
+            unless = "#result == null"
+    )
+    public FollowTraderSubscribeEntity getFollowSub(Long id) {
+        return this.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId,id));
     }
 
     private String generateCacheKey(Long slaveId, Long masterId) {

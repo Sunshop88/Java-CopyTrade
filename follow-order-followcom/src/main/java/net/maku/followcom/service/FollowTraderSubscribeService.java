@@ -42,4 +42,6 @@ public interface FollowTraderSubscribeService extends BaseService<FollowTraderSu
     List<FollowTraderSubscribeEntity> getSubscribeOrder(Long id);
 
     void updateSubCache(Long id);
+
+    FollowTraderSubscribeEntity getFollowSub(Long id);
 }

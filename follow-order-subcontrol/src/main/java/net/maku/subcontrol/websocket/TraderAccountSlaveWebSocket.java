@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * 账号信息
  */
 @Component
-@ServerEndpoint("/socket/trader/slave/{page}/{limit}/{traderId}/{number}") //此注解相当于设置访问URL
+@ServerEndpoint("/socket/trader/slave/{page}/{limit}/{traderId}") //此注解相当于设置访问URL
 public class TraderAccountSlaveWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(TraderAccountSlaveWebSocket.class);
@@ -46,7 +46,6 @@ public class TraderAccountSlaveWebSocket {
 
     private String limit;
     private String traderId;
-    private String number;
 
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
 
@@ -57,16 +56,15 @@ public class TraderAccountSlaveWebSocket {
     private Future<?> scheduledTask;
     private FollowTraderSubscribeService followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeServiceImpl.class);
     @OnOpen
-    public void onOpen(Session session, @PathParam(value = "page") String page, @PathParam(value = "limit") String limit, @PathParam(value = "traderId") String traderId, @PathParam(value = "number") String number) {
+    public void onOpen(Session session, @PathParam(value = "page") String page, @PathParam(value = "limit") String limit, @PathParam(value = "traderId") String traderId) {
         try {
             this.session = session;
             this.page = page;
             this.limit = limit;
             this.traderId=traderId;
-            this.number=number;
-            Set<Session> sessionSet = sessionPool.getOrDefault(page + limit+traderId+number, ConcurrentHashMap.newKeySet());
+            Set<Session> sessionSet = sessionPool.getOrDefault(page + limit+traderId, ConcurrentHashMap.newKeySet());
             sessionSet.add(session);
-            sessionPool.put(page + limit+traderId+number, sessionSet);
+            sessionPool.put(page + limit+traderId, sessionSet);
             FollowTraderQuery followTraderQuer=new FollowTraderQuery();
             followTraderQuer.setPage(Integer.valueOf(page));
             followTraderQuer.setLimit(Integer.valueOf(limit));
@@ -91,7 +89,7 @@ public class TraderAccountSlaveWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId,number), 0, 2, TimeUnit.SECONDS);
+        scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(page, limit,traderId), 0, 2, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
@@ -101,7 +99,7 @@ public class TraderAccountSlaveWebSocket {
     }
 
 
-    private void sendPeriodicMessage(String page ,String limit,String traderId,String number) {
+    private void sendPeriodicMessage(String page ,String limit,String traderId) {
         //查询用户数据
         List<FollowRedisTraderVO> followRedisTraderVOS=new ArrayList<>();
         listFollow.forEach(o->{
@@ -113,14 +111,14 @@ public class TraderAccountSlaveWebSocket {
             }
             followRedisTraderVOS.add(followRedisTraderVO);
         });
-        pushMessage(page,limit,traderId,number,JsonUtils.toJsonString(followRedisTraderVOS));
+        pushMessage(page,limit,traderId,JsonUtils.toJsonString(followRedisTraderVOS));
     }
 
 
     @OnClose
     public void onClose() {
         try {
-            sessionPool.get(page + limit+traderId+number).remove(session);
+            sessionPool.get(page + limit+traderId).remove(session);
             stopPeriodicTask(); // 关闭时停止定时任务
         } catch (Exception e) {
             e.printStackTrace();
@@ -130,9 +128,9 @@ public class TraderAccountSlaveWebSocket {
     /**
      * 服务器端推送消息
      */
-    public void pushMessage(String page, String limit,String traderId, String number,String message) {
+    public void pushMessage(String page, String limit,String traderId,String message) {
         try {
-            Set<Session> sessionSet = sessionPool.get(page + limit+traderId+number);
+            Set<Session> sessionSet = sessionPool.get(page + limit+traderId);
             if (ObjectUtil.isEmpty(sessionSet)) {
                 return;
             }
@@ -152,8 +150,8 @@ public class TraderAccountSlaveWebSocket {
     public void onMessage(String message) {
     }
 
-    public Boolean isConnection(String page, String limit,String traderId,String number) {
-        return sessionPool.containsKey(page + limit+traderId+number);
+    public Boolean isConnection(String page, String limit,String traderId) {
+        return sessionPool.containsKey(page + limit+traderId);
     }
 
 }

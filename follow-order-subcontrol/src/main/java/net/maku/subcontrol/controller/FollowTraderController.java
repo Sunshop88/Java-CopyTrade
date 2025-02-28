@@ -259,6 +259,10 @@ public class FollowTraderController {
                     cache1.evict(o1.getMasterId()); // 移除指定缓存条目
                 }
 
+                Cache cache3= cacheManager.getCache("followSubTraderCache");
+                if (cache3 != null) {
+                    cache3.evict(o1.getSlaveId()); // 移除指定缓存条目
+                }
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
         });
@@ -314,8 +318,8 @@ public class FollowTraderController {
     @Operation(summary = "订单品种列表")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<String>> listSymbol() {
-        List<FollowOrderDetailEntity> collect = detailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getSymbol).eq(FollowOrderDetailEntity::getIpAddr,FollowConstant.LOCAL_HOST).groupBy(FollowOrderDetailEntity::getSymbol)).stream().toList();
-        return Result.ok(collect.stream().map(FollowOrderDetailEntity::getSymbol).toList());
+        List<FollowOrderSendEntity> collect = followOrderSendService.list(new LambdaQueryWrapper<FollowOrderSendEntity>().select(FollowOrderSendEntity::getSymbol).eq(FollowOrderSendEntity::getIpAddr,FollowConstant.LOCAL_HOST)).stream().distinct().toList();
+        return Result.ok(collect.stream().map(FollowOrderSendEntity::getSymbol).toList());
     }
 
     @PostMapping("orderSend")
@@ -811,14 +815,16 @@ public class FollowTraderController {
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
             // 先查品种规格
-            Optional<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getProfitMode().equals(FollowConstant.PROFIT_MODE)&&item.getSymbol().contains(symbol)).findFirst();
-            if (specificationEntity.isPresent()){
-                log.info("品种规格获取报价"+specificationEntity.get().getStdSymbol());
-                //获取报价
-                QuoteEventArgs eventArgs= getEventArgs(abstractApiTrader,quoteClient,specificationEntity.get().getSymbol());
-                if (ObjectUtil.isNotEmpty(eventArgs)) {
-                    return specificationEntity.get().getSymbol();
-                }
+            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
+            if (ObjectUtil.isNotEmpty(specificationEntity)){
+                for (FollowSysmbolSpecificationEntity o : specificationEntity) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(abstractApiTrader,quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        return o.getSymbol();
+                    }
+                };
             }else {
                 // 查看品种匹配 模板
                 List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());

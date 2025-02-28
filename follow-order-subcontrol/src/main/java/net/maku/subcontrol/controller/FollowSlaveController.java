@@ -176,7 +176,11 @@ public class FollowSlaveController {
                             FollowTraderEntity master = followTraderService.getFollowById(eaOrderInfo.getMasterId());
                             messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
                         });
+
                     }
+                }else{
+                    FollowTraderEntity master = followTraderService.getFollowById(followTraderEntity.getId());
+                    messagesService.checkRepairSend(convert,master,copierApiTrader.quoteClient);
                 }
             });
         } catch (Exception e) {

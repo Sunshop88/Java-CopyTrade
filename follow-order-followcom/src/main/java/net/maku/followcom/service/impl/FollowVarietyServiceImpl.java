@@ -36,6 +36,7 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpHeaders;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 
@@ -113,17 +115,26 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             value = "followVarietyCache", // 缓存名称
             key = "#template"
     )
-    public void importByExcel(MultipartFile file, Integer template, String templateName) throws Exception {
-        String fileName = file.getOriginalFilename();
-        if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
-            // 处理CSV文件
-            importCsv(file, template, templateName);
-        } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
-            // 处理Excel文件
-            importExcel(file, template, templateName);
-        } else {
-            throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
-        }
+    public CompletableFuture<Void> importByExcel(MultipartFile file, Integer template, String templateName) throws Exception {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                String fileName = file.getOriginalFilename();
+                if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
+                    // 处理CSV文件
+                    importCsv(file, template, templateName);
+                } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
+                    // 处理Excel文件
+                    importExcel(file, template, templateName);
+                } else {
+                    throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
+                }
+            } catch (Exception e) {
+                log.error("Error processing file: {}", e.getMessage());
+                throw new RuntimeException(e); // 根据需要处理异常
+            }
+        }).thenRun(() -> {
+            log.info("上传完成"); // 在处理完成后记录日志
+        });
     }
 
     @Override
@@ -173,36 +184,11 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
     }
 
     @Override
-    public boolean checkTemplate(List<Integer> idList) {
-        //策略者或者跟单者绑定了该模板就不能删除
-        for (Integer id : idList) {
-            if (followTraderService.exists(new LambdaQueryWrapper<FollowTraderEntity>()
-                    .eq(FollowTraderEntity::getTemplateId, id))){
-               throw new ServerException("策略者或者跟单者绑定了该模板不能删除");
-            }
-        }
-        return true;
-    }
-
-    @Override
     @CacheEvict(
             value = "followVarietyCache", // 缓存名称
             key = "#template"
     )
     public boolean updateCache(Integer template) {
-        return true;
-    }
-
-    @Override
-    public boolean updateSymbol(List<FollowVarietyVO> followVarietyVO) {
-        List<FollowVarietyEntity> list = FollowVarietyConvert.INSTANCE.convertList2(followVarietyVO);
-        for (FollowVarietyEntity entity : list){
-            LambdaUpdateWrapper<FollowVarietyEntity> wrapper = new LambdaUpdateWrapper<>();
-            wrapper.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdSymbol,entity.getStdContract());
-            wrapper.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getStdSymbol,entity.getBrokerSymbol());
-            wrapper.eq(FollowVarietyEntity::getId,entity.getId());
-            baseMapper.update(entity,wrapper);
-        }
         return true;
     }
 
@@ -538,25 +524,34 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void addByExcel(MultipartFile file, String templateName) throws Exception {
-        String fileName = file.getOriginalFilename();
-        LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(FollowVarietyEntity::getTemplateId)
-                .orderByDesc(FollowVarietyEntity::getTemplateId)
-                .last("LIMIT 1");
-        FollowVarietyEntity maxTemplateEntity = baseMapper.selectOne(queryWrapper);
-        int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplateId() != null)
-                ? maxTemplateEntity.getTemplateId() + 1 : 1;
+    public CompletableFuture<Void> addByExcel(MultipartFile file, String templateName) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                String fileName = file.getOriginalFilename();
+                LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.select(FollowVarietyEntity::getTemplateId)
+                        .orderByDesc(FollowVarietyEntity::getTemplateId)
+                        .last("LIMIT 1");
+                FollowVarietyEntity maxTemplateEntity = baseMapper.selectOne(queryWrapper);
+                int template = (maxTemplateEntity != null && maxTemplateEntity.getTemplateId() != null)
+                        ? maxTemplateEntity.getTemplateId() + 1 : 1;
 
-        if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
-            // 处理CSV文件
-            addCsv(file, template, templateName);
-        } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
-            // 处理Excel文件
-            addExcel(file, template, templateName);
-        } else {
-            throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
-        }
+                if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
+                    // 处理CSV文件
+                    addCsv(file, template, templateName);
+                } else if (fileName != null && (fileName.toLowerCase().endsWith(".xls") || fileName.toLowerCase().endsWith(".xlsx"))) {
+                    // 处理Excel文件
+                    addExcel(file, template, templateName);
+                } else {
+                    throw new Exception("Unsupported file type. Please upload a CSV or Excel file.");
+                }
+            } catch (Exception e) {
+                log.error("Error processing file: {}", e.getMessage());
+                throw new RuntimeException(e); // 可以根据需要处理异常
+            }
+        }).thenRun(() -> {
+            log.info("新增模板完成"); // 在处理完成后记录日志
+        });
     }
 
     public void addCsv(MultipartFile file, Integer template, String templateName) throws Exception {
@@ -931,4 +926,17 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             throw new IOException("写入 CSV 时出错", e);
         }
     }
+    @Override
+    public boolean updateSymbol(List<FollowVarietyVO> followVarietyVO) {
+        List<FollowVarietyEntity> list = FollowVarietyConvert.INSTANCE.convertList2(followVarietyVO);
+        for (FollowVarietyEntity entity : list){
+            LambdaUpdateWrapper<FollowVarietyEntity> wrapper = new LambdaUpdateWrapper<>();
+            wrapper.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdSymbol,entity.getStdContract());
+            wrapper.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getStdSymbol,entity.getBrokerSymbol());
+            wrapper.eq(FollowVarietyEntity::getId,entity.getId());
+            baseMapper.update(entity,wrapper);
+        }
+        return true;
+    }
+
 }
