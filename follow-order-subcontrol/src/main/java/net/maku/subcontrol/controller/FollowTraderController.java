@@ -25,6 +25,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.subcontrol.service.FollowApiService;
 import net.maku.subcontrol.task.ObtainOrderHistoryTask;
 import net.maku.subcontrol.task.SpeedTestTask;
 import net.maku.subcontrol.trader.*;
@@ -78,6 +79,7 @@ public class FollowTraderController {
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     private final SourceService sourceService;
     private final FollowService followService;
+    private final FollowApiService followApiService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -905,8 +907,22 @@ public class FollowTraderController {
     @PostMapping("reconnectionTrader")
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:speed')")
-    public Result<Boolean> reconnectionTrader(@RequestBody String traderId) {
-        return Result.ok(reconnect(traderId));
+    public Result<Boolean> reconnectionTrader(@RequestBody FollowTraderVO vo) {
+        QuoteClient quoteClient = null;
+        Long traderId = vo.getId();
+        FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
+        quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
+        try {
+            quoteClient.ChangePassword(vo.getNewPassword(), false);
+        } catch (IOException e) {
+            throw new ServerException("MT4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
+        } catch (online.mtapi.mt4.Exception.ServerException e) {
+            throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
+        }
+        if (ObjectUtil.isNotEmpty(quoteClient)){
+            reconnect(String.valueOf(traderId));
+        }
+        return Result.ok();
     }
 
     @PostMapping("/synchData/{traderId}")

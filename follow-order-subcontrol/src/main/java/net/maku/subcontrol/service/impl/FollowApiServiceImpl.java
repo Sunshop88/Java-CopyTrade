@@ -1061,7 +1061,7 @@ public class FollowApiServiceImpl implements FollowApiService {
         return true;
     }
 
-    private QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
+    public QuoteClient getQuoteClient(Long traderId, FollowTraderEntity followTraderVO, QuoteClient quoteClient) {
         AbstractApiTrader abstractApiTrader;
         if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
             abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId.toString());

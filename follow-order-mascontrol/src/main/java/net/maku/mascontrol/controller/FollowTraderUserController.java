@@ -13,6 +13,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
+import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
@@ -226,6 +227,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
             followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
             followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+            followUploadTraderUserVO.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
             followUploadTraderUserService.save(followUploadTraderUserVO);
 
             //查询最新的记录
@@ -287,7 +289,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePasswords(@RequestBody List<FollowTraderUserVO> voList,@RequestBody String password,@RequestBody String confirmPassword, HttpServletRequest req) throws Exception {
+    public Result<String> updatePasswords(@RequestBody FollowUpdatePasswordVO vos, HttpServletRequest req) throws Exception {
+        List<FollowTraderUserVO> voList = vos.getVoList();
+        String password = vos.getPassword();
+        String confirmPassword = vos.getConfirmPassword();
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
 

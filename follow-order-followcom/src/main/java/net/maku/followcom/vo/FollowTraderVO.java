@@ -184,4 +184,7 @@ public class FollowTraderVO implements Serializable {
 	@Schema(description = "位数")
 	private Integer digits;
 
+	@Schema(description = "新密码")
+	private String newPassword;
+
 }
