@@ -44,6 +44,7 @@ public class FollowOrderInstructSubServiceImpl extends BaseServiceImpl<FollowOrd
 
     private LambdaQueryWrapper<FollowOrderInstructSubEntity> getWrapper(FollowOrderInstructSubQuery query){
         LambdaQueryWrapper<FollowOrderInstructSubEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(FollowOrderInstructSubEntity::getInstructId, query.getInstructId());
 
         return wrapper;
     }

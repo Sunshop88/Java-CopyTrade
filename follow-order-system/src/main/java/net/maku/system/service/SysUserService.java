@@ -69,4 +69,6 @@ public interface SysUserService extends BaseService<SysUserEntity> {
     void export();
 
     SysUserVO getByUsername(String username);
+
+    List<Integer> getUser(String creator);
 }

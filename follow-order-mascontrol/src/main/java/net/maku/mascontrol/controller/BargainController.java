@@ -2,7 +2,7 @@ package net.maku.mascontrol.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSONObject;
+import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,13 +13,13 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
-import net.maku.followcom.service.BargainService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderUserService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.query.FollowGroupQuery;
+import net.maku.followcom.query.FollowOrderInstructQuery;
+import net.maku.followcom.query.FollowOrderInstructSubQuery;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowOrderSendCloseVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
@@ -31,7 +31,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import net.maku.followcom.vo.BargainCloseVO;
+
 import java.util.List;
 
 
@@ -49,6 +49,8 @@ public class BargainController {
     private BargainService bargainService;
     private final FollowTraderUserService followTraderUserService;
     private final FollowTraderService followTraderService;
+    private final FollowOrderInstructSubService followOrderInstructSubService;
+    private final FollowOrderInstructService followOrderInstructService;
 
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
@@ -118,5 +120,23 @@ public class BargainController {
     public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
         bargainService.masOrderSend(vo,request);
         return Result.ok();
+    }
+
+    @GetMapping("historySubcommands")
+    @Operation(summary = "历史子指令分页")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<PageResult<FollowOrderInstructSubVO>> page(@ParameterObject @Valid FollowOrderInstructSubQuery query){
+        PageResult<FollowOrderInstructSubVO> page = followOrderInstructSubService.page(query);
+
+        return Result.ok(page);
+    }
+
+    @GetMapping("historyCommands")
+    @Operation(summary = "历史总指令分页")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<PageResult<FollowOrderInstructVO>> page(@ParameterObject @Valid FollowOrderInstructQuery query){
+        PageResult<FollowOrderInstructVO> page = followOrderInstructService.page(query);
+
+        return Result.ok(page);
     }
 }
