@@ -52,9 +52,13 @@ public class MissingOrdersNoticeTask {
             Map<Object, Object> stringObjectMap = redisCache.hGetStrAll(key);
             if(stringObjectMap!=null){
                 stringObjectMap.values().forEach(obj->{
-                    JSONObject jsonObject = JSONObject.parseObject(obj.toString());
-                    Collection<Object> values = jsonObject.values();
-                    num.updateAndGet(v -> v + values.size());
+                    try {
+                        JSONObject jsonObject = JSONObject.parseObject(obj.toString());
+                        Collection<Object> values = jsonObject.values();
+                        num.updateAndGet(v -> v + values.size());
+                    } catch (Exception e) {
+                      log.error("定时发送信息"+e);
+                    }
 
                 });
             }

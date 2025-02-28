@@ -61,8 +61,9 @@ public class BargainWebSocket {
         try {
             String id = session.getId();
             JSONObject jsonObj = JSONObject.parseObject(message);
-            JSONArray accountIds = jsonObj.getJSONArray("accountIds");
-            Long currentAccountId = jsonObj.getLong("currentAccountId");
+            //当前选中的id [{"account":111,"platformId"},{"account":111,"platformId"}}
+            JSONArray accountVos = jsonObj.getJSONArray("accountVos");
+            Long currentAccountId = jsonObj.getLong("traderUserId");
             String traderUserJson = jsonObj.getString("traderUserQuery");
             FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
 
@@ -85,29 +86,45 @@ public class BargainWebSocket {
                 List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
                 List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
                 List<FollowTraderEntity> traders = followTraderService.list();
-                Map<String,JSONObject> map = new ConcurrentHashMap<>();
+                Map<String,FollowTraderEntity> map = new ConcurrentHashMap<>();
+                Map<String,FollowTraderEntity> sucessmap = new ConcurrentHashMap<>();
+                Map<String,FollowTraderEntity> errmap = new ConcurrentHashMap<>();
+                JSONObject totalJson = new JSONObject();
+                JSONObject currentJson = new JSONObject();
+                totalJson.put("tBuyNum",BigDecimal.ZERO);
+                totalJson.put("tSellNum",BigDecimal.ZERO);
+                totalJson.put("tProfit",BigDecimal.ZERO);
+
+                currentJson.put("BuyNum",BigDecimal.ZERO);
+                currentJson.put("SellNum",BigDecimal.ZERO);
+                currentJson.put("Profit",BigDecimal.ZERO);
                 traders.forEach(t->{
-                    JSONObject json = map.get(t.getAccount() + "-" + t.getPlatformId());
+                    FollowTraderEntity json = map.get(t.getAccount() + "-" + t.getPlatformId());
                     if(json == null) {
                         //判断是否连接成功
                         if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
-                            json = new JSONObject();
-                            BigDecimal tBuylots = json.getBigDecimal("tBuylots");
-                            FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
-                            //多单
-                            tBuylots.add(new BigDecimal(o1.getBuyNum()+o1.getSellNum()));
-                            //
+                            addData(t, totalJson, sucessmap, accountVos, currentJson);
+
+                        }else{
+                            errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
                         }
-
-
-                       // tlots.add(tlots.);
                     }
-
-                    
                 });
-              //  ls1.set(0, new BigDecimal(masterTotal.toString()));
+                errmap.forEach((k,v)->{
+                    FollowTraderEntity followTraderEntity = sucessmap.get(k);
+                    if(followTraderEntity==null){
+                        addData(v, totalJson, sucessmap, accountVos, currentJson);
+                    }
+                });
+                ls1.set(0, totalJson.getBigDecimal("tBuyNum"));
+                ls1.set(1, totalJson.getBigDecimal("tSellNum"));
+                ls1.set(2, totalJson.getBigDecimal("tProfit"));
+                ls2.set(0, totalJson.getBigDecimal("BuyNum"));
+                ls2.set(1, totalJson.getBigDecimal("SellNum"));
+                ls2.set(2, totalJson.getBigDecimal("Profit"));
                 statList.add(ls1);
                 statList.add(ls2);
+                bargainAccountVO.setStatList(statList);
                 ObjectMapper objectMapper = new ObjectMapper();
                 JavaTimeModule javaTimeModule = new JavaTimeModule();
                 //格式化时间格式
@@ -128,7 +145,46 @@ public class BargainWebSocket {
 
     }
     }
-   private void getActive(Long currentAccountId,BargainAccountVO bargainAccountVO){
+
+    private void addData(FollowTraderEntity t, JSONObject totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos, JSONObject currentJson) {
+        BigDecimal tBuyNum = totalJson.getBigDecimal("tBuyNum");
+        BigDecimal tSellNum = totalJson.getBigDecimal("tSellNum");
+        BigDecimal tProfit = totalJson.getBigDecimal("tProfit");
+        FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
+        //多单
+        tBuyNum = tBuyNum.add(new BigDecimal(o1.getBuyNum()));
+        //空单
+        tSellNum=  tSellNum.add(new BigDecimal(o1.getSellNum()));
+        //总盈亏
+        tProfit = tProfit.add(o1.getProfit());
+        totalJson.put("tBuyNum",tBuyNum);
+        totalJson.put("tSellNum",tSellNum);
+        totalJson.put("tProfit",tProfit);
+        sucessmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
+        if(ObjectUtil.isNotEmpty(accountVos)){
+            boolean flag = accountVos.stream().anyMatch(o -> {
+                JSONObject obj = JSONObject.parseObject(o.toString());
+                Integer account = obj.getInteger("account");
+                Integer platformId = obj.getInteger("platformId");
+                return account.equals(t.getAccount()) && platformId.equals(t.getPlatformId());
+            });
+           if(flag){
+               BigDecimal buyNum = currentJson.getBigDecimal("BuyNum");
+               BigDecimal sellNum = currentJson.getBigDecimal("SellNum");
+               BigDecimal profit = currentJson.getBigDecimal("Profit");
+               buyNum = buyNum.add(new BigDecimal(o1.getBuyNum()));
+               //空单
+               sellNum=  sellNum.add(new BigDecimal(o1.getSellNum()));
+               //总盈亏
+               profit = profit.add(o1.getProfit());
+               currentJson.put("BuyNum",tBuyNum);
+               currentJson.put("SellNum",tSellNum);
+               currentJson.put("Profit",tProfit);
+           }
+        }
+    }
+
+    private void getActive(Long currentAccountId,BargainAccountVO bargainAccountVO){
        FollowTraderUserEntity traderUser = followTraderUserService.getById(currentAccountId);
        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
        AtomicLong traderId=new AtomicLong(0);

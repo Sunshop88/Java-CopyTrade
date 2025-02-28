@@ -1,6 +1,8 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +31,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import net.maku.followcom.vo.BargainCloseVO;
 import java.util.List;
 
 
@@ -93,13 +96,18 @@ public class BargainController {
 
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
-    public Result<Boolean> orderClose(@RequestBody @Valid FollowOrderSendCloseVO vo,HttpServletRequest request) {
+    public Result<Boolean> orderClose(@RequestBody @Valid BargainCloseVO vo,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
+
         if(ObjectUtil.isEmpty(users)){
             throw new ServerException("账号未挂靠vps");
         }
         users.forEach(user -> {
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, vo);
+            FollowOrderSendCloseVO closeVO=new FollowOrderSendCloseVO();
+            closeVO.setTraderId(user.getId());
+            closeVO.setAccount(user.getAccount());
+            BeanUtil.copyProperties(vo, closeVO);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, closeVO);
         });
         return Result.ok();
     }
