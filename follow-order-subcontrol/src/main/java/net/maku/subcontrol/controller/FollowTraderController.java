@@ -2,6 +2,7 @@ package net.maku.subcontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,6 +81,7 @@ public class FollowTraderController {
     private final SourceService sourceService;
     private final FollowService followService;
     private final FollowApiService followApiService;
+    private final FollowTraderUserService followTraderUserService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -112,6 +114,14 @@ public class FollowTraderController {
         try {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
+            //添加trader_user
+            FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+            followTraderUserVO.setAccount(vo.getAccount());
+            followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            followTraderUserVO.setPlatform(vo.getPlatform());
+            Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+            followTraderUserVO.setPlatformId(Math.toIntExact(id));
+            followTraderUserService.save(followTraderUserVO);
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
@@ -170,6 +180,11 @@ public class FollowTraderController {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         }
         followTraderService.update(vo);
+        //修改trader_user
+        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FollowTraderUserEntity::getId, old.getId());
+        updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
+        followTraderUserService.update(updateWrapper);
         //重连
         if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(old.getPassword()).equals(vo.getPassword())){
             reconnect(vo.getId().toString());
