@@ -6,13 +6,17 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.Setter;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowTraderSubscribeService;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.FollowRedisTraderVO;
 import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.subcontrol.pojo.ObjectPool;
+import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
 import net.maku.subcontrol.trader.AbstractApiTrader;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.Order;
@@ -54,11 +58,12 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
     // 定义对象池，用于管理 OrderActiveInfoVO 对象
     private static final ObjectPool<OrderActiveInfoVO> orderActiveInfoPool =
             new ObjectPool<>(OrderActiveInfoVO::new); // 工厂方法创建对象
-
+    private FollowTraderSubscribeService followTraderSubscribeService;
     public OnQuoteTraderHandler(AbstractApiTrader abstractApiTrader) {
         this.abstractApiTrader = abstractApiTrader;
         this.followTraderService = SpringContextUtils.getBean(FollowTraderService.class);
         this.redisCache = SpringContextUtils.getBean(RedisCache.class);
+        this.followTraderSubscribeService=SpringContextUtils.getBean(FollowTraderSubscribeService.class);
     }
 
     public void invoke(Object sender, QuoteEventArgs quote) {
@@ -71,7 +76,18 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
             try {
                 lastInvokeTime = currentTime;
                 QuoteClient qc=abstractApiTrader.quoteClient;
-
+                FollowTraderEntity trader = abstractApiTrader.getTrader();
+                if (trader.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                    FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(trader.getId());
+                    followRedisTraderVO.setFollowMode(getfollowMode(followSub));
+                    followRedisTraderVO.setFollowStatus(followSub.getFollowStatus());
+                }
+                followRedisTraderVO.setAccount(trader.getAccount());
+                followRedisTraderVO.setConnectionStatus(trader.getStatus());
+                followRedisTraderVO.setPlacedType(ObjectUtil.isNotEmpty( qc.OrderClient.PlacedType)? qc.OrderClient.PlacedType.name():"Client");
+                followRedisTraderVO.setRemark(trader.getRemark());
+                followRedisTraderVO.setPlatform(trader.getPlatform());
+                followRedisTraderVO.setLeverage(qc.Leverage);
                 // 缓存经常变动的三个值信息
                 followRedisTraderVO.setTraderId(abstractApiTrader.getTrader().getId());
                 followRedisTraderVO.setBalance(BigDecimal.valueOf(qc.AccountBalance()));
@@ -113,6 +129,24 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
             lastInvokeTimeTrader = currentTime;
             updateTraderInfo();
         }
+    }
+
+    private String getfollowMode(FollowTraderSubscribeEntity followSub) {
+        String direction = followSub.getFollowDirection() == 0 ? "正" : "反";
+        //  0-固定手数 1-手数比例 2-净值比例
+        String mode =null;
+        switch (followSub.getFollowMode()) {
+            case(0):
+                mode="固定";
+                break;
+            case(1):
+                mode="手";
+                break;
+            case(2):
+                mode="净";
+                break;
+        }
+        return direction+"|"+mode+"*"+followSub.getFollowParam();
     }
 
     /**

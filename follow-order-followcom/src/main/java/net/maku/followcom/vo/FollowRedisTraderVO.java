@@ -54,4 +54,27 @@ public class FollowRedisTraderVO implements Serializable {
 	@Schema(description = "跟单账号数量")
 	private Integer slaveNum;
 
+	@Schema(description = "账户")
+	private String account;
+
+	@Schema(description = "备注")
+	private String remark;
+
+	@Schema(description = "平台")
+	private String platform;
+
+	@Schema(description = "杠杆")
+	private Integer leverage;
+
+	@Schema(description = "下单模式")
+	private String followMode;
+
+	@Schema(description = "下单方式")
+	private String placedType;
+
+	@Schema(description = "连接状态")
+	private Integer connectionStatus;
+
+	@Schema(description = "跟单状态")
+	private Integer followStatus;
 }
