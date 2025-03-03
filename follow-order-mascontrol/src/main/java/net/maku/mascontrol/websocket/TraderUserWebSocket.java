@@ -6,9 +6,12 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderCloseEnum;
+import net.maku.followcom.service.FollowOrderDetailService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.util.SpringContextUtils;
@@ -29,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static dm.jdbc.util.DriverUtil.log;
 
@@ -44,6 +48,7 @@ public class TraderUserWebSocket {
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
     private final FollowTraderUserService followTraderUserService= SpringContextUtils.getBean(FollowTraderUserService.class);
     private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
+    private final FollowOrderDetailService followOrderDetailService=SpringContextUtils.getBean(FollowOrderDetailService.class);
     @OnOpen
     public void onOpen(Session session) throws IOException {
     }
@@ -106,10 +111,26 @@ public class TraderUserWebSocket {
         }
         Object o1 = redisCache.get(Constant.TRADER_ACTIVE + traderId.get());
         List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+        
         if (ObjectUtil.isNotEmpty(o1)){
             orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+            List<Integer> orderNos = orderActiveInfoList.stream().map(OrderActiveInfoVO::getOrderNo).toList();
+            List<FollowOrderDetailEntity> orderDetails = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, traderUser.getAccount()).in(FollowOrderDetailEntity::getOrderNo, orderNos));
+            Map<Integer, FollowOrderDetailEntity> map = orderDetails.stream().collect(Collectors.toMap(FollowOrderDetailEntity::getOrderNo, o -> o));
+            orderActiveInfoList.forEach(o->{
+                FollowOrderDetailEntity followOrderDetailEntity = map.get(o.getOrderNo());
+                if(followOrderDetailEntity!=null){
+                    if(followOrderDetailEntity.getType().equals(TraderCloseEnum.BUY)){
+                        o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
+                    }else{
+                        o.setPriceSlip(followOrderDetailEntity.getClosePriceSlip());
+                    }
+
+                }
+            });
 
         }
+        
       return orderActiveInfoList;
     }
     // 当发生错误时调用
