@@ -69,6 +69,7 @@ public class FollowVpsController {
     private final MasControlService masControlService;
     private final  FollowTestDetailService followTestDetailService;
     private final RedisUtil redisUtil;
+    private final FollowTraderUserService followTraderUserService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -410,5 +411,18 @@ public class FollowVpsController {
         });
         return Result.ok("修改完成");
     }
+
+    @GetMapping("listVpsUser")
+    @Operation(summary = "查询账号列表")
+    public Result<List<String>> listVpsUser(@RequestParam String vps ) {
+        //查看该vps下的账号
+        List<String> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr, vps)).stream().map(FollowTraderEntity::getAccount).toList();
+        //查询所有账号，去重
+        List<String> accountsList = followTraderUserService.list().stream().map(FollowTraderUserEntity::getAccount).distinct().toList();
+        //差集
+        List<String> collect = accountsList.stream().filter(item -> !list.contains(item)).toList();
+        return Result.ok(collect);
+    }
+
 
 }
