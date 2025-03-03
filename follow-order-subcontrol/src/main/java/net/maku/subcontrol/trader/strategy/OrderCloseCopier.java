@@ -195,6 +195,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             if (flag==1){
                 FollowOrderRepairSocketVO followOrderRepairSocketVO = setRepairWebSocket(leaderCopier.getMasterId().toString(), leaderCopier.getSlaveId().toString(), quoteClient);
                 traderOrderRepairWebSocket.pushMessage(leaderCopier.getMasterId().toString(),leaderCopier.getSlaveId().toString(), JsonUtils.toJsonString(followOrderRepairSocketVO));
+                redisUtil.set(Constant.TRADER_TEMPORARILY_REPAIR+leaderCopier.getSlaveId(),followOrderRepairSocketVO);
             }
             //删除漏单
 //            FollowTraderEntity master = followTraderService.getById(leaderCopier.getMasterId());

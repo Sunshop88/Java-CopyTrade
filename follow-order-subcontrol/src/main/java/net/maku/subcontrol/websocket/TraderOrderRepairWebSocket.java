@@ -126,14 +126,21 @@ public class TraderOrderRepairWebSocket {
                 log.info(accountId + "登录异常");
                 return;
             }
-            FollowOrderRepairSocketVO followOrderRepairSocketVO = new FollowOrderRepairSocketVO();
-            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
-            List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
-            if (ObjectUtil.isNotEmpty(o1)){
-                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
-            }
+
             //持仓不为空并且为跟单账号 校验漏单信息
             if (!slaveId.equals("0")) {
+                Object repair =redisUtil.get(Constant.TRADER_TEMPORARILY_REPAIR+slaveId);
+                if (ObjectUtil.isNotEmpty(repair)){
+                    pushMessage(traderId, slaveId, JsonUtils.toJsonString(repair));
+                    redisUtil.del(Constant.TRADER_TEMPORARILY_REPAIR+slaveId);
+                }
+
+                Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
+                FollowOrderRepairSocketVO followOrderRepairSocketVO = new FollowOrderRepairSocketVO();
+                List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+                if (ObjectUtil.isNotEmpty(o1)){
+                    orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                }
                 FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
                 FollowTraderEntity master = followTraderService.getFollowById(Long.valueOf(traderId));
                 FollowTraderEntity slave = followTraderService.getFollowById(Long.valueOf(slaveId));
@@ -208,16 +215,10 @@ public class TraderOrderRepairWebSocket {
                     list.sort((m1, m2) -> m2.getMasterOpenTime().compareTo(m1.getMasterOpenTime()));
                 }
                 followOrderRepairSocketVO.setOrderRepairInfoVOList(list);
+                pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderRepairSocketVO));
             }
-            pushMessage(traderId, slaveId, JsonUtils.toJsonString(followOrderRepairSocketVO));
         } catch (Exception e) {
             log.error("定时推送消息异常", e);
-        }finally {
-            if (!Thread.currentThread().isInterrupted()) { // 检查线程是否被中断
-                redissonLockUtil.unlock("LOCK:" + traderId + ":" + slaveId);
-            } else {
-                log.warn("线程已中断，跳过释放锁");
-            }
         }
     }
 

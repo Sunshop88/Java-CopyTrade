@@ -58,7 +58,9 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     private  final FollowOrderDetailService followOrderDetailService;
     @Override
     public Boolean repairSend(RepairSendVO repairSendVO) {
-        if (redissonLockUtil.tryLockForShortTime(ObjectUtil.isEmpty(repairSendVO.getOrderNo())?"RepiarAll":repairSendVO.getOrderNo().toString()+repairSendVO.getSlaveId()+repairSendVO.getMasterId(), 0, -1, TimeUnit.SECONDS)) {
+        String locakkey = ObjectUtil.isEmpty(repairSendVO.getOrderNo()) ? "RepiarAll" : repairSendVO.getOrderNo().toString();
+        locakkey+=repairSendVO.getSlaveId()+repairSendVO.getMasterId();
+        if (redissonLockUtil.tryLockForShortTime(locakkey, 0, -1, TimeUnit.SECONDS)) {
             try {
                 FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
                 if (ObjectUtil.isEmpty(vps) || vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
@@ -123,10 +125,10 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
                 }
             } catch (Exception e) {
                 log.error("补单异常" + e.getMessage());
-                throw new ServerException("补单异常");
+                throw new ServerException(e.getMessage());
             } finally {
-                if (redissonLockUtil.isLockedByCurrentThread(repairSendVO.getOrderNo().toString())) {
-                    redissonLockUtil.unlock(repairSendVO.getOrderNo().toString());
+                if (redissonLockUtil.isLockedByCurrentThread(locakkey)) {
+                    redissonLockUtil.unlock(locakkey);
                 }
             }
         }else {
