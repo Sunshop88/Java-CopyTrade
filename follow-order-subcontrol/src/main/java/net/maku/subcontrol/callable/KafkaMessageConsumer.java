@@ -269,7 +269,7 @@ public class KafkaMessageConsumer {
                                         //多余漏单删除
                                         Map<Object, Object> map = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slaveTrader.getPlatform() + "#" + leaderApiTrader.getTrader().getPlatform() + "#" + o.getSlaveAccount() + "#" + o.getMasterAccount());
                                         map.keySet().stream().forEach(omap->{
-                                            Optional<Order> first = finalOrderMaster.stream().filter(of -> omap.equals(of.Ticket)).findFirst();
+                                            Optional<Order> first = Arrays.asList(orders).stream().filter(of -> omap.toString().equals(String.valueOf(of.Ticket))).findFirst();
                                             if (!first.isPresent()){
                                                 log.info("存在多余漏单"+omap);
                                                 EaOrderInfo eaOrderInfo = (EaOrderInfo)map.get(omap);
