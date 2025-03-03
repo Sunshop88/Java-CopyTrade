@@ -101,7 +101,6 @@ public class BargainController {
     @Operation(summary = "平仓")
     public Result<Boolean> orderClose(@RequestBody @Valid BargainCloseVO vo,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
-
         if(ObjectUtil.isEmpty(users)){
             throw new ServerException("账号未挂靠vps");
         }
