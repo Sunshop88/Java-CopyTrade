@@ -77,6 +77,7 @@ public class FollowSlaveController {
     private final ObtainOrderHistoryTask obtainOrderHistoryTask;
     private final MessagesService messagesService;
     private final FollowService followService;
+    private final FollowTraderUserService followTraderUserService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -122,6 +123,17 @@ public class FollowSlaveController {
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
+            //添加trader_user
+            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+            if (ObjectUtil.isNotEmpty(entities)) {
+                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                followTraderUserVO.setAccount(vo.getAccount());
+                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                followTraderUserVO.setPlatform(vo.getPlatform());
+                Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                followTraderUserVO.setPlatformId(Math.toIntExact(id));
+                followTraderUserService.save(followTraderUserVO);
+            }
             newID=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());

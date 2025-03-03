@@ -172,6 +172,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowTraderUserVO vo) {
+        List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+        if (ObjectUtil.isNotEmpty(entities)){
+            throw new ServerException("重复添加,请重新输入");
+        }
         FollowTraderUserEntity entity = FollowTraderUserConvert.INSTANCE.convert(vo);
         FollowPlatformEntity first = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst();
         if (ObjectUtil.isNotEmpty(first)){
@@ -267,6 +271,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 String node = record.get(4);
                 String remark = record.get(5);
                 String sort = record.get(6).isEmpty() ? "1" : record.get(6);
+
+                List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
+                if (ObjectUtil.isNotEmpty(entities)){
+                    String errorRemark = "账号重复添加";
+                    failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark,savedId));
+                    failureCount++;
+                    break;
+                }
 
                 // 校验必填字段
                 StringBuilder errorMsg = new StringBuilder();
