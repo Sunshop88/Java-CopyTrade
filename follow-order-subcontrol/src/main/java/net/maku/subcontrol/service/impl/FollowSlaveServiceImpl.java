@@ -58,7 +58,7 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
     private  final FollowOrderDetailService followOrderDetailService;
     @Override
     public Boolean repairSend(RepairSendVO repairSendVO) {
-        if (redissonLockUtil.tryLockForShortTime(repairSendVO.getOrderNo().toString()+repairSendVO.getSlaveId()+repairSendVO.getMasterId(), 0, -1, TimeUnit.SECONDS)) {
+        if (redissonLockUtil.tryLockForShortTime(ObjectUtil.isEmpty(repairSendVO.getOrderNo())?"RepiarAll":repairSendVO.getOrderNo().toString()+repairSendVO.getSlaveId()+repairSendVO.getMasterId(), 0, -1, TimeUnit.SECONDS)) {
             try {
                 FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
                 if (ObjectUtil.isEmpty(vps) || vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
