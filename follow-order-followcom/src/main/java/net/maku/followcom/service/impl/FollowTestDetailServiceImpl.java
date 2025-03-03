@@ -266,6 +266,11 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         for (Map.Entry<String, Map<String, String>> entry : sortedEntries) {
             String key = entry.getKey();
             String[] keyParts = key.split("_");
+            // 检查分割后的数组长度是否足够
+            if (keyParts.length < 3) {
+                log.error("数组越界：{}", key);
+                continue;
+            }
             String serverName = keyParts[0];
             String platformType = keyParts[1];
             String serverNode = keyParts[2];
@@ -481,6 +486,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         PageResult<String[]> pageResult = new PageResult<>(result, dataRows.size());
         return pageResult;
     }
+
 
     // 辅助方法：处理可能为 null 的字符串比较
     private int compareStrings(String str1, String str2) {
