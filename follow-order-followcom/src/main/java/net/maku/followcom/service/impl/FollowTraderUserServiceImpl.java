@@ -561,10 +561,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         if (f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                             followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
                         }
-                        if (f.getType().equals(TraderTypeEnum.MASTER_REAL)) {
+                        if (f.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
                             VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
                             vpsDesc.add(vo);
-                        } else if (f.getType().equals(TraderTypeEnum.BARGAIN)) {
+                        } else if (f.getType().equals(TraderTypeEnum.BARGAIN.getType())) {
                             VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
                             vpsDesc.add(vo);
                         } else {
