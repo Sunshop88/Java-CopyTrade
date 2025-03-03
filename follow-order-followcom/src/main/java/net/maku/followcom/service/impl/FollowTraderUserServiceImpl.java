@@ -115,6 +115,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                  }
                 if(query.getStatus().contains(2) ){
                     statusExtra.add("账号异常");
+                    statusExtra.add("账号掉线");
                 }
                 wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
             }

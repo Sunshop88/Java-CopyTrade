@@ -25,6 +25,7 @@ import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class BargainWebSocket {
             JSONObject jsonObj = JSONObject.parseObject(message);
             //当前选中的id [{"account":111,"platformId"},{"account":111,"platformId"}}
             JSONArray accountVos = jsonObj.getJSONArray("accountVos");
-            Long currentAccountId = jsonObj.getLong("traderUserId");
+          //  Long currentAccountId = jsonObj.getLong("traderUserId");
             String traderUserJson = jsonObj.getString("traderUserQuery");
             FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
 
@@ -78,9 +79,9 @@ public class BargainWebSocket {
                 PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery).getPageResult();
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 //选中当前账号的持仓
-                if(ObjectUtil.isNotEmpty(currentAccountId)) {
+              /*  if(ObjectUtil.isNotEmpty(currentAccountId)) {
                     getActive(currentAccountId,bargainAccountVO);
-                }
+                }*/
                 //概览
                 List<List<BigDecimal>> statList = new ArrayList<>();
                 List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
@@ -89,8 +90,8 @@ public class BargainWebSocket {
                 Map<String,FollowTraderEntity> map = new ConcurrentHashMap<>();
                 Map<String,FollowTraderEntity> sucessmap = new ConcurrentHashMap<>();
                 Map<String,FollowTraderEntity> errmap = new ConcurrentHashMap<>();
-                JSONObject totalJson = new JSONObject();
-                JSONObject currentJson = new JSONObject();
+                Map<String,BigDecimal> totalJson = new ConcurrentHashMap();
+                Map<String,BigDecimal> currentJson = new ConcurrentHashMap();
                 totalJson.put("tBuyNum",BigDecimal.ZERO);
                 totalJson.put("tSellNum",BigDecimal.ZERO);
                 totalJson.put("tProfit",BigDecimal.ZERO);
@@ -98,30 +99,40 @@ public class BargainWebSocket {
                 currentJson.put("BuyNum",BigDecimal.ZERO);
                 currentJson.put("SellNum",BigDecimal.ZERO);
                 currentJson.put("Profit",BigDecimal.ZERO);
+               // CountDownLatch  countDownLatch = new CountDownLatch(traders.size());
                 traders.forEach(t->{
-                    FollowTraderEntity json = map.get(t.getAccount() + "-" + t.getPlatformId());
-                    if(json == null) {
-                        //判断是否连接成功
-                        if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
-                            addData(t, totalJson, sucessmap, accountVos, currentJson);
 
-                        }else{
-                            errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
+                   // ThreadPoolUtils.getExecutor().execute(()->{
+                        FollowTraderEntity json = map.get(t.getAccount() + "-" + t.getPlatformId());
+                        if(json == null) {
+                            //判断是否连接成功
+                            if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
+                                addData(t, totalJson, sucessmap, accountVos, currentJson);
+
+                            }else{
+                                errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
+                            }
                         }
-                    }
-                });
+                     //   countDownLatch.countDown();
+                    });
+             //   });
+             /*   try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    log.error("推送异常："+e);
+                }*/
                 errmap.forEach((k,v)->{
                     FollowTraderEntity followTraderEntity = sucessmap.get(k);
                     if(followTraderEntity==null){
                         addData(v, totalJson, sucessmap, accountVos, currentJson);
                     }
                 });
-                ls1.set(0, totalJson.getBigDecimal("tBuyNum"));
-                ls1.set(1, totalJson.getBigDecimal("tSellNum"));
-                ls1.set(2, totalJson.getBigDecimal("tProfit"));
-                ls2.set(0, totalJson.getBigDecimal("BuyNum"));
-                ls2.set(1, totalJson.getBigDecimal("SellNum"));
-                ls2.set(2, totalJson.getBigDecimal("Profit"));
+                ls1.set(0, totalJson.get("tBuyNum"));
+                ls1.set(1, totalJson.get("tSellNum"));
+                ls1.set(2, totalJson.get("tProfit"));
+                ls2.set(0, currentJson.get("BuyNum")==null?BigDecimal.ZERO:currentJson.get("BuyNum"));
+                ls2.set(1, currentJson.get("SellNum")==null?BigDecimal.ZERO:currentJson.get("SellNum"));
+                ls2.set(2, currentJson.get("Profit")==null?BigDecimal.ZERO:currentJson.get("Profit"));
                 statList.add(ls1);
                 statList.add(ls2);
                 bargainAccountVO.setStatList(statList);
@@ -146,17 +157,20 @@ public class BargainWebSocket {
     }
     }
 
-    private void addData(FollowTraderEntity t, JSONObject totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos, JSONObject currentJson) {
-        BigDecimal tBuyNum = totalJson.getBigDecimal("tBuyNum");
-        BigDecimal tSellNum = totalJson.getBigDecimal("tSellNum");
-        BigDecimal tProfit = totalJson.getBigDecimal("tProfit");
+    private void addData(FollowTraderEntity t, Map<String,BigDecimal> totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos,  Map<String,BigDecimal> currentJson) {
+        BigDecimal tBuyNum = totalJson.get("tBuyNum");
+        BigDecimal tSellNum = totalJson.get("tSellNum");
+        BigDecimal tProfit = totalJson.get("tProfit");
         FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
-        //多单
-        tBuyNum = tBuyNum.add(new BigDecimal(o1.getBuyNum()));
-        //空单
-        tSellNum=  tSellNum.add(new BigDecimal(o1.getSellNum()));
-        //总盈亏
-        tProfit = tProfit.add(o1.getProfit());
+        if(ObjectUtil.isNotEmpty(o1)){
+            //多单
+            tBuyNum = tBuyNum.add(new BigDecimal(o1.getBuyNum()));
+            //空单
+            tSellNum=  tSellNum.add(new BigDecimal(o1.getSellNum()));
+            //总盈亏
+            tProfit = tProfit.add(o1.getProfit());
+        }
+
         totalJson.put("tBuyNum",tBuyNum);
         totalJson.put("tSellNum",tSellNum);
         totalJson.put("tProfit",tProfit);
@@ -169,9 +183,9 @@ public class BargainWebSocket {
                 return account.equals(t.getAccount()) && platformId.equals(t.getPlatformId());
             });
            if(flag){
-               BigDecimal buyNum = currentJson.getBigDecimal("BuyNum");
-               BigDecimal sellNum = currentJson.getBigDecimal("SellNum");
-               BigDecimal profit = currentJson.getBigDecimal("Profit");
+               BigDecimal buyNum = currentJson.get("BuyNum");
+               BigDecimal sellNum = currentJson.get("SellNum");
+               BigDecimal profit = currentJson.get("Profit");
                buyNum = buyNum.add(new BigDecimal(o1.getBuyNum()));
                //空单
                sellNum=  sellNum.add(new BigDecimal(o1.getSellNum()));
