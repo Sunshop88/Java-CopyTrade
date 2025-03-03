@@ -269,12 +269,12 @@ public class KafkaMessageConsumer {
                                         //多余漏单删除
                                         Map<Object, Object> map = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#" + slaveTrader.getPlatform() + "#" + leaderApiTrader.getTrader().getPlatform() + "#" + o.getSlaveAccount() + "#" + o.getMasterAccount());
                                         map.keySet().stream().forEach(omap->{
-                                            Optional<Order> first = finalOrderMaster.stream().filter(of -> !omap.equals(of.Ticket)).findFirst();
-                                            if (first.isPresent()){
+                                            Optional<Order> first = finalOrderMaster.stream().filter(of -> omap.equals(of.Ticket)).findFirst();
+                                            if (!first.isPresent()){
                                                 log.info("存在多余漏单"+omap);
+                                                EaOrderInfo eaOrderInfo = (EaOrderInfo)map.get(omap);
                                                 redisUtil.hDel(Constant.FOLLOW_REPAIR_SEND+ FollowConstant.LOCAL_HOST+"#"+slaveTrader.getPlatform()+"#"+leaderApiTrader.getTrader().getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(),String.valueOf(omap));
                                                 //删除
-                                                EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.CLOSED, first.get(), 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(),leaderApiTrader.getTrader());
                                                 Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString());
                                                 Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
                                                 if (o1!=null && o1.toString().trim().length()>0){
