@@ -19,12 +19,15 @@ import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
+import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
 import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.trader.*;
+import net.maku.subcontrol.vo.FollowOrderRepairSocketVO;
+import net.maku.subcontrol.websocket.TraderOrderRepairWebSocket;
 import online.mtapi.mt4.Op;
 import online.mtapi.mt4.Order;
 import online.mtapi.mt4.QuoteClient;
@@ -60,6 +63,8 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final CacheManager cacheManager;
     private final RedissonLockUtil redissonLockUtil;
+    private final TraderOrderRepairWebSocket traderOrderRepairWebSocket;
+
     @Override
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
@@ -187,8 +192,12 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             // 保存到批量发送队列
             kafkaCloseMessages.add(jsonEvent);
+            if (flag==1){
+                FollowOrderRepairSocketVO followOrderRepairSocketVO = setRepairWebSocket(leaderCopier.getMasterId().toString(), leaderCopier.getSlaveId().toString(), quoteClient);
+                traderOrderRepairWebSocket.pushMessage(leaderCopier.getMasterId().toString(),leaderCopier.getSlaveId().toString(), JsonUtils.toJsonString(followOrderRepairSocketVO));
+            }
             //删除漏单
-            FollowTraderEntity master = followTraderService.getById(leaderCopier.getMasterId());
+//            FollowTraderEntity master = followTraderService.getById(leaderCopier.getMasterId());
             //String mapKey = copierApiTrader.getTrader().getId() + "#" + copierApiTrader.getTrader().getAccount();
 //            String closekey = Constant.REPAIR_CLOSE + "：" + copier.getAccount();
 //            boolean closelock = redissonLockUtil.lock(closekey, 10, -1, TimeUnit.SECONDS);

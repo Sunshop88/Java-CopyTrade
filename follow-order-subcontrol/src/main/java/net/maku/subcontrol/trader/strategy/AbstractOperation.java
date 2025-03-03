@@ -1,6 +1,7 @@
 package net.maku.subcontrol.trader.strategy;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
@@ -10,18 +11,22 @@ import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.CommentGenerator;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.rule.FollowRule;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.FollowSubscribeOrderService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.service.impl.FollowSubscribeOrderServiceImpl;
+import net.maku.subcontrol.vo.FollowOrderRepairSocketVO;
 import online.mtapi.mt4.Op;
+import online.mtapi.mt4.Order;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static online.mtapi.mt4.Op.Buy;
@@ -123,5 +128,86 @@ public class AbstractOperation {
                 }
             }
         }, ThreadPoolUtils.getExecutor()); // 使用虚拟线程
+    }
+
+
+    FollowOrderRepairSocketVO setRepairWebSocket(String traderId, String slaveId, QuoteClient quoteClient){
+        Order[] orders = quoteClient.GetOpenedOrders();
+        FollowTraderSubscribeEntity followTraderSubscribe = followTraderSubscribeService.subscription(Long.valueOf(slaveId), Long.valueOf(traderId));
+        FollowTraderEntity master = followTraderService.getFollowById(Long.valueOf(traderId));
+        FollowTraderEntity slave = followTraderService.getFollowById(Long.valueOf(slaveId));
+        Map<Object,Object> sendRepair=redisUtil.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+        Map<Object,Object> closeRepair = redisUtil.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+"#"+slave.getPlatform()+"#"+master.getPlatform()+"#"+followTraderSubscribe.getSlaveAccount()+"#"+followTraderSubscribe.getMasterAccount());
+
+        List<Object> sendRepairToExtract = new ArrayList<>();
+
+        for (Object repairObj : sendRepair.keySet()) {
+            EaOrderInfo repairComment = (EaOrderInfo) sendRepair.get(repairObj);
+            boolean existsInActive = Arrays.asList(orders).stream().anyMatch(order -> repairComment.getTicket()==order.MagicNumber);
+            if (!existsInActive) {
+                sendRepairToExtract.add(repairComment);
+            }
+        }
+        List<Object> closeRepairToRemove = new ArrayList<>();
+        List<Object> closeRepairToExtract = new ArrayList<>();
+        for (Object repairObj : closeRepair.keySet()) {
+            EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
+            boolean existsInActive = Arrays.asList(orders).stream().anyMatch(order -> repairComment.getTicket()==order.MagicNumber);
+            if (!existsInActive) {
+                closeRepairToRemove.add(repairComment);
+            } else {
+                closeRepairToExtract.add(repairComment);
+            }
+        }
+        String repairKey = Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform()+ "#" +
+                master.getPlatform()+ "#" + followTraderSubscribe.getSlaveAccount() + "#" + followTraderSubscribe.getMasterAccount();
+
+        redisUtil.pipeline(connection -> {
+            closeRepairToRemove.forEach(ticket -> connection.hDel(repairKey.getBytes(), ticket.toString().getBytes()));
+        });
+
+        List<OrderRepairInfoVO> list = Collections.synchronizedList(new ArrayList<>());
+        sendRepairToExtract.forEach(o -> {
+            EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
+            OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+            orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.SEND.getType());
+            orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
+            orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
+            orderRepairInfoVO.setMasterProfit(eaOrderInfo.getProfit().doubleValue());
+            orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
+            orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
+            orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
+            list.add(orderRepairInfoVO);
+        });
+        closeRepairToExtract.forEach(o -> {
+            EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
+            //通过备注查询未平仓记录
+            List<FollowOrderDetailEntity> detailServiceList = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getTraderId, slaveId).isNull(FollowOrderDetailEntity::getCloseTime).eq(FollowOrderDetailEntity::getMagical, ((EaOrderInfo) o).getTicket()));
+            if (ObjectUtil.isNotEmpty(detailServiceList)) {
+                for (FollowOrderDetailEntity detail : detailServiceList) {
+                    OrderRepairInfoVO orderRepairInfoVO = new OrderRepairInfoVO();
+                    orderRepairInfoVO.setMasterOpenTime(eaOrderInfo.getOpenTime());
+                    orderRepairInfoVO.setMasterSymbol(eaOrderInfo.getSymbol());
+                    orderRepairInfoVO.setRepairType(TraderRepairOrderEnum.CLOSE.getType());
+                    orderRepairInfoVO.setMasterLots(eaOrderInfo.getLots());
+                    orderRepairInfoVO.setMasterProfit(ObjectUtil.isNotEmpty(eaOrderInfo.getProfit()) ? eaOrderInfo.getProfit().doubleValue() : 0);
+                    orderRepairInfoVO.setMasterType(Op.forValue(eaOrderInfo.getType()).name());
+                    orderRepairInfoVO.setMasterTicket(eaOrderInfo.getTicket());
+                    orderRepairInfoVO.setSlaveLots(eaOrderInfo.getLots());
+                    orderRepairInfoVO.setSlaveType(Op.forValue(eaOrderInfo.getType()).name());
+                    orderRepairInfoVO.setSlaveOpenTime(detail.getOpenTime());
+                    orderRepairInfoVO.setSlaveSymbol(detail.getSymbol());
+                    orderRepairInfoVO.setSlaveTicket(detail.getOrderNo());
+                    orderRepairInfoVO.setSlaverProfit(detail.getProfit().doubleValue());
+                    list.add(orderRepairInfoVO);
+                }
+            }
+        });
+        if (list.size()>=2){
+            list.sort((m1, m2) -> m2.getMasterOpenTime().compareTo(m1.getMasterOpenTime()));
+        }
+        FollowOrderRepairSocketVO followOrderRepairSocketVO=new FollowOrderRepairSocketVO();
+        followOrderRepairSocketVO.setOrderRepairInfoVOList(list);
+        return followOrderRepairSocketVO;
     }
 }
