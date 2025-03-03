@@ -376,7 +376,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     public static void main(String[] args) {
-        String s = AesUtils.decryptStr("d4d66868f72b8838ed2a450a529657fc");
+        String s = AesUtils.aesEncryptStr("As123456");
         System.out.println(s);
     }
     @Override
@@ -479,7 +479,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             Map<String, String> headers = new HashMap<>();
             headers.put("Authorization", token);
             headers.put("Content-Type", "application/json");
-            String originalPassword = AesUtils.decryptStr(followTraderEntities.getFirst().getPassword()); // 保存原始密码
+//            String originalPassword = AesUtils.decryptStr(followTraderEntities.getFirst().getPassword()); // 保存原始密码
             for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                 // 账号正常登录
                 FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);

@@ -944,6 +944,10 @@ public class FollowTraderController {
             throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
         }
         if (ObjectUtil.isNotEmpty(quoteClient)){
+            //修改密码
+            LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderEntity::getId, traderId)
+                    .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
             reconnect(String.valueOf(traderId));
         }
         return Result.ok();
