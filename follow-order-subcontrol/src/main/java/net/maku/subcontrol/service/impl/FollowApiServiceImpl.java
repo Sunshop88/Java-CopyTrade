@@ -82,6 +82,7 @@ public class FollowApiServiceImpl implements FollowApiService {
     private final RedisUtil redisUtil;
     private final RedissonLockUtil redissonLockUtil;
     private final MessagesService messagesService;
+    private final FollowTraderUserService followTraderUserService;
 
     /**
      * 喊单账号保存
@@ -98,6 +99,17 @@ public class FollowApiServiceImpl implements FollowApiService {
         //本机处理
         try {
             FollowTraderVO followTraderVO = followTraderService.save(vo);
+            //添加trader_user
+            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+            if (ObjectUtil.isNotEmpty(entities)) {
+                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                followTraderUserVO.setAccount(vo.getAccount());
+                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                followTraderUserVO.setPlatform(vo.getPlatform());
+                Long platformId = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                followTraderUserVO.setPlatformId(Math.toIntExact(platformId));
+                followTraderUserService.save(followTraderUserVO);
+            }
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
 
@@ -240,6 +252,17 @@ public class FollowApiServiceImpl implements FollowApiService {
             }
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
+            //添加trader_user
+            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+            if (ObjectUtil.isNotEmpty(entities)) {
+                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                followTraderUserVO.setAccount(vo.getAccount());
+                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                followTraderUserVO.setPlatform(vo.getPlatform());
+                Long platformId = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                followTraderUserVO.setPlatformId(Math.toIntExact(platformId));
+                followTraderUserService.save(followTraderUserVO);
+            }
 
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());

@@ -115,13 +115,16 @@ public class FollowTraderController {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             //添加trader_user
-            FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
-            followTraderUserVO.setAccount(vo.getAccount());
-            followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
-            followTraderUserVO.setPlatform(vo.getPlatform());
-            Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
-            followTraderUserVO.setPlatformId(Math.toIntExact(id));
-            followTraderUserService.save(followTraderUserVO);
+            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+            if (ObjectUtil.isNotEmpty(entities)) {
+                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                followTraderUserVO.setAccount(vo.getAccount());
+                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                followTraderUserVO.setPlatform(vo.getPlatform());
+                Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                followTraderUserVO.setPlatformId(Math.toIntExact(id));
+                followTraderUserService.save(followTraderUserVO);
+            }
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
             ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
@@ -941,6 +944,10 @@ public class FollowTraderController {
             throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
         }
         if (ObjectUtil.isNotEmpty(quoteClient)){
+            //修改密码
+            LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderEntity::getId, traderId)
+                    .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
             reconnect(String.valueOf(traderId));
         }
         return Result.ok();

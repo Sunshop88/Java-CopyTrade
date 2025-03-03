@@ -14,6 +14,7 @@ import com.fhs.trans.service.impl.TransService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.api.module.system.UserApi;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -64,6 +65,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     private final RedisUtil redisUtil;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsUserService followVpsUserService;
+    private final UserApi userApi;
 
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
@@ -112,11 +114,12 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             //查询vps其下的用户
             List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, o.getId()));
             if (ObjectUtil.isNotEmpty(vpsUserEntities)){
-                List<String> vpsUserVO = new ArrayList<>();
+                List<Long> vpsUserVO = new ArrayList<>();
                 vpsUserEntities.forEach(o1->{
-                    vpsUserVO.add(o1.getVpsName());
+                    vpsUserVO.add(o1.getUserId());
                 });
-                o.setUserList(vpsUserVO);
+                List<String> userList = userApi.getUserId(vpsUserVO);
+                o.setUserList(userList);
             }
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
