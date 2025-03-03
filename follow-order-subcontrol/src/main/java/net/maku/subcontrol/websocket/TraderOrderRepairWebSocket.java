@@ -133,6 +133,7 @@ public class TraderOrderRepairWebSocket {
                 if (ObjectUtil.isNotEmpty(repair)){
                     pushMessage(traderId, slaveId, JsonUtils.toJsonString(repair));
                     redisUtil.del(Constant.TRADER_TEMPORARILY_REPAIR+slaveId);
+                    return;
                 }
 
                 Object o1 = redisCache.get(Constant.TRADER_ACTIVE + accountId);
