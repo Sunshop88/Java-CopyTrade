@@ -725,6 +725,7 @@ public class FollowTraderController {
                 }
             }
         }catch (Exception e){
+            log.info("重连错误"+e.getMessage());
             result=false;
         }
         return result;
