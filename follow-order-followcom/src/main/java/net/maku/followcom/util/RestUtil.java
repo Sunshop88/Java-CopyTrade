@@ -367,14 +367,14 @@ public class RestUtil {
         try {
             if(t!=null) {
                 jsonBody = objectMapper.writeValueAsString(t);
-                JSONObject jsonObject = JSONObject.parseObject(jsonBody);
+            /*    JSONObject jsonObject = JSONObject.parseObject(jsonBody);
                 JSONObject newjson = new JSONObject();
                 jsonObject.forEach((key, value) -> {
                     if(ObjectUtil.isNotEmpty(value)) {
                         newjson.put(key, value);
                     }
                 });
-                jsonBody=newjson.toJSONString();
+                jsonBody=newjson.toJSONString();*/
             }
 
         } catch (JsonProcessingException e) {

@@ -32,6 +32,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -109,7 +110,24 @@ public class BargainController {
             closeVO.setTraderId(user.getId());
             closeVO.setAccount(user.getAccount());
             BeanUtil.copyProperties(vo, closeVO);
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, closeVO,null);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ORDERCLOSE, closeVO,null);
+        });
+        return Result.ok();
+    }
+
+    @PostMapping("repairOrderClose")
+    @Operation(summary = "一键漏平")
+    public Result<Boolean> repairOrderClose(@RequestBody @Valid List<TraderUserClose>  list,HttpServletRequest request) {
+        list.forEach(o->{
+            List<FollowTraderEntity> users = getByUserId(o.getTraderUserId());
+            users.forEach(user -> {
+                List<RepairCloseVO> repairCloseVO=new ArrayList<>();
+                RepairCloseVO closeVO=new RepairCloseVO();
+                closeVO.setSlaveId(user.getId());
+                closeVO.setVpsId(user.getServerId());
+                repairCloseVO.add(closeVO);
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,null);
+            });
         });
         return Result.ok();
     }

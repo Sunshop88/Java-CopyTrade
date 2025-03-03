@@ -1,5 +1,6 @@
 package net.maku.subcontrol.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -18,6 +19,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
+import net.maku.followcom.vo.RepairCloseVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.constant.Constant;
@@ -220,6 +222,63 @@ public class FollowSlaveServiceImpl implements FollowSlaveService {
         } else {
             throw new ServerException("操作过于频繁，请稍后再试");
         }
+    }
+
+
+    @Override
+    public Boolean repairOrderClose(List<RepairCloseVO> repairCloseVO) {
+        repairCloseVO.forEach(c->{
+            FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+            if(ObjectUtil.isEmpty(vps) || vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue()) ) {
+                throw new ServerException("VPS已关闭");
+            }
+            List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, c.getSlaveId()));
+            if (ObjectUtil.isNotEmpty(list)) {
+                FollowTraderSubscribeEntity subscription = list.get(0);
+                if (ObjectUtil.isNotEmpty(c.getOrderNo())) {
+                    RepairSendVO repairSendVO=new RepairSendVO();
+                    repairSendVO.setMasterId(subscription.getMasterId());
+                    repairSendVO.setType(TraderRepairEnum.CLOSE.getType());
+                    repairSendVO.setSlaveId(c.getSlaveId());
+                    repairSendVO.setOrderNo(c.getOrderNo());
+                    repairSendVO.setVpsId(c.getVpsId());
+                     repair(repairSendVO, subscription);
+                } else {
+                        CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(c.getSlaveId().toString());
+                        if (ObjectUtil.isEmpty(copierApiTrader)) {
+                            throw new ServerException("账号异常请重连");
+                        }
+                        Order[] orders = copierApiTrader.quoteClient.GetOpenedOrders();
+                        if (subscription.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()) && subscription.getFollowClose().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                            FollowTraderEntity slave = followTraderService.getFollowById(c.getSlaveId());
+                            FollowTraderEntity master = followTraderService.getFollowById(subscription.getMasterId());
+                            List<Object> closeRepairToExtract = new ArrayList<>();
+                            String key = Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST + "#" + slave.getPlatform() + "#" + master.getPlatform() + "#" + subscription.getSlaveAccount() + "#" + subscription.getMasterAccount();
+                            Map<Object, Object> closeRepair = redisUtil.hGetAll(key);
+                            for (Object repairObj : closeRepair.keySet()) {
+
+                                EaOrderInfo repairComment = (EaOrderInfo) closeRepair.get(repairObj);
+                                boolean existsInActive = Arrays.stream(orders).toList().stream().anyMatch(order -> String.valueOf(repairComment.getTicket()).equalsIgnoreCase(String.valueOf(order.MagicNumber)));
+                                if (existsInActive) {
+                                    closeRepairToExtract.add(repairComment);
+                                    //  redisUtil.hDel(key,repairObj.toString());
+                                }
+                            }
+                            closeRepairToExtract.stream().toList().forEach(o -> {
+                                EaOrderInfo eaOrderInfo = (EaOrderInfo) o;
+                                orderCloseCopier.operate(copierApiTrader, eaOrderInfo, 1);
+                            });
+                        }
+
+
+                }
+
+            }
+            
+
+        });
+
+        return null;
     }
 
     @Override

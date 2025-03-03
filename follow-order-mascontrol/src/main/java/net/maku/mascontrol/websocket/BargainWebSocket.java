@@ -45,7 +45,7 @@ import static dm.jdbc.util.DriverUtil.log;
 @Component
 @ServerEndpoint("/socket/bargain")
 public class BargainWebSocket {
-    private final DashboardService dashboardService = SpringContextUtils.getBean(DashboardService.class);
+
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);

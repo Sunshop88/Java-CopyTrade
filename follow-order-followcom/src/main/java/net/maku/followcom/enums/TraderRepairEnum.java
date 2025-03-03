@@ -9,7 +9,8 @@ public enum TraderRepairEnum {
 
     SEND(0, "下单"),
     CLOSE(1,"平仓"),
-    ALL(2,"一键补全");
+    ALL(2,"一键补全"),
+    ALL_CLOSE(3,"一键漏平");
 
     private Integer type;
 

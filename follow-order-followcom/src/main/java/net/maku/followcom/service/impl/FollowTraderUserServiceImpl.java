@@ -556,25 +556,30 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
             if(o.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
                 AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
-                followTraderEntities.forEach(f->{
-                    if(f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                if(ObjectUtil.isNotEmpty(followTraderEntities)) {
+                    followTraderEntities.forEach(f -> {
+                        if (f.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                             followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
-                    }
-                    if(f.getType().equals(TraderTypeEnum.MASTER_REAL)){
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
-                    }else if(f.getType().equals(TraderTypeEnum.BARGAIN)){
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName()+"-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
-                    } else{
-                        VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() +"-"+ vpsMap.get(f.getServerId()).getName()+"-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
-                        vpsDesc.add(vo);
+                        }
+                        if (f.getType().equals(TraderTypeEnum.MASTER_REAL)) {
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            vpsDesc.add(vo);
+                        } else if (f.getType().equals(TraderTypeEnum.BARGAIN)) {
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            vpsDesc.add(vo);
+                        } else {
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            vpsDesc.add(vo);
 
-                    }
-                }) ;
+                        }
+                    });
+                }
                 if(ObjectUtil.isEmpty(followRedisTraderVO.get())){
-                    Object o1 = redisCache.get(Constant.TRADER_USER + followTraderEntities.get(0).getId());
-                    followRedisTraderVO.set((FollowRedisTraderVO) o1);
+                    if(ObjectUtil.isNotEmpty(followTraderEntities)) {
+                        Object o1 = redisCache.get(Constant.TRADER_USER + followTraderEntities.get(0).getId());
+                        followRedisTraderVO.set((FollowRedisTraderVO) o1);
+                    }
+
                 }
                 FollowRedisTraderVO redisTraderVo = followRedisTraderVO.get();
                 if(ObjectUtil.isNotEmpty(redisTraderVo)){
@@ -681,7 +686,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 try {
                     //等待
                     countDownLatch.await();
-                    followFailureDetailService.saveBatch(errList);
+                    if(ObjectUtil.isEmpty(errList)){
+                        followFailureDetailService.saveBatch(errList);
+                    }
+
                     followUploadTraderUserVO.setFailureCount(err.get());
                     followUploadTraderUserVO.setSuccessCount(sum.get());
                     followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
@@ -702,6 +710,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void belowVps(List<Long> traderUserIds, HttpServletRequest request) {
         List<FollowTraderUserEntity> followTraderUsers = baseMapper.selectBatchIds(traderUserIds);
+        followTraderUsers.forEach(o->{
+            o.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+        });
+        updateBatchById(followTraderUsers);
         Map<String,List<Long>> map=new HashMap<>();
 
         followTraderUsers.forEach(traderUser->{
@@ -719,7 +731,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         });
         if(ObjectUtil.isNotEmpty(map)){
             map.forEach((k,v)->{
-                Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.ADD_SLAVE, v,null);
+                Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.DEL_TRADER, v,null);
             });
         }
 

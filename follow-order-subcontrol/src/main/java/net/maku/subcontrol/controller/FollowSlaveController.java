@@ -379,6 +379,14 @@ public class FollowSlaveController {
     public Result<Boolean> repairSend(@RequestBody RepairSendVO repairSendVO) {
         return Result.ok(followSlaveService.repairSend(repairSendVO));
     }
+
+    @PostMapping("repairOrderClose")
+    @Operation(summary = "一键漏平")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<Boolean> repairOrderClose(@RequestBody List<RepairCloseVO> repairCloseVO) {
+        return Result.ok(followSlaveService.repairOrderClose(repairCloseVO));
+    }
+
     @PostMapping("batchRepairSend")
     @Operation(summary = "漏单处理")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
