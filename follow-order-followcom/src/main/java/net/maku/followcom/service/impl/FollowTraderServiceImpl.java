@@ -407,15 +407,33 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
 
         wrapper.like(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
-        wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
-        wrapper.eq(ObjectUtil.isNotEmpty(query.getOrderingSystem()), FollowOrderDetailEntity::getOrderingSystem, query.getOrderingSystem());
+//        wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
+        wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
         //查询结算汇率
        // List<FollowOrderDetailEntity> records = pageOrder.getRecords();
+        List<FollowOrderDetailVO> results = FollowOrderDetailConvert.INSTANCE.convertList(pageOrder.getRecords());
+        for (FollowOrderDetailVO detail : results) {
+            if (detail.getIsExternal() == 1) {
+                detail.setOrderingSystem(0); // 外部
+            } else if (detail.getIsExternal() == 0) {
+                if ("11111".equals(detail.getSendNo())) {
+                    detail.setOrderingSystem(1); // 内部跟单
+                } else {
+                    detail.setOrderingSystem(2); // 内部交易下单
+                }
+            }
+        }
 
-        return new PageResult<>(FollowOrderDetailConvert.INSTANCE.convertList(pageOrder.getRecords()), pageOrder.getTotal());
+        if (ObjectUtil.isNotEmpty(query.getOrderingSystem())) {
+            results = results.stream()
+                    .filter(detail -> detail.getOrderingSystem().equals(query.getOrderingSystem()))
+                    .collect(Collectors.toList());
+        }
+        return new PageResult<>(results, pageOrder.getTotal());
+//        return new PageResult<>(FollowOrderDetailConvert.INSTANCE.convertList(pageOrder.getRecords()), pageOrder.getTotal());
     }
 
     private void handleOrder(QuoteClient quoteClient, OrderClient oc, FollowOrderSendCloseVO vo) {
