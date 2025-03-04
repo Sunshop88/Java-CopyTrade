@@ -186,7 +186,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             // 设置响应头
             HttpHeaders headers = new HttpHeaders();
             headers.add("Content-Disposition", "attachment; filename=export.csv");
-            headers.add("Content-Type", "text/csv");
+            headers.add("Content-Type", "text/csv; charset=UTF-8");
 
             return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
         } catch (IOException e) {
@@ -287,6 +287,16 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         followTraderUserService.updateGroup(idList,groupId);
 
         return Result.ok("批量修改分组成功");
+    }
+
+    @PutMapping("modifyGroup")
+    @Operation(summary = "修改分组")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> modifyGroup(@RequestBody List<FollowTraderUserVO> vos) {
+        followTraderUserService.modify(vos);
+
+        return Result.ok("修改分组成功");
     }
 
     @PutMapping("updatePasswords")

@@ -782,4 +782,16 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
 
     }
+
+    @Override
+    public void modify(List<FollowTraderUserVO> vos) {
+        for (FollowTraderUserVO vo : vos) {
+            FollowGroupVO group = followGroupService.get(Long.valueOf(vo.getGroupId()));
+                LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
+                        .set(FollowTraderUserEntity::getGroupName, group.getName())
+                        .set(FollowTraderUserEntity::getGroupId, vo.getGroupId());
+                baseMapper.update(updateWrapper);
+        }
+    }
 }

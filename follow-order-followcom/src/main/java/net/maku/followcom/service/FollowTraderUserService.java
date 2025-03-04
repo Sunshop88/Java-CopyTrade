@@ -53,4 +53,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request);
 
     void belowVps(List<Long> traderUserIds, HttpServletRequest request);
+
+    void modify(List<FollowTraderUserVO> vos);
 }
