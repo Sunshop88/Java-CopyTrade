@@ -15,6 +15,7 @@ import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.dao.FollowTraderDao;
+import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.query.DashboardAccountQuery;
@@ -254,7 +255,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract) {
+    public boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract,Integer flag) {
         //判断是否正在下单
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + vo.getTraderId()))) {
             return false;
@@ -1700,6 +1701,39 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             listVOArrayList.add(followSendAccountListVO);
         });
         return listVOArrayList;
+    }
+
+    @Override
+    public void masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract) {
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(this.get(vo.getTraderId()).getPlatformId().toString());
+        if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
+            double pr = 1;
+            if (contract != 0) {
+                //查询合约手数比例
+                List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(vo.getTraderId());
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationServiceByTraderId.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(vo.getSymbol());
+                if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                    log.info("对应合约值{}", followSysmbolSpecificationEntity.getContractSize());
+                    pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
+                }
+            }
+            if (pr!= 0) {
+                // 使用索引更新列表中的值
+                BigDecimal newOrderValue = vo.getTotalSzie().multiply(BigDecimal.valueOf(pr));
+                if (newOrderValue.compareTo(new BigDecimal("0.01")) < 0) {
+                    // 如果小于 0.01，则设置为 0.01
+                    vo.setTotalSzie(new BigDecimal("0.01"));
+                } else {
+                    // 否则将新的值设置回 orders 列表
+                    vo.setTotalSzie(new BigDecimal("0.01"));
+                }
+            }
+            //分配下单
+            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), "55555", ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+        }else {
+            //复制下单
+            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), "55555", ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+        }
     }
 
     @Override

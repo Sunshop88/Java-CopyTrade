@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowTraderConvert;
+import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.query.*;
@@ -445,7 +446,7 @@ public class FollowTraderController {
             return Result.error(followTraderVO.getAccount() + " 操作被中断");
         }
 
-        boolean result = followTraderService.orderSend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
+        boolean result = followTraderService.orderSend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract,0);
         if (!result) {
             return Result.error(followTraderVO.getAccount() + "下单失败,该账号正在下单中");
         }
@@ -967,6 +968,120 @@ public class FollowTraderController {
     public Result<List<FollowSendAccountListVO>> sendAccountList() {
         List<FollowSendAccountListVO> page = followTraderService.accountPage();
         return Result.ok(page);
+    }
+
+    @PostMapping("masOrdersend")
+    @Operation(summary = "交易下单")
+    @OperateLog(type = OperateTypeEnum.INSERT)
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<?> masOrdersend(@RequestBody @Valid MasToSubOrderSendDto vo) {
+        FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
+        QuoteClient quoteClient = null;
+        AbstractApiTrader abstractApiTrader = null;
+        if (followTraderVO.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderVO.getType().equals(TraderTypeEnum.BARGAIN.getType())){
+            abstractApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap()
+                    .get(vo.getTraderId().toString());
+
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                    || !abstractApiTrader.quoteClient.Connected()) {
+                leaderApiTradersAdmin.removeTrader(vo.getTraderId().toString());
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
+                    LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    leaderApiTrader1.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                    long startTime = System.currentTimeMillis();
+                    LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    // 开始等待直到获取到copierApiTrader1
+                    while (leaderApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                        try {
+                            // 每次自旋等待500ms后再检查
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            // 处理中断
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    }
+                    //重复提交
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
+                        log.info(followTraderVO.getId().toString()+"重复提交并等待完成");
+                        quoteClient = leaderApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
+                    }
+                }else {
+                    return Result.error("账号无法登录");
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+        }else {
+            abstractApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap()
+                    .get(vo.getTraderId().toString());
+            if (ObjectUtil.isEmpty(abstractApiTrader) || ObjectUtil.isEmpty(abstractApiTrader.quoteClient)
+                    || !abstractApiTrader.quoteClient.Connected()) {
+                copierApiTradersAdmin.removeTrader(vo.getTraderId().toString());
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderVO);
+                if (conCodeEnum == ConCodeEnum.SUCCESS) {
+                    quoteClient = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(vo.getTraderId().toString()).quoteClient;
+                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    copierApiTrader.startTrade();
+                }else if (conCodeEnum == ConCodeEnum.AGAIN){
+                    long maxWaitTimeMillis = 10000; // 最多等待10秒
+                    long startTime = System.currentTimeMillis();
+                    CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    // 开始等待直到获取到copierApiTrader1
+                    while (copierApiTrader == null && (System.currentTimeMillis() - startTime) < maxWaitTimeMillis) {
+                        try {
+                            // 每次自旋等待500ms后再检查
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            // 处理中断
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+                    }
+                    //重复提交
+                    if (ObjectUtil.isNotEmpty(copierApiTrader)){
+                        log.info(followTraderVO.getId()+"重复提交并等待完成");
+                        quoteClient = copierApiTrader.quoteClient;
+                    }else {
+                        log.info(followTraderVO.getId()+"重复提交并等待失败");
+                    }
+                }else {
+                    return Result.error("账号无法登录");
+                }
+            } else {
+                quoteClient = abstractApiTrader.quoteClient;
+            }
+
+        }
+
+        // 查看品种匹配 模板
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(abstractApiTrader.getTrader().getTemplateId());
+        Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(vo.getSymbol())).findFirst()
+                .map(FollowVarietyEntity::getStdContract)
+                .orElse(0);
+
+        String symbol1 = getSymbol(abstractApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
+        vo.setSymbol(symbol1);
+        log.info("标准合约大小{}", contract);
+        try {
+            double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
+        } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
+            return Result.error(followTraderVO.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种");
+        } catch (InterruptedException e) {
+            return Result.error(followTraderVO.getAccount() + " 操作被中断");
+        }
+
+        followTraderService.masOrdersend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
+
+        return Result.ok(true);
     }
 
 }
