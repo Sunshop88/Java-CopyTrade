@@ -1153,7 +1153,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(order.Swap));
             followOrderDetailEntity.setTp(BigDecimal.valueOf(order.TakeProfit));
             followOrderDetailEntity.setRateMargin(order.RateMargin);
-            followOrderDetailEntity.setMagical(order.Ticket);
+            followOrderDetailEntity.setMagical(order.MagicNumber);
         }catch (ServerException e){
             followOrderDetailEntity.setRemark( e.getMessage());
         } catch (TimeoutException e) {
