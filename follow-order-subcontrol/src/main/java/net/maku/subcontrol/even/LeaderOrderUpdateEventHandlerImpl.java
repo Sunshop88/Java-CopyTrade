@@ -121,7 +121,7 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         //避免重复监听
         String val=Constant.FOLLOW_ON_EVEN + FollowConstant.LOCAL_HOST + "#" + orderUpdateEventArgs.Action + "#" + order.Ticket;
         // 使用 Redis 原子操作 SET NX EX
-        boolean isLocked = redisUtil.setnx(val, 1, 10); // 原子操作
+        boolean isLocked = redisUtil.setnx(val, 1, 36000); // 原子操作
         if (!isLocked) {
             log.info(order.Ticket + "锁定监听重复");
             return;
