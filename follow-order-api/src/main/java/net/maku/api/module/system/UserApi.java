@@ -13,6 +13,4 @@ public interface UserApi {
     SysUserEntity getUserById(String id);
 
     List<Integer> getUser(String creator);
-
-    List<String> getUserId(List<Long> vpsUserVO);
 }

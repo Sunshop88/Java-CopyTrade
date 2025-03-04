@@ -65,7 +65,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     private final RedisUtil redisUtil;
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsUserService followVpsUserService;
-    private final UserApi userApi;
+    private final UserService userService;
 
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
@@ -118,7 +118,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 vpsUserEntities.forEach(o1->{
                     vpsUserVO.add(o1.getUserId());
                 });
-                List<String> userList = userApi.getUserId(vpsUserVO);
+                List<String> userList = userService.getUserId(vpsUserVO);
                 o.setUserList(userList);
             }
         });

@@ -53,8 +53,9 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
         wrapper.eq(ObjectUtil.isNotEmpty(query.getInstructionType()), FollowOrderInstructEntity::getInstructionType, query.getInstructionType());
         wrapper.like(ObjectUtil.isNotEmpty(query.getSymbol()), FollowOrderInstructEntity::getSymbol, query.getSymbol());
     //    List<Integer> userIdList = userApi.getUser(query.getCreator());
-        List<Integer> userIdList =null;
-        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
+//        List<Integer> userIdList =null;
+//        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
+        wrapper.like(ObjectUtil.isNotEmpty(query.getCreator()), FollowOrderInstructEntity::getCreator, query.getCreator());
         //如果没有时间，默认一个月
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());

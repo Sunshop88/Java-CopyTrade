@@ -32,10 +32,4 @@ public class UserApiImpl implements UserApi {
        List<Integer> list = sysUserService.getUser(creator);
         return list;
     }
-
-    @Override
-    public List<String> getUserId(List<Long> vpsUserVO) {
-        List<String> list = sysUserService.getRealNameList(vpsUserVO);
-        return list;
-    }
 }
