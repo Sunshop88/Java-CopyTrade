@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -52,6 +53,12 @@ public class FollowOrderInstructEntity {
 	*/
 	@TableField(value = "max_lot_size")
 	private BigDecimal maxLotSize;
+
+	/**
+	 * 间隔时间
+	 */
+	@TableField(value = "interval_time")
+	private Integer intervalTime;
 
 	/**
 	* 备注

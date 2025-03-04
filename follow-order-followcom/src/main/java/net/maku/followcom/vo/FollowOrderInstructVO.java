@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -47,6 +48,9 @@ public class FollowOrderInstructVO implements Serializable {
 
 	@Schema(description = "下单总订单")
 	private Integer totalOrders;
+
+	@Schema(description = "间隔时间")
+	private Integer intervalTime;
 
 	@Schema(description = "成交手数")
 	private BigDecimal tradedLots;
