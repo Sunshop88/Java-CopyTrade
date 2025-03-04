@@ -131,15 +131,11 @@ public class BargainServiceImpl implements BargainService {
             throw new ServerException("无可下单账号");
         }
     }
-
-
     //分配下单
     public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, double totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
         double totalPlacedLots = 0;
-        List<Double> orders = new ArrayList<>();
         Map<FollowTraderEntity, Double> accountOrders = new HashMap<>(); // 记录每个账号分配的手数
-
         // 遍历所有账号，随机分配手数
         for (FollowTraderEntity acc : traderId) {
             double remainingLotsForAccount = totalLots - totalPlacedLots;
