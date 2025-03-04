@@ -3,7 +3,6 @@ package net.maku.followcom.service.impl;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.injector.methods.SelectById;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -33,7 +32,6 @@ import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.security.user.SecurityUser;
-import online.mtapi.mt4.QuoteClient;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
@@ -190,13 +188,48 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void update(FollowTraderUserVO vo) {
-        FollowTraderUserEntity entity = FollowTraderUserConvert.INSTANCE.convert(vo);
+    public void update(FollowTraderUserVO vo, HttpServletRequest req) {
+        //只修改密码和备注信息
+        FollowTraderUserEntity ent = new FollowTraderUserEntity();
+        ent.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+        ent.setRemark(vo.getRemark());
+        updateById(ent);
+        FollowTraderUserVO data = get(vo.getId());
 
-        updateById(entity);
+        ThreadPoolUtils.execute(() -> {
+            String token = req.getHeader("Authorization");
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Authorization", token);
+            headers.put("Content-Type", "application/json");
 
+            // 账号正常登录
+            // 根据account和platform查询出对应的信息
+            FollowTraderEntity followTraderEntity = followTraderService.list(
+                            new LambdaQueryWrapper<FollowTraderEntity>()
+                                    .eq(FollowTraderEntity::getAccount, data.getAccount())
+                                    .eq(FollowTraderEntity::getPlatform, data.getPlatform()))
+                    .getFirst();
 
-    }
+            if (followTraderEntity != null) {
+                FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+                followTraderVO.setNewPassword(vo.getPassword());
+                String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+                RestTemplate restTemplate = new RestTemplate();
+
+                // 使用提前提取的 headers 构建请求头
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.setAll(headers);  // 注入提前获取的请求头
+                HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
+
+                ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+                if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+                    log.error("账号重连失败: " + followTraderEntity.getAccount());
+                }
+            } else {
+                log.error("未找到对应的 : 账号=" + data.getAccount() + "平台=" + data.getPlatform());
+            }
+        });
+        }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -501,7 +534,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             }
         }
         vo.setPassword(s);
-        this.update(vo);
+        this.update(vo, req);
     }
 
     @Override

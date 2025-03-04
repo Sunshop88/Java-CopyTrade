@@ -30,7 +30,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void save(FollowTraderUserVO vo);
 
-    void update(FollowTraderUserVO vo);
+    void update(FollowTraderUserVO vo, HttpServletRequest req);
 
     void delete(List<Long> idList);
 

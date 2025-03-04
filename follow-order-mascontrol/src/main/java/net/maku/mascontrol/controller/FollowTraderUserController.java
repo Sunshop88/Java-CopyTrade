@@ -157,8 +157,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo){
-        followTraderUserService.update(vo);
+    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo,HttpServletRequest req){
+        followTraderUserService.update(vo,req);
 
         return Result.ok();
     }
@@ -277,7 +277,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("listHavingServer")
     @Operation(summary = "查询节点列表")
     public Result<List<FollowTestDetailVO>> listHavingServer(@Parameter FollowTestServerQuery query) {
-        List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
+        List<FollowTestDetailVO> list = followTestDetailService.selectServer1(query);
 
         return Result.ok(list);
     }
