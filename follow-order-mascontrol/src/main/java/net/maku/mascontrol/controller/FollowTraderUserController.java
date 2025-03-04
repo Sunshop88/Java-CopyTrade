@@ -149,7 +149,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo,HttpServletRequest req){
+    public Result<String> update(@RequestBody  FollowTraderUserVO vo,HttpServletRequest req){
         followTraderUserService.update(vo,req);
 
         return Result.ok();
@@ -283,8 +283,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updateGroup(@RequestBody FollowBatchUpdateVO vos) {
         List<Long> idList = vos.getIdList();
-        String group = vos.getGroup();
-        followTraderUserService.updateGroup(idList,group);
+        Long groupId = vos.getGroupId();
+        followTraderUserService.updateGroup(idList,groupId);
 
         return Result.ok("批量修改分组成功");
     }

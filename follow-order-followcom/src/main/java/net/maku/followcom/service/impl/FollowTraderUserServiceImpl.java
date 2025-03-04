@@ -191,8 +191,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     public void update(FollowTraderUserVO vo, HttpServletRequest req) {
         //只修改密码和备注信息
         FollowTraderUserEntity ent = new FollowTraderUserEntity();
+        ent.setId(vo.getId());
         ent.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
         ent.setRemark(vo.getRemark());
+        ent.setServerNode(vo.getServerNode());
         updateById(ent);
         FollowTraderUserVO data = get(vo.getId());
 
@@ -269,13 +271,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 csvPrinter.printRecord("账号","密码","账号类型","服务器","节点","备注","排序");
             } else {
                 CSVRecord firstRecord = records.get(0);
-                String account = firstRecord.get("account");
-                String password = firstRecord.get("password");
-                String accountType = firstRecord.get("accountType");
-                String server = firstRecord.get("server");
-                String node = firstRecord.get("node");
-                String remark = firstRecord.get("remark");
-                String sort = firstRecord.get("sort");
+                String account = firstRecord.get("账号");
+                String password = firstRecord.get("密码");
+                String accountType = firstRecord.get("账号类型");
+                String server = firstRecord.get("服务器");
+                String node = firstRecord.get("节点");
+                String remark = firstRecord.get("备注");
+                String sort = firstRecord.get("排序");
 
                 // 写入到输出流
                 csvPrinter.printRecord(account, password, accountType, server, node, remark, sort);
@@ -396,14 +398,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public void updateGroup(List<Long> idList, String group) {
-        LambdaQueryWrapper<FollowGroupEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(FollowGroupEntity::getName, group);
-        long groupId = followGroupService.list(queryWrapper).getFirst().getId();
+    public void updateGroup(List<Long> idList, Long groupId) {
+        FollowGroupVO vo = followGroupService.get(groupId);
         for (Long id : idList) {
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderUserEntity::getId, id)
-                    .set(FollowTraderUserEntity::getGroupName, group)
+                    .set(FollowTraderUserEntity::getGroupName, vo.getName())
                     .set(FollowTraderUserEntity::getGroupId, groupId);
             baseMapper.update(updateWrapper);
         }
