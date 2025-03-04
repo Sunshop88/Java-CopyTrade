@@ -5,8 +5,10 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class FollowUpdatePasswordVO {
+public class FollowBatchUpdateVO {
     private List<FollowTraderUserVO> voList;
     private String password;
     private String confirmPassword;
+    private List<Long> idList;
+    private String group;
 }
