@@ -147,7 +147,7 @@ public class ObtainOrderHistoryTask {
                 //订单详情保存订单
                 followOrderDetailService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
                 //保存持仓订单
-                followOrderDetailService.saveOrderActive(quoteClient,u);
+             //   followOrderDetailService.saveOrderActive(quoteClient,u);
                 newList.add(u);
             }else {
                 //保存历史订单
@@ -155,7 +155,7 @@ public class ObtainOrderHistoryTask {
                 //订单详情保存订单
                 followOrderDetailService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-1)));
                 //保存持仓订单
-                followOrderDetailService.saveOrderActive(quoteClient,u);
+            //    followOrderDetailService.saveOrderActive(quoteClient,u);
                 log.info("保存历史订单{}",u.getAccount());
             }
 
