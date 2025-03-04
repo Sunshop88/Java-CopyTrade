@@ -3,6 +3,7 @@ package net.maku.subcontrol.trader.strategy;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,11 +13,13 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
@@ -24,6 +27,8 @@ import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
 import net.maku.subcontrol.pojo.CachedCopierOrderInfo;
 import net.maku.subcontrol.rule.AbstractFollowRule;
 import net.maku.subcontrol.trader.*;
+import net.maku.subcontrol.vo.FollowOrderRepairSocketVO;
+import net.maku.subcontrol.websocket.TraderOrderRepairWebSocket;
 import online.mtapi.mt4.*;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -46,7 +51,7 @@ import java.util.stream.Collectors;
 public class OrderSendCopier extends AbstractOperation implements IOperationStrategy {
     private final CopierApiTradersAdmin copierApiTradersAdmin;
     private final RedisCache redisCache;
-
+    private final TraderOrderRepairWebSocket traderOrderRepairWebSocket;
 
     @Override
     public void operate(AbstractApiTrader trader,EaOrderInfo orderInfo, int flag) {
@@ -294,6 +299,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
                 // 保存到批量发送队列
                 kafkaMessages.add(jsonEvent);
+                if (flag==1){
+                    FollowOrderRepairSocketVO followOrderRepairSocketVO = setRepairWebSocket(leaderCopier.getMasterId().toString(), leaderCopier.getSlaveId().toString(), quoteClient);
+                    traderOrderRepairWebSocket.pushMessage(leaderCopier.getMasterId().toString(),leaderCopier.getSlaveId().toString(), JsonUtils.toJsonString(followOrderRepairSocketVO));
+                    redisUtil.set(Constant.TRADER_TEMPORARILY_REPAIR+leaderCopier.getSlaveId(),followOrderRepairSocketVO);
+                }
 //                //删除漏单redis记录
 //                Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
 //                Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
@@ -459,6 +469,11 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
             // 保存到批量发送队列
             kafkaMessages.add(jsonEvent);
+            if (flag==1){
+                FollowOrderRepairSocketVO followOrderRepairSocketVO = setRepairWebSocket(leaderCopier.getMasterId().toString(), leaderCopier.getSlaveId().toString(), quoteClient);
+                traderOrderRepairWebSocket.pushMessage(leaderCopier.getMasterId().toString(),leaderCopier.getSlaveId().toString(), JsonUtils.toJsonString(followOrderRepairSocketVO));
+                redisUtil.set(Constant.TRADER_TEMPORARILY_REPAIR+leaderCopier.getSlaveId(),followOrderRepairSocketVO);
+            }
 //            //删除漏单redis记录
 //            Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
 //            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
@@ -500,4 +515,6 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         }
         return true;
     }
+
+
 }

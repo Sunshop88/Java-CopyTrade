@@ -601,6 +601,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
                     .eq(FollowOrderDetailEntity::getSymbol, vo.getSymbol()).isNotNull(FollowOrderDetailEntity::getOpenTime)
+                    .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                     .isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime);
             if (!vo.getType().equals(2)) {
                 followOrderDetailw.eq(FollowOrderDetailEntity::getType, vo.getType());
