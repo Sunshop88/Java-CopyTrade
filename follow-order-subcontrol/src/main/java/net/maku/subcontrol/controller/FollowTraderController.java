@@ -190,12 +190,13 @@ public class FollowTraderController {
         followTraderUserService.update(updateWrapper);
         //重连
         if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(old.getPassword()).equals(vo.getPassword())){
-            reconnect(vo.getId().toString());
+            Boolean reconnect = reconnect(vo.getId().toString());
+            if (!reconnect){
+                throw new ServerException("请检查账号密码，稍后再试");
+            }
         }
-        Boolean reconnect = reconnect(vo.getId().toString());
-        if (!reconnect){
-            throw new ServerException("请检查账号密码，稍后再试");
-        }
+      //  Boolean reconnect = reconnect(vo.getId().toString());
+
         //修改从库
         SourceUpdateVO sourceUpdateVO=new SourceUpdateVO();
      //   sourceUpdateVO.setServerId(Integer.valueOf(vo.getServerId()));

@@ -88,8 +88,8 @@ public class BargainWebSocket {
                 //概览 BigDecimal
                 AtomicDouble aDouble = new AtomicDouble();
                 List<List<BigDecimal>> statList = new ArrayList<>();
-                List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
-                List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
                 List<FollowTraderEntity> traders = followTraderService.list();
                 Map<String,FollowTraderEntity> map = new ConcurrentHashMap<>();
                 Map<String,FollowTraderEntity> sucessmap = new ConcurrentHashMap<>();

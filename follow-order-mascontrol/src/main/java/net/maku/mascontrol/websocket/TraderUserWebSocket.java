@@ -60,9 +60,10 @@ public class TraderUserWebSocket {
         if (st != null) {
             st.cancel(true);
         }
-        ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
         JSONObject jsonObj = JSONObject.parseObject(message);
         Long traderUserId = jsonObj.getLong("traderUserId");
+        ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
+
         //选中当前账号的持仓
         if(ObjectUtil.isNotEmpty(traderUserId)) {
             List<OrderActiveInfoVO> active = getActive(traderUserId);
@@ -100,36 +101,42 @@ public class TraderUserWebSocket {
     private List<OrderActiveInfoVO> getActive(Long currentAccountId){
         FollowTraderUserEntity traderUser = followTraderUserService.getById(currentAccountId);
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
-        AtomicLong traderId=new AtomicLong(0);
-        list.forEach(o->{
-            if(o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
-                traderId.set(o.getId());
-            }
-        });
-        if(traderId.get()==0l){
-            traderId.set(list.get(0).getId());
-        }
-        Object o1 = redisCache.get(Constant.TRADER_ACTIVE + traderId.get());
         List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
-        
-        if (ObjectUtil.isNotEmpty(o1)){
-            orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
-            List<Integer> orderNos = orderActiveInfoList.stream().map(OrderActiveInfoVO::getOrderNo).toList();
-            List<FollowOrderDetailEntity> orderDetails = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, traderUser.getAccount()).in(FollowOrderDetailEntity::getOrderNo, orderNos));
-            Map<Integer, FollowOrderDetailEntity> map = orderDetails.stream().collect(Collectors.toMap(FollowOrderDetailEntity::getOrderNo, o -> o));
-            orderActiveInfoList.forEach(o->{
-                FollowOrderDetailEntity followOrderDetailEntity = map.get(o.getOrderNo());
-                if(followOrderDetailEntity!=null){
-                    if(followOrderDetailEntity.getType().equals(TraderCloseEnum.BUY)){
-                        o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
-                    }else{
-                        o.setPriceSlip(followOrderDetailEntity.getClosePriceSlip());
-                    }
-
+        if(ObjectUtil.isNotEmpty(list)){
+            AtomicLong traderId=new AtomicLong(0);
+            list.forEach(o->{
+                if(o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                    traderId.set(o.getId());
                 }
             });
+            if(traderId.get()==0l){
+                traderId.set(list.get(0).getId());
+            }
+            Object o1 = redisCache.get(Constant.TRADER_ACTIVE + traderId.get());
 
+
+            if (ObjectUtil.isNotEmpty(o1)){
+                orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+                List<Integer> orderNos = orderActiveInfoList.stream().map(OrderActiveInfoVO::getOrderNo).toList();
+                List<FollowOrderDetailEntity> orderDetails = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, traderUser.getAccount()).in(FollowOrderDetailEntity::getOrderNo, orderNos));
+                Map<Integer, FollowOrderDetailEntity> map = orderDetails.stream().collect(Collectors.toMap(FollowOrderDetailEntity::getOrderNo, o -> o));
+                orderActiveInfoList.forEach(o->{
+                    FollowOrderDetailEntity followOrderDetailEntity = map.get(o.getOrderNo());
+                    if(followOrderDetailEntity!=null){
+                        if(followOrderDetailEntity.getType().equals(TraderCloseEnum.BUY.getType())){
+                            o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
+                            o.setOpenTimeDifference(followOrderDetailEntity.getOpenTimeDifference());
+                        }else{
+                            o.setPriceSlip(followOrderDetailEntity.getClosePriceSlip());
+                            o.setOpenTimeDifference(followOrderDetailEntity.getCloseTimeDifference());
+                        }
+
+                    }
+                });
+
+            }
         }
+
         
       return orderActiveInfoList;
     }

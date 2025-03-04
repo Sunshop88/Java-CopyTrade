@@ -23,11 +23,13 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.mascontrol.vo.FollowOrderHistoryQuery;
 import net.maku.mascontrol.vo.FollowOrderHistoryVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -68,7 +70,8 @@ public class BargainController {
             throw new ServerException("vps不存在");
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
-        Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
+      //  list.get(0).getIpAddr()
+        Result result = RestUtil.sendRequest(request, "39.98.109.212", HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
         return result;
     }
 
@@ -119,13 +122,18 @@ public class BargainController {
     public Result<Boolean> repairOrderClose(@RequestBody @Valid List<TraderUserClose>  list,HttpServletRequest request) {
         list.forEach(o->{
             List<FollowTraderEntity> users = getByUserId(o.getTraderUserId());
+            HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
             users.forEach(user -> {
-                List<RepairCloseVO> repairCloseVO=new ArrayList<>();
-                RepairCloseVO closeVO=new RepairCloseVO();
-                closeVO.setSlaveId(user.getId());
-                closeVO.setVpsId(user.getServerId());
-                repairCloseVO.add(closeVO);
-                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,null);
+             
+                ThreadPoolUtils.getExecutor().execute(()->{
+                    List<RepairCloseVO> repairCloseVO=new ArrayList<>();
+                    RepairCloseVO closeVO=new RepairCloseVO();
+                    closeVO.setSlaveId(user.getId());
+                    closeVO.setVpsId(user.getServerId());
+                    repairCloseVO.add(closeVO);
+                    Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken);
+                });
+
             });
         });
         return Result.ok();

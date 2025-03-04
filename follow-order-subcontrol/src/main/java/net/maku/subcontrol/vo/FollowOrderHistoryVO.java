@@ -1,5 +1,6 @@
 package net.maku.subcontrol.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -96,5 +97,16 @@ public class FollowOrderHistoryVO implements Serializable {
 
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
+	@Schema(description = "开仓价格滑点")
+	private BigDecimal openPriceSlip;
+	@Schema(description = "开仓请求价格")
+	private BigDecimal requestOpenPrice;
+	@Schema(description = "开仓时间差 毫秒")
+	private Integer openTimeDifference;
+
+	@Schema(description = "开仓响应时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	private LocalDateTime responseOpenTime;
+
 
 }
