@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTraderConvert;
+import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
@@ -304,7 +306,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updatePasswords(@RequestBody FollowBatchUpdateVO vos, HttpServletRequest req) throws Exception {
-        List<FollowTraderUserVO> voList = vos.getVoList();
+        List<Long> idList = vos.getIdList();
+        //根据id查询信息
+        List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
+        List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
 
@@ -317,8 +322,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) throws Exception{
-
+    public Result<String> updatePassword(@RequestBody Long id,HttpServletRequest req) throws Exception{
+        FollowTraderUserVO vo = followTraderUserService.get(id);
         followTraderUserService.updatePassword(vo,req);
 
         return Result.ok("修改密码成功");
