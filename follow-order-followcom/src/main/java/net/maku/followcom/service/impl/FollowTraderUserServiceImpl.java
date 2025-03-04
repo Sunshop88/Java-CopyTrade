@@ -250,7 +250,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void generateCsv(ByteArrayOutputStream outputStream) throws IOException {
         // 使用相对路径替代绝对路径
-        String inputFilePath = "/template/账号添加模板1.csv"; // 相对于 resources 目录的路径
+        String inputFilePath = "/template/账号添加模板.csv"; // 相对于 resources 目录的路径
 
         // 读取 CSV 文件
         try (InputStream inputStream = getClass().getResourceAsStream(inputFilePath);
@@ -271,21 +271,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 csvPrinter.printRecord("账号","密码","账号类型","服务器","节点","备注","排序");
             } else {
                 CSVRecord firstRecord = records.get(0);
-                String account = firstRecord.get("1");
-                String password = firstRecord.get("2");
-                String accountType = firstRecord.get("3");
-                String server = firstRecord.get("4");
-                String node = firstRecord.get("5");
-                String remark = firstRecord.get("6");
-                String sort = firstRecord.get("7");
-
-//                String account = firstRecord.get("账号");
-//                String password = firstRecord.get("密码");
-//                String accountType = firstRecord.get("账号类型");
-//                String server = firstRecord.get("服务器");
-//                String node = firstRecord.get("节点");
-//                String remark = firstRecord.get("备注");
-//                String sort = firstRecord.get("排序");
+                String account = firstRecord.get("账号");
+                String password = firstRecord.get("密码");
+                String accountType = firstRecord.get("账号类型");
+                String server = firstRecord.get("服务器");
+                String node = firstRecord.get("节点");
+                String remark = firstRecord.get("备注");
+                String sort = firstRecord.get("排序");
 
                 // 写入到输出流
                 csvPrinter.printRecord(account, password, accountType, server, node, remark, sort);
