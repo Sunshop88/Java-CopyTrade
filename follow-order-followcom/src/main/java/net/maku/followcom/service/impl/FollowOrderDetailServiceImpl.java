@@ -209,7 +209,6 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
        // entity.setMagical(order.Ticket);
         entity.setComment(order.Comment);
         entity.setIsExternal(1);
-        entity.setOrderingSystem(0);
      //   entity.setPlacedType(order.p);
         // entity.setBrokeName(u.get);
          //  entity.setSourceUser(u.getAccount());
@@ -226,7 +225,6 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         Arrays.stream(orders).filter(order -> order.Type.equals(Op.Buy) || order.Type.equals(Op.Sell)).forEach(order -> {
             FollowOrderDetailEntity entity = getFollowOrderDetailEntity(quoteClient, u, order);
             entity.setIsExternal(1);
-            entity.setOrderingSystem(0);
             list.add(entity);
         });
         if(ObjectUtil.isNotEmpty(list)) {
