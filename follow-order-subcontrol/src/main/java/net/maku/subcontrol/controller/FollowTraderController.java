@@ -504,6 +504,7 @@ public class FollowTraderController {
             checkParams(vo);
         }
         FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
+        vo.setAccount(followTraderVO.getAccount());
         if (ObjectUtil.isEmpty(followTraderVO)) {
             throw new ServerException("账号不存在");
         }
@@ -600,9 +601,9 @@ public class FollowTraderController {
                 // 获取报价信息
                 double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
             } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-                throw new ServerException(vo.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
+                throw new ServerException(followTraderVO.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
             } catch (InterruptedException e) {
-                throw new ServerException(vo.getAccount() + " 操作被中断", e);
+                throw new ServerException(followTraderVO.getAccount() + " 操作被中断", e);
             }
         }
         boolean result = followTraderService.orderClose(vo, quoteClient);

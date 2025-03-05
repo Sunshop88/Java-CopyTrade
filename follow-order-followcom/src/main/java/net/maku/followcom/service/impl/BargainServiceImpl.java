@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.dto.MasOrderSendDto;
+import net.maku.followcom.dto.MasToSubOrderCloseDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
@@ -14,6 +16,7 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowMasOrderVo;
+import net.maku.followcom.vo.FollowOrderSendCloseVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
@@ -171,6 +174,62 @@ public class BargainServiceImpl implements BargainService {
             throw new ServerException("无可下单账号");
         }
     }
+
+    @Override
+    public void masOrderClose(MasToSubOrderCloseDto vo, HttpServletRequest request) {
+        //现在找出可下单账号
+        List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
+        vo.getTraderList().forEach(o->{
+            FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(o);
+            //查询各VPS状态正常的账号
+            List<FollowTraderEntity> followTraderEntity = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()).orderByDesc(FollowTraderEntity::getType));
+            if (ObjectUtil.isNotEmpty(followTraderEntity)){
+                for (FollowTraderEntity fo : followTraderEntity) {
+                    //检查vps是否正常
+                    FollowVpsEntity followVpsEntity = followVpsService.getById(fo.getServerId());
+                    if (followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                        log.info(followVpsEntity.getName()+"VPS服务异常，请检查");
+                    }else {
+                        followTraderEntityList.add(fo);
+                        break;
+                    }
+                }
+            }
+        });
+        if (ObjectUtil.isEmpty(followTraderEntityList)){
+            throw new ServerException("无可下单账号");
+        }
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        followTraderEntityList.forEach(followTraderEntity -> {
+            CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
+                try {
+                    // 发送请求
+                    FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
+                    BeanUtil.copyProperties(vo,followOrderSendCloseVO);
+                    followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
+                    // 需等待发起请求
+                    sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
+                } catch (Exception e) {
+                    log.error("订单处理异常", e);
+                    throw new RuntimeException(e); // 抛出异常让 allOf 感知
+                }
+            }, ThreadPoolUtils.getExecutor());
+            futures.add(orderFuture);
+        });
+        // 使用 CompletableFuture.allOf 等待所有订单任务完成
+        CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        // 当所有订单任务完成后，执行更新操作
+        try {
+            allOrdersCompleted.get(30, TimeUnit.SECONDS);
+            log.info("所有交易平仓已完成");
+        } catch (TimeoutException e) {
+            log.error("任务执行超时", e);
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("任务执行异常", e);
+        }
+    }
+
     //分配下单
     public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, double totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
