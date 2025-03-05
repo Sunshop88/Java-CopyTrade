@@ -322,9 +322,12 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody Long id,HttpServletRequest req) throws Exception{
-        FollowTraderUserVO vo = followTraderUserService.get(id);
-        followTraderUserService.updatePassword(vo,req);
+    public Result<String> updatePassword(@RequestBody FollowBatchUpdateVO vos,HttpServletRequest req) throws Exception{
+        FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
+        String password = vos.getPassword();
+        String confirmPassword = vos.getConfirmPassword();
+
+        followTraderUserService.updatePassword(vo,password,confirmPassword,req);
 
         return Result.ok("修改密码成功");
     }

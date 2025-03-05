@@ -512,8 +512,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
 
     @Override
-    public void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception {
-        if (!vo.getPassword().equals(vo.getConfirmPassword())) {
+    public void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception {
+        if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
         String s = AesUtils.aesEncryptStr(vo.getPassword());
@@ -532,7 +532,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
-                    followTraderVO.setNewPassword(vo.getPassword());
+                    followTraderVO.setNewPassword(password);
                     String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
                     RestTemplate restTemplate = new RestTemplate();
 
