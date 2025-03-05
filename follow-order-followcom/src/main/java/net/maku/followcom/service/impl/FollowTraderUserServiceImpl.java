@@ -808,9 +808,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
             });
         });
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         if(ObjectUtil.isNotEmpty(map)){
             map.forEach((k,v)->{
-                Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.DEL_TRADER, v,null);
+                ThreadPoolUtils.getExecutor().execute(() -> {
+                    Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.DEL_TRADER, v, headerApplicationJsonAndToken);
+                });
             });
         }
 
