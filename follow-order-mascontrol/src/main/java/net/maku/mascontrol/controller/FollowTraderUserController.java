@@ -312,9 +312,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
-        //检查密码在8-16位之间
-        if (password.length() < 8 || password.length() > 16) {
-            return Result.error("密码长度应在8到16位之间");
+        //检查密码在6-16位之间
+        if (password.length() < 6 || password.length() > 16) {
+            return Result.error("密码长度应在6到16位之间");
         }
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
@@ -330,9 +330,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
-        //检查密码在8-16位之间
-        if (password.length() < 8 || password.length() > 16) {
-            return Result.error("密码长度应在8到16位之间");
+        //检查密码在6-16位之间
+        if (password.length() < 6 || password.length() > 16) {
+            return Result.error("密码长度应在6到16位之间");
         }
 
         followTraderUserService.updatePassword(vo,password,confirmPassword,req);
