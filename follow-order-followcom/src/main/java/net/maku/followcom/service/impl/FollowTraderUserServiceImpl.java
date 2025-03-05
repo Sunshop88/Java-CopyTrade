@@ -752,6 +752,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                    }
                     countDownLatch.countDown();
                 });
+                f.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            });
                 try {
                     //等待
                     countDownLatch.await();
@@ -763,11 +765,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     followUploadTraderUserVO.setSuccessCount(sum.get());
                     followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
                     followUploadTraderUserService.update(followUploadTraderUserVO);
+                      updateBatchById(followTraderUserEntities);
                 } catch (InterruptedException e) {
-
+                       log.error("挂靠失败"+e);
                 }
 
-            });
+
        });
 
     }
