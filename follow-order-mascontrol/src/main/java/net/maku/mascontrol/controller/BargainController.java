@@ -16,6 +16,7 @@ import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
 import net.maku.followcom.query.FollowOrderInstructQuery;
 import net.maku.followcom.query.FollowOrderInstructSubQuery;
+import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -54,6 +55,7 @@ public class BargainController {
     private final FollowTraderService followTraderService;
     private final FollowOrderInstructSubService followOrderInstructSubService;
     private final FollowOrderInstructService followOrderInstructService;
+    private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
 
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
@@ -119,9 +121,9 @@ public class BargainController {
 
     @PostMapping("repairOrderClose")
     @Operation(summary = "一键漏平")
-    public Result<Boolean> repairOrderClose(@RequestBody @Valid List<TraderUserClose>  list,HttpServletRequest request) {
-        list.forEach(o->{
-            List<FollowTraderEntity> users = getByUserId(o.getTraderUserId());
+    public Result<Boolean> repairOrderClose(@RequestBody TraderUserClose  vo,HttpServletRequest request) {
+
+            List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
             HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
             users.forEach(user -> {
              
@@ -135,7 +137,7 @@ public class BargainController {
                 });
 
             });
-        });
+
         return Result.ok();
     }
 
@@ -161,6 +163,19 @@ public class BargainController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderInstructVO>> page(@ParameterObject @Valid FollowOrderInstructQuery query){
         PageResult<FollowOrderInstructVO> page = followOrderInstructService.page(query);
+
+        return Result.ok(page);
+    }
+
+    @GetMapping("/specificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<PageResult<FollowSysmbolSpecificationVO>> page(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
+        List<FollowTraderEntity> list = getByUserId(query.getTraderUserId());
+        PageResult<FollowSysmbolSpecificationVO> page =null;
+        if(ObjectUtil.isNotEmpty(list)){
+            query.setTraderId(list.get(0).getId());
+            page = followSysmbolSpecificationService.page(query);
+        }
 
         return Result.ok(page);
     }

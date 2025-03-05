@@ -710,14 +710,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 ThreadPoolUtils.getExecutor().execute(() -> {
                     Result result = null;
                     //不是跟单账号，走策略新增接口
-                    if (!TraderTypeEnum.SLAVE_REAL.equals(hangVpsVO.getAccountType())) {
+                    if (!TraderTypeEnum.SLAVE_REAL.getType().equals(hangVpsVO.getAccountType())) {
                         FollowTraderVO vo = new FollowTraderVO();
                         vo.setTemplateId(hangVpsVO.getTemplateId());
                         vo.setAccount(f.getAccount());
                         vo.setPlatformId(f.getPlatformId());
                         vo.setPlatform(f.getPlatform());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(f.getPassword());
+                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
@@ -732,7 +732,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setFollowParam(hangVpsVO.getFollowParam());
                         vo.setFollowRep(CloseOrOpenEnum.OPEN.getValue());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(f.getPassword());
+                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
                         vo.setPlacedType(hangVpsVO.getPlacedType());
                         vo.setPlatform(f.getPlatform());
                         vo.setRemainder(hangVpsVO.getRemainder());
