@@ -150,4 +150,17 @@ public class FollowOrderInstructEntity {
 	 */
 	@TableField(value = "end_time")
 	private LocalDateTime endTime;
+
+	/**
+	 * 订单号
+	 */
+	@TableField(value = "order_no")
+	private String orderNo;
+
+	/**
+	 * 失败订单
+	 */
+	@TableField(value = "fail_orders")
+	private Integer failOrders;
+
 }

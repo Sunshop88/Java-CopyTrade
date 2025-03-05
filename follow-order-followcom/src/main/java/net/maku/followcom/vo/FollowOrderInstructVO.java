@@ -82,4 +82,10 @@ public class FollowOrderInstructVO implements Serializable {
 	@Schema(description = "指令结束时间")
 	private LocalDateTime endTime;
 
+	@Schema(description = "订单号")
+	private String orderNo;
+
+	@Schema(description = "失败订单")
+	private Integer failOrder;
+
 }

@@ -1,6 +1,7 @@
 package net.maku.followcom.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
@@ -11,12 +12,14 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowMasOrderVo;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
@@ -25,6 +28,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -69,11 +76,12 @@ public class BargainServiceImpl implements BargainService {
             }
         });
         //创建父指令
+        String orderNo = RandomStringUtil.generateNumeric(13);
         FollowOrderInstructEntity followOrderInstructEntity = FollowOrderInstructEntity.builder().instructionType(vo.getType())
                 .maxLotSize(vo.getStartSize()).minLotSize(vo.getEndSize()).remark(vo.getRemark()).totalLots(vo.getTotalSzie())
                 .totalOrders(vo.getTotalNum()).intervalTime(vo.getIntervalTime()).symbol(vo.getSymbol()).type(vo.getType())
-                .creator(SecurityUser.getUserId()).createTime(LocalDateTime.now()).build();
-        String orderNo = RandomStringUtil.generateNumeric(13);
+                .orderNo(orderNo).creator(SecurityUser.getUserId()).createTime(LocalDateTime.now()).build();
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         if (!followTraderEntityList.isEmpty()){
             if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
                 //交易分配，根据手数范围和总手数进行分配
@@ -97,7 +105,7 @@ public class BargainServiceImpl implements BargainService {
                         masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
                         masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
                         masToSubOrderSendDto.setSendNo(orderNo);
-                        sendRequest(request, "127.0.0.1", HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,null);
+                        sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,headerApplicationJsonAndToken);
                     }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
                 });
@@ -107,30 +115,38 @@ public class BargainServiceImpl implements BargainService {
                     log.info("所有分配交易下单已完成");
                 });
             }else {
-                AtomicReference<Integer> totalOrders= new AtomicReference<>(0);
-                BigDecimal totalLots=BigDecimal.ZERO;
+                AtomicInteger totalOrders = new AtomicInteger(0);
+                AtomicReference<BigDecimal> totalLots = new AtomicReference<>(BigDecimal.ZERO);
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 followTraderEntityList.forEach(followTraderEntity -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
-                        //发送请求
-                        MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
-                        masToSubOrderSendDto.setRemark(vo.getRemark());
-                        masToSubOrderSendDto.setSymbol(vo.getSymbol());
-                        masToSubOrderSendDto.setType(vo.getType());
-                        masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
-                        masToSubOrderSendDto.setStartSize(vo.getStartSize());
-                        masToSubOrderSendDto.setEndSize(vo.getEndSize());
-                        masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
-                        masToSubOrderSendDto.setIntervalTime(vo.getIntervalTime());
-                        masToSubOrderSendDto.setTradeType(FollowInstructEnum.COPY.getValue());
-                        masToSubOrderSendDto.setTotalSzie(vo.getTotalSzie());
-                        masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
-                        masToSubOrderSendDto.setSendNo(orderNo);
-                        //需等待发起请求
-                        Result<FollowMasOrderVo> result=sendRequest(request, "127.0.0.1", HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, null);
-                        if (result.getCode()==0){
-                            totalOrders.updateAndGet(v -> v + result.getData().getTotalNum());
-                            totalLots.add(BigDecimal.valueOf(result.getData().getTotalSize()));
+                        try {
+                            // 发送请求
+                            MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
+                            masToSubOrderSendDto.setRemark(vo.getRemark());
+                            masToSubOrderSendDto.setSymbol(vo.getSymbol());
+                            masToSubOrderSendDto.setType(vo.getType());
+                            masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
+                            masToSubOrderSendDto.setStartSize(vo.getStartSize());
+                            masToSubOrderSendDto.setEndSize(vo.getEndSize());
+                            masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
+                            masToSubOrderSendDto.setIntervalTime(vo.getIntervalTime());
+                            masToSubOrderSendDto.setTradeType(FollowInstructEnum.COPY.getValue());
+                            masToSubOrderSendDto.setTotalSzie(vo.getTotalSzie());
+                            masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
+                            masToSubOrderSendDto.setSendNo(orderNo);
+
+                            // 需等待发起请求
+                            Result<?> result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
+                            FollowMasOrderVo data = JSONObject.parseObject(result.getData().toString(),FollowMasOrderVo.class);
+                            if (result.getCode() == 0) {
+                                totalOrders.updateAndGet(v -> v + data.getTotalNum());
+                                // 更新 totalLots，使用 AtomicReference 的 getAndUpdate 方法
+                                totalLots.updateAndGet(current -> current.add(BigDecimal.valueOf(data.getTotalSize())));
+                            }
+                        } catch (Exception e) {
+                            log.error("订单处理异常", e);
+                            throw new RuntimeException(e); // 抛出异常让 allOf 感知
                         }
                     }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
@@ -138,13 +154,17 @@ public class BargainServiceImpl implements BargainService {
                 // 使用 CompletableFuture.allOf 等待所有订单任务完成
                 CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
                 // 当所有订单任务完成后，执行更新操作
-                allOrdersCompleted.thenRun(() -> {
+                try {
+                    allOrdersCompleted.get(30, TimeUnit.SECONDS);
                     log.info("所有复制交易下单已完成");
-                });
-                //复制 所有账号相同参数 默认总单数为0
-                followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
-                followOrderInstructEntity.setTrueTotalLots(totalLots);
-                followOrderInstructService.save(followOrderInstructEntity);
+                    followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
+                    followOrderInstructEntity.setTrueTotalLots(totalLots.get());
+                    followOrderInstructService.save(followOrderInstructEntity);
+                } catch (TimeoutException e) {
+                    log.error("任务执行超时", e);
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("任务执行异常", e);
+                }
             }
         }else {
             //无可以下单账号

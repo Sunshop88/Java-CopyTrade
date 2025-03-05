@@ -37,7 +37,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderInstructDao, FollowOrderInstructEntity> implements FollowOrderInstructService {
     private final TransService transService;
-    private final UserApi userApi;
+//    private final UserApi userApi;
 
     @Override
     public PageResult<FollowOrderInstructVO> page(FollowOrderInstructQuery query) {
@@ -52,22 +52,22 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderInstructEntity::getType, query.getType());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getInstructionType()), FollowOrderInstructEntity::getInstructionType, query.getInstructionType());
         wrapper.like(ObjectUtil.isNotEmpty(query.getSymbol()), FollowOrderInstructEntity::getSymbol, query.getSymbol());
-        List<Integer> userIdList = userApi.getUser(query.getCreator());
-        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
-        //如果没有时间，默认一个月
-        if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
-            wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());
-            wrapper.le(FollowOrderInstructEntity::getCreateTime, query.getEndTime());
-        } else {
-            // 默认近一个月的数据
-            LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-            LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String startTime = oneMonthAgo.format(formatter);
-            String endTime = now.format(formatter);
-            wrapper.ge(FollowOrderInstructEntity::getCreateTime, startTime);
-            wrapper.le(FollowOrderInstructEntity::getCreateTime, endTime);
-        }
+//        List<Integer> userIdList = userApi.getUser(query.getCreator());
+//        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
+//        //如果没有时间，默认一个月
+//        if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
+//            wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());
+//            wrapper.le(FollowOrderInstructEntity::getCreateTime, query.getEndTime());
+//        } else {
+//            // 默认近一个月的数据
+//            LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+//            LocalDateTime now = LocalDateTime.now();
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//            String startTime = oneMonthAgo.format(formatter);
+//            String endTime = now.format(formatter);
+//            wrapper.ge(FollowOrderInstructEntity::getCreateTime, startTime);
+//            wrapper.le(FollowOrderInstructEntity::getCreateTime, endTime);
+//        }
         return wrapper;
     }
 
