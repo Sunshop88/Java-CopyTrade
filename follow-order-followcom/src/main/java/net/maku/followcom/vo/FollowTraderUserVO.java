@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
@@ -33,6 +34,7 @@ public class FollowTraderUserVO implements Serializable {
 
 	@Schema(description = "密码")
 	@NotBlank(message = "密码不能为空")
+	@Size(min = 8, max = 16, message = "密码长度应在8到16位之间")
 	private String password;
 
 	@Schema(description = "平台id")

@@ -141,7 +141,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> save(@RequestBody FollowTraderUserVO vo){
+    public Result<String> save(@RequestBody @Valid FollowTraderUserVO vo){
         followTraderUserService.save(vo);
 
         return Result.ok();
@@ -151,7 +151,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> update(@RequestBody  FollowTraderUserVO vo,HttpServletRequest req){
+    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo,HttpServletRequest req){
         followTraderUserService.update(vo,req);
 
         return Result.ok();
@@ -312,6 +312,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
+        //检查密码在8-16位之间
+        if (password.length() < 8 || password.length() > 16) {
+            return Result.error("密码长度应在8到16位之间");
+        }
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
 
@@ -326,6 +330,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
+        //检查密码在8-16位之间
+        if (password.length() < 8 || password.length() > 16) {
+            return Result.error("密码长度应在8到16位之间");
+        }
 
         followTraderUserService.updatePassword(vo,password,confirmPassword,req);
 
