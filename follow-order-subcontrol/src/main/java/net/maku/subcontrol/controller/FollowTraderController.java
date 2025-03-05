@@ -446,7 +446,7 @@ public class FollowTraderController {
             return Result.error(followTraderVO.getAccount() + " 操作被中断");
         }
 
-        boolean result = followTraderService.orderSend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract,0);
+        boolean result = followTraderService.orderSend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
         if (!result) {
             return Result.error(followTraderVO.getAccount() + "下单失败,该账号正在下单中");
         }

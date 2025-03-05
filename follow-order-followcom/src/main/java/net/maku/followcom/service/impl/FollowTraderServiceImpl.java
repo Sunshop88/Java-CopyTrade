@@ -259,7 +259,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract,Integer flag) {
+    public boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract) {
         //判断是否正在下单
         if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + vo.getTraderId()))) {
             return false;

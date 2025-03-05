@@ -46,7 +46,7 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
      * @param vo
      * @return
      */
-    boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract,Integer flag);
+    boolean orderSend(FollowOrderSendVO vo, QuoteClient quoteClient, FollowTraderVO followTraderVO, Integer contract);
 
     /**
      * 滑点分析列表
