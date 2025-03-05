@@ -974,7 +974,7 @@ public class FollowTraderController {
     @Operation(summary = "交易下单")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<?> masOrdersend(@RequestBody @Valid MasToSubOrderSendDto vo) {
+    public Result<FollowMasOrderVo> masOrdersend(@RequestBody @Valid MasToSubOrderSendDto vo) {
         FollowTraderEntity followTraderVO = followTraderService.getById(vo.getTraderId());
         QuoteClient quoteClient = null;
         AbstractApiTrader abstractApiTrader = null;
@@ -1079,9 +1079,9 @@ public class FollowTraderController {
             return Result.error(followTraderVO.getAccount() + " 操作被中断");
         }
 
-        followTraderService.masOrdersend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
+        FollowMasOrderVo followMasOrderVo=followTraderService.masOrdersend(vo, quoteClient, FollowTraderConvert.INSTANCE.convert(followTraderVO), contract);
 
-        return Result.ok(true);
+        return Result.ok(followMasOrderVo);
     }
 
 }

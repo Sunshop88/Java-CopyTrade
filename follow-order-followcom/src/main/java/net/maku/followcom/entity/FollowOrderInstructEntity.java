@@ -79,6 +79,18 @@ public class FollowOrderInstructEntity {
 	private Integer totalOrders;
 
 	/**
+	 * 实际下单总手数
+	 */
+	@TableField(value = "true_total_lots")
+	private BigDecimal trueTotalLots;
+
+	/**
+	 * 实际下单总单数
+	 */
+	@TableField(value = "true_total_orders")
+	private Integer trueTotalOrders;
+
+	/**
 	* 成交手数
 	*/
 	@TableField(value = "traded_lots")

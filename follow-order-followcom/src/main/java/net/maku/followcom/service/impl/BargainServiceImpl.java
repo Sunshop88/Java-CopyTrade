@@ -1,6 +1,5 @@
 package net.maku.followcom.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,29 +9,26 @@ import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowOrderSendVO;
-import net.maku.framework.common.cache.RedissonLockUtil;
-import net.maku.framework.common.constant.Constant;
+import net.maku.followcom.vo.FollowMasOrderVo;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
-import online.mtapi.mt4.QuoteClient;
-import org.jacoco.agent.rt.internal_1f1cc91.core.internal.flow.IFrame;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static net.maku.followcom.util.RestUtil.sendRequest;
 
 /**
  * Author:  zsd
@@ -77,54 +73,78 @@ public class BargainServiceImpl implements BargainService {
                 .maxLotSize(vo.getStartSize()).minLotSize(vo.getEndSize()).remark(vo.getRemark()).totalLots(vo.getTotalSzie())
                 .totalOrders(vo.getTotalNum()).intervalTime(vo.getIntervalTime()).symbol(vo.getSymbol()).type(vo.getType())
                 .creator(SecurityUser.getUserId()).createTime(LocalDateTime.now()).build();
+        String orderNo = RandomStringUtil.generateNumeric(13);
         if (!followTraderEntityList.isEmpty()){
             if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
                 //交易分配，根据手数范围和总手数进行分配
                 Map<FollowTraderEntity, Double> doubleMap = executeOrdersRandomTotalLots(followTraderEntityList, vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize());
-                //总订单
-                followOrderInstructEntity.setTotalOrders(doubleMap.size());
+                followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
+                followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
                 followOrderInstructService.save(followOrderInstructEntity);
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
-                    //创建子指令
-                    FollowOrderInstructSubEntity followOrderInstructSubEntity = FollowOrderInstructSubEntity.builder().instructId(followOrderInstructEntity.getId())
-                            .account(followTraderEntity.getAccount()).accountType("MT4").symbol(vo.getSymbol()).type(vo.getType()).lots(BigDecimal.valueOf(aDouble))
-                            .platform(followTraderEntity.getPlatform()).createTime(LocalDateTime.now()).creator(SecurityUser.getUserId()).build();
-                    followOrderInstructSubService.save(followOrderInstructSubEntity);
-
-                    //发送请求
-                    MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
-                    masToSubOrderSendDto.setRemark(vo.getRemark());
-                    masToSubOrderSendDto.setSymbol(vo.getSymbol());
-                    masToSubOrderSendDto.setType(vo.getType());
-                    masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
-                    masToSubOrderSendDto.setStartSize(vo.getStartSize());
-                    masToSubOrderSendDto.setEndSize(vo.getEndSize());
-                    masToSubOrderSendDto.setTotalNum(1);
-                    masToSubOrderSendDto.setIntervalTime(0);
-                    masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
-                    masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
-                    RestUtil.sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,null);
+                    CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
+                        //发送请求
+                        MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
+                        masToSubOrderSendDto.setRemark(vo.getRemark());
+                        masToSubOrderSendDto.setSymbol(vo.getSymbol());
+                        masToSubOrderSendDto.setType(vo.getType());
+                        masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
+                        masToSubOrderSendDto.setStartSize(vo.getStartSize());
+                        masToSubOrderSendDto.setEndSize(vo.getEndSize());
+                        masToSubOrderSendDto.setTotalNum(1);
+                        masToSubOrderSendDto.setIntervalTime(0);
+                        masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
+                        masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
+                        masToSubOrderSendDto.setSendNo(orderNo);
+                        sendRequest(request, "127.0.0.1", HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,null);
+                    }, ThreadPoolUtils.getExecutor());
+                    futures.add(orderFuture);
+                });
+                CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                // 当所有订单任务完成后，执行更新操作
+                allOrdersCompleted.thenRun(() -> {
+                    log.info("所有分配交易下单已完成");
                 });
             }else {
-                //复制 所有账号相同参数
-                followOrderInstructEntity.setTotalOrders(vo.getTotalNum());
-                followOrderInstructService.save(followOrderInstructEntity);
+                AtomicReference<Integer> totalOrders= new AtomicReference<>(0);
+                BigDecimal totalLots=BigDecimal.ZERO;
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
                 followTraderEntityList.forEach(followTraderEntity -> {
-                    //发送请求
-                    MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
-                    masToSubOrderSendDto.setRemark(vo.getRemark());
-                    masToSubOrderSendDto.setSymbol(vo.getSymbol());
-                    masToSubOrderSendDto.setType(vo.getType());
-                    masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
-                    masToSubOrderSendDto.setStartSize(vo.getStartSize());
-                    masToSubOrderSendDto.setEndSize(vo.getEndSize());
-                    masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
-                    masToSubOrderSendDto.setIntervalTime(vo.getIntervalTime());
-                    masToSubOrderSendDto.setTradeType(FollowInstructEnum.COPY.getValue());
-                    masToSubOrderSendDto.setTotalSzie(vo.getTotalSzie());
-                    masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
-                    RestUtil.sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, null);
+                    CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
+                        //发送请求
+                        MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
+                        masToSubOrderSendDto.setRemark(vo.getRemark());
+                        masToSubOrderSendDto.setSymbol(vo.getSymbol());
+                        masToSubOrderSendDto.setType(vo.getType());
+                        masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
+                        masToSubOrderSendDto.setStartSize(vo.getStartSize());
+                        masToSubOrderSendDto.setEndSize(vo.getEndSize());
+                        masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
+                        masToSubOrderSendDto.setIntervalTime(vo.getIntervalTime());
+                        masToSubOrderSendDto.setTradeType(FollowInstructEnum.COPY.getValue());
+                        masToSubOrderSendDto.setTotalSzie(vo.getTotalSzie());
+                        masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
+                        masToSubOrderSendDto.setSendNo(orderNo);
+                        //需等待发起请求
+                        Result<FollowMasOrderVo> result=sendRequest(request, "127.0.0.1", HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, null);
+                        if (result.getCode()==0){
+                            totalOrders.updateAndGet(v -> v + result.getData().getTotalNum());
+                            totalLots.add(BigDecimal.valueOf(result.getData().getTotalSize()));
+                        }
+                    }, ThreadPoolUtils.getExecutor());
+                    futures.add(orderFuture);
                 });
+                // 使用 CompletableFuture.allOf 等待所有订单任务完成
+                CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                // 当所有订单任务完成后，执行更新操作
+                allOrdersCompleted.thenRun(() -> {
+                    log.info("所有复制交易下单已完成");
+                });
+                //复制 所有账号相同参数 默认总单数为0
+                followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
+                followOrderInstructEntity.setTrueTotalLots(totalLots);
+                followOrderInstructService.save(followOrderInstructEntity);
             }
         }else {
             //无可以下单账号

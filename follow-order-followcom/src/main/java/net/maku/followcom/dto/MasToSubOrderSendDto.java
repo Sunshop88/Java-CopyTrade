@@ -54,4 +54,7 @@ public class MasToSubOrderSendDto implements Serializable {
 	@Schema(description = "交易类型")
 	private Integer tradeType;
 
+	@Schema(description = "订单号")
+	private String sendNo;
+
 }

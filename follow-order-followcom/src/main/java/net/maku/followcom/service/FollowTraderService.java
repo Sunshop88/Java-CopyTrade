@@ -104,5 +104,5 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
 
     List<FollowSendAccountListVO> accountPage();
 
-    void masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract);
+    FollowMasOrderVo masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract);
 }

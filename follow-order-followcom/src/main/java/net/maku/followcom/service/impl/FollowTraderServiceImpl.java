@@ -288,23 +288,33 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
         log.info("合约大小值{}", pr);
+        FollowMasOrderVo followMasOrderVo=null;
         //根据情况进行下单
         if (ObjectUtil.isNotEmpty(vo.getTotalSzie()) && ObjectUtil.isNotEmpty(vo.getTotalNum()) && ObjectUtil.isEmpty(vo.getStartSize()) && ObjectUtil.isEmpty(vo.getEndSize())) {
             //情况一  总手数+订单数量情况 填写 范围未填写
-            executeOrdersFixedQuantity(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalSzie().doubleValue(), vo.getTotalNum(), vo.getIntervalTime(), orderNo,vo.getRemark());
+            followMasOrderVo=executeOrdersFixedQuantity(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalSzie().doubleValue(), vo.getTotalNum(), vo.getIntervalTime(), orderNo,vo.getRemark());
         } else if (ObjectUtil.isNotEmpty(vo.getTotalSzie()) && ObjectUtil.isEmpty(vo.getTotalNum()) && ObjectUtil.isNotEmpty(vo.getStartSize()) && ObjectUtil.isNotEmpty(vo.getEndSize())) {
             //情况二  区间随机下单，订单数量不固定，总手数不超过设定值
-            executeOrdersRandomTotalLots(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomTotalLots(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
         } else if (ObjectUtil.isEmpty(vo.getTotalSzie()) && ObjectUtil.isNotEmpty(vo.getTotalNum()) && ObjectUtil.isNotEmpty(vo.getStartSize()) && ObjectUtil.isNotEmpty(vo.getEndSize())) {
             //情况三  区间随机下单，订单数量固定，总手数不限制
-            executeOrdersRandomFixedCount(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalNum(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomFixedCount(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalNum(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
         } else if (ObjectUtil.isNotEmpty(vo.getTotalSzie()) && ObjectUtil.isNotEmpty(vo.getTotalNum()) && ObjectUtil.isNotEmpty(vo.getStartSize()) && ObjectUtil.isNotEmpty(vo.getEndSize())) {
             //区间随机下单，总手数和订单数量都受限制
-            executeOrdersRandomLimited(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalNum(), vo.getTotalSzie(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomLimited(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo, followTraderVO.getId(), followTraderVO.getAccount(), vo.getType(), quoteClient, vo.getSymbol(), vo.getTotalNum(), vo.getTotalSzie(), vo.getStartSize(), vo.getEndSize(), vo.getIntervalTime(), orderNo,vo.getRemark());
         }
         //只有间隔会创建下单标识
         if (vo.getIntervalTime() != 0) {
             redisCache.set(Constant.TRADER_SEND + vo.getTraderId(), 1);
+        }
+        if (ObjectUtil.isNotEmpty(followMasOrderVo)){
+            if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+                executeOrder(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, vo.getPlacedType(),vo.getRemark());
+            }else {
+                executeOrderNoSyn(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, vo.getPlacedType(),vo.getRemark());
+            }
+        }else {
+            log.info(followTraderVO.getAccount()+"下单处理异常");
         }
         return true;
     }
@@ -958,7 +968,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     // 示例 1: 每笔订单的下单数量为 总手数/订单数量
-    public void executeOrdersFixedQuantity(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, double totalLots, int orderCount, Integer interval, String orderNo,String remark) {
+    public FollowMasOrderVo executeOrdersFixedQuantity(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, double totalLots, int orderCount, Integer interval, String orderNo,String remark) {
+        FollowMasOrderVo followMasOrderVo=new FollowMasOrderVo();
         double lotsPerOrder = roundToTwoDecimal(totalLots / orderCount);
         // 如果每笔手数小于 0.01，将每笔订单设置为 0.01，并重新计算总订单数
         if (lotsPerOrder < 0.01 || lotsPerOrder == 0.01) {
@@ -1014,12 +1025,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }
             }
         }
-        log.info("下单数量{}", orders);
-        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }else {
-            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }
+        log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setOrderList(orders);
+        return  followMasOrderVo;
+//        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+//            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }else {
+//            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }
     }
 
     private void updateSendOrder(long traderId, String orderNo,Integer flag,List<Integer> ticket) {
@@ -1160,7 +1175,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
 
     // 示例 2: 每笔订单的下单数量为 区间内的随机值，总手数不超过 总手数，订单数量不固定
-    public void executeOrdersRandomTotalLots(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, double totalLots, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+    public FollowMasOrderVo executeOrdersRandomTotalLots(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, double totalLots, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+        FollowMasOrderVo followMasOrderVo = new FollowMasOrderVo();
         Random rand = new Random();
         double totalPlacedLots = 0;
         List<Double> orders = new ArrayList<>();
@@ -1222,17 +1238,22 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }
             }
         }
-        log.info("下单数量{}", orders);
-        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }else {
-            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }
+        log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setOrderList(orders);
+        return followMasOrderVo;
+//        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+//            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }else {
+//            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }
     }
 
 
     // 示例 3: 每笔订单的下单数量为 区间内的随机值，总订单数量固定，总手数不限
-    public void executeOrdersRandomFixedCount(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, Integer orderCount, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+    public FollowMasOrderVo executeOrdersRandomFixedCount(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, Integer orderCount, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+        FollowMasOrderVo followMasOrderVo = new FollowMasOrderVo();
         Random rand = new Random();
         List<Double> orders = new ArrayList<>();
 
@@ -1261,15 +1282,21 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
         log.info("下单数量{}", orders);
-        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }else {
-            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }
+        log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setOrderList(orders);
+        return followMasOrderVo;
+//        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+//            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }else {
+//            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCount, orders, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }
     }
 
     // 示例 4: 每笔订单的下单数量为 区间内的随机值，总手数和订单数量都受限制
-    public void executeOrdersRandomLimited(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, Integer orderCount, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+    public FollowMasOrderVo executeOrdersRandomLimited(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, Integer orderCount, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
+        FollowMasOrderVo followMasOrderVo = new FollowMasOrderVo();
         Random rand = new Random();
         BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
         int orderCountNum = 0;                         // 已下单的订单数量
@@ -1354,14 +1381,19 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }
             }
         }
-        log.info("下单数量{}", orders);
+        List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
+        log.info("下单数量{}++++++++下单手数{}", orderCount,doubleList.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalSize(doubleList.stream().mapToDouble(o->o).sum());
+        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setOrderList(doubleList);
+        return followMasOrderVo;
         // 执行订单操作
-        List<Double> collect = orders.stream().map(BigDecimal::doubleValue).collect(Collectors.toList());
-        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCountNum, collect, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }else {
-            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCountNum, collect, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
-        }
+//        List<Double> collect = orders.stream().map(BigDecimal::doubleValue).collect(Collectors.toList());
+//        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+//            executeOrder(ipAdd, serverName, platform, brokerName, interval, orderCountNum, collect, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }else {
+//            executeOrderNoSyn(ipAdd, serverName, platform, brokerName, interval, orderCountNum, collect, traderId, account, quoteClient, symbol, type, orderNo, vo.getPlacedType(),remark);
+//        }
     }
 
     // 保留两位小数的方法
@@ -1709,7 +1741,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     @Override
-    public void masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract) {
+    public FollowMasOrderVo masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract) {
+        FollowMasOrderVo followMasOrderVo=null;
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(this.get(vo.getTraderId()).getPlatformId().toString());
         double pr = 1;
         if (contract != 0) {
@@ -1734,29 +1767,44 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
             //分配下单
-            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), "55555", ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+            followMasOrderVo.setTotalNum(vo.getTotalNum());
+            followMasOrderVo.setTotalSize(vo.getTotalSzie().doubleValue());
+            return followMasOrderVo;
         }else {
             //复制下单
-            orderSendMasCopy(vo,quoteClient,convert,pr,followPlatform.getBrokerName());
+            followMasOrderVo= orderSendMasCopy(vo,quoteClient,convert,pr,followPlatform.getBrokerName());
+            if (ObjectUtil.isNotEmpty(followMasOrderVo)){
+                if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
+                    executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), convert.getPlacedType(),vo.getRemark());
+                }else {
+                    executeOrderNoSyn(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), convert.getPlacedType(),vo.getRemark());
+                }
+            }else {
+                log.info(convert.getAccount()+"下单处理异常");
+            }
+            return followMasOrderVo;
         }
     }
 
-    public boolean orderSendMasCopy(MasToSubOrderSendDto masToSubOrderSendDto,QuoteClient quoteClient, FollowTraderVO vo, double pr,String brokeName) {
+    public FollowMasOrderVo orderSendMasCopy(MasToSubOrderSendDto masToSubOrderSendDto,QuoteClient quoteClient, FollowTraderVO vo, double pr,String brokeName) {
+        FollowMasOrderVo followMasOrderVo =null;
         //根据情况进行下单
         if (ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalSzie()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalNum()) && ObjectUtil.isEmpty(masToSubOrderSendDto.getStartSize()) && ObjectUtil.isEmpty(masToSubOrderSendDto.getEndSize())) {
             //情况一  总手数+订单数量情况 填写 范围未填写
-            executeOrdersFixedQuantity(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalSzie().doubleValue(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
+            followMasOrderVo=executeOrdersFixedQuantity(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalSzie().doubleValue(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
         } else if (ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalSzie()) && ObjectUtil.isEmpty(masToSubOrderSendDto.getTotalNum()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getStartSize()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getEndSize())) {
             //情况二  区间随机下单，订单数量不固定，总手数不超过设定值
-            executeOrdersRandomTotalLots(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalSzie().doubleValue(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomTotalLots(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalSzie().doubleValue(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
         } else if (ObjectUtil.isEmpty(masToSubOrderSendDto.getTotalSzie()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalNum()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getStartSize()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getEndSize())) {
             //情况三  区间随机下单，订单数量固定，总手数不限制
-            executeOrdersRandomFixedCount(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomFixedCount(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
         } else if (ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalSzie()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getTotalNum()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getStartSize()) && ObjectUtil.isNotEmpty(masToSubOrderSendDto.getEndSize())) {
             //区间随机下单，总手数和订单数量都受限制
-            executeOrdersRandomLimited(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getTotalSzie(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
+            followMasOrderVo=executeOrdersRandomLimited(vo.getIpAddr(), vo.getServerName(), BigDecimal.valueOf(pr), vo.getPlatform(), brokeName, null, vo.getId(), vo.getAccount(), vo.getType(), quoteClient, masToSubOrderSendDto.getSymbol(), masToSubOrderSendDto.getTotalNum(), masToSubOrderSendDto.getTotalSzie(), masToSubOrderSendDto.getStartSize(), masToSubOrderSendDto.getEndSize(), masToSubOrderSendDto.getIntervalTime(), null,vo.getRemark());
         }
-        return true;
+
+        return followMasOrderVo;
     }
 
 

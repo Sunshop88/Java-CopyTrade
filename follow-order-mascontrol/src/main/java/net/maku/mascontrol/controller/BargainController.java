@@ -117,9 +117,8 @@ public class BargainController {
     @PostMapping("masOrderSend")
     @Operation(summary = "交易下单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
+    public void   masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
         bargainService.masOrderSend(vo,request);
-        return Result.ok();
     }
 
     @GetMapping("historySubcommands")
