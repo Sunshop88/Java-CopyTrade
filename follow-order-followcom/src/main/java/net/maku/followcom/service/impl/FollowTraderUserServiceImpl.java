@@ -691,6 +691,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
                         vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
+                        vo.setIsAdd(false);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
                     } else {
                         //策略转发
@@ -710,6 +711,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setTemplateId(hangVpsVO.getTemplateId());
                         vo.setTraderId(hangVpsVO.getTraderId());
                         vo.setTemplateId(hangVpsVO.getTemplateId());
+                        vo.setIsAdd(false);
                         //策略新增
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
                     }

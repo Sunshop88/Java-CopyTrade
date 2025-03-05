@@ -100,5 +100,7 @@ public class FollowAddSalveVo  implements Serializable {
 
     @Schema(description = "位数")
     private Integer digits;
+    //用于挂号vps(true 需要新增)
+    private Boolean isAdd;
 
 }

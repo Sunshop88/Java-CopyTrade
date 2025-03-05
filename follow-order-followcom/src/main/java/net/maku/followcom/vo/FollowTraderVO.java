@@ -186,5 +186,6 @@ public class FollowTraderVO implements Serializable {
 
 	@Schema(description = "新密码")
 	private String newPassword;
-
+	//用于挂号vps(true 需要新增)
+	private Boolean isAdd;
 }
