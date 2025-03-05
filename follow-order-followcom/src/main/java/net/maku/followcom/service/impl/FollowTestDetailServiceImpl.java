@@ -487,6 +487,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         return pageResult;
     }
 
+
     // 辅助方法：处理可能为 null 的字符串比较
     private int compareStrings(String str1, String str2) {
         if (str1 == null && str2 == null) return 0;
@@ -952,6 +953,20 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 followTestDetailVO.setServerName(serverName);
                 followTestDetailVO.setServerNode(serverNode);
                 extractedData.add(followTestDetailVO);
+                //查询followTestDetail里是否有
+                List<FollowTestDetailEntity> list = list(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, serverName).eq(FollowTestDetailEntity::getServerNode, serverNode));
+                if (ObjectUtil.isEmpty(list)) {
+                    String[] split = followTestDetailVO.getServerNode().split(":");
+                    if (split.length != 2) {
+                        log.info("服务器节点格式不正确:{}", followTestDetailVO.getServerNode());
+                        break;
+                    }
+                    FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
+                    followBrokeServer.setServerName(followTestDetailVO.getServerName());
+                    followBrokeServer.setServerNode(split[0]);
+                    followBrokeServer.setServerPort(split[1]);
+                    followBrokeServerService.save(followBrokeServer);
+                }
             }
             // 处理提取的数据
             processData(extractedData,vpsId);
@@ -997,7 +1012,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                     for (FollowTestDetailVO extracted : extractedData) {
                         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                             // 将vps其下的节点的数据更新为0
-                            if (ObjectUtil.isNotEmpty(map)) {
+//                            if (ObjectUtil.isNotEmpty(map)) {
                                 FollowTestDetailVO vo = map.get(extracted.getServerName() + "_" + extracted.getServerNode() + "_" + vps);
                                 if (vo != null) {
                                     vo.setIsDefaultServer(0);
@@ -1006,12 +1021,13 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                                     FollowTestDetailVO followTestDetailVO = new FollowTestDetailVO();
                                     followTestDetailVO.setServerName(extracted.getServerName());
                                     followTestDetailVO.setServerNode(extracted.getServerNode());
+                                    followTestDetailVO.setPlatformType("MT4");
                                     followTestDetailVO.setVpsId(vps);
                                     followTestDetailVO.setIsDefaultServer(0);
                                     save(FollowTestDetailConvert.INSTANCE.convert(followTestDetailVO));
                                 }
                                 redisUtil.hSet(Constant.VPS_NODE_SPEED + vps, extracted.getServerName(), extracted.getServerNode());
-                            }
+//                            }
                         }, executorService);
                         futures.add(future);
                     }
