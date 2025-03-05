@@ -11,4 +11,5 @@ public class FollowBatchUpdateVO {
     private String confirmPassword;
     private List<Long> idList;
     private long groupId;
+    private long id;
 }

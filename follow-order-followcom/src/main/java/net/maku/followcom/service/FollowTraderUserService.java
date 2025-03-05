@@ -44,7 +44,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
-    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
+    void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
     TraderUserStatVO getStatInfo(FollowTraderUserQuery query);
 
@@ -53,4 +53,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request);
 
     void belowVps(List<Long> traderUserIds, HttpServletRequest request);
+
+    void modify(List<FollowTraderUserVO> vos);
 }
