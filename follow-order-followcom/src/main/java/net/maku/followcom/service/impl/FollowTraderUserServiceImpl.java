@@ -182,6 +182,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (ObjectUtil.isNotEmpty(first)){
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
+        entity.setPassword(AesUtils.aesEncryptStr(entity.getPassword()));
 
         baseMapper.insert(entity);
 
@@ -239,7 +240,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
         removeByIds(idList);
-        followTraderService.removeByIds(idList);
+        //根据id查询账号
+        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
+        if (ObjectUtil.isNotEmpty(list)){
+            List<String>accountList = list.stream().map(FollowTraderUserEntity::getAccount).toList();
+            //删除followTrader表信息
+            followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
+        }
 
     }
 
@@ -516,7 +523,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
-        String s = AesUtils.aesEncryptStr(vo.getPassword());
+        String s = AesUtils.aesEncryptStr(password);
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);

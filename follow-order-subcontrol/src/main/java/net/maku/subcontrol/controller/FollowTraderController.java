@@ -115,15 +115,17 @@ public class FollowTraderController {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             //添加trader_user
-            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
-            if (ObjectUtil.isNotEmpty(entities)) {
-                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
-                followTraderUserVO.setAccount(vo.getAccount());
-                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
-                followTraderUserVO.setPlatform(vo.getPlatform());
-                Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
-                followTraderUserVO.setPlatformId(Math.toIntExact(id));
-                followTraderUserService.save(followTraderUserVO);
+            if (ObjectUtil.isEmpty(vo.getIsAdd()) || vo.getIsAdd()) {
+                List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+                if (ObjectUtil.isNotEmpty(entities)) {
+                    FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                    followTraderUserVO.setAccount(vo.getAccount());
+                    followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    followTraderUserVO.setPlatform(vo.getPlatform());
+                    Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                    followTraderUserVO.setPlatformId(Math.toIntExact(id));
+                    followTraderUserService.save(followTraderUserVO);
+                }
             }
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());

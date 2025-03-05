@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
@@ -124,15 +125,17 @@ public class FollowSlaveController {
             followTraderVo.setTemplateId(vo.getTemplateId());
             FollowTraderVO followTraderVO = followTraderService.save(followTraderVo);
             //添加trader_user
-            List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
-            if (ObjectUtil.isNotEmpty(entities)) {
-                FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
-                followTraderUserVO.setAccount(vo.getAccount());
-                followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
-                followTraderUserVO.setPlatform(vo.getPlatform());
-                Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
-                followTraderUserVO.setPlatformId(Math.toIntExact(id));
-                followTraderUserService.save(followTraderUserVO);
+            if (ObjectUtil.isEmpty(vo.getIsAdd()) || vo.getIsAdd()) {
+                List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
+                if (ObjectUtil.isNotEmpty(entities)) {
+                    FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
+                    followTraderUserVO.setAccount(vo.getAccount());
+                    followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    followTraderUserVO.setPlatform(vo.getPlatform());
+                    Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
+                    followTraderUserVO.setPlatformId(Math.toIntExact(id));
+                    followTraderUserService.save(followTraderUserVO);
+                }
             }
             newID=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
@@ -225,6 +228,11 @@ public class FollowSlaveController {
                 followTraderEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             }
             followTraderService.updateById(followTraderEntity);
+            //修改trader_user
+            LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(FollowTraderUserEntity::getId, followTraderEntity.getId());
+            updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
+            followTraderUserService.update(updateWrapper);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
                     .eq(FollowTraderSubscribeEntity::getSlaveId, vo.getId()));
