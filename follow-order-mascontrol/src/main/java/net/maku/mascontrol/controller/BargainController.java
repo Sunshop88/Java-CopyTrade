@@ -118,15 +118,17 @@ public class BargainController {
     @PostMapping("masOrderSend")
     @Operation(summary = "交易下单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public void  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
+    public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
         bargainService.masOrderSend(vo,request);
+        return Result.ok();
     }
 
     @PostMapping("masOrderClose")
     @Operation(summary = "交易平仓")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public void  masOrderClose(@RequestBody @Valid MasToSubOrderCloseDto vo, HttpServletRequest request) {
+    public Result<?>   masOrderClose(@RequestBody @Valid MasToSubOrderCloseDto vo, HttpServletRequest request) {
         bargainService.masOrderClose(vo,request);
+        return Result.ok();
     }
 
     @GetMapping("historySubcommands")
