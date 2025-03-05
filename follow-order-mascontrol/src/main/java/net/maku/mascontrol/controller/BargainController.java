@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.dto.MasOrderSendDto;
+import net.maku.followcom.dto.MasToSubOrderCloseDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
@@ -119,6 +120,14 @@ public class BargainController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
         bargainService.masOrderSend(vo,request);
+        return Result.ok();
+    }
+
+    @PostMapping("masOrderClose")
+    @Operation(summary = "交易平仓")
+    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    public Result<?>   masOrderClose(@RequestBody @Valid MasToSubOrderCloseDto vo, HttpServletRequest request) {
+        bargainService.masOrderClose(vo,request);
         return Result.ok();
     }
 

@@ -2,6 +2,8 @@ package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.dto.MasOrderSendDto;
+import net.maku.followcom.dto.MasToSubOrderCloseDto;
+import net.maku.framework.common.utils.Result;
 
 /**
  * Author:  zsd
@@ -9,4 +11,6 @@ import net.maku.followcom.dto.MasOrderSendDto;
  */
 public interface BargainService {
     void masOrderSend(MasOrderSendDto vo, HttpServletRequest request);
+
+    void masOrderClose(MasToSubOrderCloseDto vo, HttpServletRequest request);
 }
