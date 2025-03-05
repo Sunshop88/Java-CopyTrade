@@ -162,7 +162,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
                 customBatchSaveOrUpdate(list);
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+          log.error("历史订单保存失败"+e);
         }
     }
 
