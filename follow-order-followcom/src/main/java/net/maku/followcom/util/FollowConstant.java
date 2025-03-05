@@ -32,7 +32,7 @@ public class FollowConstant {
             in.close();
 
           //  LOCAL_HOST = "39.101.133.150";
-            LOCAL_HOST ="39.99.136.49";
+            LOCAL_HOST =publicIP;
 
         } catch (Exception e) {
             e.printStackTrace();
