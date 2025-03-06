@@ -151,13 +151,16 @@ public class BargainController {
     @GetMapping("historySubcommands")
     @Operation(summary = "历史子指令分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowOrderInstructSubVO>> page(@ParameterObject @Valid FollowOrderInstructSubQuery query){
-
+    public Result<List<FollowOrderInstructSubVO>> page(@RequestBody String  sendNo){
         FollowOrderDetailQuery ordreQuery=new FollowOrderDetailQuery();
-        ordreQuery.setSendNo(query.getSendNo());
+        ordreQuery.setSendNo(sendNo);
+        ordreQuery.setPage(1);
+        ordreQuery.setLimit(1000);
         PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(ordreQuery);
+        log.info("page:{}",page);
         List<FollowOrderInstructSubVO> followOrderInstructSubVOS = FollowOrderDetailConvert.INSTANCE.convertPage(page.getList());
-        return Result.ok(new PageResult<>(followOrderInstructSubVOS, page.getTotal()));
+
+        return Result.ok(followOrderInstructSubVOS);
     }
 
     @GetMapping("historyCommands")
