@@ -581,10 +581,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public TraderUserStatVO getStatInfo(FollowTraderUserQuery query) {
         long startTime = System.currentTimeMillis();
-
-      /* ThreadPoolUtils.getExecutor().execute(()->{
-
-        });*/
+        AtomicReference<List<FollowTraderEntity>> traders= new AtomicReference<>();
+        Map<String,Integer> traderMap=new HashMap<>();
+        ThreadPoolUtils.getExecutor().execute(()->{
+           traders.set(followTraderService.list());
+        });
         List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(getWrapper(query));
         int size = followTraderUserEntities.size();
         Map<String,FollowTraderUserEntity> traderUserMap=new HashMap<>();
@@ -592,10 +593,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             traderUserMap.put(o.getAccount() + "-" + o.getPlatformId(),o);
         });
         List<FollowTraderUserEntity> list = followTraderUserEntities.stream().filter(o -> o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())).toList();
-        List<FollowTraderEntity> traders = followTraderService.list();
-        Map<String,Integer> traderMap=new HashMap<>();
+
+
         TraderUserStatVO vo = TraderUserStatVO.builder().total(size).noVpsNum(list.size()).conNum(0).errNum(0).build();
-        traders.stream().forEach(t->{
+        traders.get().stream().forEach(t->{
            if(t.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
                FollowTraderUserEntity followTraderUserEntity = traderUserMap.get(t.getAccount() + "-" + t.getPlatformId());
                if(followTraderUserEntity!=null){
