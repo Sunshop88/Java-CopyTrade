@@ -285,14 +285,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             if (inputStream == null) {
                 throw new FileNotFoundException("未找到指定的模板文件：" + inputFilePath);
             }
-
+            // 写入 UTF-8 BOM
+            outputStream.write("\uFEFF".getBytes(StandardCharsets.UTF_8));
             // 获取第一行记录
             List<CSVRecord> records = parser.getRecords();
 
             // 检查是否有记录
             if (records.isEmpty()) {
                 // 如果 CSV 文件为空，可以返回一个默认记录
-                csvPrinter.printRecord("账号","密码","账号类型","服务器","节点","备注","排序");
+                csvPrinter.printRecord("账号", "密码", "账号类型", "服务器", "节点", "备注", "排序");
             } else {
                 CSVRecord firstRecord = records.get(0);
                 String account = firstRecord.get("账号");
@@ -305,7 +306,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
                 // 写入到输出流
                 csvPrinter.printRecord(account, password, accountType, server, node, remark, sort);
-
             }
         }
     }
