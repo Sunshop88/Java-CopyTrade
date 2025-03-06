@@ -131,4 +131,10 @@ public class FollowOrderInstructEntity {
 	 */
 	@TableField(value = "end_time")
 	private LocalDateTime endTime;
+
+	/**
+	 * 订单号
+	 */
+	@TableField(value = "order_no")
+	private String orderNo;
 }
