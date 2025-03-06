@@ -878,7 +878,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
             AtomicReference<Boolean> flag= new AtomicReference<>(false);
             list.forEach(t->{
-                if(!t.getType().equals(TraderTypeEnum.MASTER_REAL)){
+                if(!t.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
                     List<Long> idList = map.get(t.getIpAddr());
                     if(idList==null){
                         idList=new ArrayList<>();
