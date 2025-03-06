@@ -272,12 +272,14 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 
     @GetMapping("listServerOrder")
     @Operation(summary = "查询当前存在服务商列表")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<List<FollowPlatformEntity>> listServerOrder() {
         return Result.ok(followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getCreateTime)));
     }
 
     @GetMapping("listHavingServer")
     @Operation(summary = "查询节点列表")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<List<String>> listHavingServer(@Parameter FollowTestServerQuery query) {
         List<FollowBrokeServerEntity> list = followBrokeServerService
                 .list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName , query.getServerName()));
