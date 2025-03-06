@@ -172,7 +172,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
             ")",
             "</foreach>",
             "ON DUPLICATE KEY UPDATE comment=values(comment),update_time = now() , version=version+1,close_time=values(close_time),close_price=values(close_price),tp=values(tp),",
-            "sl=values(sl),swap=values(swap),profit=values(profit),close_server_host=values(close_server_host)",
+            "sl=values(sl),swap=values(swap),profit=values(profit),close_server_host=values(close_server_host),close_status=values(close_status),remark=values(remark)",
             "</script>",
     })
     void customBatchSaveOrUpdate(@Param("list") List<FollowOrderDetailEntity> list);
