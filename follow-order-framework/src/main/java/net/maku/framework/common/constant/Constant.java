@@ -80,6 +80,11 @@ public interface Constant {
     String TRADER_ACTIVE="trader:active:";
 
     /**
+     * 账户漏单临时缓存
+     */
+    String TRADER_TEMPORARILY_REPAIR="trader:temporarily:repair";
+
+    /**
      * 账号平台信息
      */
     String TRADER_PLATFORM="trader:platform:";

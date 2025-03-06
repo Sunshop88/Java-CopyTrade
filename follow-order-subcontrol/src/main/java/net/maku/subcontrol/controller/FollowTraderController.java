@@ -108,6 +108,9 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> save(@RequestBody @Valid FollowTraderVO vo) {
         //默认模板最新的模板id
+        long newId=0;
+        long newUserId=0;
+        long sourceId=0;
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
@@ -115,6 +118,7 @@ public class FollowTraderController {
         try {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
+            newId=followTraderVO.getId();
             //添加trader_user
             if (ObjectUtil.isEmpty(vo.getIsAdd()) || vo.getIsAdd()) {
                 List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
@@ -126,6 +130,7 @@ public class FollowTraderController {
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
                     followTraderUserService.save(followTraderUserVO);
+                    newUserId=followTraderUserVO.getId();
                 }
             }
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
@@ -157,10 +162,18 @@ public class FollowTraderController {
                 sourceInsertVO.setRemark(vo.getRemark());
                 sourceInsertVO.setStatus(true);
                 sourceInsertVO.setId(followTraderVO.getId());
-                sourceService.add(sourceInsertVO);
+                Integer id = sourceService.add(sourceInsertVO);
+                sourceId=id;
             }
 
         } catch (Exception e) {
+            followTraderService.removeById(newId);
+            if (newUserId!=0){
+                followTraderUserService.removeById(newUserId);
+            }
+            if (sourceId!=0){
+                sourceService.removeById(sourceId);
+            }
             log.error("保存失败" + e);
             if (e instanceof ServerException) {
                 throw e;
@@ -441,7 +454,7 @@ public class FollowTraderController {
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
-        String symbol1 = getSymbol(abstractApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
+        String symbol1 = getSymbol(quoteClient,vo.getTraderId(), vo.getSymbol());
         vo.setSymbol(symbol1);
         log.info("标准合约大小{}", contract);
         try {
@@ -601,7 +614,7 @@ public class FollowTraderController {
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())) {
-            String symbol1 = getSymbol(abstractApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
+            String symbol1 = getSymbol(quoteClient,vo.getTraderId(), vo.getSymbol());
             vo.setSymbol(symbol1);
             try {
                 // 获取报价信息
@@ -733,6 +746,7 @@ public class FollowTraderController {
                     }else {
                         log.info(traderId+"重复提交并等待失败");
                     }
+                    result=true;
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
@@ -766,6 +780,7 @@ public class FollowTraderController {
                     //重复提交
                     if (ObjectUtil.isNotEmpty(copierApiTrader)){
                         log.info(traderId+"重复提交并等待完成");
+                        result=true;
                     }else {
                         log.info(traderId+"重复提交并等待失败");
                     }
@@ -777,6 +792,7 @@ public class FollowTraderController {
                 }
             }
         }catch (Exception e){
+            log.info("重连错误"+e.getMessage());
             result=false;
         }
         return result;
@@ -813,7 +829,7 @@ public class FollowTraderController {
         }
     }
 
-    private String getSymbol(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient,Long traderId, String symbol) {
+    private String getSymbol(QuoteClient quoteClient,Long traderId, String symbol) {
 
         //查询平台信息
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
@@ -828,7 +844,7 @@ public class FollowTraderController {
                 for (FollowSysmbolSpecificationEntity o : specificationEntity) {
                     log.info("品种规格获取报价"+o.getSymbol());
                     //获取报价
-                    QuoteEventArgs eventArgs= getEventArgs(abstractApiTrader,quoteClient,o.getSymbol());
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
                     if (ObjectUtil.isNotEmpty(eventArgs)) {
                         return o.getSymbol();
                     }
@@ -841,7 +857,7 @@ public class FollowTraderController {
                 for (FollowVarietyEntity o : list) {
                     if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
                         //获取报价
-                        eventArgs= getEventArgs(abstractApiTrader,quoteClient,o.getBrokerSymbol());
+                        eventArgs= getEventArgs(quoteClient,o.getBrokerSymbol());
                         if (ObjectUtil.isNotEmpty(eventArgs)){
                             return o.getBrokerSymbol();
                         }
@@ -852,12 +868,12 @@ public class FollowTraderController {
         return symbol;
     }
 
-    private QuoteEventArgs getEventArgs(AbstractApiTrader abstractApiTrader,QuoteClient quoteClient,String symbol){
+    private QuoteEventArgs getEventArgs(QuoteClient quoteClient,String symbol){
         QuoteEventArgs eventArgs = null;
         try {
-            if (ObjectUtil.isEmpty(abstractApiTrader.quoteClient.GetQuote(symbol))){
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))){
                 //订阅
-                abstractApiTrader.quoteClient.Subscribe(symbol);
+                quoteClient.Subscribe(symbol);
             }
             while (eventArgs==null && quoteClient.Connected()) {
                 try {
@@ -867,7 +883,7 @@ public class FollowTraderController {
                 }
                 eventArgs=quoteClient.GetQuote(symbol);
             }
-            eventArgs = abstractApiTrader.quoteClient.GetQuote(symbol);
+            eventArgs = quoteClient.GetQuote(symbol);
             return eventArgs;
         }catch (InvalidSymbolException | TimeoutException | ConnectException e) {
             log.info("获取报价失败,品种不正确,请先配置品种");
@@ -1079,7 +1095,7 @@ public class FollowTraderController {
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);
 
-        String symbol1 = getSymbol(abstractApiTrader,quoteClient,vo.getTraderId(), vo.getSymbol());
+        String symbol1 = getSymbol(quoteClient,vo.getTraderId(), vo.getSymbol());
         vo.setSymbol(symbol1);
         log.info("标准合约大小{}", contract);
         try {

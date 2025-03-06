@@ -50,7 +50,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final ClientServicePt clientServicePt;
     private final PlatformServicePt platformServicePt;
     private final ServerServicePt serverServicePt;
-
+    private final FollowTestDetailService followTestDetailService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -129,9 +129,20 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(List<Integer> idList) {
         try {
-            clientService.delete(idList);
-            clientServicePt.delete(idList);
+//            clientService.delete(idList);
             followVpsService.delete(idList);
+            //删除其vps下的所有测速记录
+            List<FollowTestDetailEntity> testDetails = followTestDetailService.list(
+                    new LambdaQueryWrapper<FollowTestDetailEntity>()
+                            .in(FollowTestDetailEntity::getVpsId, idList)
+            );
+
+            if (ObjectUtil.isNotEmpty(testDetails)) {
+                List<Long> testDetailIds = testDetails.stream()
+                        .map(FollowTestDetailEntity::getId)
+                        .collect(Collectors.toList());
+                followTestDetailService.delete(testDetailIds);
+            }
             log.info("成功删除 ID 列表: {}", idList);
             return true;
         } catch (Exception e) {

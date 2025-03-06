@@ -42,7 +42,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
 
     private final FollowRedisTraderVO followRedisTraderVO = new FollowRedisTraderVO();
     // 设定时间间隔，单位为毫秒
-    private final long interval = 3000; // 3秒间隔
+    private final long interval = 1000; // 3秒间隔
 
     // 记录上次执行时间
     private long lastInvokeTime = 0;

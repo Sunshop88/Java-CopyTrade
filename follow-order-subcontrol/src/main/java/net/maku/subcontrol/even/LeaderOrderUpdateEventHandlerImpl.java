@@ -19,26 +19,20 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.AccountCacheVO;
 import net.maku.followcom.vo.FollowTraderCacheVO;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderCacheVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
-import net.maku.framework.common.utils.AssertUtils;
+import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
-import net.maku.subcontrol.entity.FollowOrderHistoryEntity;
-import net.maku.subcontrol.entity.FollowSubscribeOrderEntity;
-import net.maku.subcontrol.rule.AbstractFollowRule;
-import net.maku.subcontrol.rule.FollowRule;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
 import net.maku.subcontrol.trader.*;
 import net.maku.subcontrol.trader.strategy.*;
+import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.*;
-import org.redisson.api.RLock;
-import org.springframework.kafka.core.KafkaTemplate;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import cn.hutool.core.date.DateUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -69,6 +63,9 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
     private RedissonLockUtil redissonLockUtil=SpringContextUtils.getBean(RedissonLockUtil.class);
     // 上次执行时间
     private long lastInvokeTime = 0;
+
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingMessages = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
 
     // 设定时间间隔，单位为毫秒
     private final long interval = 1000; // 1秒间隔
@@ -125,10 +122,29 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
         //避免重复监听
         String val=Constant.FOLLOW_ON_EVEN + FollowConstant.LOCAL_HOST + "#" + orderUpdateEventArgs.Action + "#" + order.Ticket;
         // 使用 Redis 原子操作 SET NX EX
-        boolean isLocked = redisUtil.setnx(val, 1, 10); // 原子操作
+        boolean isLocked = redisUtil.setnx(val, 1, 36000); // 原子操作
         if (!isLocked) {
             log.info(order.Ticket + "锁定监听重复");
             return;
+        }
+        //发送websocket消息标识
+        if (orderUpdateEventArgs.Action == UpdateAction.PositionClose||orderUpdateEventArgs.Action == UpdateAction.PositionOpen||orderUpdateEventArgs.Action == UpdateAction.PendingFill) {
+            ScheduledFuture<?> existingTask = pendingMessages.get(leader.getId().toString());
+            if (existingTask != null) {
+                existingTask.cancel(false); // 不强制中断，允许任务自然结束
+            }
+
+            // 新建延迟任务，等待 100ms 后发送消息
+            ScheduledFuture<?> newTask = scheduler.schedule(() -> {
+                List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order1 ->(order1.Type == Buy || order1.Type == Sell)).collect(Collectors.toList());
+                FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
+                followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,leader.getAccount()));
+                log.info("发送消息"+leader.getId());
+                traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
+                pendingMessages.remove(leader.getId().toString());
+            }, 50, TimeUnit.MILLISECONDS);
+            // 更新缓存中的任务
+            pendingMessages.put(leader.getId().toString(), newTask);
         }
 
         switch (orderUpdateEventArgs.Action) {
@@ -522,5 +538,33 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             throw new RuntimeException(e);
         }
         return json;
+    }
+
+
+    private List<OrderActiveInfoVO> convertOrderActive(List<Order> openedOrders, String account) {
+        return openedOrders.stream()
+                .map(order -> createOrderActiveInfoVO(order, account))
+                .sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime).reversed())
+                .collect(Collectors.toList());
+    }
+
+    private OrderActiveInfoVO createOrderActiveInfoVO(Order order, String account) {
+        OrderActiveInfoVO vo = new OrderActiveInfoVO();
+        vo.setAccount(account);
+        vo.setLots(order.Lots);
+        vo.setComment(order.Comment);
+        vo.setOrderNo(order.Ticket);
+        vo.setCommission(order.Commission);
+        vo.setSwap(order.Swap);
+        vo.setProfit(order.Profit);
+        vo.setSymbol(order.Symbol);
+        vo.setOpenPrice(order.OpenPrice);
+        vo.setMagicNumber(order.MagicNumber);
+        vo.setType(order.Type.name());
+        // 增加五小时
+        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 0)));
+        vo.setStopLoss(order.StopLoss);
+        vo.setTakeProfit(order.TakeProfit);
+        return vo;
     }
 }

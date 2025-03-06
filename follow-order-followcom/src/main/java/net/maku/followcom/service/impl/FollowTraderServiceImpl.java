@@ -612,6 +612,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
                     .eq(FollowOrderDetailEntity::getSymbol, vo.getSymbol()).isNotNull(FollowOrderDetailEntity::getOpenTime)
+                    .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                     .isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime);
             if (!vo.getType().equals(2)) {
                 followOrderDetailw.eq(FollowOrderDetailEntity::getType, vo.getType());
@@ -1059,7 +1060,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 //        }
     }
 
-    private void updateSendOrder(long traderId, String orderNo,Integer flag,List<Integer> ticket,BigDecimal ticketLots) {
+    private void updateSendOrder(long traderId, String orderNo,Integer flag) {
         //获取symbol信息
         List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
@@ -1447,7 +1448,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     private void executeOrder(String ipAdd, String serverName, String platform, String brokerName, Integer interval, Integer orderCount, List<Double> orders, long traderId, String account, QuoteClient quoteClient, String symbol, Integer type, String orderNo, Integer placedType,String remark) {
-        boolean result=false;
         OrderClient oc;
         if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
             oc = quoteClient.OrderClient;
@@ -1457,8 +1457,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isEmpty(interval) || interval == 0) {
             ThreadPoolUtils.getExecutor().execute(() -> {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
-                List<Integer> ticketList=new ArrayList<>();
-                BigDecimal ticketLotsList=BigDecimal.ZERO;
                 for (int i = 0; i < orderCount; i++) {
                     int orderId = i + 1;
                     int finalI = i;
@@ -1469,8 +1467,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             LocalDateTime nowdate = LocalDateTime.now();
                             log.info("订单 " + orderId + ": 并发下单手数为 " + orders.get(finalI));
                             Order order = ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType,remark);
-                            ticketList.add(order.Ticket);
-                            ticketLotsList.add(BigDecimal.valueOf(order.Lots));
                         } catch (Exception e) {
                             log.info("订单交易异常" + e.getMessage());
                         }
@@ -1482,7 +1478,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 allOrdersCompleted.thenRun(() -> {
                     try {
                         log.info("开始更新订单状态");
-                        updateSendOrder(traderId, orderNo,0,ticketList,ticketLotsList);  // 确保所有订单完成后再执行
+                        updateSendOrder(traderId, orderNo,0);  // 确保所有订单完成后再执行
                     } catch (Exception e) {
                         log.error("下单任务出错", e);
                     }
@@ -1505,7 +1501,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                 double bid = quoteClient.GetQuote(symbol).Bid;
                                 LocalDateTime nowdate = LocalDateTime.now();
                                 Order order = ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType,remark);
-                                updateSendOrder(traderId, orderNo, 1,Arrays.asList(order.Ticket),BigDecimal.valueOf(order.Lots));
+                                updateSendOrder(traderId, orderNo, 1);
                             } catch (InvalidSymbolException | NullPointerException e) {
                                 log.info("订单交易异常&获取价格异常" + traderId + e.getMessage());
                                 //直接结束订单
@@ -1587,10 +1583,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         LocalDateTime nowdate = LocalDateTime.now();
                         log.info("订单 " + orderId + ": 并发下单手数为 " + orders.get(finalI));
                         Order order = ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType,remark);
-                        updateSendOrder(traderId, orderNo,0,Arrays.asList(order.Ticket),BigDecimal.valueOf(order.Lots));  // 确保所有订单完成后再执行
                     } catch (Exception e) {
                         log.info("订单交易异常" + e.getMessage());
                     }
+                }
+                // 当所有订单任务完成后，执行更新操作
+                try {
+                    log.info("开始更新订单状态");
+                    updateSendOrder(traderId, orderNo,0);  // 确保所有订单完成后再执行
+                } catch (Exception e) {
+                    log.error("下单任务出错", e);
                 }
             });
         } else {
@@ -1608,7 +1610,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             double bid = quoteClient.GetQuote(symbol).Bid;
                             LocalDateTime nowdate = LocalDateTime.now();
                             Order order = ordersends(ipAdd, serverName, platform, brokerName, traderId, account, quoteClient, symbol, type, oc, orders.get(finalI), orderId, ask, bid, nowdate, orderNo, placedType, remark);
-                            updateSendOrder(traderId, orderNo,1,Arrays.asList(order.Ticket),BigDecimal.valueOf(order.Lots));
+                            updateSendOrder(traderId, orderNo,1);
                         } catch (InvalidSymbolException | NullPointerException e) {
                             log.info("订单交易异常&获取价格异常" + traderId + e.getMessage());
                             //直接结束订单

@@ -368,6 +368,11 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 executorService.shutdownNow();
             }
         } catch (InterruptedException e) {
+            log.error("等待线程池关闭失败，正在立即关闭线程池");
+            FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
+            overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+            overallResult.setId(overallResult.getId());
+            update(overallResult);
             executorService.shutdownNow();
             Thread.currentThread().interrupt();
         }
@@ -380,6 +385,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 log.info("成功批量插入 {} 条测速记录", entitiesToSave.size());
             } catch (Exception e) {
                 log.error("批量插入测速记录失败，错误信息: {}", e.getMessage(), e);
+                FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
+                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+                overallResult.setId(overallResult.getId());
+                update(overallResult);
                 throw e; // 或者根据业务需求进行其他处理
             }
         }
