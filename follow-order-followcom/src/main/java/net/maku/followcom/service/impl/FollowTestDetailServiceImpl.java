@@ -953,14 +953,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 followTestDetailVO.setServerName(serverName);
                 followTestDetailVO.setServerNode(serverNode);
                 extractedData.add(followTestDetailVO);
+                String[] split = followTestDetailVO.getServerNode().split(":");
+                if (split.length != 2) {
+                    log.info("服务器节点格式不正确:{}", followTestDetailVO.getServerNode());
+                    break;
+                }
                 //查询followTestDetail里是否有
-                List<FollowTestDetailEntity> list = list(new LambdaQueryWrapper<FollowTestDetailEntity>().eq(FollowTestDetailEntity::getServerName, serverName).eq(FollowTestDetailEntity::getServerNode, serverNode));
+                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, serverName).eq(FollowBrokeServerEntity::getServerNode, split[0]).eq(FollowBrokeServerEntity::getServerPort,split[1]));
                 if (ObjectUtil.isEmpty(list)) {
-                    String[] split = followTestDetailVO.getServerNode().split(":");
-                    if (split.length != 2) {
-                        log.info("服务器节点格式不正确:{}", followTestDetailVO.getServerNode());
-                        break;
-                    }
                     FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
                     followBrokeServer.setServerName(followTestDetailVO.getServerName());
                     followBrokeServer.setServerNode(split[0]);
