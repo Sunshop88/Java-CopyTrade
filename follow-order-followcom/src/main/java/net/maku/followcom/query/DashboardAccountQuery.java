@@ -26,4 +26,5 @@ public class DashboardAccountQuery extends Query {
     private String account;
     //信号源
     private String sourceAccount;
+    private List<Integer> vpsIds;
 }

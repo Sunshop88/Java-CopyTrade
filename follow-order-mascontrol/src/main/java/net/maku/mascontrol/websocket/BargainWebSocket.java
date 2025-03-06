@@ -80,9 +80,12 @@ public class BargainWebSocket {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
                 //账号列表
-
+                long startTime = System.currentTimeMillis();
                 TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
                 PageResult<FollowTraderUserVO> followTraderUserVOPageResult = traderUserStatVO.getPageResult();
+                long endTime = System.currentTimeMillis();
+                long duration = (endTime - startTime);
+                System.out.println("运行时间: " + duration + " 毫秒");
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
                 bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
@@ -146,6 +149,10 @@ public class BargainWebSocket {
                 ls2.set(2, currentJson.get("Profit")==null?BigDecimal.ZERO:currentJson.get("Profit").getValue());
                 statList.add(ls1);
                 statList.add(ls2);
+                long end = System.currentTimeMillis();
+
+                 duration = (end - startTime);
+                System.out.println("最后运行时间: " + duration + " 毫秒");
                 bargainAccountVO.setStatList(statList);
                 ObjectMapper objectMapper = new ObjectMapper();
                 JavaTimeModule javaTimeModule = new JavaTimeModule();

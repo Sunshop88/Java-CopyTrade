@@ -580,6 +580,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     @Override
     public TraderUserStatVO getStatInfo(FollowTraderUserQuery query) {
+        long startTime = System.currentTimeMillis();
+
+      /* ThreadPoolUtils.getExecutor().execute(()->{
+
+        });*/
         List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(getWrapper(query));
         int size = followTraderUserEntities.size();
         Map<String,FollowTraderUserEntity> traderUserMap=new HashMap<>();
@@ -601,43 +606,74 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         });
         vo.setConNum(traderMap.size());
         vo.setErrNum(size-list.size()-traderMap.size());
+        long endTime = System.currentTimeMillis();
+        long duration = (endTime - startTime);
+        System.out.println("运行时间: " + duration + " 毫秒");
         return vo;
     }
 
     @Override
     public TraderUserStatVO searchPage(FollowTraderUserQuery query) {
-        PageResult<FollowTraderUserVO> page = page(query);
-        List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
-        List<FollowTraderEntity> traders = followTraderService.list();
+        long startTime = System.currentTimeMillis();
+        CountDownLatch countDownLatch = new CountDownLatch(5);
+        AtomicReference<PageResult<FollowTraderUserVO>> pageAtomic= new AtomicReference<>();
+        ThreadPoolUtils.getExecutor().execute(()->{
+            pageAtomic.set(page(query));
+            countDownLatch.countDown();
+        });
+        Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
+        ThreadPoolUtils.getExecutor().execute(()->{
+            List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
+            subscribes.stream().forEach(s->{
+                subscribeMap.put(s.getSlaveId(),s);
+            });
+            countDownLatch.countDown();
+                });
+        Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
+        ThreadPoolUtils.getExecutor().execute(()->{
+          List<FollowTraderEntity> traders = followTraderService.list();
+            traders.stream().forEach(t->{
+                List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
+                if (ObjectUtil.isEmpty(followTraderEntities)) {
+                    followTraderEntities = new ArrayList<>();
+
+                }
+                followTraderEntities.add(t);
+                traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
+            });
+            countDownLatch.countDown();
+        });
+        Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
+        AtomicReference<Map<Long, FollowPlatformEntity>> platformMap= new AtomicReference<>(new HashMap<>());
+        ThreadPoolUtils.getExecutor().execute(()->{
         List<FollowVpsEntity> vpsList = followVpsService.list();
         List<FollowPlatformEntity> platforms = followPlatformService.list();
-        Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
-        Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
-        Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
-        subscribes.stream().forEach(s->{
-            subscribeMap.put(s.getSlaveId(),s);
+            vpsList.forEach(v->{
+                vpsMap.put(v.getId(),v);
+            });
+            platformMap.set(platforms.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity())));
+            countDownLatch.countDown();
         });
-        traders.stream().forEach(t->{
-            List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
-            if (ObjectUtil.isEmpty(followTraderEntities)) {
-                followTraderEntities = new ArrayList<>();
-
-            }
-            followTraderEntities.add(t);
-            traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
+        AtomicReference<TraderUserStatVO> statInfo= new AtomicReference<>();
+        ThreadPoolUtils.getExecutor().execute(()->{
+             statInfo.set(getStatInfo(query));
+             statInfo.get().setParagraph(new AtomicBigDecimal(BigDecimal.ZERO));
+            countDownLatch.countDown();
         });
-        vpsList.forEach(v->{
-            vpsMap.put(v.getId(),v);
-        });
-        Map<Long, FollowPlatformEntity> platformMap = platforms.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
-        LambdaQueryWrapper<FollowTraderEntity> wrapper = new LambdaQueryWrapper<>();
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            throw new ServerException("查询异常"+e.getMessage());
+        }
+        long endTime = System.currentTimeMillis();
+        long duration = (endTime - startTime);
+        System.out.println("分页运行时间: " + duration + " 毫秒");
+        PageResult<FollowTraderUserVO> page = pageAtomic.get();
         List<FollowTraderUserVO> list = page.getList();
-        StringBuilder sb=new StringBuilder();
-        TraderUserStatVO statInfo = getStatInfo(query);
-        statInfo.setParagraph(new AtomicBigDecimal(BigDecimal.ZERO));
         list.forEach(o->{
-
-            FollowPlatformEntity followPlatformEntity = platformMap.get(Long.parseLong(o.getPlatformId().toString()));
+            ThreadPoolUtils.getExecutor().execute(()->{
+            o.setPassword(o.getPassword());
+            FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
             o.setBrokerName(followPlatformEntity.getBrokerName());
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
@@ -683,13 +719,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     o.setSellNum(redisTraderVo.getSellNum());
                     o.setBuyNum(redisTraderVo.getBuyNum());
                     o.setLeverage(redisTraderVo.getLeverage());
-                    statInfo.getParagraph().add(o.getFreeMargin());
+                    statInfo.get().getParagraph().add(o.getFreeMargin());
                 }
                 o.setVpsDesc(vpsDesc);
             }
+            });
         });
-        statInfo.setPageResult(page);
-        return statInfo;
+        statInfo.get().setPageResult(page);
+        return statInfo.get();
     }
 
     @Override

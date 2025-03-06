@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,11 @@ import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -63,12 +68,12 @@ public class FollowTraderUserController {
 
 
 
-    /*
-      public void init() {
+
+    /*  public void init() {
           List<FollowTraderEntity> list = followTraderService.list();
          List<FollowPlatformEntity> list1 = followPlatformService.list();
          Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
-         List<FollowTraderUserEntity> ls=new ArrayList<FollowTraderUserEntity>();
+         List<FollowTraderUserEntity> ls=new ArrayList<>();
          Map<String,FollowTraderEntity> map=new HashMap<>();
           list.forEach(t->{
               FollowTraderEntity one = map.put(t.getAccount() + t.getPlatformId(), t);
@@ -100,6 +105,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     return Result.ok(list);
 }
     @GetMapping("page")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "分页")
     public Result<TraderUserStatVO> page(@ParameterObject @Valid FollowTraderUserQuery query){
         TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(query);
@@ -108,6 +114,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 
     //挂靠vps
     @PostMapping("hangVps")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "挂靠vps")
     public Result<String> hangVps(@RequestBody HangVpsVO hangVpsVO,HttpServletRequest request){
         followTraderUserService.hangVps(hangVpsVO,request);
@@ -115,6 +122,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     }
     //挂靠vps
     @PostMapping("belowVps")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "下架vps")
     public Result<String> belowVps(@RequestBody List<Long>  traderUserIds,HttpServletRequest request){
         followTraderUserService.belowVps(traderUserIds,request);
