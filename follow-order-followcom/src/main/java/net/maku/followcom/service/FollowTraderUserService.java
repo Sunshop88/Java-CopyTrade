@@ -30,7 +30,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void save(FollowTraderUserVO vo);
 
-    void update(FollowTraderUserVO vo);
+    void update(FollowTraderUserVO vo, HttpServletRequest req);
 
     void delete(List<Long> idList);
 
@@ -40,11 +40,11 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void addByExcel(MultipartFile file, Long savedId);
 
-    void updateGroup(List<Long> idList, String group);
+    void updateGroup(List<Long> idList, Long group);
 
     void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
-    void updatePassword(FollowTraderUserVO vo, HttpServletRequest req) throws Exception;
+    void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
     TraderUserStatVO getStatInfo(FollowTraderUserQuery query);
 
@@ -53,4 +53,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request);
 
     void belowVps(List<Long> traderUserIds, HttpServletRequest request);
+
+    void modify(List<FollowTraderUserVO> vos);
 }

@@ -25,7 +25,7 @@ public class FollowOrderInstructSubVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "总指令id")
-	private Integer instructId;
+	private String sendNo;
 
 	@Schema(description = "账号")
 	private String account;

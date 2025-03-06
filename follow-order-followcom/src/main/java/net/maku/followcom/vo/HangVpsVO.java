@@ -78,4 +78,6 @@ public class HangVpsVO {
     @Max(value = 1, message = "跟单平仓状态只能为0或1")
     @NotNull(message = "跟单平仓状态不能为空")
     private Integer followClose;
+
+
 }

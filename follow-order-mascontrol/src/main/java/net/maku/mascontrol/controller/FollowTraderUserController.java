@@ -1,18 +1,16 @@
 package net.maku.mascontrol.controller;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.maku.followcom.convert.FollowTraderConvert;
+import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
@@ -20,9 +18,8 @@ import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
 import net.maku.followcom.vo.*;
-import net.maku.framework.common.cache.RedisCache;
-import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
@@ -33,20 +30,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -67,38 +59,40 @@ public class FollowTraderUserController {
     private final FollowTestDetailService followTestDetailService;
     private final FollowFailureDetailService followFailureDetailService;
     private final FollowTraderService followTraderService;
+    private final FollowBrokeServerService followBrokeServerService;
 
 
-  /*
-    public void init() {
-        List<FollowTraderEntity> list = followTraderService.list();
-       List<FollowPlatformEntity> list1 = followPlatformService.list();
-       Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
-       List<FollowTraderUserEntity> ls=new ArrayList<FollowTraderUserEntity>();
-       Map<String,FollowTraderEntity> map=new HashMap<>();
-        list.forEach(t->{
-            FollowTraderEntity one = map.put(t.getAccount() + t.getPlatformId(), t);
-            if(one==null){
-                FollowTraderUserEntity entity =new FollowTraderUserEntity();
-                entity.setId(t.getId());
-                entity.setAccount(t.getAccount());
-                entity.setPassword(t.getPassword());
-                entity.setPlatformId(t.getPlatformId());
-                entity.setPlatform(t.getPlatform());
-                entity.setPassword(t.getPassword());
-                entity.setAccountType("MT4");
-                entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
-                entity.setGroupName("默认");
-                entity.setGroupId(1);
-                entity.setStatus(1);
-                entity.setDeleted(0);
-                ls.add(entity);
-                map.put(t.getAccount() + t.getPlatformId(), t);
-            }
 
-        });
-        followTraderUserService.saveBatch(ls);
-    }*/
+    /*
+      public void init() {
+          List<FollowTraderEntity> list = followTraderService.list();
+         List<FollowPlatformEntity> list1 = followPlatformService.list();
+         Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
+         List<FollowTraderUserEntity> ls=new ArrayList<FollowTraderUserEntity>();
+         Map<String,FollowTraderEntity> map=new HashMap<>();
+          list.forEach(t->{
+              FollowTraderEntity one = map.put(t.getAccount() + t.getPlatformId(), t);
+              if(one==null){
+                  FollowTraderUserEntity entity =new FollowTraderUserEntity();
+                  entity.setId(t.getId());
+                  entity.setAccount(t.getAccount());
+                  entity.setPassword(t.getPassword());
+                  entity.setPlatformId(t.getPlatformId());
+                  entity.setPlatform(t.getPlatform());
+                  entity.setPassword(t.getPassword());
+                  entity.setAccountType("MT4");
+                  entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
+                  entity.setGroupName("默认");
+                  entity.setGroupId(1);
+                  entity.setStatus(1);
+                  entity.setDeleted(0);
+                  ls.add(entity);
+                  map.put(t.getAccount() + t.getPlatformId(), t);
+              }
+
+          });
+          followTraderUserService.saveBatch(ls);
+      }*/
 @GetMapping("/getTrader/info")
 @Operation(summary = "获取账号列表")
 public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer type,@RequestParam("vpsId") Integer vpsId){
@@ -147,7 +141,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> save(@RequestBody FollowTraderUserVO vo){
+    public Result<String> save(@RequestBody @Valid FollowTraderUserVO vo){
         followTraderUserService.save(vo);
 
         return Result.ok();
@@ -157,8 +151,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo){
-        followTraderUserService.update(vo);
+    public Result<String> update(@RequestBody @Valid FollowTraderUserVO vo,HttpServletRequest req){
+        followTraderUserService.update(vo,req);
 
         return Result.ok();
     }
@@ -194,7 +188,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             // 设置响应头
             HttpHeaders headers = new HttpHeaders();
             headers.add("Content-Disposition", "attachment; filename=export.csv");
-            headers.add("Content-Type", "text/csv");
+            headers.add("Content-Type", "text/csv; charset=UTF-8");
 
             return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
         } catch (IOException e) {
@@ -276,30 +270,52 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 
     @GetMapping("listHavingServer")
     @Operation(summary = "查询节点列表")
-    public Result<List<FollowTestDetailVO>> listHavingServer(@Parameter FollowTestServerQuery query) {
-        List<FollowTestDetailVO> list = followTestDetailService.selectServerNode(query);
-
-        return Result.ok(list);
+    public Result<List<String>> listHavingServer(@Parameter FollowTestServerQuery query) {
+        List<FollowBrokeServerEntity> list = followBrokeServerService
+                .list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName , query.getServerName()));
+        List<String> nodeList = list.stream()
+                .filter(item -> !StringUtils.isEmpty(item.getServerNode()) && !StringUtils.isEmpty(item.getServerPort()))
+                .map(item -> item.getServerNode() + ":" + item.getServerPort()).collect(Collectors.toList());
+        return Result.ok(nodeList);
     }
 
     @PutMapping("updateGroup")
     @Operation(summary = "批量修改分组")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updateGroup(@RequestBody List<Long> idList,@RequestBody String group) {
-        followTraderUserService.updateGroup(idList,group);
+    public Result<String> updateGroup(@RequestBody FollowBatchUpdateVO vos) {
+        List<Long> idList = vos.getIdList();
+        Long groupId = vos.getGroupId();
+        followTraderUserService.updateGroup(idList,groupId);
 
         return Result.ok("批量修改分组成功");
+    }
+
+    @PutMapping("modifyGroup")
+    @Operation(summary = "修改分组")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> modifyGroup(@RequestBody List<FollowTraderUserVO> vos) {
+        followTraderUserService.modify(vos);
+
+        return Result.ok("修改分组成功");
     }
 
     @PutMapping("updatePasswords")
     @Operation(summary = "批量修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePasswords(@RequestBody FollowUpdatePasswordVO vos, HttpServletRequest req) throws Exception {
-        List<FollowTraderUserVO> voList = vos.getVoList();
+    public Result<String> updatePasswords(@RequestBody FollowBatchUpdateVO vos, HttpServletRequest req) throws Exception {
+        List<Long> idList = vos.getIdList();
+        //根据id查询信息
+        List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
+        List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
+        //检查密码在6-16位之间
+        if (password.length() < 6 || password.length() > 16) {
+            return Result.error("密码长度应在6到16位之间");
+        }
 
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
 
@@ -310,9 +326,16 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> updatePassword(@RequestBody FollowTraderUserVO vo,HttpServletRequest req) throws Exception{
+    public Result<String> updatePassword(@RequestBody FollowBatchUpdateVO vos,HttpServletRequest req) throws Exception{
+        FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
+        String password = vos.getPassword();
+        String confirmPassword = vos.getConfirmPassword();
+        //检查密码在6-16位之间
+        if (password.length() < 6 || password.length() > 16) {
+            return Result.error("密码长度应在6到16位之间");
+        }
 
-        followTraderUserService.updatePassword(vo,req);
+        followTraderUserService.updatePassword(vo,password,confirmPassword,req);
 
         return Result.ok("修改密码成功");
     }

@@ -57,9 +57,8 @@ public class FollowUploadTraderUserServiceImpl extends BaseServiceImpl<FollowUpl
     @Transactional(rollbackFor = Exception.class)
     public void save(FollowUploadTraderUserVO vo) {
         FollowUploadTraderUserEntity entity = FollowUploadTraderUserConvert.INSTANCE.convert(vo);
-
         baseMapper.insert(entity);
-
+        vo.setId(entity.getId());
 
     }
 

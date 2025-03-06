@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -54,5 +55,14 @@ public class OrderActiveInfoVO implements Serializable {
 
 	@Schema(description = "备注")
 	private String comment;
+
+	@Schema(description = "价格滑点")
+	private BigDecimal priceSlip;
+	/**
+	 * 开仓请求时间
+	 */
+	private Integer openTimeDifference;
+
+
 
 }

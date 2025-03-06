@@ -103,6 +103,9 @@ public class FollowOrderSendQuery extends Query {
     @Schema(description = "是否外部0-否 1-是")
     private  Integer isExternal;
 
+    @Schema(description = "下单系统 0：外部 1：内部跟单 2：内部交易下单")
+    private  Integer orderingSystem;
+
     @Schema(description = "是否平仓详情0-否 1-是")
     private  Integer isClose;
 

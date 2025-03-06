@@ -107,7 +107,8 @@ public class FollowConstant {
 
 
     public static String RECONNECTION = "/subcontrol/trader/reconnection";
-
+    public static  String FOLLOW_ORDERCLOSE="/subcontrol/trader/orderClose";
+    public static  String FOLLOW_ALL_ORDERCLOSE="/subcontrol/follow/repairOrderClose";
 
     /**
      * AES key

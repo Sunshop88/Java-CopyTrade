@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.maku.framework.common.utils.PageResult;
 
+import java.math.BigDecimal;
+
 /**
  * Author:  zsd
  * Date:  2025/2/26/周三 18:12
@@ -23,6 +25,7 @@ public class TraderUserStatVO {
     private int conNum;
     //连接异常
     private int errNum;
+
 
    private PageResult<FollowTraderUserVO> pageResult;
 }

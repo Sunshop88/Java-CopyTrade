@@ -305,6 +305,7 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "is_external")
 	private  Integer isExternal;
+
 	/**
 	 * mt4备注
 	 */

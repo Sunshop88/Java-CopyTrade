@@ -10,13 +10,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.dto.MasToSubOrderCloseDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
-import net.maku.followcom.query.FollowGroupQuery;
-import net.maku.followcom.query.FollowOrderInstructQuery;
-import net.maku.followcom.query.FollowOrderInstructSubQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -24,15 +23,18 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.mascontrol.vo.FollowOrderHistoryQuery;
 import net.maku.mascontrol.vo.FollowOrderHistoryVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -52,6 +54,8 @@ public class BargainController {
     private final FollowTraderService followTraderService;
     private final FollowOrderInstructSubService followOrderInstructSubService;
     private final FollowOrderInstructService followOrderInstructService;
+    private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
+    private final  FollowOrderDetailService followOrderDetailService;
 
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
@@ -68,7 +72,8 @@ public class BargainController {
             throw new ServerException("vps不存在");
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
-        Result result = RestUtil.sendRequest(request, list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
+      //  list.get(0).getIpAddr()
+        Result result = RestUtil.sendRequest(request, "39.98.109.212", HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
         return result;
     }
 
@@ -101,7 +106,6 @@ public class BargainController {
     @Operation(summary = "平仓")
     public Result<Boolean> orderClose(@RequestBody @Valid BargainCloseVO vo,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
-
         if(ObjectUtil.isEmpty(users)){
             throw new ServerException("账号未挂靠vps");
         }
@@ -110,8 +114,30 @@ public class BargainController {
             closeVO.setTraderId(user.getId());
             closeVO.setAccount(user.getAccount());
             BeanUtil.copyProperties(vo, closeVO);
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.RECONNECTION, closeVO,null);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ORDERCLOSE, closeVO,null);
         });
+        return Result.ok();
+    }
+
+    @PostMapping("repairOrderClose")
+    @Operation(summary = "一键漏平")
+    public Result<Boolean> repairOrderClose(@RequestBody TraderUserClose  vo,HttpServletRequest request) {
+
+            List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
+            HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+            users.forEach(user -> {
+             
+                ThreadPoolUtils.getExecutor().execute(()->{
+                    List<RepairCloseVO> repairCloseVO=new ArrayList<>();
+                    RepairCloseVO closeVO=new RepairCloseVO();
+                    closeVO.setSlaveId(user.getId());
+                    closeVO.setVpsId(user.getServerId());
+                    repairCloseVO.add(closeVO);
+                    Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken);
+                });
+
+            });
+
         return Result.ok();
     }
 
@@ -135,9 +161,12 @@ public class BargainController {
     @Operation(summary = "历史子指令分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderInstructSubVO>> page(@ParameterObject @Valid FollowOrderInstructSubQuery query){
-        PageResult<FollowOrderInstructSubVO> page = followOrderInstructSubService.page(query);
 
-        return Result.ok(page);
+        FollowOrderDetailQuery ordreQuery=new FollowOrderDetailQuery();
+        ordreQuery.setSendNo(query.getSendNo());
+        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(ordreQuery);
+        List<FollowOrderInstructSubVO> followOrderInstructSubVOS = FollowOrderDetailConvert.INSTANCE.convertPage(page.getList());
+        return Result.ok(new PageResult<>(followOrderInstructSubVOS, page.getTotal()));
     }
 
     @GetMapping("historyCommands")
@@ -145,6 +174,19 @@ public class BargainController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderInstructVO>> page(@ParameterObject @Valid FollowOrderInstructQuery query){
         PageResult<FollowOrderInstructVO> page = followOrderInstructService.page(query);
+
+        return Result.ok(page);
+    }
+
+    @GetMapping("/specificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<PageResult<FollowSysmbolSpecificationVO>> page(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
+        List<FollowTraderEntity> list = getByUserId(query.getTraderUserId());
+        PageResult<FollowSysmbolSpecificationVO> page =null;
+        if(ObjectUtil.isNotEmpty(list)){
+            query.setTraderId(list.get(0).getId());
+            page = followSysmbolSpecificationService.page(query);
+        }
 
         return Result.ok(page);
     }

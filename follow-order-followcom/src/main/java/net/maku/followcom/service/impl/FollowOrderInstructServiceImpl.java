@@ -37,7 +37,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderInstructDao, FollowOrderInstructEntity> implements FollowOrderInstructService {
     private final TransService transService;
-    private final UserApi userApi;
+   // private final UserApi userApi;
 
     @Override
     public PageResult<FollowOrderInstructVO> page(FollowOrderInstructQuery query) {
@@ -52,8 +52,10 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderInstructEntity::getType, query.getType());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getInstructionType()), FollowOrderInstructEntity::getInstructionType, query.getInstructionType());
         wrapper.like(ObjectUtil.isNotEmpty(query.getSymbol()), FollowOrderInstructEntity::getSymbol, query.getSymbol());
-        List<Integer> userIdList = userApi.getUser(query.getCreator());
-        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
+    //    List<Integer> userIdList = userApi.getUser(query.getCreator());
+//        List<Integer> userIdList =null;
+//        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
+        wrapper.like(ObjectUtil.isNotEmpty(query.getCreator()), FollowOrderInstructEntity::getCreator, query.getCreator());
         //如果没有时间，默认一个月
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());

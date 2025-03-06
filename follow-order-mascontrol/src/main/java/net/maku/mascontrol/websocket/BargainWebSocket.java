@@ -8,23 +8,24 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import com.google.common.util.concurrent.AtomicDouble;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderCloseEnum;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.service.DashboardService;
 import net.maku.followcom.service.FollowTraderService;
 import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.followcom.vo.BargainAccountVO;
-import net.maku.followcom.vo.FollowRedisTraderVO;
-import net.maku.followcom.vo.FollowTraderUserVO;
-import net.maku.followcom.vo.OrderActiveInfoVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -35,6 +36,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static dm.jdbc.util.DriverUtil.log;
 
@@ -45,7 +48,7 @@ import static dm.jdbc.util.DriverUtil.log;
 @Component
 @ServerEndpoint("/socket/bargain")
 public class BargainWebSocket {
-    private final DashboardService dashboardService = SpringContextUtils.getBean(DashboardService.class);
+
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
@@ -63,8 +66,9 @@ public class BargainWebSocket {
             JSONObject jsonObj = JSONObject.parseObject(message);
             //当前选中的id [{"account":111,"platformId"},{"account":111,"platformId"}}
             JSONArray accountVos = jsonObj.getJSONArray("accountVos");
-            Long currentAccountId = jsonObj.getLong("traderUserId");
+          //  Long currentAccountId = jsonObj.getLong("traderUserId");
             String traderUserJson = jsonObj.getString("traderUserQuery");
+            String symbol = jsonObj.getString("symbol");
             FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
 
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
@@ -75,53 +79,69 @@ public class BargainWebSocket {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
                 //账号列表
-                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery).getPageResult();
+                TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
+                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = traderUserStatVO.getPageResult();
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
+                bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
+                bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
+                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getErrNum());
+            /*    bargainAccountVO.setParagraph(traderUserStatVO);
                 //选中当前账号的持仓
-                if(ObjectUtil.isNotEmpty(currentAccountId)) {
+               if(ObjectUtil.isNotEmpty(currentAccountId)) {
                     getActive(currentAccountId,bargainAccountVO);
-                }
-                //概览
+                }*/
+                //概览 BigDecimal
+                AtomicDouble aDouble = new AtomicDouble();
                 List<List<BigDecimal>> statList = new ArrayList<>();
-                List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
-                List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<BigDecimal> ls1 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                List<BigDecimal> ls2 = Arrays.asList(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
                 List<FollowTraderEntity> traders = followTraderService.list();
                 Map<String,FollowTraderEntity> map = new ConcurrentHashMap<>();
                 Map<String,FollowTraderEntity> sucessmap = new ConcurrentHashMap<>();
                 Map<String,FollowTraderEntity> errmap = new ConcurrentHashMap<>();
-                JSONObject totalJson = new JSONObject();
-                JSONObject currentJson = new JSONObject();
-                totalJson.put("tBuyNum",BigDecimal.ZERO);
-                totalJson.put("tSellNum",BigDecimal.ZERO);
-                totalJson.put("tProfit",BigDecimal.ZERO);
+                Map<String, AtomicBigDecimal> totalJson = new ConcurrentHashMap();
+                Map<String,AtomicBigDecimal> currentJson = new ConcurrentHashMap();
+                totalJson.put("tBuyNum",new AtomicBigDecimal(BigDecimal.ZERO));
+                totalJson.put("tSellNum",new AtomicBigDecimal(BigDecimal.ZERO));
+                totalJson.put("tProfit",new AtomicBigDecimal(BigDecimal.ZERO));
 
-                currentJson.put("BuyNum",BigDecimal.ZERO);
-                currentJson.put("SellNum",BigDecimal.ZERO);
-                currentJson.put("Profit",BigDecimal.ZERO);
+                currentJson.put("BuyNum",new AtomicBigDecimal(BigDecimal.ZERO));
+                currentJson.put("SellNum",new AtomicBigDecimal(BigDecimal.ZERO));
+                currentJson.put("Profit",new AtomicBigDecimal(BigDecimal.ZERO));
+                CountDownLatch  countDownLatch = new CountDownLatch(traders.size());
                 traders.forEach(t->{
-                    FollowTraderEntity json = map.get(t.getAccount() + "-" + t.getPlatformId());
-                    if(json == null) {
-                        //判断是否连接成功
-                        if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
-                            addData(t, totalJson, sucessmap, accountVos, currentJson);
 
-                        }else{
-                            errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
+                    ThreadPoolUtils.getExecutor().execute(()->{
+                        FollowTraderEntity json = map.get(t.getAccount() + "-" + t.getPlatformId());
+                        if(json == null) {
+                            //判断是否连接成功
+                            if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
+                                addData(t, totalJson, sucessmap, accountVos, currentJson,symbol);
+
+                            }else{
+                                errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
+                            }
                         }
-                    }
-                });
+                        countDownLatch.countDown();
+                    });
+               });
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    log.error("推送异常："+e);
+                }
                 errmap.forEach((k,v)->{
                     FollowTraderEntity followTraderEntity = sucessmap.get(k);
                     if(followTraderEntity==null){
-                        addData(v, totalJson, sucessmap, accountVos, currentJson);
+                        addData(v, totalJson, sucessmap, accountVos, currentJson,symbol);
                     }
                 });
-                ls1.set(0, totalJson.getBigDecimal("tBuyNum"));
-                ls1.set(1, totalJson.getBigDecimal("tSellNum"));
-                ls1.set(2, totalJson.getBigDecimal("tProfit"));
-                ls2.set(0, totalJson.getBigDecimal("BuyNum"));
-                ls2.set(1, totalJson.getBigDecimal("SellNum"));
-                ls2.set(2, totalJson.getBigDecimal("Profit"));
+                ls1.set(0, totalJson.get("tBuyNum").getValue());
+                ls1.set(1, totalJson.get("tSellNum").getValue());
+                ls1.set(2, totalJson.get("tProfit").getValue());
+                ls2.set(0, currentJson.get("BuyNum")==null?BigDecimal.ZERO:currentJson.get("BuyNum").getValue());
+                ls2.set(1, currentJson.get("SellNum")==null?BigDecimal.ZERO:currentJson.get("SellNum").getValue());
+                ls2.set(2, currentJson.get("Profit")==null?BigDecimal.ZERO:currentJson.get("Profit").getValue());
                 statList.add(ls1);
                 statList.add(ls2);
                 bargainAccountVO.setStatList(statList);
@@ -146,64 +166,89 @@ public class BargainWebSocket {
     }
     }
 
-    private void addData(FollowTraderEntity t, JSONObject totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos, JSONObject currentJson) {
-        BigDecimal tBuyNum = totalJson.getBigDecimal("tBuyNum");
-        BigDecimal tSellNum = totalJson.getBigDecimal("tSellNum");
-        BigDecimal tProfit = totalJson.getBigDecimal("tProfit");
-        FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
-        //多单
-        tBuyNum = tBuyNum.add(new BigDecimal(o1.getBuyNum()));
-        //空单
-        tSellNum=  tSellNum.add(new BigDecimal(o1.getSellNum()));
-        //总盈亏
-        tProfit = tProfit.add(o1.getProfit());
+    private void addData(FollowTraderEntity t, Map<String,AtomicBigDecimal> totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos,  Map<String,AtomicBigDecimal> currentJson,String symbol) {
+        AtomicBigDecimal tBuyNum = totalJson.get("tBuyNum");
+        AtomicBigDecimal tSellNum = totalJson.get("tSellNum");
+        AtomicBigDecimal tProfit = totalJson.get("tProfit");
+     //   FollowRedisTraderVO o1 = (FollowRedisTraderVO)redisCache.get(Constant.TRADER_USER + t.getId());
+        Object o2 = redisCache.get(Constant.TRADER_ACTIVE + t.getId());
+        List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
+
+        if (ObjectUtil.isNotEmpty(o2)){
+            orderActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
+        }
+        if(ObjectUtil.isNotEmpty(o2)){
+            orderActiveInfoList.forEach(o->{
+                if(ObjectUtil.isNotEmpty(symbol)){
+                    if(symbol.equals(o.getSymbol())){
+                        if(o.getType().equals("Buy")){
+                            //多单
+                            tBuyNum.add(new BigDecimal(o.getLots()));
+                        }else{
+                            //空单
+                            tSellNum.add(new BigDecimal(o.getLots()));
+                        }
+                        //总盈亏
+                        tProfit.add(new BigDecimal(o.getProfit()));
+                      /*  if(t.getAccount().toString().equals("301351769")){
+                            System.out.println("aa");
+                        }*/
+                        addCurrent(t, accountVos, currentJson, o);
+                    }
+                }else{
+                    if(o.getType().equals("Buy")){
+                        //多单
+                        tBuyNum.add(new BigDecimal(o.getLots()));
+                    }else{
+                        //空单
+                        tSellNum.add(new BigDecimal(o.getLots()));
+                    }
+                    //总盈亏
+                    tProfit.add(new BigDecimal(o.getProfit()));
+                    addCurrent(t, accountVos, currentJson, o);
+                }
+
+            });
+        }
+
+
+
         totalJson.put("tBuyNum",tBuyNum);
         totalJson.put("tSellNum",tSellNum);
         totalJson.put("tProfit",tProfit);
         sucessmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
-        if(ObjectUtil.isNotEmpty(accountVos)){
-            boolean flag = accountVos.stream().anyMatch(o -> {
-                JSONObject obj = JSONObject.parseObject(o.toString());
+      
+    }
+
+    private static void addCurrent(FollowTraderEntity t, JSONArray accountVos, Map<String, AtomicBigDecimal> currentJson, OrderActiveInfoVO o) {
+        if(ObjectUtil.isNotEmpty(accountVos)) {
+            boolean flag = accountVos.stream().anyMatch(od -> {
+                JSONObject obj = JSONObject.parseObject(od.toString());
                 Integer account = obj.getInteger("account");
                 Integer platformId = obj.getInteger("platformId");
-                return account.equals(t.getAccount()) && platformId.equals(t.getPlatformId());
+                return account.toString().equals(t.getAccount().toString()) && platformId.toString().equals(t.getPlatformId().toString());
             });
-           if(flag){
-               BigDecimal buyNum = currentJson.getBigDecimal("BuyNum");
-               BigDecimal sellNum = currentJson.getBigDecimal("SellNum");
-               BigDecimal profit = currentJson.getBigDecimal("Profit");
-               buyNum = buyNum.add(new BigDecimal(o1.getBuyNum()));
-               //空单
-               sellNum=  sellNum.add(new BigDecimal(o1.getSellNum()));
-               //总盈亏
-               profit = profit.add(o1.getProfit());
-               currentJson.put("BuyNum",tBuyNum);
-               currentJson.put("SellNum",tSellNum);
-               currentJson.put("Profit",tProfit);
-           }
+            if(flag){
+                AtomicBigDecimal buyNum = currentJson.get("BuyNum");
+                AtomicBigDecimal sellNum = currentJson.get("SellNum");
+                AtomicBigDecimal profit = currentJson.get("Profit");
+                if(o.getType().equals("Buy")){
+                    //多单
+                    buyNum.add(new BigDecimal(o.getLots()));
+                }else{
+                    //空单
+                    sellNum.add(new BigDecimal(o.getLots()));
+                }
+                //总盈亏
+                profit.add(new BigDecimal(o.getProfit()));
+                currentJson.put("BuyNum",buyNum);
+                currentJson.put("SellNum",sellNum);
+                currentJson.put("Profit",profit);
+            }
         }
     }
 
-    private void getActive(Long currentAccountId,BargainAccountVO bargainAccountVO){
-       FollowTraderUserEntity traderUser = followTraderUserService.getById(currentAccountId);
-       List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
-       AtomicLong traderId=new AtomicLong(0);
-       list.forEach(o->{
-           if(o.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
-               traderId.set(o.getId());
-           }
-       });
-       if(traderId.get()==0l){
-           traderId.set(list.get(0).getId());
-       }
-       Object o1 = redisCache.get(Constant.TRADER_ACTIVE + traderId.get());
-       List<OrderActiveInfoVO> orderActiveInfoList =new ArrayList<>();
-       if (ObjectUtil.isNotEmpty(o1)){
-           orderActiveInfoList = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
 
-       }
-       bargainAccountVO.setOrderActiveInfoList(orderActiveInfoList);
-   }
     // 当客户端断开连接时调用
     @OnClose
     public void onClose(Session session) {

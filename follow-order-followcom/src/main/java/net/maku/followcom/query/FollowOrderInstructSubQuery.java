@@ -20,5 +20,5 @@ import java.util.Date;
 @Schema(description = "下单子指令查询")
 public class FollowOrderInstructSubQuery extends Query {
     @Schema(description = "总指令id")
-    private Integer instructId;
+    private String sendNo;
 }

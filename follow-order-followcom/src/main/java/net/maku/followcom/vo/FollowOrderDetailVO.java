@@ -184,6 +184,9 @@ public class FollowOrderDetailVO  implements Serializable {
 
 	@Schema(description = "是否外部")
 	private Integer isExternal;
+
+	@Schema(description = "下单系统 0：外部 1：内部跟单 2：内部交易下单")
+	private Integer orderingSystem;
 	/***
 	 * MT4备注
 	 * */
