@@ -602,7 +602,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         try {
             countDownLatch.await();
         } catch (InterruptedException e) {
-            throw new ServerException("",e);
+            throw new ServerException("查询异常",e);
         }
         traders.get().stream().forEach(t->{
            if(t.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
@@ -680,8 +680,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         List<FollowTraderUserVO> list = page.getList();
         list.forEach(o->{
             ThreadPoolUtils.getExecutor().execute(()->{
-            o.setPassword(o.getPassword());
-            FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
+                try {
+                    o.setPassword(AesUtils.decryptStr(o.getPassword()));
+                } catch (Exception e) {
+                    o.setPassword(o.getPassword());
+                }
+                FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
             o.setBrokerName(followPlatformEntity.getBrokerName());
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
@@ -825,7 +829,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 try {
                     //等待
                     countDownLatch.await();
-                    if(ObjectUtil.isEmpty(errList)){
+                    if(ObjectUtil.isNotEmpty(errList)){
                         followFailureDetailService.saveBatch(errList);
                     }
 
@@ -853,21 +857,28 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followTraderUsers.forEach(o->{
             o.setStatus(CloseOrOpenEnum.CLOSE.getValue());
         });
-        updateBatchById(followTraderUsers);
+
         Map<String,List<Long>> map=new HashMap<>();
 
         followTraderUsers.forEach(traderUser->{
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));
+            AtomicReference<Boolean> flag= new AtomicReference<>(false);
             list.forEach(t->{
-                if(!t.getType().equals(TraderTypeEnum.BARGAIN)){
+                if(!t.getType().equals(TraderTypeEnum.MASTER_REAL)){
                     List<Long> idList = map.get(t.getIpAddr());
                     if(idList==null){
                         idList=new ArrayList<>();
                     }
                     idList.add(t.getId());
                     map.put(t.getIpAddr(),idList);
+                }else {
+                    flag.set(true);
                 }
             });
+            if(flag.get()){
+                traderUser.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            }
+
         });
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         if(ObjectUtil.isNotEmpty(map)){
@@ -877,7 +888,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 });
             });
         }
-
+        updateBatchById(followTraderUsers);
     }
 
     @Override

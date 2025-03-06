@@ -93,10 +93,14 @@ public class BargainController {
             throw new ServerException("账号未挂靠vps");
 
         }
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         users.forEach(user -> {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("traderId", user.getId());
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,null);
+            ThreadPoolUtils.getExecutor().execute(()->{
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("traderId", user.getId());
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
+            });
+           
         });
         return Result.ok();
     }
