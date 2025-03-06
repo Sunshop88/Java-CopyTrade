@@ -229,7 +229,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         try {
             // 检查文件类型
             if (!isExcelOrCsv(file.getOriginalFilename())) {
-                return Result.error("仅支持 Excel 和 CSV 文件");
+                return Result.error("仅支持 CSV 文件");
             }
             //设置状态
             FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
@@ -258,7 +258,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             return false;
         }
         String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
-        return extension.equals("xlsx") || extension.equals("xls") || extension.equals("csv");
+        return extension.equals("csv");
     }
 
     @GetMapping("pageDetail")

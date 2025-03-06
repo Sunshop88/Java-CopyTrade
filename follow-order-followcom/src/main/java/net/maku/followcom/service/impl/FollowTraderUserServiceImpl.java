@@ -80,6 +80,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsService followVpsService;
     private final RedisCache redisCache;
+    private final FollowBrokeServerService followBrokeServerService;
 
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
@@ -336,7 +337,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     String errorRemark = "账号重复添加";
                     failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark,savedId));
                     failureCount++;
-                    break;
+                    continue;
                 }
 
                 // 校验必填字段
@@ -360,6 +361,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
                 if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
                     errorMsg.append("账号类型必须是MT4或MT5; ");
+                }
+                if(ObjectUtil.isNotEmpty(node)){
+                    //将node拆分
+                    String[] split = node.split(":");
+                    if (split.length != 2){
+                        errorMsg.append("节点格式不正确; ");
+                    }else
+                    if (followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                            .eq(FollowBrokeServerEntity::getServerName, platform)
+                            .eq(FollowBrokeServerEntity::getServerNode, split[0])
+                            .eq(FollowBrokeServerEntity::getServerPort, split[1])).size() == 0) {
+                        errorMsg.append("节点不存在; ");
+                    }
                 }
 
                 // 生成备注信息
