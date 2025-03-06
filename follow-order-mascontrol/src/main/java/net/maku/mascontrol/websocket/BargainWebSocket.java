@@ -79,10 +79,15 @@ public class BargainWebSocket {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
                 //账号列表
-                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = followTraderUserService.searchPage(traderUserQuery).getPageResult();
+                TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
+                PageResult<FollowTraderUserVO> followTraderUserVOPageResult = traderUserStatVO.getPageResult();
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
+                bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
+                bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
+                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getErrNum());
+            /*    bargainAccountVO.setParagraph(traderUserStatVO);
                 //选中当前账号的持仓
-              /*  if(ObjectUtil.isNotEmpty(currentAccountId)) {
+               if(ObjectUtil.isNotEmpty(currentAccountId)) {
                     getActive(currentAccountId,bargainAccountVO);
                 }*/
                 //概览 BigDecimal

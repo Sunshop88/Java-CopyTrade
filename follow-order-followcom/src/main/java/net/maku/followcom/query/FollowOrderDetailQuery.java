@@ -21,6 +21,7 @@ import java.util.Date;
 public class FollowOrderDetailQuery extends Query {
     @Schema(description = "账号ID")
     private Long traderId;
+    private String sendNo;
 
     @Schema(description = "时间-开始")
     private String startTime;

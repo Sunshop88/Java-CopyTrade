@@ -79,6 +79,7 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderDetailEntity::getType, query.getType());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getAccount()), FollowOrderDetailEntity::getAccount, query.getAccount());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getPlatform()), FollowOrderDetailEntity::getPlatform, query.getPlatform());
+        wrapper.eq(ObjectUtil.isNotEmpty(query.getSendNo()), FollowOrderDetailEntity::getSendNo, query.getSendNo());
         if(query.getIsHistory()){
             wrapper.isNotNull(FollowOrderDetailEntity::getCloseTime);
         }

@@ -694,6 +694,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
         followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
         followUploadTraderUserVO.setUploadTotal(hangVpsVO.getTraderUserIds().size());
+        followUploadTraderUserVO.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
         followUploadTraderUserService.save(followUploadTraderUserVO);
         //转发请求，检索账号
         List<FollowTraderUserEntity> followTraderUserEntities = listByIds(hangVpsVO.getTraderUserIds());

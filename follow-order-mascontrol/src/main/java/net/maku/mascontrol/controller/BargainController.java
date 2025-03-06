@@ -10,13 +10,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
-import net.maku.followcom.query.FollowGroupQuery;
-import net.maku.followcom.query.FollowOrderInstructQuery;
-import net.maku.followcom.query.FollowOrderInstructSubQuery;
-import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -56,6 +54,7 @@ public class BargainController {
     private final FollowOrderInstructSubService followOrderInstructSubService;
     private final FollowOrderInstructService followOrderInstructService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
+    private final  FollowOrderDetailService followOrderDetailService;
 
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
@@ -153,9 +152,12 @@ public class BargainController {
     @Operation(summary = "历史子指令分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<PageResult<FollowOrderInstructSubVO>> page(@ParameterObject @Valid FollowOrderInstructSubQuery query){
-        PageResult<FollowOrderInstructSubVO> page = followOrderInstructSubService.page(query);
 
-        return Result.ok(page);
+        FollowOrderDetailQuery ordreQuery=new FollowOrderDetailQuery();
+        ordreQuery.setSendNo(query.getSendNo());
+        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(ordreQuery);
+        List<FollowOrderInstructSubVO> followOrderInstructSubVOS = FollowOrderDetailConvert.INSTANCE.convertPage(page.getList());
+        return Result.ok(new PageResult<>(followOrderInstructSubVOS, page.getTotal()));
     }
 
     @GetMapping("historyCommands")
