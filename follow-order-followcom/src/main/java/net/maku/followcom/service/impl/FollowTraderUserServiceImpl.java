@@ -583,9 +583,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         long startTime = System.currentTimeMillis();
         AtomicReference<List<FollowTraderEntity>> traders= new AtomicReference<>();
         Map<String,Integer> traderMap=new HashMap<>();
+        CountDownLatch countDownLatch = new CountDownLatch(1);
         ThreadPoolUtils.getExecutor().execute(()->{
            traders.set(followTraderService.list());
+            countDownLatch.countDown();
         });
+
         List<FollowTraderUserEntity> followTraderUserEntities = baseMapper.selectList(getWrapper(query));
         int size = followTraderUserEntities.size();
         Map<String,FollowTraderUserEntity> traderUserMap=new HashMap<>();
@@ -596,6 +599,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
 
         TraderUserStatVO vo = TraderUserStatVO.builder().total(size).noVpsNum(list.size()).conNum(0).errNum(0).build();
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            throw new ServerException("",e);
+        }
         traders.get().stream().forEach(t->{
            if(t.getStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
                FollowTraderUserEntity followTraderUserEntity = traderUserMap.get(t.getAccount() + "-" + t.getPlatformId());
@@ -607,15 +615,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         });
         vo.setConNum(traderMap.size());
         vo.setErrNum(size-list.size()-traderMap.size());
-        long endTime = System.currentTimeMillis();
-        long duration = (endTime - startTime);
-        System.out.println("运行时间: " + duration + " 毫秒");
+
+
         return vo;
     }
 
     @Override
     public TraderUserStatVO searchPage(FollowTraderUserQuery query) {
-        long startTime = System.currentTimeMillis();
+      //  long startTime = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(5);
         AtomicReference<PageResult<FollowTraderUserVO>> pageAtomic= new AtomicReference<>();
         ThreadPoolUtils.getExecutor().execute(()->{
@@ -666,9 +673,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         } catch (InterruptedException e) {
             throw new ServerException("查询异常"+e.getMessage());
         }
-        long endTime = System.currentTimeMillis();
+       /* long endTime = System.currentTimeMillis();
         long duration = (endTime - startTime);
-        System.out.println("分页运行时间: " + duration + " 毫秒");
+        System.out.println("分页运行时间: " + duration + " 毫秒");*/
         PageResult<FollowTraderUserVO> page = pageAtomic.get();
         List<FollowTraderUserVO> list = page.getList();
         list.forEach(o->{
