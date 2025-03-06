@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -132,6 +133,18 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 wrapper.eq(FollowTraderUserEntity::getDeleted,2);
             }
 
+        }
+        JSONArray accountVos = query.getAccountVos();
+        if(ObjectUtil.isNotEmpty(accountVos)){
+            StringBuilder sb = new StringBuilder();
+            accountVos.forEach(o->{
+                JSONObject json = JSONObject.parseObject(o.toString());
+                String account=json.getString("account");
+                String platformId = json.getString("platformId");
+                sb.append("'"+account+"-"+platformId+"',");
+            });
+            String sql =sb.substring(0, sb.length() - 1);
+            wrapper.apply("concat(account,'-',platform_id) in (" +sql+")");
         }
         //组别
         if(ObjectUtil.isNotEmpty(query.getGroupIds()) ){
@@ -621,6 +634,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         List<FollowTraderUserVO> list = page.getList();
         StringBuilder sb=new StringBuilder();
         TraderUserStatVO statInfo = getStatInfo(query);
+        statInfo.setParagraph(new AtomicBigDecimal(BigDecimal.ZERO));
         list.forEach(o->{
 
             FollowPlatformEntity followPlatformEntity = platformMap.get(Long.parseLong(o.getPlatformId().toString()));
@@ -669,6 +683,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     o.setSellNum(redisTraderVo.getSellNum());
                     o.setBuyNum(redisTraderVo.getBuyNum());
                     o.setLeverage(redisTraderVo.getLeverage());
+                    statInfo.getParagraph().add(o.getFreeMargin());
                 }
                 o.setVpsDesc(vpsDesc);
             }

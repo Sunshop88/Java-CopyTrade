@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.rmi.ServerException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -70,7 +71,7 @@ public class BargainWebSocket {
             String traderUserJson = jsonObj.getString("traderUserQuery");
             String symbol = jsonObj.getString("symbol");
             FollowTraderUserQuery traderUserQuery = JSONObject.parseObject(traderUserJson, FollowTraderUserQuery.class);
-
+            traderUserQuery.setAccountVos(accountVos);
             ScheduledFuture<?> st = scheduledFutureMap.get(id);
             if (st != null) {
                 st.cancel(true);
@@ -79,16 +80,17 @@ public class BargainWebSocket {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
                 //账号列表
+
                 TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
                 PageResult<FollowTraderUserVO> followTraderUserVOPageResult = traderUserStatVO.getPageResult();
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
                 bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
                 bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getErrNum());
-            /*    bargainAccountVO.setParagraph(traderUserStatVO);
+                bargainAccountVO.setParagraph(traderUserStatVO.getParagraph().getValue());
                 //选中当前账号的持仓
-               if(ObjectUtil.isNotEmpty(currentAccountId)) {
-                    getActive(currentAccountId,bargainAccountVO);
+             /*  if(ObjectUtil.isNotEmpty(accountVos)) {
+                    getActive(accountVos,bargainAccountVO);
                 }*/
                 //概览 BigDecimal
                 AtomicDouble aDouble = new AtomicDouble();
@@ -165,6 +167,7 @@ public class BargainWebSocket {
 
     }
     }
+
 
     private void addData(FollowTraderEntity t, Map<String,AtomicBigDecimal> totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos,  Map<String,AtomicBigDecimal> currentJson,String symbol) {
         AtomicBigDecimal tBuyNum = totalJson.get("tBuyNum");
