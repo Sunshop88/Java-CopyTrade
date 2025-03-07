@@ -35,7 +35,6 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, FollowGroupEntity> implements FollowGroupService {
     private final TransService transService;
-    private final FollowTraderUserService followTraderUserService;
 
     @Override
     public PageResult<FollowGroupVO> page(FollowGroupQuery query) {
@@ -76,11 +75,6 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowGroupVO vo) {
-        //修改账号记录名称
-        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(FollowTraderUserEntity::getGroupId, vo.getId());
-        updateWrapper.set(FollowTraderUserEntity::getGroupName, vo.getName());
-        followTraderUserService.update(updateWrapper);
 
         FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
         updateById(entity);
@@ -91,14 +85,7 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        for (Long id : idList) {
-            LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(FollowTraderUserEntity::getGroupId, id);
-            if (ObjectUtil.isNotEmpty(followTraderUserService.list(wrapper))) {
-                throw new ServerException("该组别下有账号，不能删除");
-            }
-            baseMapper.deleteById(id);
-        }
+        removeByIds(idList);
 
     }
 
