@@ -46,7 +46,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderSendMaster extends AbstractOperation implements IOperationStrategy {
       private final MessagesService messagesService;
-
+    private final CopierApiTradersAdmin copierApiTradersAdmin;
     /**
      * 收到开仓信号处理操作
      */
@@ -63,7 +63,9 @@ public class OrderSendMaster extends AbstractOperation implements IOperationStra
             redisUtil.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+"#"+follow.getPlatform()+"#"+trader.getPlatform()+"#"+o.getSlaveAccount()+"#"+o.getMasterAccount(), orderInfo.getTicket().toString(),orderInfo);
             //发送漏单通知
             FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
-            messagesService.isRepairSend(orderInfo,follow,master,null);
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(o.getSlaveId().toString());
+
+            messagesService.isRepairSend(orderInfo,follow,master,copierApiTrader.quoteClient);
         });
    /*         FollowTraderVO master = followTraderService.get(orderInfo.getMasterId());
             FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).

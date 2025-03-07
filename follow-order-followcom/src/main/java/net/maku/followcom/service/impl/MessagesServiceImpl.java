@@ -289,8 +289,15 @@ public class MessagesServiceImpl implements MessagesService {
                         if (ObjectUtil.isNotEmpty(o1)) {
                             orderActive = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                         }
-                        boolean flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-                        if (!flag) {
+                        boolean flag=true;
+                        if(quoteClient!=null){
+                            flag= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
+                        }else{
+                             flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+
+                        }
+                       if (!flag) {
+                          // +";"+orderInfo.getTicket()+";"+orderActive.size()+";"+quoteClient.GetOpenedOrders().length
                             FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
                             FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                                     vpsName(vps.getName())
