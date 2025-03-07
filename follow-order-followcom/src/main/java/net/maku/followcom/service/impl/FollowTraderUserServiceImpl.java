@@ -96,7 +96,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         wrapper.eq(FollowTraderUserEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue());
         //备注
         if (ObjectUtil.isNotEmpty(query.getRemark())){
-            wrapper.like(FollowTraderUserEntity::getRemark,query.getRemark());
+            String remark = query.getRemark().replaceAll("%", "\\\\%");
+            wrapper.like(FollowTraderUserEntity::getRemark,remark);
         }
        wrapper.eq(ObjectUtil.isNotEmpty(query.getHangStatus()),FollowTraderUserEntity::getStatus,query.getHangStatus());
         //挂号的vpsId和连接状态和账号类型
@@ -163,10 +164,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
         //  服务器
         if (ObjectUtil.isNotEmpty(query.getPlatform())){
-            wrapper.like(FollowTraderUserEntity::getPlatform,query.getPlatform());
+            String platform = query.getPlatform().replaceAll("%", "\\\\%");
+            wrapper.like(FollowTraderUserEntity::getPlatform,platform);
         }
         if (ObjectUtil.isNotEmpty(query.getAccount())){
-            wrapper.like(FollowTraderUserEntity::getAccount,query.getAccount());
+            String account = query.getAccount().replaceAll("%", "\\\\%");
+            wrapper.like(FollowTraderUserEntity::getAccount,account);
         }
         if (ObjectUtil.isNotEmpty(query.getGroupName())){
             wrapper.in(FollowTraderUserEntity::getGroupName,query.getGroupName());
