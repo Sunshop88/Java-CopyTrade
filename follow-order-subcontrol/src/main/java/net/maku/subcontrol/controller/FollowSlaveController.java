@@ -130,10 +130,12 @@ public class FollowSlaveController {
                 if (ObjectUtil.isEmpty(entities)) {
                     FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
                     followTraderUserVO.setAccount(vo.getAccount());
-                    followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     followTraderUserVO.setPlatform(vo.getPlatform());
+                    followTraderUserVO.setPassword(vo.getPassword());
+                    followTraderUserVO.setAccountType("MT4");
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
+                    followTraderUserVO.setServerNode(followTraderVO.getServerIp());
                     followTraderUserService.save(followTraderUserVO);
                 }
             }

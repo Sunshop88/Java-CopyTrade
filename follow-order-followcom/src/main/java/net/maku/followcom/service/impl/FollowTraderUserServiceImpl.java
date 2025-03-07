@@ -336,7 +336,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
                 List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
                 if (ObjectUtil.isNotEmpty(entities)){
-                    String errorRemark = "账号重复添加";
+                    String errorRemark = "账号已存在;";
                     failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark,savedId));
                     failureCount++;
                     continue;
@@ -346,11 +346,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 StringBuilder errorMsg = new StringBuilder();
                 if (account.isEmpty()) {
                     errorMsg.append("账号不能为空; ");
-                }else {
-                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {
-                        errorMsg.append("账号已存在; ");
-                    }
                 }
+//                }else {
+//                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {
+//                        errorMsg.append("账号已存在; ");
+//                    }
+//                }
                 if (password.isEmpty()) {
                     errorMsg.append("密码不能为空; ");
                 }
@@ -390,8 +391,21 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureCount++;
                 }
             }
-            this.saveBatch(entityList);
-            followFailureDetailService.saveBatch(failureList);
+            if (ObjectUtil.isNotEmpty(entityList)) {
+                //批量保存前还要检查一次并发重复的数据，platform和account同时相等的情况
+                entityList = entityList.stream()
+                        .collect(Collectors.toMap(
+                                entity -> entity.getAccount() + "_" + entity.getPlatform(),
+                                entity -> entity,
+                                (existing, replacement) -> existing))
+                        .values()
+                        .stream()
+                        .collect(Collectors.toList());  // 最终转换成 list
+                this.saveBatch(entityList);
+            }
+            if (ObjectUtil.isNotEmpty(failureList)) {
+                followFailureDetailService.saveBatch(failureList);
+            }
             LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(FollowUploadTraderUserEntity::getSuccessCount, successCount)
                     .set(FollowUploadTraderUserEntity::getFailureCount, failureCount)
@@ -449,8 +463,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     public static void main(String[] args) {
-        String s = AesUtils.aesEncryptStr("As123456");
-        String s1 = AesUtils.decryptStr("5bbc20e6d024516d9aa2429c99d52bd9");
+        String s = AesUtils.aesEncryptStr("feecad814e7f62a5799f6d9cdfc9353eb6d3cf7daf045ec6fbf1d8d6ebc35091d90b0bb4f65a94f4452a139d651ecae2");
+        String s1 = AesUtils.decryptStr("4b7eaa1f0df5fbc6323b6c0517731f14");
         System.out.println(s);
         System.out.println(s1);
     }
@@ -508,18 +522,28 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
                             ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                             if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+                                failureDetail.setPlatformType(vo.getAccountType());
+                                failureDetail.setServer(vo.getPlatform());
+                                failureDetail.setNode(vo.getServerNode());
+                                failureDetail.setAccount(vo.getAccount());
+                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+                                failureDetail.setRecordId(savedId);
+                                //报错内容
+                                failureDetail.setRemark(response.getBody().getString("msg"));
+                                followFailureDetailService.save(failureDetail);
+                                failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
                             }
                         }
+                    }else {
+                        // 更新traderUser密码并记录备注
+                        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                        updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
+                                .set(FollowTraderUserEntity::getPassword, s);
+                        baseMapper.update(updateWrapper);
+                        successCount.incrementAndGet(); // 数据库更新成功算作成功
                     }
-
-                    // 更新traderUser密码并记录备注
-                    LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-                    updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
-                            .set(FollowTraderUserEntity::getPassword, s);
-
-                    baseMapper.update(updateWrapper);
-                    successCount.incrementAndGet(); // 数据库更新成功算作成功
                 } catch (Exception e) {
                     log.error("数据库更新失败: ", e);
                     FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
