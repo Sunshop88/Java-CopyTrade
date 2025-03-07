@@ -91,6 +91,8 @@ public class BargainServiceImpl implements BargainService {
                 Map<FollowTraderEntity, Double> doubleMap = executeOrdersRandomTotalLots(followTraderEntityList, vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize());
                 followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
                 followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
+                //插入第一个用户的id
+                followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
                 followOrderInstructService.save(followOrderInstructEntity);
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
@@ -162,6 +164,7 @@ public class BargainServiceImpl implements BargainService {
                     log.info("所有复制交易下单已完成");
                     followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
                     followOrderInstructEntity.setTrueTotalLots(totalLots.get());
+                    followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
                     followOrderInstructService.save(followOrderInstructEntity);
                 } catch (TimeoutException e) {
                     log.error("任务执行超时", e);
