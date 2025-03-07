@@ -98,6 +98,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (ObjectUtil.isNotEmpty(query.getRemark())){
             wrapper.like(FollowTraderUserEntity::getRemark,query.getRemark());
         }
+       wrapper.eq(ObjectUtil.isNotEmpty(query.getHangStatus()),FollowTraderUserEntity::getStatus,query.getHangStatus());
         //挂号的vpsId和连接状态和账号类型
         if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus())){
             LambdaQueryWrapper<FollowTraderEntity> wp = new LambdaQueryWrapper<>();
