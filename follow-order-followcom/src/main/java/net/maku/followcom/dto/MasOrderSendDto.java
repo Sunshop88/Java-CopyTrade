@@ -31,9 +31,11 @@ public class MasOrderSendDto implements Serializable {
 	private Integer type;
 
 	@Schema(description = "总单数")
+	@NotNull(message = "总单数不能为空")
 	private Integer totalNum;
 
 	@Schema(description = "总手数")
+	@NotNull(message = "总手数不能为空")
 	private BigDecimal totalSzie;
 
 	@Schema(description = "开始手数范围from")
@@ -53,6 +55,9 @@ public class MasOrderSendDto implements Serializable {
 	private String remark;
 
 	@Schema(description = "交易类型")
+	@NotNull(message = "交易类型不能为空")
+	@Min(value = 0, message = "交易类型只能为0或1")
+	@Max(value = 1, message = "交易类型只能为0或1")
 	private Integer tradeType;
 
 }
