@@ -127,7 +127,7 @@ public class FollowSlaveController {
             //添加trader_user
             if (ObjectUtil.isEmpty(vo.getIsAdd()) || vo.getIsAdd()) {
                 List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
-                if (ObjectUtil.isNotEmpty(entities)) {
+                if (ObjectUtil.isEmpty(entities)) {
                     FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
                     followTraderUserVO.setAccount(vo.getAccount());
                     followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
