@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -75,8 +76,13 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowGroupVO vo) {
-        FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
+        //修改账号记录名称
+        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FollowTraderUserEntity::getGroupId, vo.getId());
+        updateWrapper.set(FollowTraderUserEntity::getGroupName, vo.getName());
+        followTraderUserService.update(updateWrapper);
 
+        FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
         updateById(entity);
 
 
