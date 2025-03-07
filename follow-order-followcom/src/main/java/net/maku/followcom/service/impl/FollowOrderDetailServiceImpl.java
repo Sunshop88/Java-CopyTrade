@@ -233,6 +233,11 @@ public class FollowOrderDetailServiceImpl extends BaseServiceImpl<FollowOrderDet
         }
     }
 
+    @Override
+    public List<FollowOrderDetailEntity> getInstruct(String orderNo) {
+        return baseMapper.getInstruct(orderNo);
+    }
+
     /**
      * 自定义保存或者更新，根据唯一约束处理
      */

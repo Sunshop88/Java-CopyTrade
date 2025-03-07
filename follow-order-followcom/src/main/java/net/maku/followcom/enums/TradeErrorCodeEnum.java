@@ -49,4 +49,14 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     public String getValue() {
         return this.value;
     }
+
+    public static TradeErrorCodeEnum getDescription(String remark) {
+        TradeErrorCodeEnum[] enums = TradeErrorCodeEnum.values();
+        for (TradeErrorCodeEnum anEnum : enums) {
+            if (remark.contains(anEnum.getValue())) {
+                return anEnum;
+            }
+        }
+        return null;
+    }
 }

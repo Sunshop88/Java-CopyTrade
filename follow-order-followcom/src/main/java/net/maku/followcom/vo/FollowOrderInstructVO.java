@@ -88,7 +88,12 @@ public class FollowOrderInstructVO implements Serializable {
 	@Schema(description = "失败订单")
 	private Integer failOrder;
 
+
+	@Schema(description = "用户id")
+	private Integer traderId;
+
 	@Schema(description = "操作人")
 	private String creatorName;
+
 
 }
