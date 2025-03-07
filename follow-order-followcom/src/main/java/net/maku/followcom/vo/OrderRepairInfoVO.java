@@ -69,5 +69,13 @@ public class OrderRepairInfoVO implements Serializable {
 
 	@Schema(description = "跟单者的ID")
 	private Long slaveId;
+	/**
+	 * 跟单状态
+	 */
+	private Integer followStatus;
 
+	/**
+	 * 连接状态，0为异常，1为正常
+	 */
+	private Integer status;
 }
