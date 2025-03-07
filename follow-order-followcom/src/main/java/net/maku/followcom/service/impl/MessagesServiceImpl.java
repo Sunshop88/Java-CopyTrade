@@ -13,11 +13,13 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.followcom.vo.FollowTraderVO;
@@ -59,6 +61,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final FollowOrderDetailService followOrderDetailService;
     private final RedissonLockUtil redissonLockUtil;
     private final RedisUtil redisUtil;
+    private final FollowVpsService followVpsService;
 
 
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
@@ -176,14 +179,15 @@ public class MessagesServiceImpl implements MessagesService {
                             //发送漏单
                             ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
-                                    Thread.sleep(3000);
+                                    Thread.sleep(5000);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
                                 FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
                                 if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus() == CloseOrOpenEnum.CLOSE.getValue()) {
+                                    FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
                                     FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                            vpsName(follow.getServerName())
+                                            vpsName(vps.getName())
                                             .source(master.getAccount())
                                             .sourceRemarks(master.getRemark())
                                             .follow(follow.getAccount())
@@ -276,7 +280,7 @@ public class MessagesServiceImpl implements MessagesService {
                 try {
                     ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
-                                    Thread.sleep(3000);
+                                    Thread.sleep(5000);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -285,10 +289,18 @@ public class MessagesServiceImpl implements MessagesService {
                         if (ObjectUtil.isNotEmpty(o1)) {
                             orderActive = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                         }
-                        boolean flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-                        if (!flag) {
+                        boolean flag=true;
+                        if(quoteClient!=null){
+                            flag= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
+                        }else{
+                             flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+
+                        }
+                       if (!flag) {
+                          // +";"+orderInfo.getTicket()+";"+orderActive.size()+";"+quoteClient.GetOpenedOrders().length
+                            FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
                             FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                    vpsName(follow.getServerName())
+                                    vpsName(vps.getName())
                                     .source(master.getAccount())
                                     .sourceRemarks(master.getRemark())
                                     .follow(follow.getAccount())
