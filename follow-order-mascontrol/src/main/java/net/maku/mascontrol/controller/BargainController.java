@@ -199,21 +199,4 @@ public class BargainController {
 
         return Result.ok(page);
     }
-
-    @GetMapping("listSymbol/{id}")
-    @Operation(summary = "账号品种列表")
-    public Result<List<FollowSysmbolSpecificationEntity>> listSymbol(@PathVariable("id") Long traderId) {
-        List<FollowTraderEntity> followTraderEntityList = getByUserId(traderId);
-        Long id = followTraderEntityList.get(0).getId();
-        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
-
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + id))) {
-            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + id);
-        } else {
-            //查询改账号的品种规格
-            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, id));
-            redisCache.set(Constant.SYMBOL_SPECIFICATION + id, followSysmbolSpecificationEntityList);
-        }
-        return Result.ok(followSysmbolSpecificationEntityList);
-    }
 }
