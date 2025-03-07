@@ -260,7 +260,7 @@ public class KafkaMessageConsumer {
                                                     }else{
                                                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
                                                     }
-                                                    log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), slaveTrader.getAccount(),eaOrderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+                                                    log.info("漏单删除,主账号:{},跟单:{},订单号:{}",master.getAccount() , slaveTrader.getAccount(),eaOrderInfo.getTicket());
                                                 }else {
                                                     log.info(slaveTrader.getAccount()+"暂无订单"+order1.Ticket);
                                                 }
@@ -287,7 +287,7 @@ public class KafkaMessageConsumer {
                                                 }else{
                                                     redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), slaveTrader.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
                                                 }
-                                                log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), slaveTrader.getAccount(),eaOrderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+                                                log.info("漏单删除,主账号:{},跟单账号:{},订单号:{}",master.getAccount() , slaveTrader.getAccount(),eaOrderInfo.getTicket());
                                             }
                                         });
                                     });
@@ -395,7 +395,7 @@ public class KafkaMessageConsumer {
                             repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
                         }
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("漏开补偿数据写入,主账号:{},跟单账号:{},订单号:{}",  master.getAccount() , follow.getAccount().toString(), orderInfo.getOrderNo());
                     });
                 }else{
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
@@ -455,7 +455,7 @@ public class KafkaMessageConsumer {
                             repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
                         }
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("漏开补偿数据写入,主账号:{},跟单账号:{},订单号:{}", master.getAccount() , follow.getAccount().toString(), orderInfo.getOrderNo());
                     });
                 }else{
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());

@@ -152,6 +152,8 @@ public class TraderRepairManageWebSocket {
         followVpsEntityList.forEach(o->{
             RepairVpsVO repairVpsVO= RepairVpsVO.builder().build();
             repairVpsVO.setVpsName(o.getName());
+            repairVpsVO.setConnectionStatus(o.getConnectionStatus());
+            repairVpsVO.setIsActive(o.getIsActive());
             List<MasterRepairVO> masterRepairVOList=new ArrayList<>(List.of());
             List<FollowTraderEntity> list ;
 
@@ -196,6 +198,8 @@ public class TraderRepairManageWebSocket {
                 MasterRepairVO masterRepairVO = MasterRepairVO.builder().build();
                 masterRepairVO.setMasterAccount(Integer.valueOf(trader.getAccount()));
                 masterRepairVO.setMasterPlatform(trader.getPlatform());
+                masterRepairVO.setFollowStatus(trader.getFollowStatus());
+                masterRepairVO.setStatus(trader.getStatus());
                 //查询信号源下跟单的漏单信息
                 List<OrderRepairInfoVO> orderRepairInfoVOList = Collections.synchronizedList(new ArrayList<>());/*
              Map<String, Map<Object, Object>> sendMap = redisUtil.getKeysByThreeConditions("follow:repair:send:*", o.getIpAddress(), trader.getPlatform(), trader.getAccount());
@@ -209,6 +213,8 @@ public class TraderRepairManageWebSocket {
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                                infoVO.setStatus(trader.getStatus());
+                                infoVO.setFollowStatus(trader.getFollowStatus());
                                    vpsNumMap.put(trader.getServerId(),1);
 
                             if (slaveAccount!=0) {
@@ -234,6 +240,8 @@ public class TraderRepairManageWebSocket {
                         values.forEach(vs->{
                             System.out.println(vs.toString());
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
+                            infoVO.setStatus(trader.getStatus());
+                            infoVO.setFollowStatus(trader.getFollowStatus());
                             vpsNumMap.put(trader.getServerId(),1);
 
                             if (slaveAccount!=0) {

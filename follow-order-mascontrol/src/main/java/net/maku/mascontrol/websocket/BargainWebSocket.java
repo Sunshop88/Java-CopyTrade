@@ -79,7 +79,7 @@ public class BargainWebSocket {
           ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
-                traderUserQuery.setHangStatus(CloseOrOpenEnum.OPEN.getValue());
+              //  traderUserQuery.setHangStatus(CloseOrOpenEnum.OPEN.getValue());
                 //账号列表
                // long startTime = System.currentTimeMillis();
                 TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
