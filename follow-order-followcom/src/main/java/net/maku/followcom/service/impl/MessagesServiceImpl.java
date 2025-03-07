@@ -195,7 +195,7 @@ public class MessagesServiceImpl implements MessagesService {
                         });
                         repairInfoVOS.putAll(closeMap);
                         redisCache.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开数据写入,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getTicket(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("漏开数据写入,主账号:{},跟单账号:{},订单号:{}",  master.getAccount() , follow.getAccount().toString(), orderInfo.getTicket());
 
                     }
                 }
@@ -264,7 +264,7 @@ public class MessagesServiceImpl implements MessagesService {
                         repairInfoVOS.put(orderInfo.getTicket(), orderRepairInfoVO);
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
                       //  redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + "#" + master.getId(), follow.getAccount(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开数据写入,key:{},key:{},val:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS),orderInfo.getTicket() );
+                        log.info("漏开数据写入,主账号:{},跟单账号:{},主订单号:{}",master.getAccount(), follow.getAccount().toString(),orderInfo.getTicket() );
                     }
 
                 } catch (Exception e) {
@@ -348,7 +348,7 @@ public class MessagesServiceImpl implements MessagesService {
                             repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
                         }
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("初始化漏单补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("初始化漏单补偿数据写入,主账号:{},跟单账号:{},订单号:{}",  master.getAccount(), follow.getAccount().toString(), orderInfo.getOrderNo());
                     });
                 }else{
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());

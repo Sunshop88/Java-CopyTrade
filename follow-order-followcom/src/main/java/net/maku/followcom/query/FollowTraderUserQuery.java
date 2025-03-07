@@ -54,6 +54,9 @@ public class FollowTraderUserQuery extends Query {
 
     private JSONArray accountVos;
 
+    @Schema(description = "挂靠状态")
+    private Integer hangStatus;
+
 
 
 

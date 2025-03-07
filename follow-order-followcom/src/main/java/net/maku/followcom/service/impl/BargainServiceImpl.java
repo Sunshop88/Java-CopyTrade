@@ -63,6 +63,9 @@ public class BargainServiceImpl implements BargainService {
         List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
         vo.getTraderList().forEach(o->{
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(o);
+            if (ObjectUtil.isEmpty(followTraderUserEntity)){
+                throw new ServerException("请求异常");
+            }
             //查询各VPS状态正常的账号
             List<FollowTraderEntity> followTraderEntity = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()).orderByDesc(FollowTraderEntity::getType));
             if (ObjectUtil.isNotEmpty(followTraderEntity)){
@@ -120,6 +123,8 @@ public class BargainServiceImpl implements BargainService {
                     log.info("所有分配交易下单已完成");
                 });
             }else {
+                followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
+                followOrderInstructService.save(followOrderInstructEntity);
                 AtomicInteger totalOrders = new AtomicInteger(0);
                 AtomicReference<BigDecimal> totalLots = new AtomicReference<>(BigDecimal.ZERO);
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -164,8 +169,7 @@ public class BargainServiceImpl implements BargainService {
                     log.info("所有复制交易下单已完成");
                     followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
                     followOrderInstructEntity.setTrueTotalLots(totalLots.get());
-                    followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
-                    followOrderInstructService.save(followOrderInstructEntity);
+                    followOrderInstructService.updateById(followOrderInstructEntity);
                 } catch (TimeoutException e) {
                     log.error("任务执行超时", e);
                 } catch (InterruptedException | ExecutionException e) {

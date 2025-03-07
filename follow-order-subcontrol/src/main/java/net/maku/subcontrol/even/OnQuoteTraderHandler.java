@@ -103,6 +103,7 @@ public class OnQuoteTraderHandler implements QuoteEventHandler {
                 followRedisTraderVO.setConnectTrader(qc.Host + ":" + qc.Port);
                 followRedisTraderVO.setLeverage(qc.Leverage);
                 redisCache.set(Constant.TRADER_USER + abstractApiTrader.getTrader().getId(), followRedisTraderVO);
+                log.info("执行账号信息推送:"+abstractApiTrader.getTrader().getAccount()+"杠杆:"+qc.Leverage);
             } catch (Exception e) {
                 System.err.println("Error during quote processing: " + e.getMessage());
                 e.printStackTrace();
