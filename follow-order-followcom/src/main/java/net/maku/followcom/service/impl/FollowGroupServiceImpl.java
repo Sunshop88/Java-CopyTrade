@@ -7,10 +7,13 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowGroupConvert;
 import net.maku.followcom.dao.FollowGroupDao;
 import net.maku.followcom.entity.FollowGroupEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
 import net.maku.followcom.service.FollowGroupService;
+import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.vo.FollowGroupExcelVO;
 import net.maku.followcom.vo.FollowGroupVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import com.fhs.trans.service.impl.TransService;
@@ -31,6 +34,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, FollowGroupEntity> implements FollowGroupService {
     private final TransService transService;
+    private final FollowTraderUserService followTraderUserService;
 
     @Override
     public PageResult<FollowGroupVO> page(FollowGroupQuery query) {
@@ -81,7 +85,14 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        removeByIds(idList);
+        for (Long id : idList) {
+            LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(FollowTraderUserEntity::getGroupId, id);
+            if (ObjectUtil.isNotEmpty(followTraderUserService.list(wrapper))) {
+                throw new ServerException("该组别下有账号，不能删除");
+            }
+            baseMapper.deleteById(id);
+        }
 
     }
 

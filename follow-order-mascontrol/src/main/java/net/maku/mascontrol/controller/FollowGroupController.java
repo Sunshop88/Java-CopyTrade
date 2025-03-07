@@ -59,7 +59,7 @@ public class FollowGroupController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:group')")
-    public Result<String> save(@RequestBody FollowGroupVO vo){
+    public Result<String> save(@RequestBody @Valid FollowGroupVO vo){
         //确保名字唯一性
         followGroupService.list().stream()
                 .filter(vo1 -> vo1.getName().equals(vo.getName()))

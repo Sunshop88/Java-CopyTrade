@@ -253,7 +253,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        removeByIds(idList);
         //根据id查询账号
         List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
         if (ObjectUtil.isNotEmpty(list)){
@@ -261,6 +260,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             //删除followTrader表信息
             followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
         }
+        removeByIds(idList);
 
     }
 

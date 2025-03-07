@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
@@ -28,6 +29,7 @@ public class FollowGroupVO implements Serializable {
 
 	@Schema(description = "组别名称")
 	@NotBlank(message = "组别名称不能为空")
+	@Size(max = 16, message = "组别名称长度不能超过16")
 	private String name;
 
 	@Schema(description = "账号数量")
