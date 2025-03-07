@@ -1,6 +1,7 @@
 package net.maku.followcom.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.FollowOrderSendEntity;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -102,4 +103,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     void removeRelation(FollowTraderEntity o, String account, Integer platformId);
 
     List<FollowSendAccountListVO> accountPage();
+
+    FollowMasOrderVo masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract);
 }

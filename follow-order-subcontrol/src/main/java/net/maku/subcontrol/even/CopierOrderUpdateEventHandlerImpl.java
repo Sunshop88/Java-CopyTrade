@@ -6,8 +6,6 @@ import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
@@ -23,7 +21,6 @@ import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.followcom.vo.OrderRepairInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.cache.RedissonLockUtil;
-import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.framework.common.utils.ThreadPoolUtils;
@@ -76,26 +73,20 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
     @Override
     public void invoke(Object sender, OrderUpdateEventArgs orderUpdateEventArgs) {
-        FollowTraderEntity follow = copier4ApiTrader.getTrader();
         try {
-            switch (orderUpdateEventArgs.Action) {
-                case  Balance:
-                case Credit:
-                    Order order = orderUpdateEventArgs.Order;
-                    //发送平仓MQ
-                    ObjectMapper mapper = JacksonConfig.getObjectMapper();
-                    try {
-                        producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
-                        log.info("监听信用或者出入金:{},{} ",follow.getAccount(),  orderUpdateEventArgs.Action);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    break;
-                default:
-                    log.error("Unexpected value: " + orderUpdateEventArgs.Action);
+            Order order = orderUpdateEventArgs.Order;
+            //避免重复监听
+            String val=Constant.FOLLOW_ON_EVEN + FollowConstant.LOCAL_HOST + "#" + orderUpdateEventArgs.Action + "#" + order.Ticket;
+            // 使用 Redis 原子操作 SET NX EX
+            boolean isLocked = redisUtil.setnx(val, 1, 36000); // 原子操作
+            if (!isLocked) {
+                log.info(order.Ticket + "跟单锁定监听重复");
+                return;
             }
+            FollowTraderEntity follow = copier4ApiTrader.getTrader();
             //发送websocket消息标识
             if (orderUpdateEventArgs.Action == UpdateAction.PositionClose||orderUpdateEventArgs.Action == UpdateAction.PositionOpen||orderUpdateEventArgs.Action == UpdateAction.PendingFill) {
+                log.info("跟单监听到"+orderUpdateEventArgs.Action+"账号:"+follow.getAccount());
                 ScheduledFuture<?> existingTask = pendingMessages.get(follow.getId().toString());
                 if (existingTask != null) {
                     existingTask.cancel(false); // 不强制中断，允许任务自然结束
@@ -104,20 +95,18 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 // 新建延迟任务，等待 100ms 后发送消息
                 ScheduledFuture<?> newTask = scheduler.schedule(() -> {
                     FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(follow.getId());
-                    List<Order> openedOrders = Arrays.stream(copier4ApiTrader.quoteClient.GetOpenedOrders()).filter(order -> order.Type == Buy || order.Type == Sell).collect(Collectors.toList());
+                    List<Order> openedOrders = Arrays.stream(copier4ApiTrader.quoteClient.GetOpenedOrders()).filter(order1 -> order1.Type == Buy || order1.Type == Sell).collect(Collectors.toList());
                     FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
                     followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,follow.getAccount()));
                     log.info("发送消息"+follow.getId());
                     traderOrderActiveWebSocket.pushMessage(followSub.getMasterId().toString(),follow.getId().toString(), JsonUtils.toJsonString(followOrderActiveSocketVO));
                     pendingMessages.remove(follow.getId().toString());
-                }, 100, TimeUnit.MILLISECONDS);
+                }, 50, TimeUnit.MILLISECONDS);
                 // 更新缓存中的任务
                 pendingMessages.put(follow.getId().toString(), newTask);
             }
-            Order order = orderUpdateEventArgs.Order;
             FollowTraderSubscribeEntity subscribeEntity = subscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, follow.getId()));
             FollowTraderEntity master = followTraderService.getFollowById(subscribeEntity.getMasterId());
-            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
             switch (orderUpdateEventArgs.Action) {
                 case PositionOpen:
                 case PendingFill:
@@ -154,7 +143,8 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                         }finally {
                             redissonLockUtil.unlock(key1);
                         }
-                        log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{},跟单订单号：{}", follow.getAccount(),order.Ticket,follow.getPlatform(),list);
+//                        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
+                        log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
                     });
                     break;
                 case PositionClose:
@@ -193,9 +183,8 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             redissonLockUtil.unlock(key);
                         }
                         log.info("监听跟单漏平删除:跟单账号{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
-
+                        repairSend(follow,master,copier4ApiTrader.quoteClient);
                     });
-                    repairSend(follow,master,copier4ApiTrader.quoteClient);
                     break;
                 default:
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);

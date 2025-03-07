@@ -42,7 +42,7 @@ public class ObtainOrderHistoryTask {
     private final FollowOrderDetailService followOrderDetailService;
 
 
-    @Scheduled(cron = "0 0 * ? * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void getOrderHistory(){
         //1.获取所有账号
         List<FollowTraderEntity> list = followTraderService.list(Wrappers.<FollowTraderEntity>lambdaQuery()
@@ -51,6 +51,7 @@ public class ObtainOrderHistoryTask {
                 .orderByAsc(FollowTraderEntity::getCreateTime));
         //获取mt4客户端quoteClient
         List<FollowTraderEntity> newList = new ArrayList<>();
+        log.info("获取历史订单{}",list.size());
         list.forEach(u->{
                  update(u,newList);
         });
@@ -146,7 +147,7 @@ public class ObtainOrderHistoryTask {
                 //订单详情保存订单
                 followOrderDetailService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-365)));
                 //保存持仓订单
-                followOrderDetailService.saveOrderActive(quoteClient,u);
+             //   followOrderDetailService.saveOrderActive(quoteClient,u);
                 newList.add(u);
             }else {
                 //保存历史订单
@@ -154,7 +155,8 @@ public class ObtainOrderHistoryTask {
                 //订单详情保存订单
                 followOrderDetailService.saveOrderHistory(quoteClient,u, DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-1)));
                 //保存持仓订单
-                followOrderDetailService.saveOrderActive(quoteClient,u);
+            //    followOrderDetailService.saveOrderActive(quoteClient,u);
+                log.info("保存历史订单{}",u.getAccount());
             }
 
         }

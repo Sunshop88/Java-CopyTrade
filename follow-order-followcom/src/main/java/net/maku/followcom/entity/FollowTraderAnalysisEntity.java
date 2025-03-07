@@ -136,7 +136,7 @@ public class FollowTraderAnalysisEntity {
 	@TableField(value = "free_margin")
 	private BigDecimal freeMargin;
 
-	private
+
 
 	@TableField(exist = false)
 	List<FollowTraderAnalysisEntityVO>  symbolAnalysisDetails;

@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -54,6 +55,12 @@ public class FollowOrderInstructEntity {
 	private BigDecimal maxLotSize;
 
 	/**
+	 * 间隔时间
+	 */
+	@TableField(value = "interval_time")
+	private Integer intervalTime;
+
+	/**
 	* 备注
 	*/
 	@TableField(value = "remark")
@@ -70,6 +77,18 @@ public class FollowOrderInstructEntity {
 	*/
 	@TableField(value = "total_orders")
 	private Integer totalOrders;
+
+	/**
+	 * 实际下单总手数
+	 */
+	@TableField(value = "true_total_lots")
+	private BigDecimal trueTotalLots;
+
+	/**
+	 * 实际下单总单数
+	 */
+	@TableField(value = "true_total_orders")
+	private Integer trueTotalOrders;
 
 	/**
 	* 成交手数
@@ -137,4 +156,11 @@ public class FollowOrderInstructEntity {
 	 */
 	@TableField(value = "order_no")
 	private String orderNo;
+
+	/**
+	 * 失败订单
+	 */
+	@TableField(value = "fail_orders")
+	private Integer failOrders;
+
 }

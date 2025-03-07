@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -16,6 +17,7 @@ import java.util.Date;
 
 @Data
 @TableName("follow_order_instruct_sub")
+@Builder
 public class FollowOrderInstructSubEntity {
 	@TableId(type = IdType.AUTO)
 	@TableField(value = "id")

@@ -76,28 +76,31 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
             //发送漏单通知
             FollowTraderEntity master = followTraderService.getFollowById(orderInfo.getMasterId());
             messagesService.isRepairClose(orderInfo,follow,master);
-            //删除漏单redis记录
-            String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
-            boolean lock1 = redissonLockUtil.lock(key1, 500, -1, TimeUnit.SECONDS);
-            try {
-                if (lock1) {
-                    Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
-                    Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
-                    if (o1!=null && o1.toString().trim().length()>0){
-                        repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+            ThreadPoolUtils.execute(()->{
+                //删除漏单redis记录
+                String key1 = Constant.REPAIR_SEND + "：" + follow.getAccount();
+                boolean lock1 = redissonLockUtil.lock(key1, 500, -1, TimeUnit.SECONDS);
+                try {
+                    if (lock1) {
+                        Object o1 = redisUtil.hGetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());
+                        Map<Integer,OrderRepairInfoVO> repairInfoVOS = new HashMap();
+                        if (o1!=null && o1.toString().trim().length()>0){
+                            repairInfoVOS= JSONObject.parseObject(o1.toString(), Map.class);
+                        }
+                        repairInfoVOS.remove(orderInfo.getTicket());
+                        if(repairInfoVOS==null || repairInfoVOS.size()==0){
+                            redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),follow.getAccount().toString());
+                        }else{
+                            redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
+                        }
+                        log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
                     }
-                    repairInfoVOS.remove(orderInfo.getTicket());
-                    if(repairInfoVOS==null || repairInfoVOS.size()==0){
-                        redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(),follow.getAccount().toString());
-                    }else{
-                        redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
-                    }
-                    log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
-                }
 
-            }finally {
-                redissonLockUtil.unlock(key1);
-            }
+                }finally {
+                    redissonLockUtil.unlock(key1);
+                }
+            });
+
           /*  ThreadPoolUtils.getExecutor().execute(()->{
                     repair(follow, master, null);
             });*/

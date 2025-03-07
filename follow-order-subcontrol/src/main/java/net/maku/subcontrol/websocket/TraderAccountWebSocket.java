@@ -90,7 +90,7 @@ public class TraderAccountWebSocket {
                 log.info("WebSocket建立连接异常" + e);
                 throw new RuntimeException();
             }
-        }, 0, 2, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
     }
 

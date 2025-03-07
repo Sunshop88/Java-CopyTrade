@@ -225,7 +225,7 @@ public class PushRedisTask {
       ThreadPoolUtils.execute(() -> {
            String localHost = FollowConstant.LOCAL_HOST;
            String keyl="LOCK:" + localHost;
-           boolean lock = redissonLockUtil.lock(keyl, 3, -1, TimeUnit.SECONDS);
+           boolean lock = redissonLockUtil.lock(keyl, 10, -1, TimeUnit.SECONDS);
            try {
                if (lock) {
 
