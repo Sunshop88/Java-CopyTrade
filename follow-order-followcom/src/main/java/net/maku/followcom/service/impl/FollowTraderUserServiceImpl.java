@@ -54,10 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -514,8 +511,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         headers.put("Content-Type", "application/json");
 
         // 使用线程池
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) ThreadPoolUtils.getExecutor();
+        ExecutorService executor = Executors.newFixedThreadPool(20);
 
+        // 定义并初始化 CountDownLatch
         CountDownLatch countDownLatch = new CountDownLatch(20);
 
         for (FollowTraderUserVO vo : voList) {
@@ -547,14 +545,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 failureDetail.setAccount(vo.getAccount());
                                 failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
                                 failureDetail.setRecordId(savedId);
-                                //报错内容
+                                // 报错内容
                                 failureDetail.setRemark(response.getBody().getString("msg"));
                                 followFailureDetailService.save(failureDetail);
                                 failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
                             }
                         }
-                    }else {
+                    } else {
                         // 更新traderUser密码并记录备注
                         LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                         updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
@@ -589,6 +587,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setId(savedId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
     }
+
 
 
     @Override
