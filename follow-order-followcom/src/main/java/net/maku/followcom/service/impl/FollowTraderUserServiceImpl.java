@@ -55,6 +55,7 @@ import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -653,18 +654,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             });
             countDownLatch.countDown();
                 });
-        Map<String,List<FollowTraderEntity>> traderMap=new HashMap<>();
-        ThreadPoolUtils.getExecutor().execute(()->{
-          List<FollowTraderEntity> traders = followTraderService.list();
-            traders.stream().forEach(t->{
-                List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
-                if (ObjectUtil.isEmpty(followTraderEntities)) {
-                    followTraderEntities = new ArrayList<>();
+        Map<String,List<FollowTraderEntity>> traderMap=new ConcurrentHashMap<>();
 
-                }
-                followTraderEntities.add(t);
-                traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
-            });
+       ThreadPoolUtils.getExecutor().execute(()->{
+           List<FollowTraderEntity> traders = followTraderService.list();
+           traders.stream().forEach(t->{
+               List<FollowTraderEntity> followTraderEntities = traderMap.get(t.getAccount() + "-" + t.getPlatformId());
+               if (ObjectUtil.isEmpty(followTraderEntities)) {
+                   followTraderEntities = new ArrayList<>();
+
+               }
+               followTraderEntities.add(t);
+               traderMap.put(t.getAccount() + "-" + t.getPlatformId(), followTraderEntities);
+           });
             countDownLatch.countDown();
         });
         Map<Integer,FollowVpsEntity> vpsMap=new HashMap<>();
@@ -694,6 +696,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         System.out.println("分页运行时间: " + duration + " 毫秒");*/
         PageResult<FollowTraderUserVO> page = pageAtomic.get();
         List<FollowTraderUserVO> list = page.getList();
+        CountDownLatch count = new CountDownLatch(list.size());
         list.forEach(o->{
             ThreadPoolUtils.getExecutor().execute(()->{
                 try {
@@ -751,8 +754,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
                 o.setVpsDesc(vpsDesc);
             }
+                count.countDown();
             });
         });
+        try {
+            count.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         statInfo.get().setPageResult(page);
         return statInfo.get();
     }
