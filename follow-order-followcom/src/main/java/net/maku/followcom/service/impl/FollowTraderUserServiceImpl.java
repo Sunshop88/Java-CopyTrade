@@ -845,7 +845,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                        entity.setAccount(f.getAccount());
                        entity.setRemark(result.getMsg());
                        entity.setRecordId(followUploadTraderUserVO.getId());
-                       entity.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
+                       entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
                        errList.add(entity);
                    }
                     countDownLatch.countDown();
