@@ -5,6 +5,7 @@ import net.maku.followcom.entity.UserEntity;
 import net.maku.framework.mybatis.service.BaseService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户管理
@@ -14,4 +15,6 @@ import java.util.List;
  */
 public interface UserService extends BaseService<UserEntity> {
     List<String> getUserId(List<Long> vpsUserVO);
+
+    Map<Long, String> getUserName(List<Long> creatorIds);
 }

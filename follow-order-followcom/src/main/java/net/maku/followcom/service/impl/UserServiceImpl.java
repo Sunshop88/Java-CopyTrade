@@ -7,7 +7,9 @@ import net.maku.followcom.service.UserService;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户管理
@@ -19,16 +21,28 @@ import java.util.List;
 @AllArgsConstructor
 public class UserServiceImpl extends BaseServiceImpl<UserDao, UserEntity> implements UserService {
 
-/*
-根据id获取用户名
- */
+    /*
+    根据id获取用户名
+     */
     @Override
     public List<String> getUserId(List<Long> idList) {
         if (idList.isEmpty()) {
             return null;
         }
 
-        return baseMapper.selectBatchIds(idList).stream().map(UserEntity::getRealName).toList();
+        return baseMapper.selectBatchIds(idList).stream().map(UserEntity::getUsername).toList();
+    }
+
+    @Override
+    public Map<Long, String> getUserName(List<Long> idList) {
+        if (idList.isEmpty()) {
+            return null;
+        }
+        return baseMapper.selectBatchIds(idList).stream().collect(
+                (HashMap<Long, String>::new),
+                (m, v) -> m.put(v.getId(), v.getUsername()),
+                HashMap::putAll
+        );
     }
 
 }

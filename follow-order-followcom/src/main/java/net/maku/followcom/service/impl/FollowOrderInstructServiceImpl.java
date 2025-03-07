@@ -11,6 +11,7 @@ import net.maku.followcom.dao.FollowOrderInstructDao;
 import net.maku.followcom.entity.FollowOrderInstructEntity;
 import net.maku.followcom.query.FollowOrderInstructQuery;
 import net.maku.followcom.service.FollowOrderInstructService;
+import net.maku.followcom.service.UserService;
 import net.maku.followcom.vo.FollowOrderInstructVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -26,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 下单总指令表
@@ -37,13 +40,36 @@ import java.util.List;
 @AllArgsConstructor
 public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderInstructDao, FollowOrderInstructEntity> implements FollowOrderInstructService {
     private final TransService transService;
-   // private final UserApi userApi;
+    private final UserService userService;
 
     @Override
     public PageResult<FollowOrderInstructVO> page(FollowOrderInstructQuery query) {
         IPage<FollowOrderInstructEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
 
-        return new PageResult<>(FollowOrderInstructConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+//        return new PageResult<>(FollowOrderInstructConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+        List<FollowOrderInstructEntity> records = page.getRecords();
+        List<FollowOrderInstructVO> vos = FollowOrderInstructConvert.INSTANCE.convertList(records);
+
+        // 获取 creatorName
+        List<Long> creatorIds = records.stream()
+                .map(FollowOrderInstructEntity::getCreator)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, String> creatorNameMap = userService.getUserName(creatorIds);
+
+        for (FollowOrderInstructVO vo : vos) {
+            vo.setCreatorName(creatorNameMap.get(vo.getCreator()));
+        }
+        //查询用户名
+        if (ObjectUtil.isNotEmpty(query.getCreator())){
+            vos = vos.stream()
+                    //过滤出当前用户
+                    .filter(vo -> creatorNameMap.get(vo.getCreator()).equals(query.getCreator()))
+                    .collect(Collectors.toList());
+        }
+
+        return new PageResult<>(vos, page.getTotal());
     }
 
 
@@ -55,7 +81,7 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
     //    List<Integer> userIdList = userApi.getUser(query.getCreator());
 //        List<Integer> userIdList =null;
 //        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
-        wrapper.like(ObjectUtil.isNotEmpty(query.getCreator()), FollowOrderInstructEntity::getCreator, query.getCreator());
+//        wrapper.like(ObjectUtil.isNotEmpty(query.getCreator()),FollowOrderInstructEntity);
         //如果没有时间，默认一个月
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());
