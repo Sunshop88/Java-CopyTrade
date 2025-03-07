@@ -2,6 +2,8 @@ package net.maku.followcom.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * Author:  zsd
  * Date:  2025/1/2/周四 16:56
@@ -43,4 +45,6 @@ public class TraderAnalysisVO {
     private String order;
 
     private Boolean asc;
+
+    private List<Integer> vpsIds;
 }

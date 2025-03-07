@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -7,10 +8,13 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowGroupConvert;
 import net.maku.followcom.dao.FollowGroupDao;
 import net.maku.followcom.entity.FollowGroupEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
 import net.maku.followcom.service.FollowGroupService;
+import net.maku.followcom.service.FollowTraderUserService;
 import net.maku.followcom.vo.FollowGroupExcelVO;
 import net.maku.followcom.vo.FollowGroupVO;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import com.fhs.trans.service.impl.TransService;
@@ -71,8 +75,8 @@ public class FollowGroupServiceImpl extends BaseServiceImpl<FollowGroupDao, Foll
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowGroupVO vo) {
-        FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
 
+        FollowGroupEntity entity = FollowGroupConvert.INSTANCE.convert(vo);
         updateById(entity);
 
 
