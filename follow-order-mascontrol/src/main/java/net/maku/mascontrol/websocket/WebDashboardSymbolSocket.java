@@ -4,13 +4,18 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
+import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.service.DashboardService;
+import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.service.impl.FollowVpsUserServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import org.springframework.stereotype.Component;
@@ -38,6 +43,7 @@ public class WebDashboardSymbolSocket {
     private final DashboardService dashboardService = SpringContextUtils.getBean(DashboardService.class);
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
+    private FollowVpsUserService followVpsUserService=SpringContextUtils.getBean(FollowVpsUserServiceImpl.class);
 
     // 当客户端连接时调用
 /*    @OnOpen
@@ -60,7 +66,8 @@ public class WebDashboardSymbolSocket {
     }
 
     private JSONObject send(String rankOrder, Boolean rankAsc, String brokerName,
-                            String accountOrder, Integer accountPage, Boolean accountAsc, Integer accountLimit, String server, String vpsName, String account, String sourceAccount, TraderAnalysisVO analysisVO) {
+                            String accountOrder, Integer accountPage, Boolean accountAsc, Integer accountLimit, String server, String vpsName, String account, String sourceAccount,
+                            TraderAnalysisVO analysisVO,String userId) {
         //仪表盘-头部统计
         StatDataVO statData = dashboardService.getStatData();
         //仪表盘-头寸监控-统计
@@ -68,6 +75,17 @@ public class WebDashboardSymbolSocket {
         Map<String, SymbolChartVO> symbolAnalysisMap = new HashMap<>();
         //List<SymbolChartVO> symbolAnalysis=new ArrayList<>();
         //仪表盘-头寸监控-统计明细
+        if (ObjectUtil.isNotEmpty(userId) && !ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
+            List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId).eq(FollowVpsUserEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+            List<Integer> vpsIds = new ArrayList<>();
+            if(ObjectUtil.isNotEmpty(vpsUserEntityList)){
+                List<Integer> list = vpsUserEntityList.stream().map(FollowVpsUserEntity::getVpsId).toList();
+                vpsIds.addAll(list);
+            }else{
+                vpsIds.add(-1);
+            }
+            analysisVO.setVpsIds(vpsIds);
+        }
         List<FollowTraderAnalysisEntity> details = dashboardService.getSymbolAnalysisDetails(analysisVO);
         // Map<String, List<FollowTraderAnalysisEntity>> symbolAnalysisMapDetails = dashboardService.getSymbolAnalysisMapDetails();
         //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
@@ -109,6 +127,17 @@ public class WebDashboardSymbolSocket {
             vo.setAccount(account);
             vo.setSourceAccount(sourceAccount);
             vo.setVpsName(vpsName);
+            if (ObjectUtil.isNotEmpty(userId) && !ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
+                List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId).eq(FollowVpsUserEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+                List<Integer> vpsIds = new ArrayList<>();
+                if(ObjectUtil.isNotEmpty(vpsUserEntityList)){
+                    List<Integer> list = vpsUserEntityList.stream().map(FollowVpsUserEntity::getVpsId).toList();
+                    vpsIds.addAll(list);
+                }else{
+                    vpsIds.add(-1);
+                }
+                vo.setVpsIds(vpsIds);
+            }
             accountDataPage = dashboardService.getAccountDataPage(vo);
             //遍历账号数据修改仪表盘统计数据
             Map<String, Integer> accountMap = new HashMap<>();
@@ -390,6 +419,7 @@ public class WebDashboardSymbolSocket {
         try {
             String id = session.getId();
             JSONObject jsonObject = JSONObject.parseObject(message);
+            String userId = jsonObject.getString("userId");
             String rankOrder = jsonObject.getString("rankOrder");
             Boolean rankAsc = jsonObject.getBoolean("rankAsc");
             String brokerName = jsonObject.getString("brokerName");
@@ -429,7 +459,7 @@ public class WebDashboardSymbolSocket {
             }
             ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo,userId);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     e.printStackTrace();

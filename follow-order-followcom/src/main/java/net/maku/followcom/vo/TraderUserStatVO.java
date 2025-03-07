@@ -25,6 +25,7 @@ public class TraderUserStatVO {
     private int conNum;
     //连接异常
     private int errNum;
+    private AtomicBigDecimal paragraph;
 
 
    private PageResult<FollowTraderUserVO> pageResult;

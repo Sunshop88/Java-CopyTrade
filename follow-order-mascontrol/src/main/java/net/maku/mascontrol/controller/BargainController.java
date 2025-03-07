@@ -94,10 +94,14 @@ public class BargainController {
             throw new ServerException("账号未挂靠vps");
 
         }
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         users.forEach(user -> {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("traderId", user.getId());
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,null);
+            ThreadPoolUtils.getExecutor().execute(()->{
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("traderId", user.getId());
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
+            });
+           
         });
         return Result.ok();
     }
@@ -160,13 +164,15 @@ public class BargainController {
     @GetMapping("historySubcommands")
     @Operation(summary = "历史子指令分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
-    public Result<PageResult<FollowOrderInstructSubVO>> page(@ParameterObject @Valid FollowOrderInstructSubQuery query){
-
+    public Result<List<FollowOrderInstructSubVO>> page(@RequestParam String sendNo){
         FollowOrderDetailQuery ordreQuery=new FollowOrderDetailQuery();
-        ordreQuery.setSendNo(query.getSendNo());
+        ordreQuery.setSendNo(sendNo);
+        ordreQuery.setPage(1);
+        ordreQuery.setLimit(1000);
         PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(ordreQuery);
         List<FollowOrderInstructSubVO> followOrderInstructSubVOS = FollowOrderDetailConvert.INSTANCE.convertPage(page.getList());
-        return Result.ok(new PageResult<>(followOrderInstructSubVOS, page.getTotal()));
+
+        return Result.ok(followOrderInstructSubVOS);
     }
 
     @GetMapping("historyCommands")

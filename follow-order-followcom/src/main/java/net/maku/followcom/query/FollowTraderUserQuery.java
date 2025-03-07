@@ -1,5 +1,6 @@
 package net.maku.followcom.query;
 
+import com.alibaba.fastjson.JSONArray;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -50,6 +51,8 @@ public class FollowTraderUserQuery extends Query {
     private List<Integer> accountType;
     @Schema(description = "组别")
     private List<Integer> groupIds;
+
+    private JSONArray accountVos;
 
 
 
