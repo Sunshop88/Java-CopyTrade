@@ -255,12 +255,27 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        //根据id查询账号
-        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
-        if (ObjectUtil.isNotEmpty(list)){
-            List<String>accountList = list.stream().map(FollowTraderUserEntity::getAccount).toList();
-            //删除followTrader表信息
-            followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
+//        //根据id查询账号
+//        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
+//        if (ObjectUtil.isNotEmpty(list)){
+//            List<String>accountList = list.stream().map(FollowTraderUserEntity::getAccount).toList();
+//            //删除followTrader表信息
+//            followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
+//        }
+//        removeByIds(idList);
+        for (Long id : idList) {
+            FollowTraderUserVO vo = get(id);
+            //根据账号删除
+            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()));
+            if (ObjectUtil.isNotEmpty(List)){
+                //查看喊单账号是否存在用户
+                List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
+                if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
+                    continue;
+                }
+                List<Long> accountList = List.stream().map(FollowTraderEntity::getId).toList();
+                followTraderService.removeByIds(accountList);
+            }
         }
         removeByIds(idList);
 
