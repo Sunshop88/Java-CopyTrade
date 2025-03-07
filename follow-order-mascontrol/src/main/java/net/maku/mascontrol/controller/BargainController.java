@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.dto.MasToSubOrderCloseDto;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.*;
@@ -20,6 +21,8 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.*;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
@@ -56,7 +59,7 @@ public class BargainController {
     private final FollowOrderInstructService followOrderInstructService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final  FollowOrderDetailService followOrderDetailService;
-
+    private final RedisCache redisCache;
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
@@ -72,7 +75,7 @@ public class BargainController {
             throw new ServerException("vps不存在");
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
-      //  list.get(0).getIpAddr()
+        //  list.get(0).getIpAddr()
         Result result = RestUtil.sendRequest(request, "39.98.109.212", HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
         return result;
     }
@@ -101,7 +104,7 @@ public class BargainController {
                 jsonObject.put("traderId", user.getId());
                 Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
             });
-           
+
         });
         return Result.ok();
     }
@@ -127,20 +130,20 @@ public class BargainController {
     @Operation(summary = "一键漏平")
     public Result<Boolean> repairOrderClose(@RequestBody TraderUserClose  vo,HttpServletRequest request) {
 
-            List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
-            HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
-            users.forEach(user -> {
-             
-                ThreadPoolUtils.getExecutor().execute(()->{
-                    List<RepairCloseVO> repairCloseVO=new ArrayList<>();
-                    RepairCloseVO closeVO=new RepairCloseVO();
-                    closeVO.setSlaveId(user.getId());
-                    closeVO.setVpsId(user.getServerId());
-                    repairCloseVO.add(closeVO);
-                    Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken);
-                });
+        List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+        users.forEach(user -> {
 
+            ThreadPoolUtils.getExecutor().execute(()->{
+                List<RepairCloseVO> repairCloseVO=new ArrayList<>();
+                RepairCloseVO closeVO=new RepairCloseVO();
+                closeVO.setSlaveId(user.getId());
+                closeVO.setVpsId(user.getServerId());
+                repairCloseVO.add(closeVO);
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken);
             });
+
+        });
 
         return Result.ok();
     }
@@ -195,5 +198,22 @@ public class BargainController {
         }
 
         return Result.ok(page);
+    }
+
+    @GetMapping("listSymbol/{id}")
+    @Operation(summary = "账号品种列表")
+    public Result<List<FollowSysmbolSpecificationEntity>> listSymbol(@PathVariable("id") Long traderId) {
+        List<FollowTraderEntity> followTraderEntityList = getByUserId(traderId);
+        Long id = followTraderEntityList.get(0).getId();
+        List<FollowSysmbolSpecificationEntity> followSysmbolSpecificationEntityList;
+
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYMBOL_SPECIFICATION + id))) {
+            followSysmbolSpecificationEntityList = (List<FollowSysmbolSpecificationEntity>) redisCache.get(Constant.SYMBOL_SPECIFICATION + id);
+        } else {
+            //查询改账号的品种规格
+            followSysmbolSpecificationEntityList = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, id));
+            redisCache.set(Constant.SYMBOL_SPECIFICATION + id, followSysmbolSpecificationEntityList);
+        }
+        return Result.ok(followSysmbolSpecificationEntityList);
     }
 }
