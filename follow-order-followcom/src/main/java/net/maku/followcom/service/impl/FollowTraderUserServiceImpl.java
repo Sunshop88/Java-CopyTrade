@@ -253,7 +253,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList) {
-        removeByIds(idList);
         //根据id查询账号
         List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
         if (ObjectUtil.isNotEmpty(list)){
@@ -261,6 +260,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             //删除followTrader表信息
             followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
         }
+        removeByIds(idList);
 
     }
 
@@ -448,7 +448,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     public static void main(String[] args) {
         String s = AesUtils.aesEncryptStr("As123456");
+        String s1 = AesUtils.decryptStr("5bbc20e6d024516d9aa2429c99d52bd9");
         System.out.println(s);
+        System.out.println(s1);
     }
     @Override
     public void updatePasswords(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) throws Exception {

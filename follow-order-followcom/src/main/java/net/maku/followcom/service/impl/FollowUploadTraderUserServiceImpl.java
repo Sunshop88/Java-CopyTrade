@@ -41,6 +41,8 @@ public class FollowUploadTraderUserServiceImpl extends BaseServiceImpl<FollowUpl
         if (ObjectUtil.isNotEmpty(query.getType())){
             wrapper.eq(FollowUploadTraderUserEntity::getType,query.getType());
         }
+        // 按照上传时间倒序排列
+        wrapper.orderByDesc(FollowUploadTraderUserEntity::getUploadTime);
         return wrapper;
     }
 

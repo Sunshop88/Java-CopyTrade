@@ -2,6 +2,7 @@ package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
@@ -59,7 +60,7 @@ public class FollowGroupController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:group')")
-    public Result<String> save(@RequestBody FollowGroupVO vo){
+    public Result<String> save(@RequestBody @Valid FollowGroupVO vo){
         //确保名字唯一性
         followGroupService.list().stream()
                 .filter(vo1 -> vo1.getName().equals(vo.getName()))
@@ -77,6 +78,18 @@ public class FollowGroupController {
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:group')")
     public Result<String> update(@RequestBody @Valid FollowGroupVO vo){
+        //确保名字唯一性，排除掉自己的名字
+        followGroupService.list().stream()
+                .filter(vo1 -> vo1.getName().equals(vo.getName()) && !vo1.getId().equals(vo.getId()))
+                .findAny()
+                .ifPresent(followGroupVO -> {
+                    throw new ServerException("组别名称重复");
+                });
+        //修改账号记录名称
+        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FollowTraderUserEntity::getGroupId, vo.getId());
+        updateWrapper.set(FollowTraderUserEntity::getGroupName, vo.getName());
+        followTraderUserService.update(updateWrapper);
         followGroupService.update(vo);
 
         return Result.ok();
@@ -87,7 +100,14 @@ public class FollowGroupController {
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:group')")
     public Result<String> delete(@RequestBody List<Long> idList){
-        followGroupService.delete(idList);
+        for (Long id : idList) {
+            LambdaQueryWrapper<FollowTraderUserEntity> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(FollowTraderUserEntity::getGroupId, id);
+            if (ObjectUtil.isNotEmpty(followTraderUserService.list(wrapper))) {
+                throw new ServerException("该组别下有账号，不能删除");
+            }
+           followGroupService.removeById(id);
+        }
 
         return Result.ok();
     }
