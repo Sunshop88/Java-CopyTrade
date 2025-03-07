@@ -122,6 +122,8 @@ public class BarginOrderWebSocket {
             followBarginOrderVO.setScheduleNum(followOrderInstruct.getTradedOrders());
             followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
             followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
+        }else {
+            followBarginOrderVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
         }
         pushMessage(session,JsonUtils.toJsonString(followBarginOrderVO));
     }

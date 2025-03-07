@@ -1050,7 +1050,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
         followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
-        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setTotalNum(orders.size());
         followMasOrderVo.setOrderList(orders);
         return  followMasOrderVo;
 //        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
@@ -1286,7 +1286,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
         followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
-        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setTotalNum(orders.size());
         followMasOrderVo.setOrderList(orders);
         return followMasOrderVo;
 //        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
@@ -1330,7 +1330,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         log.info("下单数量{}", orders);
         log.info("下单数量{}++++++++下单手数{}", orderCount,orders.stream().mapToDouble(o->o).sum());
         followMasOrderVo.setTotalSize(orders.stream().mapToDouble(o->o).sum());
-        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setTotalNum(orders.size());
         followMasOrderVo.setOrderList(orders);
         return followMasOrderVo;
 //        if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
@@ -1428,9 +1428,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
         }
         List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
-        log.info("下单数量{}++++++++下单手数{}", orderCount,doubleList.stream().mapToDouble(o->o).sum());
+        log.info("下单数量{}++++++++下单手数{}", orders.size(),doubleList.stream().mapToDouble(o->o).sum());
         followMasOrderVo.setTotalSize(doubleList.stream().mapToDouble(o->o).sum());
-        followMasOrderVo.setTotalNum(orderCount);
+        followMasOrderVo.setTotalNum(orders.size());
         followMasOrderVo.setOrderList(doubleList);
         return followMasOrderVo;
         // 执行订单操作
