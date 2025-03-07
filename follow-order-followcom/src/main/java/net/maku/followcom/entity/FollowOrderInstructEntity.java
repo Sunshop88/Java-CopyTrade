@@ -163,4 +163,10 @@ public class FollowOrderInstructEntity {
 	@TableField(value = "fail_orders")
 	private Integer failOrders;
 
+	/**
+	 * 用户id
+	 */
+	@TableField(value = "trader_id")
+	private Integer traderId;
+
 }
