@@ -20,7 +20,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for follow_trader_user
 -- ----------------------------
-DROP TABLE IF EXISTS `follow_trader_user`;
 CREATE TABLE `follow_trader_user`  (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `account` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '账号',
@@ -49,7 +48,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ----------------------------
 -- Table structure for follow_failure_detail
 -- ----------------------------
-DROP TABLE IF EXISTS `follow_failure_detail`;
 CREATE TABLE `follow_failure_detail`  (
       `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
       `platform_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '账号类型 需为MT4或MT5',
@@ -66,7 +64,6 @@ CREATE TABLE `follow_failure_detail`  (
 -- ----------------------------
 -- Table structure for follow_upload_trader_user
 -- ----------------------------
-DROP TABLE IF EXISTS `follow_upload_trader_user`;
 CREATE TABLE `follow_upload_trader_user`  (
           `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
           `upload_time` datetime NULL DEFAULT NULL COMMENT '上传时间',
