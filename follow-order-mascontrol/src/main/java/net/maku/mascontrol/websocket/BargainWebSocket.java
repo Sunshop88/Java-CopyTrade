@@ -79,6 +79,7 @@ public class BargainWebSocket {
           ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
+                traderUserQuery.setHangStatus(CloseOrOpenEnum.OPEN.getValue());
                 //账号列表
                // long startTime = System.currentTimeMillis();
                 TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(traderUserQuery);
@@ -89,7 +90,7 @@ public class BargainWebSocket {
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
                 bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
-                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getErrNum());
+                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getTotal()-traderUserStatVO.getErrNum());
                 bargainAccountVO.setParagraph(traderUserStatVO.getParagraph().getValue());
                 //选中当前账号的持仓
              /*  if(ObjectUtil.isNotEmpty(accountVos)) {
