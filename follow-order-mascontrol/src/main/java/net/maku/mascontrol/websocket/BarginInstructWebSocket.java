@@ -1,5 +1,6 @@
 package net.maku.mascontrol.websocket;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.websocket.OnClose;
@@ -11,12 +12,14 @@ import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowMasOrderStatusEnum;
+import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
+import net.maku.mascontrol.vo.FollowBaiginInstructSubVO;
 import net.maku.mascontrol.vo.FollowBaiginInstructVO;
 import net.maku.mascontrol.vo.FollowBarginOrderVO;
 import online.mtapi.mt4.QuoteClient;
@@ -42,21 +45,17 @@ public class BarginInstructWebSocket {
     private RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
     private ScheduledFuture<?> scheduledFuture;
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    private static Map<String, Future<?>> scheduledTasks = new ConcurrentHashMap<>(); // 用于存储每个连接的定时任务
-    private FollowTraderUserService followTraderUserService= SpringContextUtils.getBean( FollowTraderUserServiceImpl.class);
-    private FollowVpsService followVpsService= SpringContextUtils.getBean( FollowVpsServiceImpl.class);
-    private FollowPlatformService followPlatformService= SpringContextUtils.getBean( FollowPlatformServiceImpl.class);
-    private FollowSysmbolSpecificationService followSysmbolSpecificationService= SpringContextUtils.getBean( FollowSysmbolSpecificationServiceImpl.class);
-    private FollowVarietyService followVarietyService= SpringContextUtils.getBean( FollowVarietyServiceImpl.class);
     private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
+    private FollowOrderDetailService followOrderDetailService= SpringContextUtils.getBean( FollowOrderDetailServiceImpl.class);
 
     @OnOpen
     public void onOpen(Session session) {
         try {
-            this.session = session;
-            if (scheduledExecutorService.isShutdown()){
-                startPeriodicTask();
+            if (scheduledExecutorService.isTerminated()){
+                scheduledExecutorService.shutdownNow();
             }
+            this.session = session;
+            startPeriodicTask();
         } catch (Exception e) {
             log.info("连接异常"+e);
             throw new RuntimeException();
@@ -66,7 +65,7 @@ public class BarginInstructWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
-        scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(), 0, 2, TimeUnit.SECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(), 0, 1, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
@@ -75,17 +74,42 @@ public class BarginInstructWebSocket {
 
     private void sendPeriodicMessage(){
         FollowBaiginInstructVO followBaiginInstructVO = new FollowBaiginInstructVO();
+        FollowOrderInstructEntity followOrderInstruct = null;
         //获取最新的正在执行指令
-//        Optional<FollowOrderInstructEntity> followOrderInstructEntity = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getStatus, FollowMasOrderStatusEnum.UNDERWAY.getValue()).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
-//        if (followOrderInstructEntity.isPresent()){
-//            FollowOrderInstructEntity followOrderInstruct = followOrderInstructEntity.get();
-//            followBaiginInstructVO.setStatus(CloseOrOpenEnum.CLOSE.getValue());
-//            followBaiginInstructVO.setScheduleNum(followOrderInstruct.getTradedOrders());
-//            followBaiginInstructVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
-//            followBaiginInstructVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
-//        }
-//        pushMessage(JsonUtils.toJsonString(followBarginOrderVO));
+        Optional<FollowOrderInstructEntity> followOrderInstructEntity = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getStatus, FollowMasOrderStatusEnum.UNDERWAY.getValue()).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
+        if (followOrderInstructEntity.isPresent()){
+            followOrderInstruct = followOrderInstructEntity.get();
+        }else {
+            Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
+            if (followOrderInstruct1.isPresent()) {
+                followOrderInstruct = followOrderInstruct1.get();
+            }
+        }
+        if (ObjectUtil.isNotEmpty(followOrderInstruct)){
+            BeanUtil.copyProperties(followOrderInstruct,followBaiginInstructVO);
+            List<FollowOrderDetailEntity> list = followOrderDetailService.getInstruct(followOrderInstruct.getOrderNo());
+            List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList=new ArrayList<>();
+            list.forEach(o->{
+                FollowBaiginInstructSubVO followBaiginInstructSubVO=new FollowBaiginInstructSubVO();
+                BeanUtil.copyProperties(o,followBaiginInstructSubVO);
+                if (ObjectUtil.isNotEmpty(o.getRemark())){
+                    //失败原因
+                    TradeErrorCodeEnum description = TradeErrorCodeEnum.getDescription(o.getRemark());
+                    if (ObjectUtil.isNotEmpty(description)){
+                        followBaiginInstructSubVO.setStatusComment("其他原因");
+                    }else {
+                        followBaiginInstructSubVO.setStatusComment(description.getDescription());
+                    }
+                }else {
+                    followBaiginInstructSubVO.setStatusComment("成功");
+                }
+                followBaiginInstructSubVOList.add(followBaiginInstructSubVO);
+            });
+            followBaiginInstructVO.setFollowBaiginInstructSubVOList(followBaiginInstructSubVOList);
+        }
+        pushMessage(JsonUtils.toJsonString(followBaiginInstructVO));
     }
+
 
 
     @OnClose
@@ -102,16 +126,10 @@ public class BarginInstructWebSocket {
     /**
      * 服务器端推送消息
      */
-    public void pushMessage(String traderId,String symbol, String message) {
+    public void pushMessage(String message) {
         try {
-            Set<Session> sessionSet = sessionPool.get(traderId+symbol);
-            if (ObjectUtil.isEmpty(sessionSet))return;
-            for (Session session : sessionSet) {
-                if (session.isOpen()) {
-                    synchronized (session) {
-                        session.getBasicRemote().sendText(message);
-                    }
-                }
+            synchronized (session) {
+                session.getBasicRemote().sendText(message);
             }
         } catch (Exception e) {
             e.printStackTrace();

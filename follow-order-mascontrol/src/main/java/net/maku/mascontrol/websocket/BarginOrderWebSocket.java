@@ -1,6 +1,9 @@
 package net.maku.mascontrol.websocket;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnMessage;
@@ -12,7 +15,9 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.SpringContextUtils;
+import net.maku.followcom.vo.OrderActiveInfoVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
@@ -23,25 +28,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+
+import static dm.jdbc.util.DriverUtil.log;
 
 /**
  * 账号信息
  */
 @Component
-@ServerEndpoint("/socket/bargain/orderSend/{traderId}/{symbol}") //此注解相当于设置访问URL
+@ServerEndpoint("/socket/bargain/orderSend") //此注解相当于设置访问URL
 public class BarginOrderWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(BarginOrderWebSocket.class);
-    private Session session;
-    private String traderId;
-    private String symbol;
     private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
-    private ScheduledFuture<?> scheduledFuture;
-    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(0,Thread.ofVirtual().factory());;
     private static Map<String, Future<?>> scheduledTasks = new ConcurrentHashMap<>(); // 用于存储每个连接的定时任务
     private FollowTraderUserService followTraderUserService= SpringContextUtils.getBean( FollowTraderUserServiceImpl.class);
     private FollowVpsService followVpsService= SpringContextUtils.getBean( FollowVpsServiceImpl.class);
@@ -51,25 +55,123 @@ public class BarginOrderWebSocket {
     private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
 
     @OnOpen
-    public void onOpen(Session session, @PathParam(value = "traderId") String traderId, @PathParam(value = "symbol") String symbol) {
-        try {
-            this.session = session;
-            this.traderId = traderId;
-            this.symbol = symbol;
+    public void onOpen(Session session) {
+    }
 
-            // 关闭之前的任务（如果存在）
-            if (scheduledTasks.containsKey(traderId + symbol)) {
-                stopPeriodicTask( traderId+symbol); // 停止之前的任务
+    private String getSymbol(String traderId,String symbol,QuoteClient quoteClient,FollowTraderEntity followTraderEntity,String brokeName) {
+        QuoteEventArgs eventArgs = null;
+        String oldSymbol=symbol;
+        //获取symbol信息
+        String finalSymbol = symbol;
+        List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->o.getSymbol().contains(finalSymbol)).toList();
+        if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
+            for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
+                symbol=o.getSymbol();
+                eventArgs = getEventArgs(symbol,quoteClient);
+                log.info("品种规格symbol"+symbol);
+                if (ObjectUtil.isNotEmpty(eventArgs)){
+                    break;
+                }
             }
-            Set<Session> sessionSet;
-            if (sessionPool.containsKey(traderId+symbol)) {
-                sessionSet = sessionPool.get(traderId+symbol);
-            } else {
-                sessionSet = new HashSet<>();
+            if (ObjectUtil.isEmpty(eventArgs)){
+                return oldSymbol;
             }
-            sessionSet.add(session);
-            sessionPool.put(traderId+symbol, sessionSet);
-            log.info("订阅该品种{}+++{}",symbol,traderId);
+        }else {
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+            String finalSymbol1 = symbol;
+            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(brokeName)&&o.getStdSymbol().equals(finalSymbol1)).toList();
+            log.info("匹配品种"+listv);
+            if (ObjectUtil.isNotEmpty(listv)){
+                for (FollowVarietyEntity o:listv){
+                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
+                        //查看品种规格
+                        log.info("匹配symbol"+o.getBrokerSymbol());
+                        symbol=o.getBrokerSymbol();
+                        eventArgs = getEventArgs(symbol,quoteClient);
+                        if (ObjectUtil.isNotEmpty(eventArgs)){
+                            break;
+                        }
+                    }
+                }
+                if (ObjectUtil.isEmpty(eventArgs)){
+                    return oldSymbol;
+                }
+            }
+        }
+        return symbol;
+
+    }
+
+    private void startPeriodicTask(String traderId,String symbol,QuoteClient client,Session session) {
+        // 每秒钟发送一次消息
+        Future<?> scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage( client,traderId,symbol,session), 0, 1, TimeUnit.SECONDS);
+        scheduledTasks.put(session.getId(), scheduledTask); // 将任务保存到任务映射中
+    }
+
+    private void sendPeriodicMessage(QuoteClient client,String trader,String symbol,Session session){
+        FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
+        QuoteEventArgs eventArgs = getEventArgs(symbol,client);
+        followBarginOrderVO.setBuyPrice(eventArgs.Ask);
+        followBarginOrderVO.setSellPrice(eventArgs.Bid);
+        //获取最新的正在执行指令
+        Optional<FollowOrderInstructEntity> followOrderInstructEntity = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getStatus, FollowMasOrderStatusEnum.UNDERWAY.getValue()).eq(FollowOrderInstructEntity::getTraderId, Integer.valueOf(trader)).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
+        if (followOrderInstructEntity.isPresent()){
+            FollowOrderInstructEntity followOrderInstruct = followOrderInstructEntity.get();
+            followBarginOrderVO.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+            followBarginOrderVO.setScheduleNum(followOrderInstruct.getTradedOrders());
+            followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
+            followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
+        }
+        pushMessage(session,JsonUtils.toJsonString(followBarginOrderVO));
+    }
+
+
+    @OnClose
+    public void onClose(Session session) {
+        try {
+            String id = session.getId();
+            Future<?> future = scheduledTasks.get(id);
+            if (future != null && !future.isCancelled()) {
+                future.cancel(true);
+            }
+            if (session != null && session.getBasicRemote() != null) {
+                session.close();
+            }
+
+        } catch (IOException e) {
+            log.error("关闭链接异常{}", e);
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    /**
+     * 服务器端推送消息
+     */
+    public void pushMessage(Session session,String message) {
+        try {
+            synchronized (session) {
+                session.getBasicRemote().sendText(message);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @OnMessage
+    public void onMessage(String message,Session session) {
+
+            JSONObject jsonObj = JSONObject.parseObject(message);
+            String symbol = jsonObj.getString("symbol");
+            String traderId = jsonObj.getString("traderId");
+            String id = session.getId();
+            Future<?> st = scheduledTasks.get(id);
+            if (st != null) {
+                st.cancel(true);
+                scheduledExecutorService.shutdown();
+            }
+
             //发送远程调用vps存入报价到redis
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(traderId);
             //查询各VPS状态正常的账号
@@ -98,128 +200,23 @@ public class BarginOrderWebSocket {
                 if (ObjectUtil.isNotEmpty(serverNode)) {
                     //处理节点格式
                     String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(followTrader.getAccount()), followTrader.getPassword(),  split[0], Integer.valueOf(split[1]));
-                    quoteClient.Connect();
-                    log.info(followTrader.getId()+"登录完成");
-                    //查品种模版
-                    getSymbol(quoteClient,followTrader,followPlatformServiceOne.getBrokerName());
-                    startPeriodicTask(quoteClient); // 启动定时任务
-                }
-            }
-        } catch (Exception e) {
-            log.info("连接异常"+e);
-            throw new RuntimeException();
-        }
-    }
-
-    private void getSymbol(QuoteClient quoteClient,FollowTraderEntity followTraderEntity,String brokeName) {
-        QuoteEventArgs eventArgs = null;
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->o.getSymbol().contains(symbol)).toList();
-        if (ObjectUtil.isNotEmpty(specificationServiceByTraderId)){
-            for (FollowSysmbolSpecificationEntity o:specificationServiceByTraderId) {
-                this.symbol=o.getSymbol();
-                eventArgs = getEventArgs(quoteClient);
-                log.info("品种规格symbol"+this.symbol);
-                if (ObjectUtil.isNotEmpty(eventArgs)){
-                    break;
-                }
-            }
-            if (ObjectUtil.isEmpty(eventArgs)){
-                this.symbol=symbol;
-            }
-        }else {
-            // 查看品种匹配 模板
-            List<FollowVarietyEntity> followVarietyEntityList =followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
-            List<FollowVarietyEntity> listv =followVarietyEntityList.stream().filter(o->ObjectUtil.isNotEmpty(o.getBrokerName())&&o.getBrokerName().equals(brokeName)&&o.getStdSymbol().equals(symbol)).toList();
-            log.info("匹配品种"+listv);
-            if (ObjectUtil.isNotEmpty(listv)){
-                for (FollowVarietyEntity o:listv){
-                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())){
-                        //查看品种规格
-                        log.info("匹配symbol"+o.getBrokerSymbol());
-                        this.symbol=o.getBrokerSymbol();
-                        eventArgs = getEventArgs(quoteClient);
-                        if (ObjectUtil.isNotEmpty(eventArgs)){
-                            break;
+                    try {
+                        QuoteClient quoteClient = new QuoteClient(Integer.parseInt(followTrader.getAccount()), AesUtils.decryptStr(followTrader.getPassword()),  split[0], Integer.valueOf(split[1]));
+                        quoteClient.Connect();
+                        log.info(followTrader.getId()+"登录完成");
+                        //查品种模版
+                        String symbol1 = getSymbol(traderId, symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
+                        if (!scheduledTasks.containsKey(id)) {
+                            startPeriodicTask(traderId, symbol1, quoteClient,session); // 启动定时任务
                         }
-                    }
-                }
-                if (ObjectUtil.isEmpty(eventArgs)){
-                    this.symbol=symbol;
-                }
-            }
-        }
-
-    }
-
-    private void startPeriodicTask(QuoteClient client) {
-        // 每秒钟发送一次消息
-        Future<?> scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage( client,traderId,symbol), 0, 2, TimeUnit.SECONDS);
-        scheduledTasks.put(traderId+symbol, scheduledTask); // 将任务保存到任务映射中
-    }
-
-    private void stopPeriodicTask(String key) {
-        if (scheduledTasks.containsKey(key)) {
-            Future<?> task = scheduledTasks.get(key);
-            if (task != null && !task.isCancelled()) {
-                task.cancel(true); // 取消之前的任务
-            }
-            scheduledTasks.remove(key); // 移除任务
-        }
-    }
-
-    private void sendPeriodicMessage(QuoteClient client,String trader,String symbol){
-        FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
-        QuoteEventArgs eventArgs = getEventArgs(client);
-        followBarginOrderVO.setBuyPrice(eventArgs.Ask);
-        followBarginOrderVO.setSellPrice(eventArgs.Bid);
-        //获取最新的正在执行指令
-        Optional<FollowOrderInstructEntity> followOrderInstructEntity = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getStatus, FollowMasOrderStatusEnum.UNDERWAY.getValue()).eq(FollowOrderInstructEntity::getTraderId, Integer.valueOf(trader)).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
-        if (followOrderInstructEntity.isPresent()){
-            FollowOrderInstructEntity followOrderInstruct = followOrderInstructEntity.get();
-            followBarginOrderVO.setStatus(CloseOrOpenEnum.CLOSE.getValue());
-            followBarginOrderVO.setScheduleNum(followOrderInstruct.getTradedOrders());
-            followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
-            followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
-        }
-        pushMessage(trader,symbol, JsonUtils.toJsonString(followBarginOrderVO));
-    }
-
-
-    @OnClose
-    public void onClose() {
-        try {
-            Set<Session> sessionSet = sessionPool.get(traderId+symbol);
-            if (ObjectUtil.isEmpty(sessionSet))return;
-            sessionPool.get(traderId+symbol).remove(session);
-            log.info("取消订阅该品种{}++++{}",symbol,traderId);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 服务器端推送消息
-     */
-    public void pushMessage(String traderId,String symbol, String message) {
-        try {
-            Set<Session> sessionSet = sessionPool.get(traderId+symbol);
-            if (ObjectUtil.isEmpty(sessionSet))return;
-            for (Session session : sessionSet) {
-                if (session.isOpen()) {
-                    synchronized (session) {
-                        session.getBasicRemote().sendText(message);
+                    }catch (Exception e){
+                        log.info("连接异常");
                     }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
-    @OnMessage
-    public void onMessage(String message) {
+
+       
     }
 
     public Boolean isConnection(String traderId,String symbol) {
@@ -227,13 +224,13 @@ public class BarginOrderWebSocket {
     }
 
 
-    private QuoteEventArgs getEventArgs(QuoteClient quoteClient){
+    private QuoteEventArgs getEventArgs(String symbol,QuoteClient quoteClient){
         QuoteEventArgs eventArgs = null;
         try {
-            log.info("quoteClient.GetQuote(this.symbol)"+quoteClient.GetQuote(this.symbol)+quoteClient.Connected());
-            if (ObjectUtil.isEmpty(quoteClient.GetQuote(this.symbol))){
+            log.info("quoteClient.GetQuote(symbol)"+quoteClient.GetQuote(symbol)+quoteClient.Connected());
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))){
                 //订阅
-                quoteClient.Subscribe(this.symbol);
+                quoteClient.Subscribe(symbol);
             }
             while (eventArgs==null && quoteClient.Connected()) {
                 try {
@@ -241,7 +238,7 @@ public class BarginOrderWebSocket {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                eventArgs=quoteClient.GetQuote(this.symbol);
+                eventArgs=quoteClient.GetQuote(symbol);
             }
             return eventArgs;
         }catch (Exception e) {

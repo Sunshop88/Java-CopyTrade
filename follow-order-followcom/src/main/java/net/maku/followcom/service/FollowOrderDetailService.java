@@ -40,4 +40,6 @@ public interface FollowOrderDetailService extends BaseService<FollowOrderDetailE
     void saveOrderHistory(QuoteClient quoteClient, FollowTraderEntity u, LocalDateTime localDateTime);
 
     void saveOrderActive(QuoteClient quoteClient, FollowTraderEntity u);
+
+    List<FollowOrderDetailEntity> getInstruct(String orderNo);
 }
