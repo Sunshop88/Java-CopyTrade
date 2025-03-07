@@ -589,10 +589,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
             // 等待所有异步任务完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } else {
+            vo.setPassword(s);
+            FollowTraderUserEntity convert = FollowTraderUserConvert.INSTANCE.convert(vo);
+            this.updateById(convert);
         }
-
-        vo.setPassword(s);
-        this.update(vo, req);
     }
 
     @Override
