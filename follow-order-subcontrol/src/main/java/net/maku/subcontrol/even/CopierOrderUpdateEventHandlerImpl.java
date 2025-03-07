@@ -138,13 +138,13 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 } else {
                                     redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairVOS));
                                 }
-                                log.info("监听跟单漏单删除,key:{},key:{},喊单订单号:{},val:{}", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount(), mg, JSONObject.toJSONString(repairVOS));
+                                log.info("监听跟单漏单删除,主账号:{},跟单账号:{},喊单订单号:{}", master.getAccount() , follow.getAccount(), mg);
                             }
                         }finally {
                             redissonLockUtil.unlock(key1);
                         }
 //                        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getAccount, follow.getAccount()).eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getPlatform, follow.getPlatform()));
-                        log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
+                    //    log.info("监听跟单漏开删除:跟单账号:{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
                     });
                     break;
                 case PositionClose:
@@ -177,12 +177,12 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                                 } else {
                                     redisUtil.hSetStr(Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSONObject.toJSONString(repairInfoVOS));
                                 }
-                                log.info("监听跟单漏平删除,key:{},key:{},订单号:{},val:{}", Constant.REPAIR_CLOSE + master.getAccount() + ":" + master.getId(), follow.getAccount(),magical, JSONObject.toJSONString(repairInfoVOS));
+                                log.info("监听跟单漏平删除,主账号:{},跟单账号:{},喊单订单号:{}",  master.getAccount(), follow.getAccount(),magical);
                             }
                         }finally {
                             redissonLockUtil.unlock(key);
                         }
-                        log.info("监听跟单漏平删除:跟单账号{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
+                      //  log.info("监听跟单漏平删除:跟单账号{},订单号：{},平台:{}", follow.getAccount(),order.Ticket,follow.getPlatform());
                         repairSend(follow,master,copier4ApiTrader.quoteClient);
                     });
                     break;
@@ -237,7 +237,7 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                             repairInfoVOS.put(orderInfo.getOrderNo(), orderRepairInfoVO);
                         }
                         redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), JSON.toJSONString(repairInfoVOS));
-                        log.info("漏开补偿数据写入,key:{},key:{},订单号:{},val:{},", Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(), orderInfo.getOrderNo(), JSONObject.toJSONString(repairInfoVOS));
+                        log.info("漏开补偿数据写入,主账号:{},跟单账号:{},喊单订单号:{}", master.getAccount() , follow.getAccount().toString(), orderInfo.getOrderNo());
                     });
                 }else{
                     redisUtil.hDel(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString());

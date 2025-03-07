@@ -93,7 +93,7 @@ public class OrderCloseMaster extends AbstractOperation implements IOperationStr
                         }else{
                             redisUtil.hSetStr(Constant.REPAIR_SEND + master.getAccount() + ":" + master.getId(), follow.getAccount().toString(),JSONObject.toJSONString(repairInfoVOS));
                         }
-                        log.info("漏单删除,key:{},key:{},订单号:{},val:{},",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount(),orderInfo.getTicket(),JSONObject.toJSONString(repairInfoVOS) );
+                        log.info("漏单删除,主账号:{},跟单账号:{},订单号:{}",Constant.REPAIR_SEND +master.getAccount() + ":" + master.getId(), follow.getAccount(),orderInfo.getTicket() );
                     }
 
                 }finally {
