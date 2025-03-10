@@ -245,8 +245,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     } else {
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
-                } else {
-                    log.error("未找到对应的 : 账号={} 平台={}", vo.getAccount(), vo.getPlatform());
                 }
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
@@ -514,16 +512,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         headers.put("Authorization", token);
         headers.put("Content-Type", "application/json");
 
-        // 使用线程池
-        ExecutorService executor = Executors.newFixedThreadPool(20);
+        // 使用 CompletableFuture 处理异步任务
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (FollowTraderUserVO vo : voList) {
-            executor.execute(() -> {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
                     // 查询账号状态
                     LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
                     queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
                     List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
+
                     if (ObjectUtil.isNotEmpty(followTraderEntities)) {
                         for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                             // 账号正常登录
@@ -575,7 +574,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureCount.incrementAndGet(); // 数据库更新失败算作失败
                 }
             });
+
+            futures.add(future);
         }
+
+        // 等待所有任务完成
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        allOf.join(); // 阻塞直到所有任务完成
 
         followUploadTraderUserVO.setUploadTotal(uploadTotal);
         followUploadTraderUserVO.setSuccessCount(successCount.get());
@@ -584,6 +589,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setId(savedId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
     }
+
 
 
 
