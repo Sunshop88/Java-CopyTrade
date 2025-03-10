@@ -174,6 +174,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(entity);
         followTraderVO.setId(entity.getId());
+        followTraderVO.setServerNode(followPlatform.getServerNode());
         return followTraderVO;
     }
 

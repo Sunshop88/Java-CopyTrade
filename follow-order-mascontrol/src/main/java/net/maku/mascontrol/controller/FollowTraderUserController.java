@@ -169,8 +169,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @Operation(summary = "删除")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<String> delete(@RequestBody List<Long> idList){
-        followTraderUserService.delete(idList);
+    public Result<String> delete(@RequestBody List<Long> idList ,HttpServletRequest req){
+        followTraderUserService.delete(idList,req);
 
         return Result.ok();
     }

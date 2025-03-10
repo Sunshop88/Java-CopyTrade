@@ -90,8 +90,8 @@ public class BargainWebSocket {
                 bargainAccountVO.setTraderUserPage(followTraderUserVOPageResult);
                 bargainAccountVO.setAccountNum(traderUserStatVO.getTotal());
                 bargainAccountVO.setAccountConnectedNum(traderUserStatVO.getConNum());
-                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getTotal()-traderUserStatVO.getErrNum());
-                bargainAccountVO.setParagraph(traderUserStatVO.getParagraph().getValue());
+                bargainAccountVO.setAccountDisconnectedNum(traderUserStatVO.getTotal()-traderUserStatVO.getConNum());
+                bargainAccountVO.setParagraph(traderUserStatVO.getParagraph().getValue().setScale(2, BigDecimal.ROUND_HALF_UP));
                 //选中当前账号的持仓
              /*  if(ObjectUtil.isNotEmpty(accountVos)) {
                     getActive(accountVos,bargainAccountVO);

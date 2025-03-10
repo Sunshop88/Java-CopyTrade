@@ -38,6 +38,7 @@ import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -115,6 +116,7 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
+        String password = AesUtils.aesEncryptStr(vo.getPassword());
         //本机处理
         try {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
@@ -145,12 +147,13 @@ public class FollowTraderController {
                 if (ObjectUtil.isEmpty(entities)) {
                     FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
                     followTraderUserVO.setAccount(vo.getAccount());
-                    followTraderUserVO.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    followTraderUserVO.setPassword(password);
                     followTraderUserVO.setPlatform(vo.getPlatform());
                     followTraderUserVO.setAccountType("MT4");
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
-                    followTraderUserVO.setServerNode(followTraderVO.getServerIp());
+                    followTraderUserVO.setStatus(1);
+                    followTraderUserVO.setServerNode(followTraderVO.getServerNode());
                     followTraderUserService.save(followTraderUserVO);
                     //查询最新的id
                     newUserId=followTraderUserService.getOne(new QueryWrapper<FollowTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
@@ -959,6 +962,7 @@ public class FollowTraderController {
     public Result<Boolean> reconnectionTrader(@RequestBody FollowTraderVO vo) {
         QuoteClient quoteClient = null;
         Long traderId = vo.getId();
+        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
         try {

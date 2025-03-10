@@ -75,8 +75,8 @@ public class BargainController {
             throw new ServerException("vps不存在");
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
-        //  list.get(0).getIpAddr()
-        Result result = RestUtil.sendRequest(request, "39.98.109.212", HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
+
+        Result result = RestUtil.sendRequest(request,   list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
         return result;
     }
 

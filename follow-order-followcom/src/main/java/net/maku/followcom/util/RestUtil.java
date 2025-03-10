@@ -19,10 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 调用 Restful 接口 Util
@@ -397,7 +394,9 @@ public class RestUtil {
                     });
                 }
                 if(!sb.isEmpty()){
-                    url=url+"?"+sb.toString().substring(0,sb.toString().length()-1);
+                    Random random=new Random();
+                    int randomNum  = random.nextInt(10000);
+                    url=url+"?randomNum="+randomNum+"&"+sb.toString().substring(0,sb.toString().length()-1);
                 }
             }
             try {
