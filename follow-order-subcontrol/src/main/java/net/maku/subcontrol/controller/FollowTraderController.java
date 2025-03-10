@@ -117,7 +117,7 @@ public class FollowTraderController {
         if (ObjectUtil.isEmpty(vo.getTemplateId())) {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
-        String password = AesUtils.aesEncryptStr(vo.getPassword());
+        String password = vo.getPassword();
         //本机处理
         try {
             vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
