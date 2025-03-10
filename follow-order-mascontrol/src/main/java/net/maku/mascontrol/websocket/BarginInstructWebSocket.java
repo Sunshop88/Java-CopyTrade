@@ -115,8 +115,11 @@ public class BarginInstructWebSocket {
     @OnClose
     public void onClose() {
         try {
-            if (scheduledExecutorService.isTerminated()){
-                scheduledExecutorService.isShutdown();
+            if (session != null && session.isOpen()) {
+                if (scheduledExecutorService.isTerminated()){
+                    scheduledExecutorService.isShutdown();
+                }
+                session.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -128,8 +131,10 @@ public class BarginInstructWebSocket {
      */
     public void pushMessage(String message) {
         try {
-            synchronized (session) {
-                session.getBasicRemote().sendText(message);
+            if (session != null && session.isOpen()) {
+                synchronized (session) {
+                    session.getBasicRemote().sendText(message);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

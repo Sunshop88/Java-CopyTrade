@@ -40,6 +40,13 @@ public class FollowConstant {
     }
 
     /**
+     * 版本号
+     */
+    public static String MAS_VERSION = "1.2.0_0001";
+
+    public static String SUB_VERSION = "1.2.0_0001";
+
+    /**
      * 请求端口
      */
     public static String VPS_PORT = "9001";

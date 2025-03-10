@@ -153,8 +153,10 @@ public class BarginOrderWebSocket {
      */
     public void pushMessage(Session session,String message) {
         try {
-            synchronized (session) {
-                session.getBasicRemote().sendText(message);
+            if (session != null && session.getBasicRemote() != null) {
+                synchronized (session) {
+                    session.getBasicRemote().sendText(message);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
