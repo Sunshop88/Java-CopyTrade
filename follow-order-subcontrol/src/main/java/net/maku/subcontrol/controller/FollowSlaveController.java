@@ -134,6 +134,7 @@ public class FollowSlaveController {
                     followTraderUserVO.setPlatform(vo.getPlatform());
                     followTraderUserVO.setPassword(password);
                     followTraderUserVO.setAccountType("MT4");
+                    followTraderUserVO.setStatus(1);
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
                     followTraderUserVO.setServerNode(followTraderVO.getServerIp());
