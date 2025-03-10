@@ -75,15 +75,10 @@ public class BarginInstructWebSocket {
     private void sendPeriodicMessage(){
         FollowBaiginInstructVO followBaiginInstructVO = new FollowBaiginInstructVO();
         FollowOrderInstructEntity followOrderInstruct = null;
-        //获取最新的正在执行指令
-        Optional<FollowOrderInstructEntity> followOrderInstructEntity = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getStatus, FollowMasOrderStatusEnum.UNDERWAY.getValue()).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
-        if (followOrderInstructEntity.isPresent()){
-            followOrderInstruct = followOrderInstructEntity.get();
-        }else {
-            Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
-            if (followOrderInstruct1.isPresent()) {
-                followOrderInstruct = followOrderInstruct1.get();
-            }
+        //获取最新指令
+        Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
+        if (followOrderInstruct1.isPresent()) {
+            followOrderInstruct = followOrderInstruct1.get();
         }
         if (ObjectUtil.isNotEmpty(followOrderInstruct)){
             BeanUtil.copyProperties(followOrderInstruct,followBaiginInstructVO);

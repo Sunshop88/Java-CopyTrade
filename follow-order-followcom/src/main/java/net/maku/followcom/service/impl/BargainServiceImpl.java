@@ -153,6 +153,8 @@ public class BargainServiceImpl implements BargainService {
                                 totalOrders.updateAndGet(v -> v + data.getTotalNum());
                                 // 更新 totalLots，使用 AtomicReference 的 getAndUpdate 方法
                                 totalLots.updateAndGet(current -> current.add(BigDecimal.valueOf(data.getTotalSize())));
+                            }else {
+                                log.info("交易下单请求异常"+followTraderEntity.getId());
                             }
                         } catch (Exception e) {
                             log.error("订单处理异常", e);
