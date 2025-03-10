@@ -36,6 +36,9 @@ public class FollowBaiginInstructVO implements Serializable {
 	@Schema(description = "成交单数")
 	private Integer tradedOrders;
 
+	@Schema(description = "失败订单")
+	private Integer failOrders;
+
 	@Schema(description = "状态0-执行中 1-全部成功 2-存在失败")
 	private Integer status;
 
