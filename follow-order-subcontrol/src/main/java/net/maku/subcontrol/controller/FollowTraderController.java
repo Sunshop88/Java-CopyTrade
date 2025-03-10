@@ -50,6 +50,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -938,11 +939,16 @@ public class FollowTraderController {
         List<FollowTraderEntity> list = followTraderService.listByServerName(severName);
         log.info("查询到serverName为{}的账号数为{}", severName, list.size());
         Map<String, Boolean> reconnectResults = new HashMap<>();
-
+        List<FollowVpsEntity> vps = followVpsService.list();
+        Map<Integer, FollowVpsEntity> map = vps.stream().collect(Collectors.toMap(FollowVpsEntity::getId, Function.identity()));
         for (FollowTraderEntity followTraderEntity : list) {
-            String traderId = followTraderEntity.getId().toString();
-            Boolean reconnect = reconnect(traderId);
-            reconnectResults.put(traderId, reconnect);
+            FollowVpsEntity followVpsEntity = map.get(followTraderEntity.getServerId());
+            if(followVpsEntity.getIsActive()==CloseOrOpenEnum.OPEN.getValue()){
+                String traderId = followTraderEntity.getId().toString();
+                Boolean reconnect = reconnect(traderId);
+                reconnectResults.put(traderId, reconnect);
+            }
+
         }
 
         return Result.ok(reconnectResults);
