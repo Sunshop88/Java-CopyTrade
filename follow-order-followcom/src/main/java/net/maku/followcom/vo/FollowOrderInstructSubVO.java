@@ -45,6 +45,9 @@ public class FollowOrderInstructSubVO implements Serializable {
 	@Schema(description = "状态0-成功1-各类错误")
 	private Integer status;
 
+	@Schema(description = "状态描述")
+	private String statusComment;
+
 	@Schema(description = "手数")
 	private BigDecimal lots;
 

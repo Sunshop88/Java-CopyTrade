@@ -13,9 +13,11 @@ import lombok.AllArgsConstructor;
 import net.maku.followcom.convert.FollowOrderDetailConvert;
 import net.maku.followcom.dto.MasOrderSendDto;
 import net.maku.followcom.dto.MasToSubOrderCloseDto;
+import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
+import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
@@ -168,13 +170,32 @@ public class BargainController {
     @Operation(summary = "历史子指令分页")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<FollowOrderInstructSubVO>> page(@RequestParam String sendNo){
-        FollowOrderDetailQuery ordreQuery=new FollowOrderDetailQuery();
-        ordreQuery.setSendNo(sendNo);
-        ordreQuery.setPage(1);
-        ordreQuery.setLimit(1000);
-        PageResult<FollowOrderDetailVO> page = followOrderDetailService.page(ordreQuery);
-        List<FollowOrderInstructSubVO> followOrderInstructSubVOS = FollowOrderDetailConvert.INSTANCE.convertPage(page.getList());
-
+        List<FollowOrderInstructSubVO> followOrderInstructSubVOS = new ArrayList<>();
+        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo));
+        if (ObjectUtil.isNotEmpty(list)){
+            for (FollowOrderDetailEntity followOrderDetailEntity : list) {
+                FollowOrderInstructSubVO detail = new FollowOrderInstructSubVO();
+                detail.setSymbol(followOrderDetailEntity.getSymbol());
+                detail.setType(followOrderDetailEntity.getType());
+                detail.setAccount(followOrderDetailEntity.getAccount());
+                detail.setAccountType("MT4");
+                detail.setLots(followOrderDetailEntity.getSize());
+                detail.setCreateTime(followOrderDetailEntity.getCreateTime());
+                if (ObjectUtil.isNotEmpty(followOrderDetailEntity.getRemark())){
+                    //失败原因
+                    TradeErrorCodeEnum description = TradeErrorCodeEnum.getDescription(followOrderDetailEntity.getRemark());
+                    if (ObjectUtil.isNotEmpty(description)){
+                        detail.setStatusComment("其他原因");
+                    }else {
+                        detail.setStatusComment(description.getDescription());
+                    }
+                }else {
+                    detail.setStatusComment("成功");
+                }
+                detail.setEndTime(followOrderDetailEntity.getResponseOpenTime());
+                followOrderInstructSubVOS.add(detail);
+            }
+        }
         return Result.ok(followOrderInstructSubVOS);
     }
 
