@@ -53,7 +53,7 @@ public class BarginOrderWebSocket {
     private FollowSysmbolSpecificationService followSysmbolSpecificationService= SpringContextUtils.getBean( FollowSysmbolSpecificationServiceImpl.class);
     private FollowVarietyService followVarietyService= SpringContextUtils.getBean( FollowVarietyServiceImpl.class);
     private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
-
+    private ConcurrentHashMap<String, QuoteClient> quoteClientConcurrentHashMap=new ConcurrentHashMap<>();
     @OnOpen
     public void onOpen(Session session) {
     }
@@ -119,7 +119,7 @@ public class BarginOrderWebSocket {
         if (followOrderInstructEntity.isPresent()){
             FollowOrderInstructEntity followOrderInstruct = followOrderInstructEntity.get();
             followBarginOrderVO.setStatus(CloseOrOpenEnum.CLOSE.getValue());
-            followBarginOrderVO.setScheduleNum(followOrderInstruct.getTradedOrders());
+            followBarginOrderVO.setScheduleNum(followOrderInstruct.getTrueTotalOrders());
             followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
             followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
         }else {
@@ -171,7 +171,7 @@ public class BarginOrderWebSocket {
             Future<?> st = scheduledTasks.get(id);
             if (st != null) {
                 st.cancel(true);
-                scheduledExecutorService.shutdown();
+                scheduledTasks.clear();
             }
 
             //发送远程调用vps存入报价到redis
@@ -203,9 +203,14 @@ public class BarginOrderWebSocket {
                     //处理节点格式
                     String[] split = serverNode.split(":");
                     try {
-                        QuoteClient quoteClient = new QuoteClient(Integer.parseInt(followTrader.getAccount()), AesUtils.decryptStr(followTrader.getPassword()),  split[0], Integer.valueOf(split[1]));
-                        quoteClient.Connect();
-                        log.info(followTrader.getId()+"登录完成");
+                        QuoteClient quoteClient =quoteClientConcurrentHashMap.get(followTrader.getId().toString());
+                        if (ObjectUtil.isEmpty(quoteClient)){
+                            quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                        }else {
+                            if (!quoteClient.Connected()){
+                                quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                            }
+                        }
                         //查品种模版
                         String symbol1 = getSymbol(traderId, symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
                         if (!scheduledTasks.containsKey(id)) {
@@ -219,6 +224,19 @@ public class BarginOrderWebSocket {
 
 
        
+    }
+
+    private QuoteClient loginMt4(String traderId,String account, String password, String[] s) {
+        try {
+            QuoteClient  quoteClient = new QuoteClient(Integer.parseInt(account), AesUtils.decryptStr(password),  s[0], Integer.valueOf(s[1]));
+            quoteClient.Connect();
+            quoteClientConcurrentHashMap.put(traderId,quoteClient);
+            log.info(account+"登录完成");
+            return quoteClient;
+        }catch (Exception e){
+            log.info("登录异常");
+            return null;
+        }
     }
 
     public Boolean isConnection(String traderId,String symbol) {
