@@ -188,4 +188,5 @@ public class FollowTraderVO implements Serializable {
 	private String newPassword;
 	//用于挂号vps(true 需要新增)
 	private Boolean isAdd;
+	private String serverNode;
 }

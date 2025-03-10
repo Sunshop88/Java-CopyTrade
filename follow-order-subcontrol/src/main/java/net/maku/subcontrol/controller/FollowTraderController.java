@@ -153,8 +153,7 @@ public class FollowTraderController {
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
                     followTraderUserVO.setStatus(1);
-                    followTraderUserVO.setServerNode(followTraderVO.getServerIp());
-                    log.info("节点：" + followTraderVO.getServerIp());
+                    followTraderUserVO.setServerNode(followTraderVO.getServerNode());
                     followTraderUserService.save(followTraderUserVO);
                     //查询最新的id
                     newUserId=followTraderUserService.getOne(new QueryWrapper<FollowTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();

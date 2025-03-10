@@ -262,15 +262,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void delete(List<Long> idList) {
-//        //根据id查询账号
-//        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, idList));
-//        if (ObjectUtil.isNotEmpty(list)){
-//            List<String>accountList = list.stream().map(FollowTraderUserEntity::getAccount).toList();
-//            //删除followTrader表信息
-//            followTraderService.remove(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getAccount, accountList));
-//        }
-//        removeByIds(idList);
+    public void delete(List<Long> idList, HttpServletRequest request) {
         for (Long id : idList) {
             FollowTraderUserVO vo = get(id);
             //根据账号删除
@@ -281,8 +273,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
                     continue;
                 }
-                List<Long> accountList = List.stream().map(FollowTraderEntity::getId).toList();
-                followTraderService.removeByIds(accountList);
+                for (FollowTraderEntity entity : List) {
+                    List<Long> account = Collections.singletonList(entity.getId());
+                    Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
+                    log.info("删除成功:{}", result);
+                }
             }
         }
         removeByIds(idList);
