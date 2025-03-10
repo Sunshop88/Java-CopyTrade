@@ -241,7 +241,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
                     ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                     if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
-                        log.error("账号重连失败:{}", followTraderEntity.getAccount());
+                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getBody().getString("msg"));
                     } else {
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
