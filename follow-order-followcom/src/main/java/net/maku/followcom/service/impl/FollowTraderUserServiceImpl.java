@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -7,6 +8,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +58,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -214,12 +219,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(FollowTraderUserVO vo, HttpServletRequest req) {
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
         ThreadPoolUtils.execute(() -> {
             try {
-                String token = req.getHeader("Authorization");
+            /*    String token = req.getHeader("Authorization");
                 Map<String, String> headers = new HashMap<>();
                 headers.put("Authorization", token);
-                headers.put("Content-Type", "application/json");
+                headers.put("Content-Type", "application/json");*/
 
                 // 根据account和platform查询出对应的信息
                 FollowTraderEntity followTraderEntity = followTraderService.list(
@@ -231,23 +237,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 if (followTraderEntity != null && !followTraderEntity.getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
-                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-                    RestTemplate restTemplate = new RestTemplate();
 
-                    // 使用提前提取的 headers 构建请求头
-                    HttpHeaders httpHeaders = new HttpHeaders();
-                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
-                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
-
-                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
-                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getBody().getString("msg"));
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                    if (response != null && !response.getMsg().equals("success")) {
+                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                     } else {
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
-                } else {
-                    log.error("未找到对应的 : 账号={} 平台={}", vo.getAccount(), vo.getPlatform());
                 }
+                /*else {
+                    log.error("未找到对应的 : 账号={} 平台={}", vo.getAccount(), vo.getPlatform());
+                }*/
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
             }
