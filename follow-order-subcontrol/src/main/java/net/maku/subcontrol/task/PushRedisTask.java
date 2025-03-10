@@ -226,7 +226,273 @@ public class PushRedisTask {
            String localHost = FollowConstant.LOCAL_HOST;
            String keyl="LOCK:" + localHost;
            boolean lock = redissonLockUtil.lock(keyl, 10, -1, TimeUnit.SECONDS);
-           try {
+          synchronized (localHost){
+         //     if (lock) {
+
+                  //查询当前vpsId所有账号
+                  List<FollowTraderEntity> followTraderList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
+                          .eq(FollowTraderEntity::getServerId, vpsId).in(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType(),TraderTypeEnum.MASTER_REAL.getType()));
+                  //获取
+                  List<FollowTraderSubscribeEntity> list = followTraderSubscribeService.list();
+                  Map<Long, FollowTraderSubscribeEntity> subscribeMap = list.stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, Function.identity()));
+                  //根据vpsId账号分组
+                  Map<Integer, List<FollowTraderEntity>> map = new HashMap<>();
+                  //查询所有平台
+                  List<FollowPlatformEntity> platformList = followPlatformService.list();
+                  Map<Long, List<FollowPlatformEntity>> platformMap = platformList.stream().collect(Collectors.groupingBy(FollowPlatformEntity::getId));
+                  String key = "VPS:PUSH:";
+                  followTraderList.sort((o1,o2)->{
+                      return   o1.getType().compareTo(o2.getType());
+                  });
+
+                  map.put(vpsId, followTraderList);
+
+
+                  map.forEach((k, v) -> {
+                      //多线程写
+                      //   boolean flag = redisUtil.setnx(key + k, k, 2);
+                      boolean flag = true;
+                      StringBuilder sbb=new StringBuilder();
+                      //设置成功过表示超过2秒内
+                      if (flag) {
+                          List<AccountCacheVO> accounts = new Vector<>();
+                          //遍历账号获取持仓订单
+                          CountDownLatch countDownLatch = new CountDownLatch(v.size());
+                          for (FollowTraderEntity h : v) {
+
+                              ThreadPoolUtils.getExecutor().execute(()->{
+
+
+                                  AccountCacheVO accountCache = FollowTraderConvert.INSTANCE.convertCache(h);
+
+                                  if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                      accountCache.setType("FOLLOW");
+                                  }else{
+                                      accountCache.setType("SOURCE");
+                                  }
+                                  accountCache.setServer(h.getIpAddr());
+                                  List<OrderCacheVO> orderCaches = new ArrayList<>();
+                                  //根据id
+                                  String akey = (h.getType() == 0 ? "S" : "F") + h.getId();
+                                  accountCache.setKey(akey);
+
+                                  if (h.getType().equals(TraderTypeEnum.MASTER_REAL.getType())){
+                                      String group = h.getId() + " " + h.getAccount();
+                                      accountCache.setGroup(group);
+                                  }else{
+                                      FollowTraderSubscribeEntity sb = subscribeMap.get(h.getId());
+                                      if(sb!=null) {
+                                          String desc = PlacedTypeEnum.getDesc(sb.getPlacedType() == null ? 0 : sb.getPlacedType());
+                                          accountCache.setPlacedTypeString(desc);
+                                          accountCache.setStatus(sb.getFollowStatus() == 0 ? false : true);
+                                          if (sb != null) {
+                                              String group = sb.getMasterId() + " " + sb.getMasterAccount();
+                                              accountCache.setGroup(group);
+                                          }
+                                      }
+                                  }
+
+
+                                  List<FollowPlatformEntity> followPlatformEntities = platformMap.get(Long.valueOf(h.getPlatformId()));
+                                  if(followPlatformEntities!=null && followPlatformEntities.size()>0) {
+                                      String platformType = followPlatformEntities.get(0).getPlatformType();
+                                      accountCache.setPlatformType(platformType);
+                                  }
+
+                                  //订单信息
+                                  QuoteClient quoteClient = null;
+                                  try {
+                                      quoteClient= getQuoteClient(h.getId(),h,quoteClient);
+                                  } catch (Exception e) {
+
+                                  }
+                                  //所有持仓
+                                  try {
+                                      if (ObjectUtil.isNotEmpty(quoteClient)) {
+                                          Order[] orders = quoteClient.GetOpenedOrders();
+                                          //账号信息
+                                          ConGroup account = quoteClient.Account();
+                                          accountCache.setCredit(quoteClient.Credit);
+                                          Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
+                                          accountCache.setLots(0.00);
+                                          accountCache.setCount(0);
+                                          accountCache.setBuy(0.00);
+                                          accountCache.setSell(0.00);
+                                          accountCache.setProfit(0.00);
+                                          accountCache.setFreeMargin(quoteClient.FreeMargin);
+                                          if(quoteClient.Margin!=0) {
+                                              BigDecimal v1 = new BigDecimal(quoteClient.Equity).divide(new BigDecimal(quoteClient.Margin), 5, BigDecimal.ROUND_HALF_UP).multiply(new BigDecimal(100));
+                                              accountCache.setMarginLevel(v1);
+                                          }
+
+                                          accountCache.setMargin(BigDecimal.valueOf(quoteClient.Margin));
+                                          // accountCache.setCredit(quoteClient.Credit);
+                                          if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                              FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                              if(followTraderSubscribeEntity!=null) {
+                                                  String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                                  //  0-固定手数 1-手数比例 2-净值比例
+                                                  String mode = null;
+                                                  switch (followTraderSubscribeEntity.getFollowMode()) {
+                                                      case (0):
+                                                          mode = "固定";
+                                                          break;
+                                                      case (1):
+                                                          mode = "手";
+                                                          break;
+                                                      case (2):
+                                                          mode = "净";
+                                                          break;
+                                                  }
+                                                  accountCache.setModeString(direction + "|全部|" + mode + "*" + followTraderSubscribeEntity.getFollowParam());
+                                              }
+                                          }
+                                          if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                              accountCache.setModeString("");
+                                          }
+                                          if(quoteClient.Connected()){
+                                              accountCache.setManagerStatus("Connected");
+                                          }else{
+                                              accountCache.setManagerStatus("Disconnected");
+                                          }
+
+                                          orderMap.forEach((a, b) -> {
+                                      /*  switch (a) {
+                                            case Buy:
+                                                accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
+                                                break;
+                                            case Sell:
+                                                accountCache.setSell(ObjectUtil.isEmpty(b) ? 0 : b.size()) ;
+                                                break;
+                                            default:
+                                                Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
+                                                accountCache.setCount(accountCache.getCount() + count);
+                                                break;
+                                        }*/
+                                              if (ObjectUtil.isNotEmpty(b)) {
+                                                  b.forEach(x -> {
+                                                      OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                                      //  orderCacheVO.setId(x.);
+                                                      //    orderCacheVO.setLogin(x.);
+                                                      orderCacheVO.setTicket(x.Ticket);
+                                                      orderCacheVO.setOpenTime(x.OpenTime);
+                                                      orderCacheVO.setCloseTime(x.CloseTime);
+                                                      orderCacheVO.setType(x.Type);
+                                                      orderCacheVO.setLots(x.Lots);
+                                                      orderCacheVO.setSymbol(x.Symbol);
+                                                      orderCacheVO.setOpenPrice(x.OpenPrice);
+                                                      orderCacheVO.setStopLoss(x.StopLoss);
+                                                      orderCacheVO.setTakeProfit(x.TakeProfit);
+                                                      orderCacheVO.setClosePrice(x.ClosePrice);
+                                                      orderCacheVO.setMagicNumber(x.MagicNumber);
+                                                      orderCacheVO.setSwap(x.Swap);
+                                                      orderCacheVO.setCommission(x.Commission);
+                                                      orderCacheVO.setComment(x.Comment);
+                                                      orderCacheVO.setProfit(x.Profit);
+                                                      if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                                          FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                                          //  orderCacheVO.setPlaceType(x.p);
+                                                          //  accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                                                      }
+                                                      orderCacheVO.setLogin(Long.parseLong(h.getAccount()));
+                                                      orderCacheVO.setPlaceType(accountCache.getPlacedTypeString());
+                                                      orderCaches.add(orderCacheVO);
+                                                      accountCache.setLots(accountCache.getLots() + x.Lots);
+                                                      switch (a) {
+                                                          case Buy:
+                                                              accountCache.setBuy(accountCache.getBuy() + x.Lots);
+                                                              accountCache.setCount(accountCache.getCount() + 1);
+                                                              break;
+                                                          case Sell:
+                                                              accountCache.setSell(accountCache.getSell() + x.Lots);
+                                                              accountCache.setCount(accountCache.getCount() + 1);
+                                                              break;
+                                                          default:
+                                                              // Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
+                                                              // accountCache.setCount(accountCache.getCount() + count);
+                                                              break;
+                                                      }
+                                                      accountCache.setProfit(accountCache.getProfit() + x.Profit);
+                                                  });
+                                              }
+                                              accountCache.setOrders(orderCaches);
+                                          });
+                                      }else{
+                                          accountCache.setCredit(0.00);
+                                          accountCache.setLots(0.00);
+                                          accountCache.setCount(0);
+                                          accountCache.setBuy(0.00);
+                                          accountCache.setSell(0.00);
+                                          accountCache.setProfit(0.00);
+                                          accountCache.setFreeMargin(0.00);
+                                          if (h.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())){
+                                              FollowTraderSubscribeEntity followTraderSubscribeEntity = subscribeMap.get(h.getId());
+                                              if(followTraderSubscribeEntity!=null) {
+                                                  accountCache.setPlacedTypeString(PlacedTypeEnum.getDesc(followTraderSubscribeEntity.getPlacedType()));
+                                                  String direction = followTraderSubscribeEntity.getFollowDirection() == 0 ? "正" : "反";
+                                                  //  0-固定手数 1-手数比例 2-净值比例
+                                                  String mode = null;
+                                                  switch (followTraderSubscribeEntity.getFollowMode()) {
+                                                      case (0):
+                                                          mode = "固定";
+                                                          break;
+                                                      case (1):
+                                                          mode = "手";
+                                                          break;
+                                                      case (2):
+                                                          mode = "净";
+                                                          break;
+                                                  }
+                                                  accountCache.setModeString(direction + "|全部|" + mode + "*" + followTraderSubscribeEntity.getFollowParam());
+                                              }
+                                          }
+                                          if(ObjectUtil.isEmpty(accountCache.getModeString())){
+                                              accountCache.setModeString("");
+                                          }
+                                          accountCache.setManagerStatus("Disconnected");
+                                          OrderCacheVO orderCacheVO = new OrderCacheVO();
+                                          orderCaches.add(orderCacheVO);
+                                          accountCache.setLots(0.00);
+                                          accountCache.setProfit(0.00);
+                                      }
+                                  } catch (Exception e) {
+                                      log.error("推送redis异常："+e);
+                                  }
+
+                                  if(ObjectUtil.isEmpty(accountCache.getOrders())){
+                                      accountCache.setOrders(new ArrayList<>());
+                                  }
+                                  sbb.append(accountCache.getId()+",");
+                                  accounts.add(accountCache);
+                                  countDownLatch.countDown();
+                              });
+
+                              //      });
+                          }
+                          try {
+                              countDownLatch.await();
+                          } catch (InterruptedException e) {
+                              throw new RuntimeException(e);
+                          }
+                          List<AccountCacheVO> collect = accounts.stream().sorted(Comparator.comparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo))
+                                          .reversed().thenComparing(AccountCacheVO::getId, Comparator.nullsLast(Long::compareTo)).reversed())
+                                  .collect(Collectors.toList());
+
+                          //转出json格式
+                          String json = convertJson(collect);
+                          log.info("redis推送数据账号数量:{},数据{},排序{}",v.size(),collect.size(),sbb.toString());
+                          List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getServerId, vpsId));
+                          if(traders.size()==collect.size()){
+                              redisUtil.setSlaveRedis(Integer.toString(k), json);
+                          }
+
+                          //   redissonLockUtil.unlock(keyl);
+
+                      }
+                  });
+            //  }
+          }
+         /*  try {
                if (lock) {
 
             //查询当前vpsId所有账号
@@ -357,7 +623,7 @@ public class PushRedisTask {
                                     }
 
                                     orderMap.forEach((a, b) -> {
-                                      /*  switch (a) {
+                                      *//*  switch (a) {
                                             case Buy:
                                                 accountCache.setBuy(ObjectUtil.isEmpty(b) ? 0 : b.size());
                                                 break;
@@ -368,7 +634,7 @@ public class PushRedisTask {
                                                 Integer count = ObjectUtil.isEmpty(b) ? 0 : b.size();
                                                 accountCache.setCount(accountCache.getCount() + count);
                                                 break;
-                                        }*/
+                                        }*//*
                                         if (ObjectUtil.isNotEmpty(b)) {
                                             b.forEach(x -> {
                                                 OrderCacheVO orderCacheVO = new OrderCacheVO();
@@ -493,7 +759,7 @@ public class PushRedisTask {
                }
            }finally {
                redissonLockUtil.unlock(keyl);
-           }
+           }*/
         });
     }
 
