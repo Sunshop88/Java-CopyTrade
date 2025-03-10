@@ -514,16 +514,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         headers.put("Authorization", token);
         headers.put("Content-Type", "application/json");
 
-        // 使用线程池
-        ExecutorService executor = Executors.newFixedThreadPool(20);
+        // 使用 CompletableFuture 处理异步任务
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (FollowTraderUserVO vo : voList) {
-            executor.execute(() -> {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
                     // 查询账号状态
                     LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
                     queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
                     List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
+
                     if (ObjectUtil.isNotEmpty(followTraderEntities)) {
                         for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                             // 账号正常登录
@@ -575,7 +576,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureCount.incrementAndGet(); // 数据库更新失败算作失败
                 }
             });
+
+            futures.add(future);
         }
+
+        // 等待所有任务完成
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        allOf.join(); // 阻塞直到所有任务完成
 
         followUploadTraderUserVO.setUploadTotal(uploadTotal);
         followUploadTraderUserVO.setSuccessCount(successCount.get());
@@ -584,6 +591,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserVO.setId(savedId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
     }
+
 
 
 
