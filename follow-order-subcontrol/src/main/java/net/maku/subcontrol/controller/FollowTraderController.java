@@ -983,6 +983,7 @@ public class FollowTraderController {
             LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderEntity::getId, traderId)
                     .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+            followTraderService.update(updateWrapper);
             reconnect(String.valueOf(traderId));
         return Result.ok();
     }
