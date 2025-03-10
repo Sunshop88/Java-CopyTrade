@@ -85,6 +85,7 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
         long newID = 0;
+        String password = AesUtils.aesEncryptStr(vo.getPassword());
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity) || !followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {
@@ -131,7 +132,7 @@ public class FollowSlaveController {
                     FollowTraderUserVO followTraderUserVO = new FollowTraderUserVO();
                     followTraderUserVO.setAccount(vo.getAccount());
                     followTraderUserVO.setPlatform(vo.getPlatform());
-                    followTraderUserVO.setPassword(vo.getPassword());
+                    followTraderUserVO.setPassword(password);
                     followTraderUserVO.setAccountType("MT4");
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
