@@ -153,10 +153,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
         //劵商名称
         if(ObjectUtil.isNotEmpty(query.getBrokerName())){
-            List<FollowPlatformEntity> list = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().like(FollowPlatformEntity::getBrokerName, query.getBrokerName()));
+            String brokerName =query.getBrokerName().replaceAll("%", "\\\\%");
+            List<FollowPlatformEntity> list = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().like(FollowPlatformEntity::getBrokerName, brokerName));
               if(ObjectUtil.isNotEmpty(list)){
                   List<Long> platformIds = list.stream().map(FollowPlatformEntity::getId).toList();
                   wrapper.in(FollowTraderUserEntity::getPlatformId,platformIds);
+              }else{
+                  wrapper.eq(FollowTraderUserEntity::getDeleted,2);
               }
         }
         //  服务器
