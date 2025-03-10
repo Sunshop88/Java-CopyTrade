@@ -82,6 +82,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     private final RedisCache redisCache;
     private final FollowBrokeServerService followBrokeServerService;
 
+
     @Override
     public PageResult<FollowTraderUserVO> page(FollowTraderUserQuery query) {
         IPage<FollowTraderUserEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
@@ -736,8 +737,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         PageResult<FollowTraderUserVO> page = pageAtomic.get();
         List<FollowTraderUserVO> list = page.getList();
         CountDownLatch count = new CountDownLatch(list.size());
+        List<FollowGroupEntity> groups = followGroupService.list();
+        Map<Integer, FollowGroupEntity> groupMap = groups.stream().collect(Collectors.toMap(FollowGroupEntity::getId, Function.identity()));
+
         list.forEach(o->{
             ThreadPoolUtils.getExecutor().execute(()->{
+                if(ObjectUtil.isNotEmpty(o.getGroupId())){
+                    String color = groupMap.get(o.getGroupId()).getColor();
+                   o.setGroupColor(color);
+                }
                 try {
                     o.setPassword(AesUtils.decryptStr(o.getPassword()));
                 } catch (Exception e) {
