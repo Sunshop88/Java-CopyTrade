@@ -175,7 +175,12 @@ public abstract class AbstractApiTrader extends ApiTrader {
                 traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getLoginNode,this.quoteClient.Host+":"+this.quoteClient.Port).set(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).set(FollowTraderEntity::getStatusExtra, "账号在线").eq(FollowTraderEntity::getId, trader.getId()));
             } catch (Exception ex) {
                 log.error("", ex);
-                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra, "账号掉线").eq(FollowTraderEntity::getId, trader.getId()));
+                String  statusExtra="账号掉线";
+                FollowTraderEntity entity = traderService.getById(trader.getId());
+                if(entity.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
+                    statusExtra=entity.getStatusExtra();
+                }
+                traderService.update(Wrappers.<FollowTraderEntity>lambdaUpdate().set(FollowTraderEntity::getStatus, CloseOrOpenEnum.OPEN.getValue()).set(FollowTraderEntity::getStatusExtra,statusExtra).eq(FollowTraderEntity::getId, trader.getId()));
                 log.error("[MT4账号：{}-{}-{}]在{}:{}重连失败", trader.getId(), trader.getAccount(), trader.getServerName(), this.quoteClient.Host, this.quoteClient.Port);
             }
         } catch (Exception ex) {
