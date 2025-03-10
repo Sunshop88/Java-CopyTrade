@@ -228,7 +228,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                         .eq(FollowTraderEntity::getPlatform, vo.getPlatform()))
                         .getFirst();
 
-                if (followTraderEntity != null && followTraderEntity.getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
+                if (followTraderEntity != null && !followTraderEntity.getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
                     String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
