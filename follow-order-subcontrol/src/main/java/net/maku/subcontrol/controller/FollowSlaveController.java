@@ -137,7 +137,7 @@ public class FollowSlaveController {
                     followTraderUserVO.setStatus(1);
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
-                    followTraderUserVO.setServerNode(followTraderVO.getServerIp());
+                    followTraderUserVO.setServerNode(followTraderVO.getServerNode());
                     followTraderUserService.save(followTraderUserVO);
                 }
             }
