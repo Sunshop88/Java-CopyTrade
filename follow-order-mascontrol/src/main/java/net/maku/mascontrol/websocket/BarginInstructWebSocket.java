@@ -7,23 +7,17 @@ import jakarta.websocket.OnClose;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
-import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
+import net.maku.api.module.system.UserApi;
 import net.maku.followcom.entity.*;
-import net.maku.followcom.enums.CloseOrOpenEnum;
-import net.maku.followcom.enums.FollowMasOrderStatusEnum;
 import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.framework.common.cache.RedisUtil;
-import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.mascontrol.vo.FollowBaiginInstructSubVO;
 import net.maku.mascontrol.vo.FollowBaiginInstructVO;
-import net.maku.mascontrol.vo.FollowBarginOrderVO;
-import online.mtapi.mt4.QuoteClient;
-import online.mtapi.mt4.QuoteEventArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -47,7 +41,7 @@ public class BarginInstructWebSocket {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
     private FollowOrderDetailService followOrderDetailService= SpringContextUtils.getBean( FollowOrderDetailServiceImpl.class);
-
+    private UserApi userApi=SpringContextUtils.getBean(UserApi.class);
     @OnOpen
     public void onOpen(Session session) {
         try {
@@ -82,12 +76,15 @@ public class BarginInstructWebSocket {
         }
         if (ObjectUtil.isNotEmpty(followOrderInstruct)){
             BeanUtil.copyProperties(followOrderInstruct,followBaiginInstructVO);
+            followBaiginInstructVO.setCreator(userApi.getUserById(followBaiginInstructVO.getCreator()).getUsername());
             List<FollowOrderDetailEntity> list = followOrderDetailService.getInstruct(followOrderInstruct.getOrderNo());
             List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList=new ArrayList<>();
             list.forEach(o->{
                 FollowBaiginInstructSubVO followBaiginInstructSubVO=new FollowBaiginInstructSubVO();
                 BeanUtil.copyProperties(o,followBaiginInstructSubVO);
-                if (ObjectUtil.isNotEmpty(o.getRemark())){
+                FollowTraderEntity followTraderEntity = followTraderService.getFollowById(o.getTraderId());
+                followBaiginInstructSubVO.setPlatform(followTraderEntity.getPlatform());
+                if (ObjectUtil.isEmpty(o.getCloseTime())&&ObjectUtil.isNotEmpty(o.getRemark())){
                     //失败原因
                     TradeErrorCodeEnum description = TradeErrorCodeEnum.getDescription(o.getRemark());
                     if (ObjectUtil.isNotEmpty(description)){
@@ -96,6 +93,7 @@ public class BarginInstructWebSocket {
                         followBaiginInstructSubVO.setStatusComment(description.getDescription());
                     }
                 }else {
+                    followBaiginInstructSubVO.setCreateTime(o.getRequestOpenTime());
                     followBaiginInstructSubVO.setStatusComment("成功");
                 }
                 followBaiginInstructSubVOList.add(followBaiginInstructSubVO);
