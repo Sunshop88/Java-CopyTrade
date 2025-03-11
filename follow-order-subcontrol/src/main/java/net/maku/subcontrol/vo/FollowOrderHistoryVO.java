@@ -107,6 +107,7 @@ public class FollowOrderHistoryVO implements Serializable {
 	@Schema(description = "开仓响应时间")
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime responseOpenTime;
-
+	@Schema(description = "平仓请求价格")
+	private BigDecimal requestClosePrice;
 
 }
