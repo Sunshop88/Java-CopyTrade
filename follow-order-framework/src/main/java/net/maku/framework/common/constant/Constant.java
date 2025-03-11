@@ -135,6 +135,11 @@ public interface Constant {
     String TRADER_SEND_MAS="trader:send:mas:";
 
     /**
+     * 账户交易间隔下单标识
+     */
+    String TRADER_CLOSE_MAS="trader:close:mas:";
+
+    /**
      *
      */
     String STATISTICS_SYMBOL_INFO="statistics:symbol:info";

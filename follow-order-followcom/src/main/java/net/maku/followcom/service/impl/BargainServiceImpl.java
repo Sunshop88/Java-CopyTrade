@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -101,9 +102,8 @@ public class BargainServiceImpl implements BargainService {
         if (!followTraderEntityList.isEmpty()){
             if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
                 //分配账号总数
-                AtomicReference<Integer> total= new AtomicReference<>(followTraderEntityList.size());
                 //交易分配，根据手数范围和总手数进行分配
-                Map<FollowTraderEntity, Double> doubleMap = executeOrdersRandomTotalLots(followTraderEntityList, vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize());
+                Map<FollowTraderEntity, Double> doubleMap = executeOrdersRandomTotalLots(followTraderEntityList, vo.getTotalSzie(), vo.getStartSize(), vo.getEndSize());
                 //插入第一个用户的id
                 followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
                 followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
@@ -177,7 +177,9 @@ public class BargainServiceImpl implements BargainService {
                                 // 更新 totalLots，使用 AtomicReference 的 getAndUpdate 方法
                                 totalLots.updateAndGet(current -> current.add(BigDecimal.valueOf(data.getTotalSize())));
                             }else {
+                                //增加子指令
                                 log.info("复制交易下单请求异常"+followTraderEntity.getId());
+                                insertOrderDetail(followTraderEntity,vo,orderNo,vo.getStartSize().doubleValue(),vo.getTotalNum(),result.getMsg());
                             }
                         } catch (Exception e) {
                             log.error("订单处理异常", e);
@@ -313,79 +315,103 @@ public class BargainServiceImpl implements BargainService {
     @Override
     public void stopOrder(Integer type, String orderNo) {
         //指令停止
+        if (type == 0) {
+            FollowOrderInstructEntity orderInstructServiceOne = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
+            if (ObjectUtil.isNotEmpty(orderInstructServiceOne) && orderInstructServiceOne.getIntervalTime() != 0) {
+                //只会停止间隔下单
+                //停止下单
+                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
+                    redisCache.set(Constant.TRADER_SEND_MAS + orderNo, 2);
+                }
+                orderInstructServiceOne.setEndTime(LocalDateTime.now());
+                orderInstructServiceOne.setStatus(FollowMasOrderStatusEnum.PARTIALFAILURE.getValue());
+                followOrderInstructService.updateById(orderInstructServiceOne);
+            }else {
+                throw new ServerException("不存在正在执行订单");
+            }
+        } else {
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + orderNo))) {
+                redisCache.set(Constant.TRADER_CLOSE_MAS + orderNo, 2);
+            }else {
+                throw new ServerException("不存在正在平仓订单");
+            }
+        }
     }
 
+
     //分配下单
-    public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, double totalLots, BigDecimal minLots, BigDecimal maxLots) {
+    public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
-        double totalPlacedLots = 0;
         Map<FollowTraderEntity, Double> accountOrders = new HashMap<>(); // 记录每个账号分配的手数
-        // 遍历所有账号，随机分配手数
-        for (FollowTraderEntity acc : traderId) {
-            double remainingLotsForAccount = totalLots - totalPlacedLots;
+        BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
+        int orderCountNum = 0;                         // 已下单的订单数量
+        List<BigDecimal> orders = new ArrayList<>();
+        int orderCount=traderId.size();
+        while (totalPlacedLots.compareTo(totalLots) < 0 && orderCountNum < orderCount) {
+            // 生成随机手数，并四舍五入保留两位小数
+            BigDecimal randomLots = minLots.add(maxLots.subtract(minLots).multiply(new BigDecimal(rand.nextDouble())))
+                    .setScale(2, RoundingMode.HALF_UP);
 
-            // 如果剩余的总手数为 0，则不再分配手数
-            if (remainingLotsForAccount <= 0) {
-                break;
+            // 检查生成的随机手数是否超过剩余手数
+            if (totalPlacedLots.add(randomLots).compareTo(totalLots) > 0) {
+                randomLots = totalLots.subtract(totalPlacedLots).setScale(2, RoundingMode.HALF_UP);
             }
 
-            // 随机生成当前账号的订单手数
-            double randomLots = roundToTwoDecimal(minLots.doubleValue() +
-                    (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
-
-            // 限制手数不超过剩余总手数
-            if (totalPlacedLots + randomLots > totalLots) {
-                randomLots = remainingLotsForAccount;
-            }
-
-            // 将当前账号的订单手数加到总手数
-            accountOrders.put(acc, randomLots);
-            totalPlacedLots += randomLots;
-
-            // 如果总手数已分配完，则跳出循环
-            if (totalPlacedLots >= totalLots) {
-                break;
+            // 防止生成的订单手数为 0
+            if (randomLots.compareTo(BigDecimal.ZERO) > 0) {
+                orders.add(randomLots);
+                totalPlacedLots = totalPlacedLots.add(randomLots);
+                orderCountNum++;
             }
         }
 
-        // 如果分配后总手数仍然未达到 totalLots，尝试分配剩余的差值
-        double remainingDiff = totalLots - totalPlacedLots;
-        if (remainingDiff > 0) {
-            // 查找手数最少的账号，补充剩余手数
-            FollowTraderEntity minAccount = null;
-            double minAccountOrder = Double.MAX_VALUE;
-            for (Map.Entry<FollowTraderEntity, Double> entry : accountOrders.entrySet()) {
-                if (entry.getValue() < minAccountOrder) {
-                    minAccountOrder = entry.getValue();
-                    minAccount = entry.getKey();
+        // 如果还有剩余手数，按比例分配给每个订单
+        BigDecimal remainingLots = totalLots.subtract(totalPlacedLots).setScale(2, RoundingMode.HALF_UP);
+        if (remainingLots.compareTo(BigDecimal.ZERO) > 0 && !orders.isEmpty()) {
+            BigDecimal lotsToAddPerOrder = remainingLots.divide(new BigDecimal(orderCountNum), 2, RoundingMode.DOWN);
+
+            BigDecimal cumulativeRemainder = remainingLots.subtract(lotsToAddPerOrder.multiply(new BigDecimal(orderCountNum)));
+
+            for (int i = 0; i < orders.size(); i++) {
+                BigDecimal updatedOrder = orders.get(i).add(lotsToAddPerOrder).setScale(2, RoundingMode.HALF_UP);
+                if (cumulativeRemainder.compareTo(BigDecimal.ZERO) > 0) {
+                    updatedOrder = updatedOrder.add(new BigDecimal("0.01"));
+                    cumulativeRemainder = cumulativeRemainder.subtract(new BigDecimal("0.01"));
                 }
-            }
-
-            // 将剩余手数添加到手数最少的账号
-            if (minAccount != null) {
-                accountOrders.put(minAccount, roundToTwoDecimal(minAccountOrder + remainingDiff));
-                totalPlacedLots += remainingDiff;
+                orders.set(i, updatedOrder);
             }
         }
 
-        // 过滤未分配手数的账号
-        accountOrders = accountOrders.entrySet().stream()
-                .filter(entry -> entry.getValue() > 0)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        // 最终确认总手数并调整误差
+        BigDecimal finalTotal = orders.stream().reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+        if (finalTotal.compareTo(totalLots) > 0) {
+            BigDecimal excess = finalTotal.subtract(totalLots);
+            for (int i = 0; i < orders.size() && excess.compareTo(BigDecimal.ZERO) > 0; i++) {
+                BigDecimal order = orders.get(i);
+                BigDecimal adjustment = order.min(excess).setScale(2, RoundingMode.HALF_UP);
+                orders.set(i, order.subtract(adjustment));
+                excess = excess.subtract(adjustment);
+            }
+        } else if (finalTotal.compareTo(totalLots) < 0) {
+            BigDecimal deficit = totalLots.subtract(finalTotal);
+            int randomOrderIndex = rand.nextInt(orders.size());
+            orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
+        }
 
-        // 如果总订单手数为 0，抛出异常
-        if (accountOrders.isEmpty()) {
+        // 过滤 0 值
+        orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
+        log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orders.size());
+
+        if (orders.isEmpty()) {
+            // 下单异常，抛出异常
             throw new ServerException("请重新下单");
         }
 
-        log.info("执行随机下单操作，总手数不超过 " + totalLots + "，实际分配订单数: " + accountOrders.size());
-        log.info("下单数量{}", accountOrders);
-
+        List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
+        log.info("下单数量{}++++++++下单手数{}", orders.size(),doubleList.stream().mapToDouble(o->o).sum());
+        for (int i=0;i< traderId.size();i++){
+            accountOrders.put(traderId.get(i),orders.get(i).doubleValue());
+        }
         return accountOrders;
-    }
-
-    // 保留两位小数的方法
-    public static double roundToTwoDecimal(double value) {
-        return Math.round(value * 100.0) / 100.0;
     }
 }

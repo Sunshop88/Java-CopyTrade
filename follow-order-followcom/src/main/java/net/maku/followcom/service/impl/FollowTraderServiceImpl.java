@@ -313,9 +313,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         if (ObjectUtil.isNotEmpty(followMasOrderVo)){
             if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-                executeOrder(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+                executeOrder(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),0);
             }else {
-                executeOrderNoSyn(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+                executeOrderNoSyn(vo.getIpAddr(), vo.getServerName(), followTraderEntity.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), followMasOrderVo.getTotalNum(), followMasOrderVo.getOrderList(), followTraderVO.getId(), followTraderVO.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), orderNo, ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),0);
             }
         }else {
             log.info(followTraderVO.getAccount()+"下单处理异常");
@@ -1426,7 +1426,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return Math.round(value * 100.0) / 100.0;
     }
 
-    private void executeOrder(String ipAdd, String serverName, String platform, String brokerName, Integer interval, Integer orderCount, List<Double> orders, long traderId, String account, QuoteClient quoteClient, String symbol, Integer type, String orderNo, Integer placedType,String remark) {
+    private void executeOrder(String ipAdd, String serverName, String platform, String brokerName, Integer interval, Integer orderCount, List<Double> orders, long traderId, String account, QuoteClient quoteClient, String symbol, Integer type, String orderNo, Integer placedType,String remark,Integer masFlag) {
         OrderClient oc;
         if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
             oc = quoteClient.OrderClient;
@@ -1469,6 +1469,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (int i = 0; i < orderCount; i++) {
                     Object cacheValue = redisCache.get(Constant.TRADER_SEND + traderId);
+                    if (masFlag==1){
+                        cacheValue = redisCache.get(Constant.TRADER_SEND_MAS + orderNo);
+                    }
                     if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                         int finalI = i;
                         CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
@@ -1511,11 +1514,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         try {
                             Thread.sleep(200);
                             //删除缓存
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
-                                redisCache.delete(Constant.TRADER_SEND + traderId);
-                            }
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
-                                redisCache.delete(Constant.TRADER_ORDER + traderId);
+                            if (masFlag==1){
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
+                                    redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                }
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
+                                    redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                }
+                            }else {
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
+                                    redisCache.delete(Constant.TRADER_SEND + traderId);
+                                }
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
+                                    redisCache.delete(Constant.TRADER_ORDER + traderId);
+                                }
                             }
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
@@ -1529,7 +1541,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
     }
 
-    private void executeOrderNoSyn(String ipAdd, String serverName, String platform, String brokerName, Integer interval, Integer orderCount, List<Double> orders, long traderId, String account, QuoteClient quoteClient, String symbol, Integer type, String orderNo, Integer placedType,String remark) {
+    private void executeOrderNoSyn(String ipAdd, String serverName, String platform, String brokerName, Integer interval, Integer orderCount, List<Double> orders, long traderId, String account, QuoteClient quoteClient, String symbol, Integer type, String orderNo, Integer placedType,String remark,Integer masFlag) {
         OrderClient oc;
         if (ObjectUtil.isNotEmpty(quoteClient.OrderClient)) {
             oc = quoteClient.OrderClient;
@@ -1564,6 +1576,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             ThreadPoolUtils.getExecutor().execute(() -> {
                 for (int i = 0; i < orderCount; i++) {
                     Object cacheValue = redisCache.get(Constant.TRADER_SEND + traderId);
+                    if (masFlag==1){
+                        cacheValue = redisCache.get(Constant.TRADER_SEND_MAS + orderNo);
+                    }
                     if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                         int finalI = i;
                         int orderId = finalI + 1;
@@ -1598,12 +1613,21 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
                     try {
                         Thread.sleep(200);
-                        //删除缓存
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
-                            redisCache.delete(Constant.TRADER_SEND + traderId);
-                        }
-                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
-                            redisCache.delete(Constant.TRADER_ORDER + traderId);
+                        if (masFlag==1){
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
+                                redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                            }
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
+                                redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                            }
+                        }else {
+                            //删除缓存
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
+                                redisCache.delete(Constant.TRADER_SEND + traderId);
+                            }
+                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
+                                redisCache.delete(Constant.TRADER_ORDER + traderId);
+                            }
                         }
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
@@ -1773,7 +1797,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
         if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
             //分配下单
-            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+            executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),1);
             return followMasOrderVo;
         }else {
             //复制下单
@@ -1782,9 +1806,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             ThreadPoolUtils.execute(()->{
                 if (ObjectUtil.isNotEmpty(finalFollowMasOrderVo)){
                     if (followVpsService.getVps(FollowConstant.LOCAL_HOST).getIsSyn().equals(CloseOrOpenEnum.OPEN.getValue())){
-                        executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), finalFollowMasOrderVo.getTotalNum(), finalFollowMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+                        executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), finalFollowMasOrderVo.getTotalNum(), finalFollowMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),1);
                     }else {
-                        executeOrderNoSyn(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), finalFollowMasOrderVo.getTotalNum(), finalFollowMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark());
+                        executeOrderNoSyn(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), finalFollowMasOrderVo.getTotalNum(), finalFollowMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),1);
                     }
                 }else {
                     log.info(convert.getAccount()+"下单处理异常");
