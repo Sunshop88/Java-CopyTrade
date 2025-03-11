@@ -36,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -293,4 +294,14 @@ public class SysUserController {
     public void export() {
         sysUserService.export();
     }
+
+    @GetMapping("user")
+    @Operation(summary = "用户")
+    public Result<List<String>> user() {
+        List<SysUserEntity> list = sysUserService.list(new LambdaQueryWrapper<SysUserEntity>().eq(SysUserEntity::getDeleted,0));
+        List<String> nameList = list.stream().map(SysUserEntity::getUsername).toList();
+
+        return Result.ok(nameList);
+    }
+
 }
