@@ -38,16 +38,13 @@ public class BarginInstructWebSocket {
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
     private RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
     private ScheduledFuture<?> scheduledFuture;
-    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();;
     private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
     private FollowOrderDetailService followOrderDetailService= SpringContextUtils.getBean( FollowOrderDetailServiceImpl.class);
     private UserApi userApi=SpringContextUtils.getBean(UserApi.class);
     @OnOpen
     public void onOpen(Session session) {
         try {
-            if (!scheduledExecutorService.isShutdown()){
-                scheduledExecutorService.shutdownNow();
-            }
             this.session = session;
             startPeriodicTask();
         } catch (Exception e) {
@@ -59,6 +56,9 @@ public class BarginInstructWebSocket {
 
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
+        if (scheduledExecutorService.isShutdown() || scheduledExecutorService.isTerminated()) {
+            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        }
         scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(), 0, 1, TimeUnit.SECONDS);
     }
 
@@ -109,9 +109,7 @@ public class BarginInstructWebSocket {
     public void onClose() {
         try {
             if (session != null && session.isOpen()) {
-                if (!scheduledExecutorService.isShutdown()){
-                    scheduledExecutorService.isShutdown();
-                }
+                scheduledExecutorService.shutdown();
                 session.close();
             }
         } catch (Exception e) {
