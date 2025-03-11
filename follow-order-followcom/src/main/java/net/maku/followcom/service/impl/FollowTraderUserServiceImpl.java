@@ -245,9 +245,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
                 }
-                /*else {
-                    log.error("未找到对应的 : 账号={} 平台={}", vo.getAccount(), vo.getPlatform());
-                }*/
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
             }
@@ -609,6 +606,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     @Override
     public void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception {
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
@@ -617,10 +615,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
         if (ObjectUtil.isNotEmpty(followTraderEntities)) {
-            String token = req.getHeader("Authorization");
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Authorization", token);
-            headers.put("Content-Type", "application/json");
+//            String token = req.getHeader("Authorization");
+//            Map<String, String> headers = new HashMap<>();
+//            headers.put("Authorization", token);
+//            headers.put("Content-Type", "application/json");
 
             List<CompletableFuture<Void>> futures = new ArrayList<>();
 
@@ -633,13 +631,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     RestTemplate restTemplate = new RestTemplate();
 
                     // 使用提前提取的 headers 构建请求头
-                    HttpHeaders httpHeaders = new HttpHeaders();
-                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
-                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
+//                    HttpHeaders httpHeaders = new HttpHeaders();
+//                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
+//                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
 
-                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
-                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
-                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getBody().getString("msg"));
+//                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+//                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+                    if (response != null && !response.getMsg().equals("success")) {
+                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                     }
                 }, ThreadPoolUtils.getExecutor());
 
@@ -993,5 +993,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         .set(FollowTraderUserEntity::getGroupId, vo.getGroupId());
                 baseMapper.update(updateWrapper);
         }
+    }
+
+    @Override
+    public List<FollowTraderCountVO> getServerNodeCounts() {
+        return baseMapper.getServerNodeCounts();
     }
 }

@@ -382,13 +382,13 @@ public class FollowVarietyController {
         return Result.error("删除失败");
     }
 
-    @PostMapping("listSingleSymbol")
+    @GetMapping("listSingleSymbol")
     @Operation(summary = "查询该品种的所有信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<List<FollowVarietyEntity>> listSingleSymbol(@ParameterObject @Valid FollowVarietyQuery query){
+    public Result<List<FollowVarietyEntity>> listSingleSymbol(@ParameterObject  FollowVarietyVO query){
         LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
-        if (ObjectUtil.isNotEmpty(query.getTemplate())){
-            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplate());
+        if (ObjectUtil.isNotEmpty(query.getTemplateId())){
+            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplateId());
         }
         if (ObjectUtil.isNotEmpty(query.getStdSymbol())){
             queryWrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());

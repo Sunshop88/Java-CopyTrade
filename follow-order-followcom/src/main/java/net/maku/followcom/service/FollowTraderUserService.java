@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
+import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.followcom.vo.FollowTraderUserVO;
 import net.maku.followcom.vo.HangVpsVO;
 import net.maku.followcom.vo.TraderUserStatVO;
@@ -55,4 +56,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void belowVps(List<Long> traderUserIds, HttpServletRequest request);
 
     void modify(List<FollowTraderUserVO> vos);
+
+    List<FollowTraderCountVO> getServerNodeCounts();
 }

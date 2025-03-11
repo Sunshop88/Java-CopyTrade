@@ -72,6 +72,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
     private  final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
     private final FollowUploadTraderUserService followUploadTraderUserService;
+    private final FollowTraderUserService followTraderUserService;
 
     public PageResult<String[]> page(FollowTestDetailQuery query) {
         List<FollowTestDetailEntity> allRecords = baseMapper.selectList(getWrapper(query));
@@ -262,7 +263,8 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             accountCountMap = accountCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getAccountCount));
         }
         // 统计每个服务的节点数量
-        List<FollowTraderCountVO> serverNodeCounts = followTraderService.getServerNodeCounts();
+//        List<FollowTraderCountVO> serverNodeCounts = followTraderService.getServerNodeCounts();
+        List<FollowTraderCountVO> serverNodeCounts = followTraderUserService.getServerNodeCounts();
         Map<String, Integer> serverNodeCountMap = new HashMap<>();
         if (ObjectUtil.isNotEmpty(serverNodeCounts)) {
             serverNodeCountMap = serverNodeCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getNodeCount));
