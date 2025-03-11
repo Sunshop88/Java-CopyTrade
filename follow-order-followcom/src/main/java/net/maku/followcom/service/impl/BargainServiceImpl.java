@@ -12,11 +12,13 @@ import net.maku.followcom.dto.MasToSubOrderCloseDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
+import net.maku.followcom.enums.FollowMasOrderStatusEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowMasOrderVo;
 import net.maku.followcom.vo.FollowOrderSendCloseVO;
+import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
@@ -53,7 +55,10 @@ public class BargainServiceImpl implements BargainService {
     private final FollowTraderUserService followTraderUserService;
     private final FollowTraderService followTraderService;
     private final FollowOrderInstructService followOrderInstructService;
-    private final FollowOrderInstructSubService followOrderInstructSubService;
+    private final RedissonLockUtil redissonLockUtil;
+    private final FollowOrderDetailService followOrderDetailService;
+    private final FollowPlatformService followPlatformService;
+
     @Override
     public void masOrderSend(MasOrderSendDto vo, HttpServletRequest request) {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
@@ -66,19 +71,22 @@ public class BargainServiceImpl implements BargainService {
             if (ObjectUtil.isEmpty(followTraderUserEntity)){
                 throw new ServerException("请求异常");
             }
-            //查询各VPS状态正常的账号
-            List<FollowTraderEntity> followTraderEntity = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()).orderByDesc(FollowTraderEntity::getType));
+            //查询各VPS状态正常的账号 -优先状态正常 -优先交易分配
+            List<FollowTraderEntity> followTraderEntity = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()).orderByAsc(FollowTraderEntity::getStatus).orderByDesc(FollowTraderEntity::getType));
             if (ObjectUtil.isNotEmpty(followTraderEntity)){
                 for (FollowTraderEntity fo : followTraderEntity) {
                     //检查vps是否正常
                     FollowVpsEntity followVpsEntity = followVpsService.getById(fo.getServerId());
-                    if (followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())) {
+                    if (followVpsEntity.getIsOpen().equals(CloseOrOpenEnum.CLOSE.getValue()) || followVpsEntity.getConnectionStatus().equals(CloseOrOpenEnum.CLOSE.getValue())|| followVpsEntity.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())) {
                         log.info(followVpsEntity.getName()+"VPS服务异常，请检查");
                     }else {
                         followTraderEntityList.add(fo);
                         break;
                     }
                 }
+            }else {
+                //没有挂靠账号
+                log.info("账号ID:"+o+"没有挂靠VPS");
             }
         });
         //创建父指令
@@ -90,12 +98,14 @@ public class BargainServiceImpl implements BargainService {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         if (!followTraderEntityList.isEmpty()){
             if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
+                //分配账号总数
+                AtomicReference<Integer> total= new AtomicReference<>(followTraderEntityList.size());
                 //交易分配，根据手数范围和总手数进行分配
                 Map<FollowTraderEntity, Double> doubleMap = executeOrdersRandomTotalLots(followTraderEntityList, vo.getTotalSzie().doubleValue(), vo.getStartSize(), vo.getEndSize());
-                followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
-                followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
                 //插入第一个用户的id
                 followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
+                followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
+                followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
                 followOrderInstructService.save(followOrderInstructEntity);
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
@@ -113,14 +123,25 @@ public class BargainServiceImpl implements BargainService {
                         masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
                         masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
                         masToSubOrderSendDto.setSendNo(orderNo);
-                        sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto,headerApplicationJsonAndToken);
-                    }, ThreadPoolUtils.getExecutor());
+                        Result result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
+                        if (result.getCode() != 0) {
+                            //增加子指令数据
+                            insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1,result.getMsg());
+                            log.info("分配交易下单请求异常"+followTraderEntity.getId());
+                        }
+                        }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
                 });
                 CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
                 // 当所有订单任务完成后，执行更新操作
                 allOrdersCompleted.thenRun(() -> {
                     log.info("所有分配交易下单已完成");
+                    try {
+                        allOrdersCompleted.get(30, TimeUnit.SECONDS);
+                        updateInstruct(orderNo);
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        throw new RuntimeException(e);
+                    }
                 });
             }else {
                 followOrderInstructEntity.setTraderId(followTraderEntityList.get(0).getId().intValue());
@@ -154,11 +175,10 @@ public class BargainServiceImpl implements BargainService {
                                 // 更新 totalLots，使用 AtomicReference 的 getAndUpdate 方法
                                 totalLots.updateAndGet(current -> current.add(BigDecimal.valueOf(data.getTotalSize())));
                             }else {
-                                log.info("交易下单请求异常"+followTraderEntity.getId());
+                                log.info("复制交易下单请求异常"+followTraderEntity.getId());
                             }
                         } catch (Exception e) {
                             log.error("订单处理异常", e);
-                            throw new RuntimeException(e); // 抛出异常让 allOf 感知
                         }
                     }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
@@ -166,22 +186,71 @@ public class BargainServiceImpl implements BargainService {
                 // 使用 CompletableFuture.allOf 等待所有订单任务完成
                 CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
                 // 当所有订单任务完成后，执行更新操作
-                try {
-                    allOrdersCompleted.get(30, TimeUnit.SECONDS);
-                    log.info("所有复制交易下单已完成");
-                    followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
-                    followOrderInstructEntity.setTrueTotalLots(totalLots.get());
-                    followOrderInstructService.updateById(followOrderInstructEntity);
-                } catch (TimeoutException e) {
-                    log.error("任务执行超时", e);
-                } catch (InterruptedException | ExecutionException e) {
-                    log.error("任务执行异常", e);
-                }
+                allOrdersCompleted.thenRun(() -> {
+                    log.info("所有复制交易下单下单已完成");
+                    try {
+                        allOrdersCompleted.get(30, TimeUnit.SECONDS);
+                        followOrderInstructEntity.setTrueTotalOrders(totalOrders.get());
+                        followOrderInstructEntity.setTrueTotalLots(totalLots.get());
+                        followOrderInstructService.updateById(followOrderInstructEntity);
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
             }
         }else {
             //无可以下单账号
             throw new ServerException("无可下单账号");
         }
+    }
+
+    private void updateInstruct(String orderNo) {
+        if (redissonLockUtil.tryLockForShortTime("masOrder" + orderNo, 100, 120, TimeUnit.SECONDS)) {
+            try {
+                //增加成交订单数和手数
+                FollowOrderInstructEntity followOrderInstruct = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
+                List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+                followOrderInstruct.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
+                followOrderInstruct.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
+                followOrderInstruct.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
+                if (followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                    log.info("交易下单已完成-全部成功");
+                    followOrderInstruct.setEndTime(LocalDateTime.now());
+                    followOrderInstruct.setStatus(FollowMasOrderStatusEnum.ALLSUCCESS.getValue());
+                }else if (followOrderInstruct.getFailOrders()+followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                    log.info("交易下单已完成-部分成功");
+                    followOrderInstruct.setEndTime(LocalDateTime.now());
+                    followOrderInstruct.setStatus(FollowMasOrderStatusEnum.PARTIALFAILURE.getValue());
+                }
+                followOrderInstructService.updateById(followOrderInstruct);
+            }catch (Exception e){
+                log.info("修改总指令异常"+e.getMessage());
+            }finally {
+                if (redissonLockUtil.isLockedByCurrentThread("masOrder" + orderNo)) {
+                    redissonLockUtil.unlock("masOrder" + orderNo);
+                }
+            }
+        }
+    }
+
+    private void insertOrderDetail(FollowTraderEntity followTraderEntity, MasOrderSendDto vo, String orderNo, Double aDouble,Integer num,String msg) {
+        List<FollowOrderDetailEntity> followOrderDetailEntities=new ArrayList<>();
+        FollowPlatformEntity platFormById = followPlatformService.getPlatFormById(followTraderEntity.getPlatformId().toString());
+        for (int i=0;i<num;i++){
+            FollowOrderDetailEntity followOrderDetailEntity=new FollowOrderDetailEntity();
+            followOrderDetailEntity.setSendNo(orderNo);
+            followOrderDetailEntity.setTraderId(followTraderEntity.getId());
+            followOrderDetailEntity.setAccount(followTraderEntity.getAccount());
+            followOrderDetailEntity.setSize(new BigDecimal(aDouble));
+            followOrderDetailEntity.setSymbol(vo.getSymbol());
+            followOrderDetailEntity.setRemark(msg);
+            followOrderDetailEntity.setBrokeName(platFormById.getBrokerName());
+            followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
+            followOrderDetailEntity.setIpAddr(followTraderEntity.getIpAddr());
+            followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
+            followOrderDetailEntities.add(followOrderDetailEntity);
+        }
+        followOrderDetailService.saveBatch(followOrderDetailEntities);
     }
 
     @Override

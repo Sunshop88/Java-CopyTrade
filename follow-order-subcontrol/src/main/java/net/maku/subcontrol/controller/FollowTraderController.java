@@ -279,7 +279,6 @@ public class FollowTraderController {
                 if (cache != null) {
                     cache.evict(cacheKey); // 移除指定缓存条目
                 }
-
                 //删除跟单对应主账号缓存
                 Cache cache1 = cacheManager.getCache("followSubOrderCache");
                 if (cache1 != null) {
@@ -304,8 +303,6 @@ public class FollowTraderController {
 
         //删除订阅关系
         followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
-
-
         return Result.ok();
     }
 

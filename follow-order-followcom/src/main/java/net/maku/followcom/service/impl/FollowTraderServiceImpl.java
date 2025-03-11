@@ -1067,6 +1067,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         //查看下单所有数据
         List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+        if (ObjectUtil.isEmpty(list))return;
         if (ObjectUtil.isNotEmpty(sendServiceOne)) {
             //保存修改信息
             //保存真实下单手数
@@ -1116,7 +1117,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
               }
             }
         }
-        if (ObjectUtil.isEmpty(list))return;
         //进行滑点分析
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
@@ -1819,6 +1819,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             if (newOrderValue.compareTo(new BigDecimal("0.01")) < 0) {
                 // 如果小于 0.01，则设置为 0.01
                 vo.setTotalSzie(new BigDecimal("0.01"));
+            }else {
+                vo.setTotalSzie(newOrderValue);
             }
         }
         if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){

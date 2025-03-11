@@ -20,7 +20,8 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     OFF_QUOTES("Off quotes", "请求过多"),
     NOT_CONNECTED("Not connected in 30000 ms", "连接超时"),
     NO_CONNECTION("Cannot send order because no connection with server", "账号未连接"),
-    QUOTE_CLIENT_NULL("because \"quoteClient.OrderClient\" is null", "账号未连接");
+    QUOTE_CLIENT_NULL("because \"quoteClient.OrderClient\" is null", "账号未连接"),
+    NO_SYMBOL_SPECIFICATION("主账号标准品种未配置", "主账号标准品种未配置");
 
     /**
      * 枚举对象的值
