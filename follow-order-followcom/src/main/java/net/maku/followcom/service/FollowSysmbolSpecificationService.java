@@ -1,5 +1,6 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
@@ -31,4 +32,6 @@ public interface FollowSysmbolSpecificationService extends BaseService<FollowSys
     void export();
 
     List<FollowSysmbolSpecificationEntity> getByTraderId(long traderId);
+
+    PageResult<FollowSysmbolSpecificationVO> pageSpecification(FollowSysmbolSpecificationQuery query);
 }

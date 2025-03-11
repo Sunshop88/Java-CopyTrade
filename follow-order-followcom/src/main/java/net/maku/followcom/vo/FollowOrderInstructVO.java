@@ -49,6 +49,12 @@ public class FollowOrderInstructVO implements Serializable {
 	@Schema(description = "下单总订单")
 	private Integer totalOrders;
 
+	@Schema(description = "实际下单总手数")
+	private BigDecimal trueTotalLots;
+
+	@Schema(description = "实际下单总单数")
+	private Integer trueTotalOrders;
+
 	@Schema(description = "间隔时间")
 	private Integer intervalTime;
 

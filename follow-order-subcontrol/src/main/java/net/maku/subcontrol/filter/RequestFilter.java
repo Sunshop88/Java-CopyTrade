@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.security.user.SecurityUser;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,19 @@ public class RequestFilter implements Filter {
                 String jsonString = JSON.toJSONString(Result.error("签名无效,暂无权限访问"));
                 out.write(jsonString.getBytes());
                 return;
+            }
+        }
+        if(uri.startsWith("/subcontrol/follow") || uri.startsWith("/subcontrol/trader")) {
+            Long userId = SecurityUser.getUserId();
+            if (userId != 10000) {
+                List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
+              if(ObjectUtil.isEmpty(vpsList) || !vpsList.contains(FollowConstant.LOCAL_HOST) ) {
+                    ServletOutputStream out = servletResponse.getOutputStream();
+                    String jsonString = JSON.toJSONString(Result.error("无vps权限"));
+                    out.write(jsonString.getBytes());
+                  return;
+                }
+
             }
         }
 //        }else {

@@ -6,6 +6,8 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.framework.common.utils.Result;
@@ -19,6 +21,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -363,6 +367,10 @@ public class RestUtil {
         String jsonBody = null;
         try {
             if(t!=null) {
+                JavaTimeModule javaTimeModule = new JavaTimeModule();
+                //格式化时间格式
+                javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                objectMapper.registerModule(javaTimeModule);
                 jsonBody = objectMapper.writeValueAsString(t);
             /*    JSONObject jsonObject = JSONObject.parseObject(jsonBody);
                 JSONObject newjson = new JSONObject();

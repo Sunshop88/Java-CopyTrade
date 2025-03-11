@@ -24,4 +24,12 @@ public class FollowSysmbolSpecificationQuery extends Query {
     private String symbol;
     @Schema(description = "品种类型")
     private String profitMode;
+    @Schema(description = "券商")
+    private String brokerName;
+    @Schema(description = "服务器")
+    private String serverName;
+    @Schema(description = "账号类型")
+    private String accountType;
+    @Schema(description = "账号")
+    private String account;
 }

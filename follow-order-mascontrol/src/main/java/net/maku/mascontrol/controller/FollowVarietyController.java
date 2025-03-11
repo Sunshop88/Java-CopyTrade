@@ -7,17 +7,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
 import net.maku.followcom.query.FollowVarietyQuery;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowVarietyService;
-import net.maku.followcom.service.FollowVpsService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
+import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
+import net.maku.followcom.vo.FollowTraderVO;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
@@ -43,6 +44,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -65,6 +67,7 @@ public class FollowVarietyController {
     private final RedisCache redisCache;
     private final FollowVpsService followVpsService;
     private final FollowTraderService followTraderService;
+    private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     @GetMapping("pageSymbol")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
@@ -379,13 +382,13 @@ public class FollowVarietyController {
         return Result.error("删除失败");
     }
 
-    @PostMapping("listSingleSymbol")
+    @GetMapping("listSingleSymbol")
     @Operation(summary = "查询该品种的所有信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<List<FollowVarietyEntity>> listSingleSymbol(@ParameterObject @Valid FollowVarietyQuery query){
+    public Result<List<FollowVarietyEntity>> listSingleSymbol(@ParameterObject  FollowVarietyVO query){
         LambdaQueryWrapper<FollowVarietyEntity> queryWrapper = new LambdaQueryWrapper<>();
-        if (ObjectUtil.isNotEmpty(query.getTemplate())){
-            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplate());
+        if (ObjectUtil.isNotEmpty(query.getTemplateId())){
+            queryWrapper.eq(FollowVarietyEntity::getTemplateId,query.getTemplateId());
         }
         if (ObjectUtil.isNotEmpty(query.getStdSymbol())){
             queryWrapper.eq(FollowVarietyEntity::getStdSymbol,query.getStdSymbol());
@@ -403,5 +406,24 @@ public class FollowVarietyController {
             return Result.ok("修改成功");
         }
         return Result.error("修改失败");
+    }
+
+    @GetMapping("pageSymbolSpecification")
+    @Operation(summary = "分页")
+    @PreAuthorize("hasAuthority('mascontrol:variety')")
+    public Result<PageResult<FollowSysmbolSpecificationVO>> pageSymbolSpecification(@ParameterObject @Valid FollowSysmbolSpecificationQuery query) {
+//        List<FollowTraderEntity> entities = followTraderService.list();
+//        List<FollowTraderVO> vos = FollowTraderConvert.INSTANCE.convertList(entities);
+//
+//        Map<Long,FollowTraderVO> map = new HashMap<>();
+//        for (FollowTraderVO vo : vos) {
+//            FollowPlatformEntity followPlatform = followPlatformService.getById(vo.getPlatformId());
+//            vo.setPlatformType(followPlatform.getPlatformType());
+//            vo.setBrokerName(followPlatform.getBrokerName());
+//        }
+//        map = vos.stream().collect(Collectors.toMap(o -> o.getId(), Function.identity()));
+
+        PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.pageSpecification(query);
+        return Result.ok(page);
     }
 }

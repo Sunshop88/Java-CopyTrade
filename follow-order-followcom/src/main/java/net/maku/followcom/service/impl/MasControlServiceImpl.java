@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.MessageFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +52,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final PlatformServicePt platformServicePt;
     private final ServerServicePt serverServicePt;
     private final FollowTestDetailService followTestDetailService;
+    private final FollowVpsUserService followVpsUserService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -79,7 +81,6 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("更新 Client-pt 失败");
             return false;
         }
-        /*
         //修改vps的用户列表
         List<String> existingUserList = followVpsUserService.list(
                         new LambdaQueryWrapper<FollowVpsUserEntity>()
@@ -119,7 +120,7 @@ public class MasControlServiceImpl implements MasControlService {
                 followVpsUserService.save(newUser);
             }
         }
-         */
+
         followVpsService.update(vo);
         log.info("成功更新 Client 和 FollowVps");
         return true;

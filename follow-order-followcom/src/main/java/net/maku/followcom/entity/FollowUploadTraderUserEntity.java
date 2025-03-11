@@ -102,4 +102,10 @@ public class FollowUploadTraderUserEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	* 备注
+	*/
+	@TableField(value = "remark")
+	private String remark;
+
 }
