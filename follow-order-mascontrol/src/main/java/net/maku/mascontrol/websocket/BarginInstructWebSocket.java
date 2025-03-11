@@ -45,7 +45,7 @@ public class BarginInstructWebSocket {
     @OnOpen
     public void onOpen(Session session) {
         try {
-            if (scheduledExecutorService.isTerminated()){
+            if (!scheduledExecutorService.isShutdown()){
                 scheduledExecutorService.shutdownNow();
             }
             this.session = session;
@@ -109,7 +109,7 @@ public class BarginInstructWebSocket {
     public void onClose() {
         try {
             if (session != null && session.isOpen()) {
-                if (scheduledExecutorService.isTerminated()){
+                if (!scheduledExecutorService.isShutdown()){
                     scheduledExecutorService.isShutdown();
                 }
                 session.close();
