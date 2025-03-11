@@ -3,6 +3,7 @@ package net.maku.followcom.service.impl;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fhs.trans.service.impl.TransService;
@@ -12,7 +13,10 @@ import net.maku.followcom.convert.FollowTestDetailConvert;
 import net.maku.followcom.dao.FollowTestDetailDao;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowTestDetailEntity;
+import net.maku.followcom.entity.FollowUploadTraderUserEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.enums.TraderUserEnum;
+import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
@@ -20,24 +24,30 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowTestDetailExcelVO;
 import net.maku.followcom.vo.FollowTestDetailVO;
 import net.maku.followcom.vo.FollowTraderCountVO;
+import net.maku.followcom.vo.FollowUploadTraderUserVO;
 import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
+import net.maku.framework.security.user.SecurityUser;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
@@ -61,6 +71,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
     private final RedisUtil redisUtil;
     private  final FollowBrokeServerService followBrokeServerService;
     private final FollowVpsService followVpsService;
+    private final FollowUploadTraderUserService followUploadTraderUserService;
 
     public PageResult<String[]> page(FollowTestDetailQuery query) {
         List<FollowTestDetailEntity> allRecords = baseMapper.selectList(getWrapper(query));
@@ -925,8 +936,80 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         update(convert);
     }
 
+
     @Override
     public void uploadDefaultNode(MultipartFile file, List<Integer> vpsId) {
+        //设置状态
+        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+        followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+        followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
+        followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+        followUploadTraderUserVO.setType(TraderUserTypeEnum.UPLOAD_DEFAULT_NODE.getType());
+        followUploadTraderUserService.save(followUploadTraderUserVO);
+        FollowUploadTraderUserEntity followUploadTraderUserEntity= followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1"));
+        if (file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
+            uploadDefaultNodeCSV(file, vpsId,followUploadTraderUserEntity);
+        } else {
+            uploadDefaultNodeExcel(file, vpsId,followUploadTraderUserEntity);
+        }
+        followUploadTraderUserEntity.setStatus(TraderUserEnum.SUCCESS.getType());
+        followUploadTraderUserService.updateById(followUploadTraderUserEntity);
+    }
+
+    public void uploadDefaultNodeCSV(MultipartFile file, List<Integer> vpsId, FollowUploadTraderUserEntity followUploadTraderUserEntity) {
+        try (InputStream inputStream = file.getInputStream();
+             InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName("UTF-8"));
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+
+            List<FollowTestDetailVO> extractedData = new ArrayList<>();
+
+            // 遍历 CSV 记录
+            for (CSVRecord record : csvParser) {
+                String serverName = record.get(0); // 第一列
+                String serverNode = record.get(4); // 第五列
+
+                if (serverName == null || serverNode == null) {
+                    continue;
+                }
+
+                FollowTestDetailVO followTestDetailVO = new FollowTestDetailVO();
+                followTestDetailVO.setServerName(serverName);
+                followTestDetailVO.setServerNode(serverNode);
+                extractedData.add(followTestDetailVO);
+
+                String[] split = followTestDetailVO.getServerNode().split(":");
+                if (split.length != 2) {
+                    log.info("服务器节点格式不正确:{}", followTestDetailVO.getServerNode());
+                    continue; // 使用 continue 跳过当前记录而不是 break
+                }
+
+                // 查询 followTestDetail 里是否有
+                List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                        .eq(FollowBrokeServerEntity::getServerName, serverName)
+                        .eq(FollowBrokeServerEntity::getServerNode, split[0])
+                        .eq(FollowBrokeServerEntity::getServerPort, split[1]));
+
+                if (ObjectUtil.isEmpty(list)) {
+                    FollowBrokeServerEntity followBrokeServer = new FollowBrokeServerEntity();
+                    followBrokeServer.setServerName(followTestDetailVO.getServerName());
+                    followBrokeServer.setServerNode(split[0]);
+                    followBrokeServer.setServerPort(split[1]);
+                    followBrokeServerService.save(followBrokeServer);
+                }
+            }
+
+            // 处理提取的数据
+            processData(extractedData, vpsId,followUploadTraderUserEntity);
+
+        } catch (IOException e) {
+            followUploadTraderUserEntity.setRemark("失败原因" + e);
+            followUploadTraderUserEntity.setStatus(TraderUserEnum.FAIL.getType());
+            followUploadTraderUserService.updateById(followUploadTraderUserEntity);
+            throw new ServerException("无法读取文件");
+        }
+    }
+
+    public void uploadDefaultNodeExcel(MultipartFile file, List<Integer> vpsId, FollowUploadTraderUserEntity followUploadTraderUserEntity) {
         try (InputStream inputStream = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(inputStream)) {
 
@@ -968,14 +1051,17 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 }
             }
             // 处理提取的数据
-            processData(extractedData,vpsId);
+            processData(extractedData,vpsId,followUploadTraderUserEntity);
 
         } catch (IOException e) {
+            followUploadTraderUserEntity.setRemark("失败原因" + e);
+            followUploadTraderUserEntity.setStatus(TraderUserEnum.FAIL.getType());
+            followUploadTraderUserService.updateById(followUploadTraderUserEntity);
             throw new ServerException("无法读取文件");
         }
     }
 
-    private CompletableFuture<Void> processData(List<FollowTestDetailVO> extractedData, List<Integer> vpsId) {
+    private CompletableFuture<Void> processData(List<FollowTestDetailVO> extractedData, List<Integer> vpsId,FollowUploadTraderUserEntity followUploadTraderUserEntity) {
         return CompletableFuture.runAsync(() -> {
             // 创建一个固定大小的线程池
             ExecutorService executorService = Executors.newFixedThreadPool(20);
@@ -1039,6 +1125,9 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                 allFutures.get(30, TimeUnit.MINUTES);
                 log.info("所有任务执行成功");
             } catch (Exception e) {
+                followUploadTraderUserEntity.setRemark("失败原因" + e);
+                followUploadTraderUserEntity.setStatus(TraderUserEnum.FAIL.getType());
+                followUploadTraderUserService.updateById(followUploadTraderUserEntity);
                 log.error("任务执行失败", e);
                 throw new RuntimeException("任务执行失败", e);
             } finally {

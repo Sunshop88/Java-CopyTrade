@@ -189,4 +189,6 @@ public class FollowTraderVO implements Serializable {
 	//用于挂号vps(true 需要新增)
 	private Boolean isAdd;
 	private String serverNode;
+	private String brokerName;
+	private String platformType;
 }

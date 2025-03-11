@@ -85,7 +85,7 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
         long newID = 0;
-        String password = AesUtils.aesEncryptStr(vo.getPassword());
+        String password = vo.getPassword();
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
             if (ObjectUtil.isEmpty(followTraderEntity) || !followTraderEntity.getIpAddr().equals(FollowConstant.LOCAL_HOST)) {

@@ -92,5 +92,15 @@ public class FollowSysmbolSpecificationVO implements Serializable {
 	@Schema(description = "标准品种")
 	private String stdSymbol;
 
+	@Schema(description = "券商")
+	private String brokerName;
 
+	@Schema(description = "服务器")
+	private String serverName;
+
+	@Schema(description = "账号")
+	private String account;
+
+	@Schema(description = "账号类型")
+	private String accountType;
 }

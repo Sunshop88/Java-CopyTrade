@@ -7,7 +7,10 @@ public enum TraderUserEnum {
     //处理中
     IN_PROGRESS(0),
     //处理成功
-    SUCCESS(1);
+    SUCCESS(1),
+    //处理失败
+    FAIL(2);
+
     private Integer type;
 
     TraderUserEnum(int type) {

@@ -394,9 +394,9 @@ public class FollowVpsController {
     @PutMapping("uploadDefaultNode")
     @Operation(summary = "上传默认节点")
     public Result<String> uploadDefaultNode(@RequestParam(value = "file") MultipartFile file, @RequestParam(value = "vpsId") List<Integer> vpsId) throws Exception {
-        //检查是否为Excel文件
-        if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx"))) {
-            return Result.error("请上传Excel文件");
+        //检查是否为Excel文件或者csv文件
+        if (file.isEmpty() || (!file.getOriginalFilename().toLowerCase().endsWith(".xls") && !file.getOriginalFilename().toLowerCase().endsWith(".xlsx") && !file.getOriginalFilename().toLowerCase().endsWith(".csv"))) {
+            return Result.error("请上传Excel或csv文件");
         }
         followTestDetailService.uploadDefaultNode(file,vpsId);
         return Result.ok("修改完成");

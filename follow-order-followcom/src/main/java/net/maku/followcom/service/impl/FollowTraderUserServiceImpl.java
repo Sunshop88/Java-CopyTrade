@@ -482,7 +482,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     public static void main(String[] args) {
-        String s = AesUtils.aesEncryptStr("3832505ac3f8a8ed36237588623b8c5d");
+        String s = AesUtils.aesEncryptStr("e88ef3200461457004569f2480d7d9c2");
         String s1 = AesUtils.decryptStr("575753dc8398a446b71e55f3284244e7");
         System.out.println(s);
         System.out.println(s1);
