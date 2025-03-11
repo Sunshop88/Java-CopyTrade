@@ -139,6 +139,8 @@ public class FollowApiServiceImpl implements FollowApiService {
 
         slaveList.forEach(o->{
             List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
+            //删除订阅关系
+            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
                 String cacheKey = generateCacheKey(o1.getSlaveId(), o1.getMasterId());
@@ -153,6 +155,8 @@ public class FollowApiServiceImpl implements FollowApiService {
             });
         });
 
+        //删除订阅关系
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList));
         masterList.forEach(o->{
             //喊单关系缓存移除
             Cache cache = cacheManager.getCache("followSubOrderCache");
@@ -160,9 +164,6 @@ public class FollowApiServiceImpl implements FollowApiService {
                 cache.evict(o.getId()); // 移除指定缓存条目
             }
         });
-
-        //删除订阅关系
-        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
 
     }
 

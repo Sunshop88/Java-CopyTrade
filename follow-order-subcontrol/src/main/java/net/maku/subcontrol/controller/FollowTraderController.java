@@ -179,8 +179,7 @@ public class FollowTraderController {
             }
         }
         followTraderService.delete(idList);
-
-        //清空缓存
+         //清空缓存
         list.stream().forEach(o ->{
             leaderApiTradersAdmin.removeTrader(o.getId().toString());
             copierApiTradersAdmin.removeTrader(o.getId().toString());
@@ -193,6 +192,8 @@ public class FollowTraderController {
         });
 
         slaveList.forEach(o->{
+            //删除订阅关系
+            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
             List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
 
             //跟单关系缓存删除
@@ -223,6 +224,9 @@ public class FollowTraderController {
             });
         });
 
+        //删除订阅关系
+        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId,idList));
+
         masterList.forEach(o->{
             //喊单关系缓存移除
             Cache cache = cacheManager.getCache("followSubOrderCache");
@@ -231,8 +235,6 @@ public class FollowTraderController {
             }
         });
 
-        //删除订阅关系
-        followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, idList).or().in(FollowTraderSubscribeEntity::getSlaveId, idList));
         return Result.ok();
     }
 

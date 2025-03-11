@@ -276,6 +276,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                 if (ObjectUtil.isNotEmpty(serverNode)) {
                     //处理节点格式
                     String[] split = serverNode.split(":");
+                    log.info(copier.getAccount()+"开始连接账号"+split[0]+":"+Integer.valueOf(split[1]));
                     conCodeEnum = connectTrader(copier, conCodeEnum, split[0], Integer.valueOf(split[1]));
                     if (conCodeEnum == ConCodeEnum.TRADE_NOT_ALLOWED) {
                         //循环连接
