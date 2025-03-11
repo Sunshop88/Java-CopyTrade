@@ -18,7 +18,9 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowMasOrderVo;
 import net.maku.followcom.vo.FollowOrderSendCloseVO;
+import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedissonLockUtil;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
@@ -58,7 +60,7 @@ public class BargainServiceImpl implements BargainService {
     private final RedissonLockUtil redissonLockUtil;
     private final FollowOrderDetailService followOrderDetailService;
     private final FollowPlatformService followPlatformService;
-
+    private final RedisCache redisCache;
     @Override
     public void masOrderSend(MasOrderSendDto vo, HttpServletRequest request) {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
@@ -306,6 +308,11 @@ public class BargainServiceImpl implements BargainService {
         } catch (InterruptedException | ExecutionException e) {
             log.error("任务执行异常", e);
         }
+    }
+
+    @Override
+    public void stopOrder(Integer type, String orderNo) {
+        //指令停止
     }
 
     //分配下单

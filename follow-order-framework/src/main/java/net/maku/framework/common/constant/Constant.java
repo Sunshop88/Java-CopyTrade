@@ -130,6 +130,11 @@ public interface Constant {
     String FOLLOW_ON_EVEN="follow:on:even:";
 
     /**
+     * 账户交易间隔下单标识
+     */
+    String TRADER_SEND_MAS="trader:send:mas:";
+
+    /**
      *
      */
     String STATISTICS_SYMBOL_INFO="statistics:symbol:info";

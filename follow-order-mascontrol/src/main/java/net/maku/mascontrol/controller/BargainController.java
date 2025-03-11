@@ -29,6 +29,8 @@ import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
+import net.maku.framework.operatelog.annotations.OperateLog;
+import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.mascontrol.vo.FollowOrderHistoryQuery;
 import net.maku.mascontrol.vo.FollowOrderHistoryVO;
 import org.slf4j.Logger;
@@ -64,7 +66,7 @@ public class BargainController {
     private final RedisCache redisCache;
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<PageResult<FollowOrderHistoryVO>> histotyOrderList(@ParameterObject FollowOrderHistoryQuery followOrderHistoryQuery,HttpServletRequest request) {
         Integer vpsId = followOrderHistoryQuery.getVpsId();
         Long userId = followOrderHistoryQuery.getTraderUserId();
@@ -93,6 +95,7 @@ public class BargainController {
     }
     @GetMapping("reconnection")
     @Operation(summary = "重连账号")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> reconnection(@Parameter(description = "traderUserId") String traderUserId,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
         if(ObjectUtil.isEmpty(users)){
@@ -112,6 +115,7 @@ public class BargainController {
     }
     @GetMapping("batchReconnection")
     @Operation(summary = "重连账号")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> reconnection(@Parameter(description = "traderUserIds") List<String> traderUserIds,HttpServletRequest request) {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         ThreadPoolUtils.getExecutor().execute(()->{
@@ -133,6 +137,7 @@ public class BargainController {
 
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> orderClose(@RequestBody @Valid BargainCloseVO vo,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
         if(ObjectUtil.isEmpty(users)){
@@ -150,6 +155,7 @@ public class BargainController {
 
     @PostMapping("repairOrderClose")
     @Operation(summary = "一键漏平")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> repairOrderClose(@RequestBody TraderUserClose  vo,HttpServletRequest request) {
 
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
@@ -172,7 +178,8 @@ public class BargainController {
 
     @PostMapping("masOrderSend")
     @Operation(summary = "交易下单")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<?>  masOrderSend(@RequestBody @Valid MasOrderSendDto vo, HttpServletRequest request) {
         bargainService.masOrderSend(vo,request);
         return Result.ok();
@@ -180,15 +187,25 @@ public class BargainController {
 
     @PostMapping("masOrderClose")
     @Operation(summary = "交易平仓")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<?>   masOrderClose(@RequestBody @Valid MasToSubOrderCloseDto vo, HttpServletRequest request) {
         bargainService.masOrderClose(vo,request);
         return Result.ok();
     }
 
+    @GetMapping("stopOrder")
+    @Operation(summary = "停止下单/平仓")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
+    public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "orderNo") String orderNo) {
+        bargainService.stopOrder(type, orderNo);
+        return Result.ok();
+    }
+
     @GetMapping("historySubcommands")
     @Operation(summary = "历史子指令分页")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<List<FollowOrderInstructSubVO>> page(@RequestParam String sendNo){
         List<FollowOrderInstructSubVO> followOrderInstructSubVOS = new ArrayList<>();
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo));
@@ -221,7 +238,7 @@ public class BargainController {
 
     @GetMapping("historyCommands")
     @Operation(summary = "历史总指令分页")
-    @PreAuthorize("hasAuthority('mascontrol:trader')")
+    @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<PageResult<FollowOrderInstructVO>> page(@ParameterObject @Valid FollowOrderInstructQuery query){
         PageResult<FollowOrderInstructVO> page = followOrderInstructService.page(query);
 

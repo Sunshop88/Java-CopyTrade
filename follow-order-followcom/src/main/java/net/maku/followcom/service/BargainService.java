@@ -13,4 +13,6 @@ public interface BargainService {
     void masOrderSend(MasOrderSendDto vo, HttpServletRequest request);
 
     void masOrderClose(MasToSubOrderCloseDto vo, HttpServletRequest request);
+
+    void stopOrder(Integer type, String orderNo);
 }
