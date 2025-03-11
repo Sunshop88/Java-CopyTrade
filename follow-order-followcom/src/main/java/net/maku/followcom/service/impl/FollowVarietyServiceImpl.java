@@ -950,6 +950,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
                 LambdaUpdateWrapper<FollowVarietyEntity> update = new LambdaUpdateWrapper<>();
                 update.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdContract,entity.getStdContract());
                 update.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getBrokerSymbol,entity.getBrokerSymbol());
+                update.set(ObjectUtil.isNotEmpty(variety.getLast().getTemplateName()),FollowVarietyEntity::getTemplateName,entity.getTemplateName());
                 update.eq(FollowVarietyEntity::getId,variety.getLast().getId());
                 update(update);
             }
