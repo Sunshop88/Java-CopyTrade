@@ -255,6 +255,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                             for (FollowTestDetailEntity address : list) {
                                 // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
                                 String[] strings = address.getServerNode().split(":");
+                                log.info(leader.getAccount()+"开始连接账号"+strings[0]+":"+Integer.valueOf(strings[1]));
                                 conCodeEnum = connectTrader(leader, conCodeEnum, strings[0], Integer.valueOf(strings[1]));
                                 if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
                                     break;
@@ -263,6 +264,7 @@ public class LeaderApiTradersAdmin extends AbstractApiTradersAdmin {
                         } else {
                             List<FollowBrokeServerEntity> serverEntityList = followBrokeServerService.listByServerName(leader.getPlatform());
                             for (FollowBrokeServerEntity address : serverEntityList) {
+                                log.info(leader.getAccount()+"开始连接账号"+address.getServerNode()+":"+Integer.valueOf(address.getServerPort()));
                                 // 如果当前状态已不是TRADE_NOT_ALLOWED，则跳出循环
                                 conCodeEnum = connectTrader(leader, conCodeEnum, address.getServerNode(), Integer.valueOf(address.getServerPort()));
                                 if (conCodeEnum != ConCodeEnum.TRADE_NOT_ALLOWED) {
