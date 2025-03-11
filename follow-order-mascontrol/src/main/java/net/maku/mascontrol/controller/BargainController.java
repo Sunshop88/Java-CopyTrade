@@ -110,6 +110,26 @@ public class BargainController {
         });
         return Result.ok();
     }
+    @GetMapping("batchReconnection")
+    @Operation(summary = "重连账号")
+    public Result<Boolean> reconnection(@Parameter(description = "traderUserIds") List<String> traderUserIds,HttpServletRequest request) {
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+        ThreadPoolUtils.getExecutor().execute(()->{
+            traderUserIds.forEach(traderUserId->{
+                List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
+                users.forEach(user -> {
+                    ThreadPoolUtils.getExecutor().execute(()->{
+                        JSONObject jsonObject = new JSONObject();
+                        jsonObject.put("traderId", user.getId());
+                        Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
+                    });
+
+                });
+            });
+
+        });
+        return Result.ok();
+    }
 
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
