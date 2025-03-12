@@ -1026,6 +1026,25 @@ public class FollowTraderController {
         return Result.ok();
     }
 
+    @PostMapping("reconnectionUpdateTrader")
+    @Operation(summary = "重连账号，不涉及MT4修改密码")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<Boolean> reconnectionUpdateTrader(@RequestBody FollowTraderVO vo) {
+        Long traderId = vo.getId();
+        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
+        LambdaUpdateWrapper<FollowTraderUserEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(FollowTraderUserEntity::getAccount, vo.getAccount())
+                .set(FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+        followTraderUserService.update(wrapper);
+        //修改密码
+        LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FollowTraderEntity::getId, traderId)
+                .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+        followTraderService.update(updateWrapper);
+        reconnect(String.valueOf(traderId));
+        return Result.ok();
+    }
+
     @PostMapping("/synchData/{traderId}")
     @Operation(summary = "同步数据")
     public Result<String> synchData(@PathVariable("traderId") Long traderId) throws IOException {
