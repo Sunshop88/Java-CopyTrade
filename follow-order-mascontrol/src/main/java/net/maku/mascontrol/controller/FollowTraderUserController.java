@@ -21,11 +21,14 @@ import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
 import net.maku.followcom.vo.*;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -38,11 +41,11 @@ import jakarta.validation.Valid;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -226,12 +229,24 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         if (file.getSize() > maxSize) {
             return Result.error("上传的文件大小不能超过 10MB");
         }
-        try {
+
             // 检查文件类型
             if (!isExcelOrCsv(file.getOriginalFilename())) {
                 return Result.error("仅支持 CSV 文件");
             }
-            //设置状态
+            //查询表头是否与标准模板的一致   String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
+            try (InputStream inputStream = file.getInputStream();
+                 InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+                 CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
+                List<String> headerNames = csvParser.getHeaderNames();
+                String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
+                if (!headerNames.equals(Arrays.asList(expectedHeaders))) {
+                    throw new ServerException("CSV文件表头不正确，请下载模板");
+                }
+            }
+
+        try {
+                //设置状态
             FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
             followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
             followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
