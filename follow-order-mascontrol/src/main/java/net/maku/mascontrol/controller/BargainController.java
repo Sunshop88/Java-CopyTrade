@@ -231,6 +231,7 @@ public class BargainController {
                     detail.setStatusComment("成功");
                 }
                 detail.setEndTime(followOrderDetailEntity.getResponseOpenTime());
+                detail.setPlatform(followOrderDetailEntity.getPlatform());
                 followOrderInstructSubVOS.add(detail);
             }
         }
