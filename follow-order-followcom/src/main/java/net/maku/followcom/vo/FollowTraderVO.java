@@ -191,4 +191,8 @@ public class FollowTraderVO implements Serializable {
 	private String serverNode;
 	private String brokerName;
 	private String platformType;
+	@Schema(description = "forex")
+	private String forex;
+	@Schema(description = "cfd")
+	private String cfd;
 }

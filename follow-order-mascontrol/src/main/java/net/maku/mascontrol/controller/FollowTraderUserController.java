@@ -29,6 +29,7 @@ import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.framework.security.user.SecurityUser;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -238,10 +239,22 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             try (InputStream inputStream = file.getInputStream();
                  InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
-                List<String> headerNames = csvParser.getHeaderNames();
-                String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
-                if (!headerNames.equals(Arrays.asList(expectedHeaders))) {
-                    throw new ServerException("CSV文件表头不正确，请下载模板");
+                Iterator<CSVRecord> iterator = csvParser.iterator();
+                if (iterator.hasNext()) {
+                    CSVRecord firstRecord = iterator.next();
+                    List<String> actualHeaders = firstRecord.getParser().getHeaderNames().stream()
+                            .map(header -> header.trim().replaceAll("^\\uFEFF", "")) // 去除空格和BOM字符
+                            .collect(Collectors.toList());
+
+
+                    String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
+
+                    if (!(expectedHeaders.length == actualHeaders.size()) ||
+                            !Arrays.equals(expectedHeaders, actualHeaders.toArray(new String[0]))) {
+                        log.info("第一行数据：{}", actualHeaders);
+                        log.info("标准表头：{}", Arrays.toString(expectedHeaders));
+                        throw new ServerException("CSV文件表头不正确，请下载模板");
+                    }
                 }
             }
 

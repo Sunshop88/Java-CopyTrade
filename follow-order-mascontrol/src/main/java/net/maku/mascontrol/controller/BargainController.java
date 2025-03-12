@@ -208,7 +208,7 @@ public class BargainController {
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<List<FollowOrderInstructSubVO>> page(@RequestParam String sendNo){
         List<FollowOrderInstructSubVO> followOrderInstructSubVOS = new ArrayList<>();
-        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo));
+        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo).orderByDesc(FollowOrderDetailEntity::getCreateTime) );
         if (ObjectUtil.isNotEmpty(list)){
             for (FollowOrderDetailEntity followOrderDetailEntity : list) {
                 FollowOrderInstructSubVO detail = new FollowOrderInstructSubVO();
@@ -218,15 +218,16 @@ public class BargainController {
                 detail.setAccountType("MT4");
                 detail.setLots(followOrderDetailEntity.getSize());
                 detail.setCreateTime(followOrderDetailEntity.getCreateTime());
-                if (ObjectUtil.isNotEmpty(followOrderDetailEntity.getRemark())){
-                    //失败原因
+                if (ObjectUtil.isEmpty(followOrderDetailEntity.getCloseTime()) && ObjectUtil.isNotEmpty(followOrderDetailEntity.getRemark())) {
+                    // 失败原因
                     TradeErrorCodeEnum description = TradeErrorCodeEnum.getDescription(followOrderDetailEntity.getRemark());
-                    if (ObjectUtil.isNotEmpty(description)){
+                    if (ObjectUtil.isEmpty(description)) {
                         detail.setStatusComment("其他原因");
-                    }else {
+                    } else {
                         detail.setStatusComment(description.getDescription());
                     }
-                }else {
+                } else {
+                    detail.setCreateTime(followOrderDetailEntity.getRequestOpenTime());
                     detail.setStatusComment("成功");
                 }
                 detail.setEndTime(followOrderDetailEntity.getResponseOpenTime());

@@ -87,3 +87,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- 增加漏单监控
 -- ----------------------------
 ALTER TABLE follow_vps ADD is_monitor_repair tinyint(1) NULL DEFAULT 1 COMMENT '是否监控漏单 0不监控 1监控 ' ;
+
+ALTER TABLE follow_trader ADD cfd varchar(50) NULL  COMMENT '品种 ' ;
+ALTER TABLE follow_trader ADD forex varchar(50) NULL   COMMENT '品种 ' ;

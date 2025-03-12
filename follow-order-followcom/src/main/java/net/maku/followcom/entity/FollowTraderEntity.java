@@ -194,4 +194,9 @@ public class FollowTraderEntity {
 	 */
 	@TableField(value = "login_node")
 	private String loginNode;
+
+	@Schema(description = "forex")
+	private String forex;
+	@Schema(description = "cfd")
+	private String cfd;
 }

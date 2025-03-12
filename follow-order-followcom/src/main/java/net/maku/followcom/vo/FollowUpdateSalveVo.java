@@ -88,5 +88,8 @@ public class FollowUpdateSalveVo implements Serializable {
 
     @Schema(description = "位数")
     private Integer digits;
-
+    @Schema(description = "forex")
+    private String forex;
+    @Schema(description = "cfd")
+    private String cfd;
 }

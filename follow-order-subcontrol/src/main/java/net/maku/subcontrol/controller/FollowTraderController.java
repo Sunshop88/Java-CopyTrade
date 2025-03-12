@@ -720,6 +720,12 @@ public class FollowTraderController {
         PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.page(query);
         return Result.ok(page);
     }
+    @GetMapping("/getSpecificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<List<FollowSysmbolSpecificationEntity>> getSpecificationList(@ParameterObject FollowSysmbolSpecificationQuery query) {
+        List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
+        return Result.ok(list);
+    }
 
     private Boolean reconnect(String traderId) {
         Boolean result=false;
@@ -847,6 +853,32 @@ public class FollowTraderController {
 
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
+            //增加forex
+            String forex = followTraderEntity.getForex();
+            if(ObjectUtil.isNotEmpty(forex) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        return o.getSymbol();
+                    }
+                }
+            }
+            String cfd = followTraderEntity.getCfd();
+            if(ObjectUtil.isNotEmpty(cfd) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        return o.getSymbol();
+                    }
+                }
+            }
+            
             // 先查品种规格
             List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationEntity)){
@@ -992,6 +1024,25 @@ public class FollowTraderController {
                     .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
             followTraderService.update(updateWrapper);
             reconnect(String.valueOf(traderId));
+        return Result.ok();
+    }
+
+    @PostMapping("reconnectionUpdateTrader")
+    @Operation(summary = "重连账号，不涉及MT4修改密码")
+    @PreAuthorize("hasAuthority('mascontrol:speed')")
+    public Result<Boolean> reconnectionUpdateTrader(@RequestBody FollowTraderVO vo) {
+        Long traderId = vo.getId();
+        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
+        LambdaUpdateWrapper<FollowTraderUserEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(FollowTraderUserEntity::getAccount, vo.getAccount())
+                .set(FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+        followTraderUserService.update(wrapper);
+        //修改密码
+        LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FollowTraderEntity::getId, traderId)
+                .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+        followTraderService.update(updateWrapper);
+        reconnect(String.valueOf(traderId));
         return Result.ok();
     }
 

@@ -3,13 +3,54 @@
 
 <mapper namespace="net.maku.followcom.dao.FollowSysmbolSpecificationDao">
 
+<!--    <select id="selectSpecification" parameterType="net.maku.followcom.query.FollowSysmbolSpecificationQuery"-->
+<!--            resultType="net.maku.followcom.vo.FollowSysmbolSpecificationVO">-->
+<!--        SELECT-->
+<!--        fs.*,-->
+<!--        ft.platform_id,-->
+<!--        fp.broker_name,-->
+<!--        fp.platform_type as accountType,-->
+<!--        ft.account,-->
+<!--        ft.platform as serverName-->
+<!--        FROM-->
+<!--        follow_sysmbol_specification fs-->
+<!--        JOIN-->
+<!--        follow_trader ft ON fs.trader_id = ft.id-->
+<!--        JOIN-->
+<!--        follow_platform fp ON ft.platform_id = fp.id-->
+<!--        WHERE-->
+<!--        1=1-->
+<!--        <if test="brokerName != null and brokerName != ''">-->
+<!--            AND fp.broker_name = #{brokerName}-->
+<!--        </if>-->
+<!--        <if test="serverName != null and serverName != ''">-->
+<!--            AND ft.server_name = #{serverName}-->
+<!--        </if>-->
+<!--        <if test="accountType != null and accountType.length > 0">-->
+<!--            AND fp.platform_type IN-->
+<!--            <foreach item="item" index="index" collection="accountType" open="(" separator="," close=")">-->
+<!--                #{item}-->
+<!--            </foreach>-->
+<!--        </if>-->
+<!--        <if test="symbol != null and symbol != ''">-->
+<!--            AND fs.symbol LIKE CONCAT('%', #{symbol}, '%')-->
+<!--        </if>-->
+<!--        <if test="account != null and account != ''">-->
+<!--            AND ft.account LIKE CONCAT('%', #{account}, '%')-->
+<!--        </if>-->
+
+
+<!--    </select>-->
+
     <select id="selectSpecification" parameterType="net.maku.followcom.query.FollowSysmbolSpecificationQuery"
             resultType="net.maku.followcom.vo.FollowSysmbolSpecificationVO">
         SELECT
         fs.*,
         ft.platform_id,
         fp.broker_name,
-        fp.platform_type
+        fp.platform_type as accountType,
+        ft.account,
+        ft.platform as serverName
         FROM
         follow_sysmbol_specification fs
         JOIN
@@ -22,10 +63,16 @@
             AND fp.broker_name = #{brokerName}
         </if>
         <if test="serverName != null and serverName != ''">
-            AND fs.server_name = #{serverName}
+            AND ft.platform IN
+            <foreach item="name" collection="serverName.split(',')" open="(" separator="," close=")">
+                #{name}
+            </foreach>
         </if>
-        <if test="platformType != null and platformType != ''">
-            AND ft.platform_type = #{platformType}
+        <if test="accountType != null and accountType != ''">
+            AND fp.platform_type IN
+            <foreach item="item" collection="accountType.split(',')" open="(" separator="," close=")">
+                #{item}
+            </foreach>
         </if>
         <if test="symbol != null and symbol != ''">
             AND fs.symbol LIKE CONCAT('%', #{symbol}, '%')

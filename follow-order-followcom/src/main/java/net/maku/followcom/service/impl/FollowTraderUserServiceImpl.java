@@ -270,16 +270,18 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 //查看喊单账号是否存在用户
                 List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
                 if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
-                    continue;
+                    throw new ServerException("请先删除跟单用户");
+//                    continue;
                 }
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
                     Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
+                    removeById(id);
                     log.info("删除成功:{}", result);
                 }
             }
         }
-        removeByIds(idList);
+//        removeByIds(idList);
 
     }
 
@@ -342,16 +344,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
 
-//                // 获取表头
-//                List<String> headerNames = csvParser.getHeaderNames();
-//                String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
-//                if (!headerNames.equals(Arrays.asList(expectedHeaders))) {
-//                    LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-//                    updateWrapper.set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.FAIL.getType())
-//                            .eq(FollowUploadTraderUserEntity::getId, savedId);
-//                    followUploadTraderUserService.update(updateWrapper);
-//                    throw new ServerException("CSV文件表头不正确，请下载模板");
-//                }
 
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
@@ -496,7 +488,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
     public static void main(String[] args) {
         String s = AesUtils.aesEncryptStr("e88ef3200461457004569f2480d7d9c2");
-        String s1 = AesUtils.decryptStr("575753dc8398a446b71e55f3284244e7");
+        String s1 = AesUtils.decryptStr("0cc3bcc3558479b77f645741621dde0c");
         System.out.println(s);
         System.out.println(s1);
     }
