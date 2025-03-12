@@ -242,7 +242,7 @@ public class FollowPlatformController {
         return Result.ok(list);
     }
 
-    @GetMapping("listHavingServers")
+    @PostMapping("listHavingServers")
     @Operation(summary = "查询券商已有的服务器列表")
     public Result<List<FollowPlatformVO>> listHavingServers(@RequestBody List<String> name) {
         List<FollowPlatformVO> list = followPlatformService.listHavingServers(name);
