@@ -338,6 +338,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
                 followOrderDetailEntity.setServerHost(ip);
                 followOrderDetailEntity.setRemark(e.getMessage());
+                followOrderDetailEntity.setRequestOpenTime(LocalDateTime.now());
                 followOrderDetailService.save(followOrderDetailEntity);
                 logFollowOrder(followTraderEntity,orderInfo,openOrderMapping,flag,ip,e.getMessage(),op);
             }
