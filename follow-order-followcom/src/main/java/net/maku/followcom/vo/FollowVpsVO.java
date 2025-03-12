@@ -95,5 +95,9 @@ public class FollowVpsVO implements Serializable {
 
 	@Schema(description = "vps用户")
 	private List<String> userList;
+	/**
+	 * 是否监控漏单 0不监控 1监控
+	 */
+	private Integer isMonitorRepair;
 
 }

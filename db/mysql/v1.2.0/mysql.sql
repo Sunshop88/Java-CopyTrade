@@ -83,3 +83,7 @@ CREATE TABLE `follow_upload_trader_user`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 88 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '批量记录表' ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;
+-- ----------------------------
+-- 增加漏单监控
+-- ----------------------------
+ALTER TABLE follow_vps ADD is_monitor_repair tinyint(1) NULL DEFAULT 1 COMMENT '是否监控漏单 0不监控 1监控 ' ;
