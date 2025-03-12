@@ -186,7 +186,7 @@ public class MessagesServiceImpl implements MessagesService {
                                 FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
                                 if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus() == CloseOrOpenEnum.CLOSE.getValue()) {
                                     FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
-                                    Boolean isSend = isSend(vps);
+                                    Boolean isSend = isSend(vps,follow,master);
                                     if(isSend) {
                                         FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                                                 vpsName(vps.getName())
@@ -302,7 +302,7 @@ public class MessagesServiceImpl implements MessagesService {
                        if (!flag) {
                           // +";"+orderInfo.getTicket()+";"+orderActive.size()+";"+quoteClient.GetOpenedOrders().length
                             FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
-                           Boolean isSend = isSend(vps);
+                           Boolean isSend = isSend(vps,follow,master);
                            if( isSend){
                                 FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                                         vpsName(vps.getName())
