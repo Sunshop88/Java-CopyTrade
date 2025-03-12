@@ -103,4 +103,5 @@ public class FollowAddSalveVo  implements Serializable {
     //用于挂号vps(true 需要新增)
     private Boolean isAdd;
 
+
 }

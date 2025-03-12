@@ -719,6 +719,12 @@ public class FollowTraderController {
         PageResult<FollowSysmbolSpecificationVO> page = followSysmbolSpecificationService.page(query);
         return Result.ok(page);
     }
+    @GetMapping("/getSpecificationList")
+    @Operation(summary = "品种规格列表")
+    public Result<List<FollowSysmbolSpecificationEntity>> getSpecificationList(@ParameterObject FollowSysmbolSpecificationQuery query) {
+        List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
+        return Result.ok(list);
+    }
 
     private Boolean reconnect(String traderId) {
         Boolean result=false;
