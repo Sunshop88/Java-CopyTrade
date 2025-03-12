@@ -631,7 +631,7 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setIpAddr(trader.getIpAddr());
         followOrderDetailEntity.setServerName(trader.getServerName());
         followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
-        followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
+        followOrderDetailEntity.setOpenTime(order.OpenTime);
         followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
         followOrderDetailEntity.setOrderNo(order.Ticket);
         followOrderDetailEntity.setRequestOpenTime(startTime);
