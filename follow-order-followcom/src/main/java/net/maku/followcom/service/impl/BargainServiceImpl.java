@@ -349,7 +349,7 @@ public class BargainServiceImpl implements BargainService {
 
 
     //分配下单
-    public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
+     public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
         Map<FollowTraderEntity, Double> accountOrders = new HashMap<>(); // 记录每个账号分配的手数
         BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
