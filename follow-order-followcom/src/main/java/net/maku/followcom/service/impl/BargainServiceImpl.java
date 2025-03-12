@@ -13,6 +13,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
 import net.maku.followcom.enums.FollowMasOrderStatusEnum;
+import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -67,6 +68,9 @@ public class BargainServiceImpl implements BargainService {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             throw new ServerException("开始手数不能大于结束手数");
         }
+        if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
+            throw new ServerException("总手数不能低于最低手数");
+        }
         //现在找出可下单账号
         List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
         vo.getTraderList().forEach(o->{
@@ -112,6 +116,11 @@ public class BargainServiceImpl implements BargainService {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
+                        if (new BigDecimal(aDouble).compareTo(vo.getStartSize())<0){
+                            //低于最小手数报错
+                            insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1, TradeErrorCodeEnum.CONNECTION_LOST.getDescription());
+                            return;
+                        }
                         //发送请求
                         MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
                         masToSubOrderSendDto.setRemark(vo.getRemark());
@@ -340,7 +349,7 @@ public class BargainServiceImpl implements BargainService {
 
 
     //分配下单
-    public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
+     public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
         Map<FollowTraderEntity, Double> accountOrders = new HashMap<>(); // 记录每个账号分配的手数
         BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
@@ -406,20 +415,18 @@ public class BargainServiceImpl implements BargainService {
 
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
-        log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orders.size());
 
         if (orders.isEmpty()) {
             // 下单异常，抛出异常
             throw new ServerException("请重新下单");
         }
-
-        List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
-        log.info("下单数量{}++++++++下单手数{}", orders.size(), doubleList.stream().mapToDouble(o -> o).sum());
+        log.info("下单数量{}++++++++下单手数{}", orders.size(), orders);
 
         // 将手数分配给每个 traderId
         for (int i = 0; i < orders.size(); i++) {
             accountOrders.put(traderId.get(i), orders.get(i).doubleValue());
         }
+        log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + accountOrders.size());
 
         return accountOrders;
     }
