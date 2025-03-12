@@ -417,7 +417,7 @@ public class BargainServiceImpl implements BargainService {
         log.info("下单数量{}++++++++下单手数{}", orders.size(), doubleList.stream().mapToDouble(o -> o).sum());
 
         // 将手数分配给每个 traderId
-        for (int i = 0; i < traderId.size(); i++) {
+        for (int i = 0; i < orders.size(); i++) {
             accountOrders.put(traderId.get(i), orders.get(i).doubleValue());
         }
 
