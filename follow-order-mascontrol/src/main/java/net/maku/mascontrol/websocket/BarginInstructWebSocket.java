@@ -34,65 +34,68 @@ public class BarginInstructWebSocket {
 
     private static final Logger log = LoggerFactory.getLogger(BarginInstructWebSocket.class);
     private Session session;
-    private FollowTraderServiceImpl followTraderService= SpringContextUtils.getBean( FollowTraderServiceImpl.class);
+    private FollowTraderServiceImpl followTraderService = SpringContextUtils.getBean(FollowTraderServiceImpl.class);
     private static Map<String, Set<Session>> sessionPool = new ConcurrentHashMap<>();
-    private RedisUtil redisUtil=SpringContextUtils.getBean(RedisUtil.class);;
-    private ScheduledFuture<?> scheduledFuture;
-    private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();;
-    private FollowOrderInstructService followOrderInstructService= SpringContextUtils.getBean( FollowOrderInstructServiceImpl.class);
-    private FollowOrderDetailService followOrderDetailService= SpringContextUtils.getBean( FollowOrderDetailServiceImpl.class);
-    private UserApi userApi=SpringContextUtils.getBean(UserApi.class);
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
+    private FollowOrderInstructService followOrderInstructService = SpringContextUtils.getBean(FollowOrderInstructServiceImpl.class);
+    private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
+    private UserApi userApi = SpringContextUtils.getBean(UserApi.class);
+
     @OnOpen
     public void onOpen(Session session) {
         try {
             this.session = session;
+            // 启动周期任务
             startPeriodicTask();
+            // 添加到 sessionPool
+            String sessionKey = session.getId();
+            sessionPool.computeIfAbsent(sessionKey, k -> new HashSet<>()).add(session);
+            log.info("WebSocket connection opened, session ID: " + sessionKey);
         } catch (Exception e) {
-            log.info("连接异常"+e);
+            log.info("连接异常" + e);
             throw new RuntimeException();
         }
     }
 
-
     private void startPeriodicTask() {
         // 每秒钟发送一次消息
         if (scheduledExecutorService.isShutdown() || scheduledExecutorService.isTerminated()) {
-            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            scheduledExecutorService = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
         }
-        scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage(), 0, 1, TimeUnit.SECONDS);
+        scheduledExecutorService.scheduleAtFixedRate(this::sendPeriodicMessage, 0, 2, TimeUnit.SECONDS);
     }
 
     private void stopPeriodicTask() {
         scheduledExecutorService.shutdown();
     }
 
-    private void sendPeriodicMessage(){
+    private void sendPeriodicMessage() {
         FollowBaiginInstructVO followBaiginInstructVO = new FollowBaiginInstructVO();
         FollowOrderInstructEntity followOrderInstruct = null;
-        //获取最新指令
+        // 获取最新指令
         Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
         if (followOrderInstruct1.isPresent()) {
             followOrderInstruct = followOrderInstruct1.get();
         }
-        if (ObjectUtil.isNotEmpty(followOrderInstruct)){
-            BeanUtil.copyProperties(followOrderInstruct,followBaiginInstructVO);
+        if (ObjectUtil.isNotEmpty(followOrderInstruct)) {
+            BeanUtil.copyProperties(followOrderInstruct, followBaiginInstructVO);
             followBaiginInstructVO.setCreator(userApi.getUserById(followBaiginInstructVO.getCreator()).getUsername());
             List<FollowOrderDetailEntity> list = followOrderDetailService.getInstruct(followOrderInstruct.getOrderNo());
-            List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList=new ArrayList<>();
-            list.forEach(o->{
-                FollowBaiginInstructSubVO followBaiginInstructSubVO=new FollowBaiginInstructSubVO();
-                BeanUtil.copyProperties(o,followBaiginInstructSubVO);
+            List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList = new ArrayList<>();
+            list.forEach(o -> {
+                FollowBaiginInstructSubVO followBaiginInstructSubVO = new FollowBaiginInstructSubVO();
+                BeanUtil.copyProperties(o, followBaiginInstructSubVO);
                 FollowTraderEntity followTraderEntity = followTraderService.getFollowById(o.getTraderId());
                 followBaiginInstructSubVO.setPlatform(followTraderEntity.getPlatform());
-                if (ObjectUtil.isEmpty(o.getCloseTime())&&ObjectUtil.isNotEmpty(o.getRemark())){
-                    //失败原因
+                if (ObjectUtil.isEmpty(o.getCloseTime()) && ObjectUtil.isNotEmpty(o.getRemark())) {
+                    // 失败原因
                     TradeErrorCodeEnum description = TradeErrorCodeEnum.getDescription(o.getRemark());
-                    if (ObjectUtil.isNotEmpty(description)){
+                    if (ObjectUtil.isEmpty(description)) {
                         followBaiginInstructSubVO.setStatusComment("其他原因");
-                    }else {
+                    } else {
                         followBaiginInstructSubVO.setStatusComment(description.getDescription());
                     }
-                }else {
+                } else {
                     followBaiginInstructSubVO.setCreateTime(o.getRequestOpenTime());
                     followBaiginInstructSubVO.setStatusComment("成功");
                 }
@@ -103,14 +106,14 @@ public class BarginInstructWebSocket {
         pushMessage(JsonUtils.toJsonString(followBaiginInstructVO));
     }
 
-
-
     @OnClose
     public void onClose() {
         try {
             if (session != null && session.isOpen()) {
-                scheduledExecutorService.shutdown();
+                stopPeriodicTask();
                 session.close();
+                // 从 sessionPool 中移除当前 session
+                sessionPool.entrySet().removeIf(entry -> entry.getValue().remove(session) && entry.getValue().isEmpty());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -122,9 +125,13 @@ public class BarginInstructWebSocket {
      */
     public void pushMessage(String message) {
         try {
-            if (session != null && session.isOpen()) {
-                synchronized (session) {
-                    session.getBasicRemote().sendText(message);
+            for (Set<Session> sessions : sessionPool.values()) {
+                for (Session s : sessions) {
+                    if (s.isOpen()) {
+                        synchronized (s) {
+                            s.getBasicRemote().sendText(message);
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
@@ -134,10 +141,10 @@ public class BarginInstructWebSocket {
 
     @OnMessage
     public void onMessage(String message) {
+        // 处理接收到的消息
     }
 
-    public Boolean isConnection(String traderId,String symbol) {
-        return sessionPool.containsKey(traderId+symbol);
+    public Boolean isConnection(String traderId, String symbol) {
+        return sessionPool.containsKey(traderId + symbol);
     }
-
 }

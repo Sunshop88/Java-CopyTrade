@@ -21,7 +21,13 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     NOT_CONNECTED("Not connected in 30000 ms", "连接超时"),
     NO_CONNECTION("Cannot send order because no connection with server", "账号未连接"),
     QUOTE_CLIENT_NULL("because \"quoteClient.OrderClient\" is null", "账号未连接"),
-    NO_SYMBOL_SPECIFICATION("主账号标准品种未配置", "主账号标准品种未配置");
+    NO_SYMBOL_SPECIFICATION("主账号标准品种未配置", "主账号标准品种未配置"),
+    SYMBOL_NOT_RIGHT("获取报价失败, 品种不正确", "品种不正确"),
+    LOGIN_ERROR("登录异常", "登录异常"),
+    SEVICE_ERRROR("服务器异常", "服务器异常"),
+    LOTS_NUM_ERROR("超过最大手数限制", "超过最大手数限制");
+
+
 
     /**
      * 枚举对象的值
