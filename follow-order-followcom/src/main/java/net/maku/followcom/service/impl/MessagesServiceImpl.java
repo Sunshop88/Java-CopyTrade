@@ -18,6 +18,7 @@ import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.followcom.vo.FollowTraderVO;
@@ -59,6 +60,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final FollowOrderDetailService followOrderDetailService;
     private final RedissonLockUtil redissonLockUtil;
     private final RedisUtil redisUtil;
+    private final FollowVpsService followVpsService;
 
 
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
@@ -287,6 +289,7 @@ public class MessagesServiceImpl implements MessagesService {
                         }
                         boolean flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
                         if (!flag) {
+
                             FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
                                     vpsName(follow.getServerName())
                                     .source(master.getAccount())

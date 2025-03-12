@@ -106,7 +106,7 @@ public class TraderRepairManageWebSocket {
 
 
         }else{
-            List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+            List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
             if(ObjectUtil.isNotEmpty(list)){
                 for (FollowVpsEntity vs : list) {
                     VpsUserVO vpsUserVO = new VpsUserVO();
@@ -126,13 +126,13 @@ public class TraderRepairManageWebSocket {
                     list.add(Integer.valueOf(split[i]));
                 }
             }
-            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
         }else {
 
             if(ObjectUtil.isEmpty(vpsList)){
                 followVpsEntityList=new ArrayList<>();
             }else{
-                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
             }
         
         }
@@ -140,7 +140,7 @@ public class TraderRepairManageWebSocket {
         //总漏单数量
         AtomicReference<Integer> total= new AtomicReference<>(0);
         //漏单VPS
-        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()))).intValue());
+        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()))).intValue());
         //漏单信号源
         AtomicReference<Integer> masterNum= new AtomicReference<>(0);
         //漏单跟单账号
