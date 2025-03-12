@@ -22,4 +22,14 @@ public class MasterRepairVO implements Serializable {
 
     //信号源漏单数量
     private Integer repairNum;
+
+    /**
+     * 跟单状态
+     */
+    private Integer followStatus;
+
+    /**
+     * 连接状态，0为异常，1为正常
+     */
+    private Integer status;
 }

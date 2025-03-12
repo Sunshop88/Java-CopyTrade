@@ -85,5 +85,8 @@ public class FollowVpsVO implements Serializable {
 
 	@Schema(description = "复制状态，0：失败 1：进行中 2：成功")
 	private Integer copyStatus;
-
+	/**
+	 * 是否监控漏单 0不监控 1监控
+	 */
+	private Integer isMonitorRepair;
 }
