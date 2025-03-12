@@ -1132,13 +1132,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 long end = System.currentTimeMillis();
                 log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
+                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(asksub));
             } else {
                 long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 long end = System.currentTimeMillis();
                 log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
+                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bidsub));
             }
             followOrderDetailEntity.setOpenTimeDifference((int) order.sendTimeDifference);
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
