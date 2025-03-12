@@ -250,27 +250,34 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
         List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
-        Map<String, FollowTestDetailVO> map = detailVOList.stream()
-                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
-                .collect(Collectors.toMap(
-                        FollowTestDetailVO::getServerName,
-                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
-                        (existing, replacement) -> existing));
-
-        // 将 map 的值转回列表
-        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
+//        Map<String, FollowTestDetailVO> map = detailVOList.stream()
+//                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+//                .collect(Collectors.toMap(
+//                        detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+//                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
+//                        (existing, replacement) -> existing));
+//        log.info( "map: {}", map);
+//
+//        // 将 map 的值转回列表
+//        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
         //severName默认节点
         Map<String, String> defaultServerNodeMap = new HashMap<>();
         //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
-        if (ObjectUtil.isNotEmpty(collect)) {
-            defaultServerNodeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
+        if (ObjectUtil.isNotEmpty(detailVOList)) {
+            defaultServerNodeMap = detailVOList.stream()
+                    .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+                    .collect(Collectors.toMap(
+                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+                            FollowTestDetailVO::getServerNode,
+                            (existing, replacement) -> existing));
 
-            serverUpdateTimeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
+            serverUpdateTimeMap = detailVOList.stream()
+                    .filter(detail -> detail.getServerName() != null && detail.getServerUpdateTime() != null)
+                    .collect(Collectors.toMap(
+                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+                            FollowTestDetailVO::getServerUpdateTime,
+                            (existing, replacement) -> existing));
         }
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
@@ -284,8 +291,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
-                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverNode.getServerName());
-                String defaultServerNode = defaultServerNodeMap.get(serverNode.getServerName()) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
+                String serverKey = serverNode.getServerName() + "_" + vpsEntity.getId();
+                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverKey);
+                String defaultServerNode = defaultServerNodeMap.get(serverKey) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
+                log.info("开始测速：" + serverNode.getServerName() + "默认节点为：" + defaultServerNode);
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
@@ -554,27 +563,33 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
         List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
-        Map<String, FollowTestDetailVO> map = detailVOList.stream()
-                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
-                .collect(Collectors.toMap(
-                        FollowTestDetailVO::getServerName,
-                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
-                        (existing, replacement) -> existing));
-
-        // 将 map 的值转回列表
-        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
+//        Map<String, FollowTestDetailVO> map = detailVOList.stream()
+//                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+//                .collect(Collectors.toMap(
+//                        FollowTestDetailVO::getServerName,
+//                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
+//                        (existing, replacement) -> existing));
+//
+//        // 将 map 的值转回列表
+//        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
         //severName默认节点
         Map<String, String> defaultServerNodeMap = new HashMap<>();
         //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
-        if (ObjectUtil.isNotEmpty(collect)) {
-            defaultServerNodeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
+        if (ObjectUtil.isNotEmpty(detailVOList)) {
+            defaultServerNodeMap = detailVOList.stream()
+                    .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+                    .collect(Collectors.toMap(
+                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+                            FollowTestDetailVO::getServerNode,
+                            (existing, replacement) -> existing));
 
-            serverUpdateTimeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
+            serverUpdateTimeMap = detailVOList.stream()
+                    .filter(detail -> detail.getServerName() != null && detail.getServerUpdateTime() != null)
+                    .collect(Collectors.toMap(
+                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+                            FollowTestDetailVO::getServerUpdateTime,
+                            (existing, replacement) -> existing));
         }
         // 提交每个测速任务到线程池
         for (Map.Entry<String, List<FollowBrokeServerEntity>> entry : serverMap.entrySet()) {
@@ -588,8 +603,9 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 String ipAddress = serverNode.getServerNode(); // 目标 IP 地址
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
-                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverNode.getServerName());
-                String defaultServerNode = defaultServerNodeMap.get(serverNode.getServerName()) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
+                String serverKey = serverNode.getServerName() + "_" + vpsEntity.getId();
+                LocalDateTime localDateTime = serverUpdateTimeMap.get(serverKey);
+//                String defaultServerNode = defaultServerNodeMap.get(serverKey) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
                     int retryCount = 0; // 重试次数
