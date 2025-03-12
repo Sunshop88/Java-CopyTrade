@@ -415,20 +415,18 @@ public class BargainServiceImpl implements BargainService {
 
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
-        log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orders.size());
 
         if (orders.isEmpty()) {
             // 下单异常，抛出异常
             throw new ServerException("请重新下单");
         }
-
-        List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
-        log.info("下单数量{}++++++++下单手数{}", orders.size(), doubleList.stream().mapToDouble(o -> o).sum());
+        log.info("下单数量{}++++++++下单手数{}", orders.size(), orders);
 
         // 将手数分配给每个 traderId
         for (int i = 0; i < orders.size(); i++) {
             accountOrders.put(traderId.get(i), orders.get(i).doubleValue());
         }
+        log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + accountOrders.size());
 
         return accountOrders;
     }
