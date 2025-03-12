@@ -482,6 +482,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void updateGroup(List<Long> idList, Long groupId) {
         FollowGroupVO vo = followGroupService.get(groupId);
+        if (ObjectUtil.isEmpty(vo)){
+            throw new ServerException("分组不存在");
+        }
         for (Long id : idList) {
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderUserEntity::getId, id)
@@ -988,9 +991,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void modify(List<FollowTraderUserVO> vos) {
         for (FollowTraderUserVO vo : vos) {
             FollowGroupVO group = followGroupService.get(Long.valueOf(vo.getGroupId()));
+            if (ObjectUtil.isEmpty(group)) {
+                throw new ServerException("分组不存在");
+            }
                 LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                 updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
                         .set(FollowTraderUserEntity::getGroupName, group.getName())
