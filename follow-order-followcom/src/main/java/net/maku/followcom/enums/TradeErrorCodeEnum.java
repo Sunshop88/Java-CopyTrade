@@ -25,7 +25,8 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     SYMBOL_NOT_RIGHT("获取报价失败, 品种不正确", "品种不正确"),
     LOGIN_ERROR("登录异常", "登录异常"),
     SEVICE_ERRROR("服务器异常", "服务器异常"),
-    LOTS_NUM_ERROR("超过最大手数限制", "超过最大手数限制");
+    LOTS_NUM_ERROR("超过最大手数限制", "超过最大手数限制"),
+    LOTS_NUM_LOWER("低于最低手数限制", "低于最低手数限制");
 
 
 
