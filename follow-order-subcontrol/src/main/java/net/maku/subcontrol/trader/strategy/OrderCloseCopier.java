@@ -66,7 +66,6 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     private final TraderOrderRepairWebSocket traderOrderRepairWebSocket;
 
     @Override
-    @Transactional
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
 
