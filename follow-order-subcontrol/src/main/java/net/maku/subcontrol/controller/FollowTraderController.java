@@ -852,6 +852,32 @@ public class FollowTraderController {
 
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
+            //增加forex
+            String forex = followTraderEntity.getForex();
+            if(ObjectUtil.isNotEmpty(forex) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        return o.getSymbol();
+                    }
+                }
+            }
+            String cfd = followTraderEntity.getCfd();
+            if(ObjectUtil.isNotEmpty(cfd) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        return o.getSymbol();
+                    }
+                }
+            }
+            
             // 先查品种规格
             List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
             if (ObjectUtil.isNotEmpty(specificationEntity)){
