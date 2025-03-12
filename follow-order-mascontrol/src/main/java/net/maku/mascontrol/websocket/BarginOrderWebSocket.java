@@ -60,7 +60,6 @@ public class BarginOrderWebSocket {
 
     private String getSymbol(String traderId,String symbol,QuoteClient quoteClient,FollowTraderEntity followTraderEntity,String brokeName) {
         QuoteEventArgs eventArgs = null;
-        String oldSymbol=symbol;
         //获取symbol信息
         String finalSymbol = symbol;
         List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(Long.parseLong(traderId)).stream().filter(o->o.getSymbol().contains(finalSymbol)).toList();
@@ -74,7 +73,7 @@ public class BarginOrderWebSocket {
                 }
             }
             if (ObjectUtil.isEmpty(eventArgs)){
-                return oldSymbol;
+                return "";
             }
         }else {
             // 查看品种匹配 模板
@@ -95,7 +94,7 @@ public class BarginOrderWebSocket {
                     }
                 }
                 if (ObjectUtil.isEmpty(eventArgs)){
-                    return oldSymbol;
+                    return "";
                 }
             }
         }
@@ -153,8 +152,10 @@ public class BarginOrderWebSocket {
      */
     public void pushMessage(Session session,String message) {
         try {
-            synchronized (session) {
-                session.getBasicRemote().sendText(message);
+            if (session != null && session.getBasicRemote() != null) {
+                synchronized (session) {
+                    session.getBasicRemote().sendText(message);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -164,16 +165,18 @@ public class BarginOrderWebSocket {
     @OnMessage
     public void onMessage(String message,Session session) {
 
-            JSONObject jsonObj = JSONObject.parseObject(message);
-            String symbol = jsonObj.getString("symbol");
-            String traderId = jsonObj.getString("traderId");
-            String id = session.getId();
-            Future<?> st = scheduledTasks.get(id);
-            if (st != null) {
-                st.cancel(true);
-                scheduledTasks.clear();
-            }
-
+        JSONObject jsonObj = JSONObject.parseObject(message);
+        String symbol = jsonObj.getString("symbol");
+        String traderIds = jsonObj.getString("traderId");
+        //多账号获取数据
+        String[] traders = traderIds.split(",");
+        String id = session.getId();
+        Future<?> st = scheduledTasks.get(id);
+        if (st != null) {
+            st.cancel(true);
+            scheduledTasks.clear();
+        }
+        for(String traderId:traders){
             //发送远程调用vps存入报价到redis
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(traderId);
             //查询各VPS状态正常的账号
@@ -213,17 +216,19 @@ public class BarginOrderWebSocket {
                         }
                         //查品种模版
                         String symbol1 = getSymbol(traderId, symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
+                        if (ObjectUtil.isEmpty(symbol1)){
+                            continue;
+                        }
                         if (!scheduledTasks.containsKey(id)) {
                             startPeriodicTask(traderId, symbol1, quoteClient,session); // 启动定时任务
+                            break;
                         }
                     }catch (Exception e){
                         log.info("连接异常");
                     }
                 }
             }
-
-
-       
+        }
     }
 
     private QuoteClient loginMt4(String traderId,String account, String password, String[] s) {

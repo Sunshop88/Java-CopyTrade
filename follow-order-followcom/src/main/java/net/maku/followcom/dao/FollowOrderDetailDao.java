@@ -178,7 +178,7 @@ public interface FollowOrderDetailDao extends BaseDao<FollowOrderDetailEntity> {
     void customBatchSaveOrUpdate(@Param("list") List<FollowOrderDetailEntity> list);
 
     @Select("SELECT * FROM ( " +
-            "   SELECT *, ROW_NUMBER() OVER (PARTITION BY ip_addr ORDER BY create_time DESC) AS rn " +
+            "   SELECT *, ROW_NUMBER() OVER (PARTITION BY ip_addr,trader_id  ORDER BY create_time DESC) AS rn " +
             "   FROM follow_order_detail " +
             "   WHERE send_no = #{orderNo} " +
             ") AS tmp " +

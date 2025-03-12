@@ -1,10 +1,12 @@
 package net.maku.mascontrol.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -36,8 +38,18 @@ public class FollowBaiginInstructVO implements Serializable {
 	@Schema(description = "成交单数")
 	private Integer tradedOrders;
 
+	@Schema(description = "失败订单")
+	private Integer failOrders;
+
 	@Schema(description = "状态0-执行中 1-全部成功 2-存在失败")
 	private Integer status;
+
+	@Schema(description = "创建者")
+	private String creator;
+
+	@Schema(description = "创建时间")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	private LocalDateTime createTime;
 
 	@Schema(description = "子指令")
 	private List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList;
