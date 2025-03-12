@@ -8,6 +8,9 @@ import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.MessagesTypeEnum;
+import net.maku.followcom.service.FollowService;
+import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.framework.common.cache.RedisCache;
@@ -16,10 +19,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Author:  zsd
@@ -33,6 +35,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MissingOrdersNoticeTask {
     private final MessagesService messagesService;
     private final RedisCache redisCache;
+    private final FollowTraderService followTraderService;
+    private final FollowVpsService followVpsService;
 
    @Scheduled(cron = "0 0/10 * * * ?")
    // @Scheduled(cron = "* * * * * ?")
@@ -43,10 +47,27 @@ public class MissingOrdersNoticeTask {
         sendKeys.forEach(key -> {
             Map<Object, Object> stringObjectMap = redisCache.hGetStrAll(key);
             if(stringObjectMap!=null){
+
                 stringObjectMap.values().forEach(obj->{
                     JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                     Collection<Object> values = jsonObject.values();
-                    num.updateAndGet(v -> v + values.size());
+                    if(ObjectUtil.isNotEmpty(values)){
+                        List<Object> objects = new ArrayList<>();
+                        objects.addAll(values);
+                        Object o = objects.get(0);
+                        JSONObject json = JSONObject.parseObject(o.toString());
+                        Long masterId = json.getLong("masterId");
+                        Long slaveId = json.getLong("slaveId");
+                        FollowTraderEntity master = followTraderService.getFollowById(masterId);
+                        FollowTraderEntity slave = followTraderService.getFollowById(slaveId);
+                        FollowVpsEntity vps = followVpsService.getById(slave.getServerId());
+                        Boolean isSend = isSend(vps, slave, master);
+                        if(isSend){
+                            num.updateAndGet(v -> v + values.size());
+                        }
+
+                    }
+                  
 
                 });
             }
@@ -59,7 +80,22 @@ public class MissingOrdersNoticeTask {
                     try {
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                         Collection<Object> values = jsonObject.values();
-                        num.updateAndGet(v -> v + values.size());
+                        if(ObjectUtil.isNotEmpty(values)){
+                            List<Object> objects = new ArrayList<>();
+                            objects.addAll(values);
+                            Object o = objects.get(0);
+                            JSONObject json = JSONObject.parseObject(o.toString());
+                            Long masterId = json.getLong("masterId");
+                            Long slaveId = json.getLong("slaveId");
+                            FollowTraderEntity master = followTraderService.getFollowById(masterId);
+                            FollowTraderEntity slave = followTraderService.getFollowById(slaveId);
+                            FollowVpsEntity vps = followVpsService.getById(slave.getServerId());
+                            Boolean isSend = isSend(vps, slave, master);
+                            if(isSend){
+                                num.updateAndGet(v -> v + values.size());
+                            }
+                        }
+
                     } catch (Exception e) {
                       log.error("定时发送信息"+e);
                     }
