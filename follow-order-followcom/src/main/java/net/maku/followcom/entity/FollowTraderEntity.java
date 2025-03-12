@@ -1,8 +1,6 @@
 package net.maku.followcom.entity;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -47,7 +45,7 @@ public class FollowTraderEntity {
 	/**
 	 * 平台服务器
 	 */
-	@Schema(description = "platform")
+	@TableField(value = "platform")
 	private String platform;
 
 	/**
@@ -195,8 +193,8 @@ public class FollowTraderEntity {
 	@TableField(value = "login_node")
 	private String loginNode;
 
-	@Schema(description = "forex")
+	@TableField(value = "forex")
 	private String forex;
-	@Schema(description = "cfd")
+	@TableField(value = "cfd")
 	private String cfd;
 }
