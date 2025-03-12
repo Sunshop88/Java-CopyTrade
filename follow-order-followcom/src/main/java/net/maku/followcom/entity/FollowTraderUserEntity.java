@@ -124,8 +124,5 @@ public class FollowTraderUserEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
-	@TableField(value = "forex")
-	private String forex;
-	@TableField(value = "cfd")
-	private String cfd;
+
 }
