@@ -247,9 +247,13 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
         // 创建一个固定大小的线程池
         ExecutorService executorService = Executors.newFixedThreadPool(20); // 可根据需求调整线程池大小
 //        ConcurrentLinkedQueue<FollowTestDetailEntity> entitiesToSave = new ConcurrentLinkedQueue<>();
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setVpsId(vpsEntity.getId());
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
-        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
+
+        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServerNode(query);
+        log.info("detailVOList: {}", detailVOList.size());
 //        Map<String, FollowTestDetailVO> map = detailVOList.stream()
 //                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
 //                .collect(Collectors.toMap(
@@ -292,8 +296,9 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
                 int port = Integer.parseInt(serverNode.getServerPort()); // 目标端口号
 
                 String serverKey = serverNode.getServerName() + "_" + vpsEntity.getId();
+                log.info("serverKey: {}", serverKey);
                 LocalDateTime localDateTime = serverUpdateTimeMap.get(serverKey);
-                String defaultServerNode = defaultServerNodeMap.get(serverKey) != null ? defaultServerNodeMap.get(serverNode.getServerName()) : "null";
+                String defaultServerNode = defaultServerNodeMap.get(serverKey) != null ? defaultServerNodeMap.get(serverKey) : "null";
                 log.info("开始测速：" + serverNode.getServerName() + "默认节点为：" + defaultServerNode);
                 // 提交测速任务到线程池
                 executorService.submit(() -> {
