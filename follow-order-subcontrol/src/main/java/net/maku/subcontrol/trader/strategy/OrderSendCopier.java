@@ -254,7 +254,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 }
 
                 // 执行订单发送
-                double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
+                double startPrice=op.equals(Op.Buy) ? asksub : bidsub;
                 // 记录开始时间
                 LocalDateTime startTime=LocalDateTime.now();
                 long start = System.currentTimeMillis();
@@ -424,7 +424,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
 
             // 执行订单发送
-            double startPrice=followTraderEntity.getType().equals(Op.Buy.getValue()) ? asksub : bidsub;
+            double startPrice=op.equals(Op.Buy) ? asksub : bidsub;
             // 记录开始时间
             LocalDateTime startTime=LocalDateTime.now();
             long start = System.currentTimeMillis();
