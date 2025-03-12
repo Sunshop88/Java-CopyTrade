@@ -12,6 +12,7 @@ import net.maku.followcom.vo.*;
 import net.maku.framework.common.query.Query;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
+import net.maku.mascontrol.task.MissingOrdersNoticeTask;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,8 @@ public class DashboardController {
 
     @Autowired
     private DashboardService dashboardService;
+    @Autowired
+    private MissingOrdersNoticeTask missingOrdersNoticeTask;
 
     /***
      * 仪表盘-头部统计
@@ -123,6 +126,14 @@ public class DashboardController {
     public Result<List<FollowPlatformEntity>> searchBrokerName(String brokerName) {
 
         return Result.ok(dashboardService.searchBrokerName(brokerName));
+    }
+
+
+    @GetMapping("/sendMessages")
+    @Operation(summary = "主动触发发送总数")
+    public Result<String>  sendMessages() {
+        missingOrdersNoticeTask.notice();
+        return Result.ok();
     }
 
 }
