@@ -48,4 +48,6 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
     String getbrokerName(String serverName);
 
     List<FollowTraderCountVO> getBrokerNames();
+
+    List<FollowPlatformVO> listHavingServers(List<String> name);
 }

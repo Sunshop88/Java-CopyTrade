@@ -282,6 +282,7 @@ public class FollowTraderController {
                 if (cache != null) {
                     cache.evict(cacheKey); // 移除指定缓存条目
                 }
+
                 //删除跟单对应主账号缓存
                 Cache cache1 = cacheManager.getCache("followSubOrderCache");
                 if (cache1 != null) {
