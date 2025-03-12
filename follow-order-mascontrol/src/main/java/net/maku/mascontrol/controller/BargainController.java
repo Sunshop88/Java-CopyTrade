@@ -42,6 +42,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -116,11 +117,12 @@ public class BargainController {
     @GetMapping("batchReconnection")
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
-    public Result<Boolean> reconnection(@Parameter(description = "traderUserIds") List<String> traderUserIds,HttpServletRequest request) {
+    public Result<Boolean> reconnection(@Parameter(description = "traderUserIds") Long[] traderUserIds,HttpServletRequest request) {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+
         ThreadPoolUtils.getExecutor().execute(()->{
-            traderUserIds.forEach(traderUserId->{
-                List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
+           Arrays.stream(traderUserIds).forEach(traderUserId->{
+                List<FollowTraderEntity> users = getByUserId(traderUserId);
                 users.forEach(user -> {
                     ThreadPoolUtils.getExecutor().execute(()->{
                         JSONObject jsonObject = new JSONObject();
