@@ -60,7 +60,10 @@
         WHERE
         1=1
         <if test="brokerName != null and brokerName != ''">
-            AND fp.broker_name = #{brokerName}
+            AND fp.broker_name IN
+            <foreach item="item" collection="brokerName.split(',')" open="(" separator="," close=")">
+                #{item}
+            </foreach>
         </if>
         <if test="serverName != null and serverName != ''">
             AND ft.platform IN

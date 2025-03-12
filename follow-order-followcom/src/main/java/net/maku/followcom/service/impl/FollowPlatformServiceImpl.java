@@ -223,6 +223,13 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
         return baseMapper.getBrokerNames();
     }
 
+    @Override
+    public List<FollowPlatformVO> listHavingServers(List<String> names) {
+        List<FollowPlatformEntity> serverList = list(new LambdaQueryWrapper<FollowPlatformEntity>()
+                .in(FollowPlatformEntity::getBrokerName,names));
+        return FollowPlatformConvert.INSTANCE.convertList(serverList);
+    }
+
 
 //    @Override
 //    public List<String> getBrokeName(List<Long> idList) {

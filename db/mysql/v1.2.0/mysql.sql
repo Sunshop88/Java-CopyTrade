@@ -90,3 +90,4 @@ ALTER TABLE follow_vps ADD is_monitor_repair tinyint(1) NULL DEFAULT 1 COMMENT '
 
 ALTER TABLE follow_trader ADD cfd varchar(50) NULL  COMMENT '品种 ' ;
 ALTER TABLE follow_trader ADD forex varchar(50) NULL   COMMENT '品种 ' ;
+ALTER TABLE follow_trader_user MODIFY COLUMN sort INT;
