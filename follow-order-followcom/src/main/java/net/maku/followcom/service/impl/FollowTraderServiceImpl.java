@@ -1385,10 +1385,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             int randomOrderIndex = rand.nextInt(orders.size());
             orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
-        // 确保每个订单的手数不超过 maxLots
-        orders = orders.stream()
-                .map(order -> order.min(maxLots).setScale(2, RoundingMode.HALF_UP))
-                .collect(Collectors.toList());
 
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
