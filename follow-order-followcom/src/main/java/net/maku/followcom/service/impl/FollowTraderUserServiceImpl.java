@@ -126,6 +126,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 if(query.getStatus().contains(2) ){
                     statusExtra.add("账号异常");
                     statusExtra.add("账号掉线");
+                    statusExtra.add("经纪商异常");
                 }
                 wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
             }
@@ -896,6 +897,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setTemplateId(hangVpsVO.getTemplateId());
                         vo.setTraderId(hangVpsVO.getTraderId());
                         vo.setTemplateId(hangVpsVO.getTemplateId());
+                        vo.setFixedComment(hangVpsVO.getFixedComment());
+                        vo.setCommentType(hangVpsVO.getCommentType());
+                        vo.setDigits(hangVpsVO.getDigits());
                         vo.setIsAdd(false);
                         //策略新增
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);

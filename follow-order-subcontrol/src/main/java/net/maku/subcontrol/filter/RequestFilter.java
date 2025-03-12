@@ -48,7 +48,7 @@ public class RequestFilter implements Filter {
         }
         if(uri.startsWith("/subcontrol/follow") || uri.startsWith("/subcontrol/trader")) {
             Long userId = SecurityUser.getUserId();
-            if (userId != 10000) {
+            if (userId!=null && userId != 10000) {
                 List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
               if(ObjectUtil.isEmpty(vpsList) || !vpsList.contains(FollowConstant.LOCAL_HOST) ) {
                     ServletOutputStream out = servletResponse.getOutputStream();

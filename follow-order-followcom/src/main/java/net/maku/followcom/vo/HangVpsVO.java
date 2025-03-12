@@ -78,6 +78,14 @@ public class HangVpsVO {
     @Max(value = 1, message = "跟单平仓状态只能为0或1")
     @NotNull(message = "跟单平仓状态不能为空")
     private Integer followClose;
+    @Schema(description = "固定注释")
+    private String fixedComment;
+
+    @Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
+    private Integer commentType;
+
+    @Schema(description = "位数")
+    private Integer digits;
 
 
 }
