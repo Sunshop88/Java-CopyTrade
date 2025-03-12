@@ -363,10 +363,12 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
             }else if (result.code == ConCodeEnum.PASSWORD_FAILURE) {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("账户密码错误");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.PASSWORD_FAILURE;
             }else {
                 traderUpdateEn.setStatus(TraderStatusEnum.ERROR.getValue());
                 traderUpdateEn.setStatusExtra("经纪商异常");
+                followTraderService.updateById(traderUpdateEn);
                 conCodeEnum = ConCodeEnum.TRADE_NOT_ALLOWED;
             }
         } catch (InterruptedException | ExecutionException | IOException e) {

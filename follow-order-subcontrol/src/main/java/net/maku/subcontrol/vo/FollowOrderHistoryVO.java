@@ -110,4 +110,5 @@ public class FollowOrderHistoryVO implements Serializable {
 	@Schema(description = "平仓请求价格")
 	private BigDecimal requestClosePrice;
 
+
 }
