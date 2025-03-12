@@ -60,10 +60,12 @@ public class MissingOrdersNoticeTask {
                         Long slaveId = json.getLong("slaveId");
                         FollowTraderEntity master = followTraderService.getFollowById(masterId);
                         FollowTraderEntity slave = followTraderService.getFollowById(slaveId);
-                        FollowVpsEntity vps = followVpsService.getById(slave.getServerId());
-                        Boolean isSend = isSend(vps, slave, master);
-                        if(isSend){
-                            num.updateAndGet(v -> v + values.size());
+                        if(slave!=null) {
+                            FollowVpsEntity vps = followVpsService.getById(slave.getServerId());
+                            Boolean isSend = isSend(vps, slave, master);
+                            if (isSend) {
+                                num.updateAndGet(v -> v + values.size());
+                            }
                         }
 
                     }
@@ -90,9 +92,11 @@ public class MissingOrdersNoticeTask {
                             FollowTraderEntity master = followTraderService.getFollowById(masterId);
                             FollowTraderEntity slave = followTraderService.getFollowById(slaveId);
                             FollowVpsEntity vps = followVpsService.getById(slave.getServerId());
-                            Boolean isSend = isSend(vps, slave, master);
-                            if(isSend){
-                                num.updateAndGet(v -> v + values.size());
+                            if(slave!=null) {
+                                Boolean isSend = isSend(vps, slave, master);
+                                if (isSend) {
+                                    num.updateAndGet(v -> v + values.size());
+                                }
                             }
                         }
 

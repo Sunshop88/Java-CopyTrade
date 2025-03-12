@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -90,6 +92,9 @@ public class MasControlServiceImpl implements MasControlService {
                 .collect(Collectors.toList());
         // 转换为 Set 以便进行集合操作
         Set<String> existingUserSet = existingUserList.stream().collect(Collectors.toSet());
+       if(ObjectUtil.isEmpty(vo.getUserList())) {
+           vo.setUserList(new ArrayList<>());
+       }
         Set<String> userSet = vo.getUserList().stream().collect(Collectors.toSet());
 
         // 找出需要删除的用户
