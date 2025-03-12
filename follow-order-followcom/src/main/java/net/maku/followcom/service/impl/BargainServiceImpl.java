@@ -346,7 +346,8 @@ public class BargainServiceImpl implements BargainService {
         BigDecimal totalPlacedLots = BigDecimal.ZERO;  // 已下单的总手数
         int orderCountNum = 0;                         // 已下单的订单数量
         List<BigDecimal> orders = new ArrayList<>();
-        int orderCount=traderId.size();
+        int orderCount = traderId.size();
+
         while (totalPlacedLots.compareTo(totalLots) < 0 && orderCountNum < orderCount) {
             // 生成随机手数，并四舍五入保留两位小数
             BigDecimal randomLots = minLots.add(maxLots.subtract(minLots).multiply(new BigDecimal(rand.nextDouble())))
@@ -382,7 +383,7 @@ public class BargainServiceImpl implements BargainService {
             }
         }
 
-        // 最终确认总手数并调整误差
+        // 最终确认总手数并调整误差，确保不超过 totalLots
         BigDecimal finalTotal = orders.stream().reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
         if (finalTotal.compareTo(totalLots) > 0) {
             BigDecimal excess = finalTotal.subtract(totalLots);
@@ -398,6 +399,11 @@ public class BargainServiceImpl implements BargainService {
             orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
 
+        // 确保每个订单的手数不超过 maxLots
+        orders = orders.stream()
+                .map(order -> order.min(maxLots).setScale(2, RoundingMode.HALF_UP))
+                .collect(Collectors.toList());
+
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
         log.info("执行有限订单数量随机下单操作，总手数不超过" + totalLots + "，最大订单数: " + orderCount + "，实际下单订单数: " + orders.size());
@@ -408,10 +414,14 @@ public class BargainServiceImpl implements BargainService {
         }
 
         List<Double> doubleList = orders.stream().map(o -> o.doubleValue()).toList();
-        log.info("下单数量{}++++++++下单手数{}", orders.size(),doubleList.stream().mapToDouble(o->o).sum());
-        for (int i=0;i< traderId.size();i++){
-            accountOrders.put(traderId.get(i),orders.get(i).doubleValue());
+        log.info("下单数量{}++++++++下单手数{}", orders.size(), doubleList.stream().mapToDouble(o -> o).sum());
+
+        // 将手数分配给每个 traderId
+        for (int i = 0; i < traderId.size(); i++) {
+            accountOrders.put(traderId.get(i), orders.get(i).doubleValue());
         }
+
         return accountOrders;
     }
+
 }
