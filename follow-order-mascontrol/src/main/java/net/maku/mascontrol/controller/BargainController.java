@@ -191,7 +191,7 @@ public class BargainController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<List<FollowOrderInstructSubVO>> page(@RequestParam String sendNo){
         List<FollowOrderInstructSubVO> followOrderInstructSubVOS = new ArrayList<>();
-        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo));
+        List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, sendNo).orderByDesc(FollowOrderDetailEntity::getCreateTime) );
         if (ObjectUtil.isNotEmpty(list)){
             for (FollowOrderDetailEntity followOrderDetailEntity : list) {
                 FollowOrderInstructSubVO detail = new FollowOrderInstructSubVO();

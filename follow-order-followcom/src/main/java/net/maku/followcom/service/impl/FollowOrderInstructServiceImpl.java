@@ -96,6 +96,7 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
             wrapper.ge(FollowOrderInstructEntity::getCreateTime, startTime);
             wrapper.le(FollowOrderInstructEntity::getCreateTime, endTime);
         }
+          wrapper.orderByDesc(FollowOrderInstructEntity::getCreateTime);
         return wrapper;
     }
 
