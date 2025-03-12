@@ -567,7 +567,10 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 //        ConcurrentLinkedQueue<FollowTestDetailEntity> entitiesToSave = new ConcurrentLinkedQueue<>();
         List<FollowTestDetailEntity> entitiesToSave = Collections.synchronizedList(new ArrayList<>());
 
-        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServer(new FollowTestServerQuery());
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setVpsId(vpsEntity.getId());
+
+        List<FollowTestDetailVO> detailVOList = followTestDetailService.selectServerNode(query);
 //        Map<String, FollowTestDetailVO> map = detailVOList.stream()
 //                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
 //                .collect(Collectors.toMap(
@@ -578,16 +581,16 @@ public class FollowTestSpeedServiceImpl extends BaseServiceImpl<FollowTestSpeedD
 //        // 将 map 的值转回列表
 //        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
         //severName默认节点
-        Map<String, String> defaultServerNodeMap = new HashMap<>();
+//        Map<String, String> defaultServerNodeMap = new HashMap<>();
         //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
         if (ObjectUtil.isNotEmpty(detailVOList)) {
-            defaultServerNodeMap = detailVOList.stream()
-                    .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
-                    .collect(Collectors.toMap(
-                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
-                            FollowTestDetailVO::getServerNode,
-                            (existing, replacement) -> existing));
+//            defaultServerNodeMap = detailVOList.stream()
+//                    .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+//                    .collect(Collectors.toMap(
+//                            detail -> detail.getServerName() + "_" + vpsEntity.getId(),
+//                            FollowTestDetailVO::getServerNode,
+//                            (existing, replacement) -> existing));
 
             serverUpdateTimeMap = detailVOList.stream()
                     .filter(detail -> detail.getServerName() != null && detail.getServerUpdateTime() != null)

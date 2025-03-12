@@ -186,14 +186,17 @@ public class MessagesServiceImpl implements MessagesService {
                                 FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
                                 if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus() == CloseOrOpenEnum.CLOSE.getValue()) {
                                     FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
-                                    FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                            vpsName(vps.getName())
-                                            .source(master.getAccount())
-                                            .sourceRemarks(master.getRemark())
-                                            .follow(follow.getAccount())
-                                            .symbol(orderInfo.getSymbol())
-                                            .type(Constant.NOTICE_MESSAGE_SELL).build();
-                                    send(vo);
+                                    Boolean isSend = isSend(vps,follow,master);
+                                    if(isSend) {
+                                        FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                                vpsName(vps.getName())
+                                                .source(master.getAccount())
+                                                .sourceRemarks(master.getRemark())
+                                                .follow(follow.getAccount())
+                                                .symbol(orderInfo.getSymbol())
+                                                .type(Constant.NOTICE_MESSAGE_SELL).build();
+                                        send(vo);
+                                    }
                                 }
                             });
                         });
@@ -299,14 +302,19 @@ public class MessagesServiceImpl implements MessagesService {
                        if (!flag) {
                           // +";"+orderInfo.getTicket()+";"+orderActive.size()+";"+quoteClient.GetOpenedOrders().length
                             FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
-                            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                    vpsName(vps.getName())
-                                    .source(master.getAccount())
-                                    .sourceRemarks(master.getRemark())
-                                    .follow(follow.getAccount())
-                                    .symbol(orderInfo.getSymbol())
-                                    .type(Constant.NOTICE_MESSAGE_BUY).build();
-                            send(vo);
+                           Boolean isSend = isSend(vps,follow,master);
+                           if( isSend){
+                                FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                        vpsName(vps.getName())
+                                        .source(master.getAccount())
+                                        .sourceRemarks(master.getRemark())
+                                        .follow(follow.getAccount())
+                                        .symbol(orderInfo.getSymbol())
+                                        .type(Constant.NOTICE_MESSAGE_BUY).build();
+                                send(vo);
+                            }
+
+
                         }
                     });
 
@@ -424,5 +432,29 @@ public class MessagesServiceImpl implements MessagesService {
         }
     }
 
+    /***
+     * 判断是否需要发送消息
+     * 1、VPS运行状态/VPS漏单监控  任意一个关闭，则整个VPS不监控
+     * 2、VPS正常运行/VPS漏单监控开启，则判断账号跟单状态
+     * 2/1主账号跟单状态关闭，则此主账号下所有跟单账号漏单都不监控
+     * 2/2主账号跟单状态开启，跟单账号跟单状态关闭，则此跟单账号漏单不监控
+     * 2/3主账号跟单状态开启，跟单账号跟单状态开启，则正常监控
+     * */
+    public  Boolean isSend(FollowVpsEntity vps,FollowTraderEntity follow, FollowTraderEntity master){
+        if(ObjectUtil.isNotEmpty(vps.getIsMonitorRepair()) && vps.getIsMonitorRepair().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(vps.getIsActive()) && vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(master) &&  master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(follow) &&  follow.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+
+        return true;
+    }
 
 }
