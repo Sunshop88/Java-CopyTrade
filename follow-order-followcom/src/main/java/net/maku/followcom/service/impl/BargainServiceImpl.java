@@ -13,6 +13,7 @@ import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.FollowInstructEnum;
 import net.maku.followcom.enums.FollowMasOrderStatusEnum;
+import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
@@ -67,6 +68,9 @@ public class BargainServiceImpl implements BargainService {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             throw new ServerException("开始手数不能大于结束手数");
         }
+        if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
+            throw new ServerException("总手数不能低于最低手数");
+        }
         //现在找出可下单账号
         List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
         vo.getTraderList().forEach(o->{
@@ -112,6 +116,11 @@ public class BargainServiceImpl implements BargainService {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
+                        if (new BigDecimal(aDouble).compareTo(vo.getStartSize())<0){
+                            //低于最小手数报错
+                            insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1, TradeErrorCodeEnum.CONNECTION_LOST.getDescription());
+                            return;
+                        }
                         //发送请求
                         MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
                         masToSubOrderSendDto.setRemark(vo.getRemark());
