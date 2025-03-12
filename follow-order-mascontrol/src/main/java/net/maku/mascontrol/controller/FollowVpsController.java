@@ -391,7 +391,7 @@ public class FollowVpsController {
         return Result.ok("正在进行，请稍等");
     }
 
-    @PutMapping("uploadDefaultNode")
+    @PostMapping("uploadDefaultNode")
     @Operation(summary = "上传默认节点")
     public Result<String> uploadDefaultNode(@RequestParam(value = "file") MultipartFile file, @RequestParam(value = "vpsId") List<Integer> vpsId) throws Exception {
         //检查是否为Excel文件或者csv文件

@@ -125,5 +125,10 @@ public class FollowVpsEntity {
 	 */
 	@TableField(value = "is_select_account")
 	private Integer isSelectAccount;
+	/**
+	 * 是否监控漏单 0不监控 1监控
+	 */
+	@TableField(value = "is_monitor_repair")
+	private Integer isMonitorRepair;
 
 }

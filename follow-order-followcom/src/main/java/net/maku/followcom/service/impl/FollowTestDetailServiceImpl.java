@@ -794,6 +794,7 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                                 item -> item));
 
                 for (Integer vps : query.getNewVpsId()) {
+                    String vpsName= followVpsService.getById(vps).getName();
                     Map<Object, Object> objectObjectMap = redisUtil.hGetAll(Constant.VPS_NODE_SPEED + query.getOldVpsId());
                     for (Map.Entry<Object, Object> entry : objectObjectMap.entrySet()) {
                         final Object k = entry.getKey();
@@ -806,7 +807,26 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
                                 if (vo != null) {
                                     vo.setIsDefaultServer(0);
                                     updateById(FollowTestDetailConvert.INSTANCE.convert(vo));
+                                }else {
+                                    FollowTestDetailEntity followTestDetailEntity = new FollowTestDetailEntity();
+                                    followTestDetailEntity.setIsDefaultServer(0);
+                                    followTestDetailEntity.setServerNode(String.valueOf(v));
+                                    followTestDetailEntity.setServerName(String.valueOf(k));
+                                    followTestDetailEntity.setPlatformType("MT4");
+                                    followTestDetailEntity.setVpsId(vps);
+                                    followTestDetailEntity.setVpsName(vpsName);
+                                    save(followTestDetailEntity);
                                 }
+                            }else{
+                                FollowTestDetailEntity followTestDetailEntity = new FollowTestDetailEntity();
+                                followTestDetailEntity.setIsDefaultServer(0);
+                                followTestDetailEntity.setServerNode(String.valueOf(v));
+                                followTestDetailEntity.setServerName(String.valueOf(k));
+                                followTestDetailEntity.setPlatformType("MT4");
+                                followTestDetailEntity.setVpsId(vps);
+                                followTestDetailEntity.setVpsName(vpsName);
+                                save(followTestDetailEntity);
+
                             }
                         }, executorService);
                         futures.add(future);

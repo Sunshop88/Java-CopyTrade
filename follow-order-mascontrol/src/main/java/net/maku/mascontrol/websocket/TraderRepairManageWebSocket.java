@@ -36,7 +36,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -106,7 +108,7 @@ public class TraderRepairManageWebSocket {
 
 
         }else{
-            List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
+            List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
             if(ObjectUtil.isNotEmpty(list)){
                 for (FollowVpsEntity vs : list) {
                     VpsUserVO vpsUserVO = new VpsUserVO();
@@ -126,13 +128,13 @@ public class TraderRepairManageWebSocket {
                     list.add(Integer.valueOf(split[i]));
                 }
             }
-            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+            followVpsEntityList= followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,list).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
         }else {
 
             if(ObjectUtil.isEmpty(vpsList)){
                 followVpsEntityList=new ArrayList<>();
             }else{
-                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()));
+                followVpsEntityList=followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().in(FollowVpsEntity::getId,vpsIds).eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()));
             }
         
         }
@@ -140,15 +142,20 @@ public class TraderRepairManageWebSocket {
         //总漏单数量
         AtomicReference<Integer> total= new AtomicReference<>(0);
         //漏单VPS
-        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()))).intValue());
+        repairDataVo.setVpsNum(Long.valueOf(followVpsService.count(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,CloseOrOpenEnum.CLOSE.getValue()).eq(FollowVpsEntity::getIsActive,CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIsMonitorRepair,CloseOrOpenEnum.OPEN.getValue()))).intValue());
         //漏单信号源
         AtomicReference<Integer> masterNum= new AtomicReference<>(0);
         //漏单跟单账号
         AtomicReference<Integer> slaveNum= new AtomicReference<>(0);
         List<RepairVpsVO> repairVpsVOList = new ArrayList<>(List.of());
         Map<Integer,Integer> vpsNumMap=new HashMap<>();
-
+        List<FollowTraderEntity> slaves = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.SLAVE_REAL.getType()));
+        Map<Long, FollowTraderEntity> slaveMap=new HashMap<>();
+        if(ObjectUtil.isNotEmpty(slaves)){
+            slaveMap= slaves.stream().collect(Collectors.toMap(FollowTraderEntity::getId, Function.identity()));
+        }
         Map<String,Integer> followActiveMap=new HashMap<>();
+        Map<Long, FollowTraderEntity> finalSlaveMap = slaveMap;
         followVpsEntityList.forEach(o->{
             RepairVpsVO repairVpsVO= RepairVpsVO.builder().build();
             repairVpsVO.setVpsName(o.getName());
@@ -174,16 +181,16 @@ public class TraderRepairManageWebSocket {
             }*/
             if (masterAccount!=0){
 
-                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).like(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
+                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).like(FollowTraderEntity::getAccount,masterAccount).eq(FollowTraderEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }else{
-                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
+                list=followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()).eq(FollowTraderEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue()).eq(FollowTraderEntity::getIpAddr, o.getIpAddress()));
             }
 
             if (slaveAccount!=0) {
                 List<FollowTraderSubscribeEntity> subs = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().like(FollowTraderSubscribeEntity::getSlaveAccount, slaveAccount));
                 if(ObjectUtil.isNotEmpty(subs)){
                     List<Long> masterIds = subs.stream().map(FollowTraderSubscribeEntity::getMasterId).collect(Collectors.toList());
-                    list= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress()).in(FollowTraderEntity::getId,masterIds));
+                    list= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getIpAddr,o.getIpAddress()).in(FollowTraderEntity::getId,masterIds).eq(FollowTraderEntity::getFollowStatus,CloseOrOpenEnum.OPEN.getValue()));
                 }else{
                     list=new ArrayList<>();
                 }
@@ -207,27 +214,35 @@ public class TraderRepairManageWebSocket {
               Integer salvenum = getOrder(orderRepairInfoVOList, sendMap, closeMap, trader.getId(),o.getIpAddress());*/
 
               Map<Object, Object> objectObjectMap = redisCache.hGetStrAll(Constant.REPAIR_SEND+trader.getAccount()+":"+trader.getId());
+              List<Object> objectList=new ArrayList<>();
                 if(objectObjectMap!=null){
                     objectObjectMap.values().forEach(obj->{
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                         Collection<Object> values = jsonObject.values();
+                        AtomicBoolean flag=new AtomicBoolean(false);
                         values.forEach(vs->{
                                 OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
-                                infoVO.setStatus(trader.getStatus());
-                                infoVO.setFollowStatus(trader.getFollowStatus());
-                                   vpsNumMap.put(trader.getServerId(),1);
+                             FollowTraderEntity followTraderEntity = finalSlaveMap.get(infoVO.getSlaveId());
+                         if(followTraderEntity.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                             infoVO.setStatus(followTraderEntity.getStatus());
+                             infoVO.setFollowStatus(followTraderEntity.getFollowStatus());
+                             vpsNumMap.put(trader.getServerId(), 1);
 
-                            if (slaveAccount!=0) {
-                                if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
-                                    orderRepairInfoVOList.add(infoVO);
-                                    followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
-                                }
-                            }else{
-                                orderRepairInfoVOList.add(infoVO);
-                                followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
-                            }
-
+                             if (slaveAccount != 0) {
+                                 if (infoVO.getSlaveAccount().contains(slaveAccount.toString())) {
+                                     orderRepairInfoVOList.add(infoVO);
+                                     followActiveMap.put(infoVO.getSlaveAccount() + infoVO.getSlavePlatform(), 1);
+                                 }
+                             } else {
+                                 orderRepairInfoVOList.add(infoVO);
+                                 followActiveMap.put(infoVO.getSlaveAccount() + infoVO.getSlavePlatform(), 1);
+                             }
+                             flag.set(true);
+                         }
                         });
+                        if (flag.get()) {
+                            objectList.add(obj);
+                        }
                        
                     });
                 }
@@ -238,28 +253,29 @@ public class TraderRepairManageWebSocket {
                         JSONObject jsonObject = JSONObject.parseObject(obj.toString());
                         Collection<Object> values = jsonObject.values();
                         values.forEach(vs->{
-                            System.out.println(vs.toString());
                             OrderRepairInfoVO infoVO = JSONObject.parseObject(vs.toString(), OrderRepairInfoVO.class);
-                            infoVO.setStatus(trader.getStatus());
-                            infoVO.setFollowStatus(trader.getFollowStatus());
-                            vpsNumMap.put(trader.getServerId(),1);
+                            FollowTraderEntity followTraderEntity = finalSlaveMap.get(infoVO.getSlaveId());
+                            if(followTraderEntity.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue())) {
+                                infoVO.setStatus(trader.getStatus());
+                                infoVO.setFollowStatus(trader.getFollowStatus());
+                                vpsNumMap.put(trader.getServerId(), 1);
 
-                            if (slaveAccount!=0) {
-                                if( infoVO.getSlaveAccount().contains(slaveAccount.toString())){
+                                if (slaveAccount != 0) {
+                                    if (infoVO.getSlaveAccount().contains(slaveAccount.toString())) {
+                                        orderRepairInfoVOList.add(infoVO);
+                                        followActiveMap.put(infoVO.getSlaveAccount() + infoVO.getSlavePlatform(), 1);
+                                    }
+                                } else {
                                     orderRepairInfoVOList.add(infoVO);
-                                    followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
+                                    followActiveMap.put(infoVO.getSlaveAccount() + infoVO.getSlavePlatform(), 1);
                                 }
-                            }else{
-                                orderRepairInfoVOList.add(infoVO);
-                                followActiveMap.put(infoVO.getSlaveAccount()+infoVO.getSlavePlatform(),1);
                             }
-
                         });
 
                     });
                 }
                // slaveNum.updateAndGet(v -> v + salvenum);
-                slaveNum.updateAndGet(v -> v + objectObjectMap.size());
+                slaveNum.updateAndGet(v -> v + objectList.size());
                 log.info(trader.getAccount()+"漏单"+orderRepairInfoVOList.size());
                 if (!orderRepairInfoVOList.isEmpty()){
                     //排序

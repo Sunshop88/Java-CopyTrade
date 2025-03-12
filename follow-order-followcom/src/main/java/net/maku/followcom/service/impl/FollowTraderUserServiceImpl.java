@@ -342,16 +342,16 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
 
-                // 获取表头
-                List<String> headerNames = csvParser.getHeaderNames();
-                String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
-                if (!headerNames.equals(Arrays.asList(expectedHeaders))) {
-                    LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-                    updateWrapper.set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.FAIL.getType())
-                            .eq(FollowUploadTraderUserEntity::getId, savedId);
-                    followUploadTraderUserService.update(updateWrapper);
-                    throw new ServerException("CSV文件表头不正确，请下载模板");
-                }
+//                // 获取表头
+//                List<String> headerNames = csvParser.getHeaderNames();
+//                String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
+//                if (!headerNames.equals(Arrays.asList(expectedHeaders))) {
+//                    LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+//                    updateWrapper.set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.FAIL.getType())
+//                            .eq(FollowUploadTraderUserEntity::getId, savedId);
+//                    followUploadTraderUserService.update(updateWrapper);
+//                    throw new ServerException("CSV文件表头不正确，请下载模板");
+//                }
 
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
@@ -482,6 +482,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void updateGroup(List<Long> idList, Long groupId) {
         FollowGroupVO vo = followGroupService.get(groupId);
+        if (ObjectUtil.isEmpty(vo)){
+            throw new ServerException("分组不存在");
+        }
         for (Long id : idList) {
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderUserEntity::getId, id)
@@ -988,9 +991,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void modify(List<FollowTraderUserVO> vos) {
         for (FollowTraderUserVO vo : vos) {
             FollowGroupVO group = followGroupService.get(Long.valueOf(vo.getGroupId()));
+            if (ObjectUtil.isEmpty(group)) {
+                throw new ServerException("分组不存在");
+            }
                 LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                 updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
                         .set(FollowTraderUserEntity::getGroupName, group.getName())

@@ -12,6 +12,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.io.Serializable;
 import net.maku.framework.common.utils.DateUtils;
+
+import javax.validation.constraints.Min;
 import java.util.Date;
 
 /**
@@ -53,6 +55,7 @@ public class FollowTraderUserVO implements Serializable {
 	private String serverNode;
 
 	@Schema(description = "排序 默认：1")
+	@Min(value = 0,message = "排序最小值为0")
 	private Integer sort;
 
 	@Schema(description = "组别名称")

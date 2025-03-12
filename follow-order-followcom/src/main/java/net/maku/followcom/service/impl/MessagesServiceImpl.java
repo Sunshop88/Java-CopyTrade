@@ -13,11 +13,13 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowVpsEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.MessagesTypeEnum;
 import net.maku.followcom.enums.TraderRepairOrderEnum;
 import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.FollowOrderDetailService;
+import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.MessagesService;
 import net.maku.followcom.vo.FixTemplateVO;
 import net.maku.followcom.vo.FollowTraderVO;
@@ -59,6 +61,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final FollowOrderDetailService followOrderDetailService;
     private final RedissonLockUtil redissonLockUtil;
     private final RedisUtil redisUtil;
+    private final FollowVpsService followVpsService;
 
 
     private  String template(String secret, Integer timestamp,String vpsName,String sourceRemarks,String source,String follow,String symbol,String type) {
@@ -176,20 +179,24 @@ public class MessagesServiceImpl implements MessagesService {
                             //发送漏单
                             ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
-                                    Thread.sleep(3000);
+                                    Thread.sleep(5000);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
                                 FollowOrderDetailEntity d = followOrderDetailService.getById(detail.getId());
                                 if (ObjectUtil.isNotEmpty(d) && d.getCloseStatus() == CloseOrOpenEnum.CLOSE.getValue()) {
-                                    FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                            vpsName(follow.getServerName())
-                                            .source(master.getAccount())
-                                            .sourceRemarks(master.getRemark())
-                                            .follow(follow.getAccount())
-                                            .symbol(orderInfo.getSymbol())
-                                            .type(Constant.NOTICE_MESSAGE_SELL).build();
-                                    send(vo);
+                                    FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
+                                    Boolean isSend = isSend(vps,follow,master);
+                                    if(isSend) {
+                                        FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                                vpsName(vps.getName())
+                                                .source(master.getAccount())
+                                                .sourceRemarks(master.getRemark())
+                                                .follow(follow.getAccount())
+                                                .symbol(orderInfo.getSymbol())
+                                                .type(Constant.NOTICE_MESSAGE_SELL).build();
+                                        send(vo);
+                                    }
                                 }
                             });
                         });
@@ -276,7 +283,7 @@ public class MessagesServiceImpl implements MessagesService {
                 try {
                     ThreadPoolUtils.getExecutor().execute(() -> {
                                 try {
-                                    Thread.sleep(3000);
+                                    Thread.sleep(5000);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -285,16 +292,29 @@ public class MessagesServiceImpl implements MessagesService {
                         if (ObjectUtil.isNotEmpty(o1)) {
                             orderActive = JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
                         }
-                        boolean flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
-                        if (!flag) {
-                            FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
-                                    vpsName(follow.getServerName())
-                                    .source(master.getAccount())
-                                    .sourceRemarks(master.getRemark())
-                                    .follow(follow.getAccount())
-                                    .symbol(orderInfo.getSymbol())
-                                    .type(Constant.NOTICE_MESSAGE_BUY).build();
-                            send(vo);
+                        boolean flag=true;
+                        if(quoteClient!=null){
+                            flag= Arrays.stream(quoteClient.GetOpenedOrders()).anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.MagicNumber+""));
+                        }else{
+                             flag = orderActive.stream().anyMatch(order -> String.valueOf(orderInfo.getTicket()).equalsIgnoreCase(order.getMagicNumber().toString()));
+
+                        }
+                       if (!flag) {
+                          // +";"+orderInfo.getTicket()+";"+orderActive.size()+";"+quoteClient.GetOpenedOrders().length
+                            FollowVpsEntity vps = followVpsService.getById(follow.getServerId());
+                           Boolean isSend = isSend(vps,follow,master);
+                           if( isSend){
+                                FixTemplateVO vo = FixTemplateVO.builder().templateType(MessagesTypeEnum.MISSING_ORDERS_NOTICE.getCode()).
+                                        vpsName(vps.getName())
+                                        .source(master.getAccount())
+                                        .sourceRemarks(master.getRemark())
+                                        .follow(follow.getAccount())
+                                        .symbol(orderInfo.getSymbol())
+                                        .type(Constant.NOTICE_MESSAGE_BUY).build();
+                                send(vo);
+                            }
+
+
                         }
                     });
 
@@ -412,5 +432,29 @@ public class MessagesServiceImpl implements MessagesService {
         }
     }
 
+    /***
+     * 判断是否需要发送消息
+     * 1、VPS运行状态/VPS漏单监控  任意一个关闭，则整个VPS不监控
+     * 2、VPS正常运行/VPS漏单监控开启，则判断账号跟单状态
+     * 2/1主账号跟单状态关闭，则此主账号下所有跟单账号漏单都不监控
+     * 2/2主账号跟单状态开启，跟单账号跟单状态关闭，则此跟单账号漏单不监控
+     * 2/3主账号跟单状态开启，跟单账号跟单状态开启，则正常监控
+     * */
+    public  Boolean isSend(FollowVpsEntity vps,FollowTraderEntity follow, FollowTraderEntity master){
+        if(ObjectUtil.isNotEmpty(vps.getIsMonitorRepair()) && vps.getIsMonitorRepair().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(vps.getIsActive()) && vps.getIsActive().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(master) &&  master.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+        if(ObjectUtil.isNotEmpty(follow) &&  follow.getFollowStatus().equals(CloseOrOpenEnum.CLOSE.getValue())){
+            return false;
+        }
+
+        return true;
+    }
 
 }

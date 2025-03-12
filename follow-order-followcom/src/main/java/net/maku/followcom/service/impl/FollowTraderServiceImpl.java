@@ -1211,6 +1211,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             log.info("无效symbol");
             followOrderDetailEntity.setRemark("无效symbol" + e.getMessage());
         }
+        followOrderDetailEntity.setRequestOpenTime(nowdate);
+        followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
         followOrderDetailService.save(followOrderDetailEntity);
         return order;
     }
