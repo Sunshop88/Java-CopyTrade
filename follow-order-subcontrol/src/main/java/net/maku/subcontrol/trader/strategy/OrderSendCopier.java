@@ -93,6 +93,41 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         List<String> symbolList = orderInfo.getSymbolList();
         //查询品种规格数据
         List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->o.getSymbol().contains(finalStdSymbol)).toList();
+        //增加forex
+        String forex = copier.getForex();
+        if(ObjectUtil.isNotEmpty(forex) && forex.contains(finalStdSymbol)){
+            List<FollowSysmbolSpecificationEntity> list = sysmbolSpecificationEntity.stream().filter(item -> item.getSymbol().equals(forex)).toList();
+            for (FollowSysmbolSpecificationEntity o : list) {
+                try{
+                    //如果没有此品种匹配，校验是否可以获取报价
+                    if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getSymbol()))){
+                        //订阅
+                        trader.quoteClient.Subscribe(o.getSymbol());
+                    }
+                    symbolList.add(o.getSymbol());
+                } catch (Exception e) {
+                    log.info("品种规格异常,不可下单{}+++++++账号{}" , o.getSymbol(),copier.getId());
+                }
+            }
+        }
+
+        String cfd = copier.getCfd();
+        if(ObjectUtil.isNotEmpty(cfd) && cfd.contains(finalStdSymbol)){
+            List<FollowSysmbolSpecificationEntity> list = sysmbolSpecificationEntity.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
+            for (FollowSysmbolSpecificationEntity o : list) {
+                try{
+                    //如果没有此品种匹配，校验是否可以获取报价
+                    if (ObjectUtil.isEmpty(trader.quoteClient.GetQuote(o.getSymbol()))){
+                        //订阅
+                        trader.quoteClient.Subscribe(o.getSymbol());
+                    }
+                    symbolList.add(o.getSymbol());
+                } catch (Exception e) {
+                    log.info("品种规格异常,不可下单{}+++++++账号{}" , o.getSymbol(),copier.getId());
+                }
+            }
+        }
+
         if (ObjectUtil.isNotEmpty(sysmbolSpecificationEntity)){
             sysmbolSpecificationEntity.forEach(o->{
                         try{
