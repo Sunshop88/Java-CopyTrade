@@ -1145,7 +1145,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             log.info("下单详情 账号:"+traderId+"平台:"+platform+"节点:"+oc.QuoteClient.Host+":"+oc.QuoteClient.Port);
             log.info("订单" + orderId + "开仓时刻数据价格:" + order.OpenPrice + " 时间" + order.OpenTime);
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
-            followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
+            followOrderDetailEntity.setOpenTime(order.OpenTime);
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
@@ -1618,8 +1618,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         vo.setOpenPrice(order.OpenPrice);
         vo.setMagicNumber(order.MagicNumber);
         vo.setType(order.Type.name());
-        //增加五小时
-        vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 5)));
+        vo.setOpenTime(order.OpenTime);
         vo.setStopLoss(order.StopLoss);
         vo.setTakeProfit(order.TakeProfit);
     }
