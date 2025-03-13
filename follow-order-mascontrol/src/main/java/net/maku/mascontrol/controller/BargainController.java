@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -237,6 +238,7 @@ public class BargainController {
                 followOrderInstructSubVOS.add(detail);
             }
         }
+        followOrderInstructSubVOS.sort(Comparator.comparing(FollowOrderInstructSubVO::getCreateTime).reversed());
         return Result.ok(followOrderInstructSubVOS);
     }
 
