@@ -856,6 +856,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         List<FollowTraderUserEntity> followTraderUserEntities = listByIds(hangVpsVO.getTraderUserIds());
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         //不用等待
+        List<Long> error=new ArrayList<>();
         ThreadPoolUtils.getExecutor().execute(()-> {
             AtomicInteger sum = new AtomicInteger(0);
             AtomicInteger err = new AtomicInteger(0);
@@ -916,6 +917,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                        entity.setRecordId(followUploadTraderUserVO.getId());
                        entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
                        errList.add(entity);
+                       //查找这个账号有没有
+                       List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, f.getAccount()).eq(FollowTraderEntity::getPlatformId, f.getPlatformId()));
+                       if(ObjectUtil.isEmpty(traders)){
+                        //   f.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                           error.add(f.getId());
+                       }
+
+
                    }
                     countDownLatch.countDown();
                 });
@@ -927,12 +936,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     if(ObjectUtil.isNotEmpty(errList)){
                         followFailureDetailService.saveBatch(errList);
                     }
-
                     followUploadTraderUserVO.setFailureCount(err.get());
                     followUploadTraderUserVO.setSuccessCount(sum.get());
                     followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
                     followUploadTraderUserService.update(followUploadTraderUserVO);
-                      updateBatchById(followTraderUserEntities);
+                    updateBatchById(followTraderUserEntities);
+                    if(ObjectUtil.isNotEmpty(error)){
+                        update(new  LambdaUpdateWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId,error).set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue()));
+                    }
                 } catch (InterruptedException e) {
                        log.error("挂靠失败"+e);
                 }
