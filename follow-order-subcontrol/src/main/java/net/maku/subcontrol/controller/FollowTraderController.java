@@ -783,6 +783,7 @@ public class FollowTraderController {
                 ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
                 if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
                     followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
+                    followTraderEntity.setStatusExtra(conCodeEnum.getDescription());
                     followTraderService.updateById(followTraderEntity);
                     log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                     throw new ServerException("重连失败");
