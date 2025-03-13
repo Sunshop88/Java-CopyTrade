@@ -629,7 +629,8 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setPlatform(trader.getPlatform());
         followOrderDetailEntity.setBrokeName(platForm.getBrokerName());
         followOrderDetailEntity.setIpAddr(trader.getIpAddr());
-        followOrderDetailEntity.setServerName(trader.getServerName());
+        FollowVpsEntity vps = followVpsService.getVps(FollowConstant.LOCAL_HOST);
+        followOrderDetailEntity.setServerName(vps.getName());
         followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
         followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
         followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
