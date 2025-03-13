@@ -111,7 +111,8 @@ public class FollowPlatformController {
 //            });
 //        });
         //查询服务器是否有节点
-        List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, vo.getServer()));
+        String server = vo.getPlatformList().getFirst();
+        List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
         if(ObjectUtil.isNotEmpty(list)) {
             for (FollowBrokeServerEntity followBrokeServer : list) {
                 //查询服务器是否同时有server_node和server_port
