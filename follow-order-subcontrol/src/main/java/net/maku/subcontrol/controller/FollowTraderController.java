@@ -267,7 +267,7 @@ public class FollowTraderController {
             //账号缓存移除
             Cache cache = cacheManager.getCache("followFollowCache");
             if (cache != null) {
-                cache.evict(o); // 移除指定缓存条目
+                cache.evict(o.getId()); // 移除指定缓存条目
             }
             //删除从表
             followService.del(o.getId());
@@ -468,7 +468,7 @@ public class FollowTraderController {
         }
 
         // 查看品种匹配 模板
-        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(abstractApiTrader.getTrader().getTemplateId());
+        List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderVO.getTemplateId());
         Integer contract = followVarietyEntityList.stream().filter(o -> ObjectUtil.isNotEmpty(o.getStdSymbol()) && o.getStdSymbol().equals(vo.getSymbol())).findFirst()
                 .map(FollowVarietyEntity::getStdContract)
                 .orElse(0);

@@ -69,7 +69,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
     public void operate(AbstractApiTrader trader, EaOrderInfo orderInfo, int flag) {
         String mapKey = trader.getTrader().getId() + "#" + trader.getTrader().getAccount();
 
-        FollowTraderEntity copier = trader.getTrader();
+        FollowTraderEntity copier = followTraderService.getFollowById(trader.getTrader().getId());
         Long orderId = copier.getId();
         orderInfo.setSlaveReceiveCloseTime(orderInfo.getSlaveReceiveCloseTime() == null ? LocalDateTime.now() : orderInfo.getSlaveReceiveCloseTime());
         // 通过map获取平仓订单号
@@ -116,7 +116,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
      * @return 是否继续尝试 true false
      */
     void closeOrder(AbstractApiTrader trader, CachedCopierOrderInfo cachedCopierOrderInfo, EaOrderInfo orderInfo, int flag, String mapKey) {
-        FollowTraderEntity copier = trader.getTrader();
+        FollowTraderEntity copier = followTraderService.getFollowById(trader.getTrader().getId());
         Long orderId = copier.getId();
         String ip="";
         try {
@@ -162,11 +162,11 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             }
             bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
             ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
-            double startPrice = trader.getTrader().getType().equals(Buy.getValue()) ? bid : ask;
+            double startPrice =orderInfo.getType()==Buy.getValue() ? bid : ask;
             LocalDateTime startTime = LocalDateTime.now();
             log.info("平仓信息记录{}:{}:{}",cachedCopierOrderInfo.getSlaveSymbol(),cachedCopierOrderInfo.getSlaveTicket(),lots);
             long start = System.currentTimeMillis();
-            if (copier.getType() == Buy.getValue()) {
+            if (orderInfo.getType() == Buy.getValue()) {
                 order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), bid, Integer.MAX_VALUE);
             } else {
                 order = quoteClient.OrderClient.OrderClose(cachedCopierOrderInfo.getSlaveSymbol(), cachedCopierOrderInfo.getSlaveTicket().intValue(), cachedCopierOrderInfo.getSlavePosition(), ask, Integer.MAX_VALUE);
