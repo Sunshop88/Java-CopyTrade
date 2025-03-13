@@ -231,13 +231,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 headers.put("Content-Type", "application/json");*/
 
                 // 根据account和platform查询出对应的信息
-                FollowTraderEntity followTraderEntity = followTraderService.list(
+                List<FollowTraderEntity> followTraderEntities = followTraderService.list(
                                 new LambdaQueryWrapper<FollowTraderEntity>()
                                         .eq(FollowTraderEntity::getAccount, vo.getAccount())
-                                        .eq(FollowTraderEntity::getPlatform, vo.getPlatform()))
-                        .getFirst();
+                                        .eq(FollowTraderEntity::getPlatform, vo.getPlatform()));
 
-                if (followTraderEntity != null && !followTraderEntity.getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
+                if (ObjectUtil.isNotEmpty(followTraderEntities) && !followTraderEntities.getFirst().getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
+                    FollowTraderEntity followTraderEntity = followTraderEntities.getFirst();
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
 
@@ -251,7 +251,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     //修改密码
                     FollowTraderUserEntity entity = new FollowTraderUserEntity();
                     entity.setId(vo.getId());
-                    entity.setPassword(AesUtils.aesEncryptStr(AesUtils.aesEncryptStr(vo.getPassword())));
+                    entity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
                     updateById(entity);
                 }
             } catch (Exception e) {
