@@ -337,6 +337,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
             wrapper.eq(FollowOrderDetailEntity::getTraderId, query.getTraderId());
+            //默认只查询系统下单
+            wrapper.eq(FollowOrderDetailEntity::getIsExternal, CloseOrOpenEnum.CLOSE.getValue());
         }
 
         if (ObjectUtil.isNotEmpty(query.getTraderIdList())) {
