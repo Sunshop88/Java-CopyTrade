@@ -248,7 +248,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
                 }else {
-
+                    //修改密码
+                    FollowTraderUserEntity entity = new FollowTraderUserEntity();
+                    entity.setId(vo.getId());
+                    entity.setPassword(AesUtils.aesEncryptStr(AesUtils.aesEncryptStr(vo.getPassword())));
+                    updateById(entity);
                 }
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
@@ -259,6 +263,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         ent.setId(vo.getId());
         ent.setRemark(vo.getRemark());
         ent.setServerNode(vo.getServerNode());
+        ent.setSort(vo.getSort());
         updateById(ent);
 
         }
