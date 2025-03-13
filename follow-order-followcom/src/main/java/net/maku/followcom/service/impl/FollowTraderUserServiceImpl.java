@@ -267,7 +267,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         for (Long id : idList) {
             FollowTraderUserVO vo = get(id);
             //根据账号删除
-            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()));
+            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatformId, vo.getPlatformId()));
             if (ObjectUtil.isNotEmpty(List)){
                 //查看喊单账号是否存在用户
                 List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
@@ -278,12 +278,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
                     Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
-                    removeById(id);
+                    if(result.getCode()!=CloseOrOpenEnum.CLOSE.getValue()){
+                        throw new ServerException(result.getMsg());
+                    }
                     log.info("删除成功:{}", result);
                 }
             }
         }
-//        removeByIds(idList);
+        removeByIds(idList);
 
     }
 
