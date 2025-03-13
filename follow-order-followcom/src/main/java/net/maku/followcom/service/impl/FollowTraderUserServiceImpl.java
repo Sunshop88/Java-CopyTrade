@@ -571,6 +571,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 followFailureDetailService.save(failureDetail);
                                 failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
+                            }else{
+                                successCount.incrementAndGet(); // 数据库更新成功算作成功
                             }
                         }
                     } else {
@@ -600,7 +602,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
 
         // 等待所有任务完成
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         allOf.join(); // 阻塞直到所有任务完成
 
         followUploadTraderUserVO.setUploadTotal(uploadTotal);
