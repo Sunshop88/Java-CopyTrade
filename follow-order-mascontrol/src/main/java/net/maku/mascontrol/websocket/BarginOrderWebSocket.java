@@ -215,12 +215,12 @@ public class BarginOrderWebSocket {
                             }
                         }
                         //查品种模版
-                        String symbol1 = getSymbol(traderId, symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
+                        String symbol1 = getSymbol(followTrader.getId().toString(), symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
                         if (ObjectUtil.isEmpty(symbol1)){
                             continue;
                         }
                         if (!scheduledTasks.containsKey(id)) {
-                            startPeriodicTask(traderId, symbol1, quoteClient,session); // 启动定时任务
+                            startPeriodicTask(followTrader.getId().toString(), symbol1, quoteClient,session); // 启动定时任务
                             break;
                         }
                     }catch (Exception e){
