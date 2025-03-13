@@ -208,10 +208,10 @@ public class BarginOrderWebSocket {
                     try {
                         QuoteClient quoteClient =quoteClientConcurrentHashMap.get(followTrader.getId().toString());
                         if (ObjectUtil.isEmpty(quoteClient)){
-                            quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                            quoteClient =loginMt4(session,followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
                         }else {
                             if (!quoteClient.Connected()){
-                                quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                                quoteClient =loginMt4(session,followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
                             }
                         }
                         //查品种模版
