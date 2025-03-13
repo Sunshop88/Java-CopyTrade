@@ -53,6 +53,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.baomidou.mybatisplus.extension.toolkit.Db.list;
+
 /**
  * 策略账号
  *
@@ -248,6 +250,15 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> delete(@RequestBody List<Long> idList) {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, idList));
+        list.forEach(e -> {
+            List<FollowTraderEntity> list1 = list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, e.getAccount()));
+            if (list1.size() == 1) {
+                LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(FollowTraderUserEntity::getAccount, e.getAccount());
+                updateWrapper.set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue());
+                followTraderUserService.update(updateWrapper);
+            }
+        });
         List<FollowTraderEntity> masterList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList();
         List<FollowTraderEntity> slaveList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList();
         if (ObjectUtil.isNotEmpty(masterList)) {
