@@ -241,12 +241,18 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
 
-                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_UPDATE_TRADER, followTraderVO, headerApplicationJsonAndToken);
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                     } else {
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
+                }else {
+                    //修改密码
+                    FollowTraderUserEntity entity = new FollowTraderUserEntity();
+                    entity.setId(vo.getId());
+                    entity.setPassword(AesUtils.aesEncryptStr(AesUtils.aesEncryptStr(vo.getPassword())));
+                    updateById(entity);
                 }
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
@@ -257,6 +263,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         ent.setId(vo.getId());
         ent.setRemark(vo.getRemark());
         ent.setServerNode(vo.getServerNode());
+        ent.setSort(vo.getSort());
         updateById(ent);
 
         }
@@ -376,7 +383,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //                }
                     if (password.isEmpty()) {
                         errorMsg.append("密码不能为空; ");
-                    } else if (password.length() < 6 || password.length() > 16) {
+                    } else if (record.get(1).length() < 6 || record.get(1).length() > 16) {
                         errorMsg.append("密码需在6 ~ 16位之间; ");
                     }
                     if (platform.isEmpty()) {
@@ -854,6 +861,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         List<FollowTraderUserEntity> followTraderUserEntities = listByIds(hangVpsVO.getTraderUserIds());
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         //不用等待
+        List<Long> error=new ArrayList<>();
         ThreadPoolUtils.getExecutor().execute(()-> {
             AtomicInteger sum = new AtomicInteger(0);
             AtomicInteger err = new AtomicInteger(0);
@@ -914,6 +922,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                        entity.setRecordId(followUploadTraderUserVO.getId());
                        entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
                        errList.add(entity);
+                       //查找这个账号有没有
+                       List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, f.getAccount()).eq(FollowTraderEntity::getPlatformId, f.getPlatformId()));
+                       if(ObjectUtil.isEmpty(traders)){
+                        //   f.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                           error.add(f.getId());
+                       }
+
+
                    }
                     countDownLatch.countDown();
                 });
@@ -925,12 +941,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     if(ObjectUtil.isNotEmpty(errList)){
                         followFailureDetailService.saveBatch(errList);
                     }
-
                     followUploadTraderUserVO.setFailureCount(err.get());
                     followUploadTraderUserVO.setSuccessCount(sum.get());
                     followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
                     followUploadTraderUserService.update(followUploadTraderUserVO);
-                      updateBatchById(followTraderUserEntities);
+                    updateBatchById(followTraderUserEntities);
+                    if(ObjectUtil.isNotEmpty(error)){
+                        update(new  LambdaUpdateWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId,error).set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue()));
+                    }
                 } catch (InterruptedException e) {
                        log.error("挂靠失败"+e);
                 }

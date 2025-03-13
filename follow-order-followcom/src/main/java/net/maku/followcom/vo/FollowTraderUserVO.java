@@ -46,7 +46,7 @@ public class FollowTraderUserVO implements Serializable {
 	@NotBlank(message = "平台服务器不能为空")
 	private String platform;
 
-	@Schema(description = "账号类型 MT4或MT5")
+	@Schema(description = "账号类型 0 MT4或 1 MT5")
 	@NotBlank(message = "账号类型不能为空")
 	private String accountType;
 

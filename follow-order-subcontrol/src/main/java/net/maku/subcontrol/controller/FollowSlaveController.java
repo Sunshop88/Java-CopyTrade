@@ -133,12 +133,21 @@ public class FollowSlaveController {
                     followTraderUserVO.setAccount(vo.getAccount());
                     followTraderUserVO.setPlatform(vo.getPlatform());
                     followTraderUserVO.setPassword(password);
-                    followTraderUserVO.setAccountType("MT4");
-                    followTraderUserVO.setStatus(1);
+                    followTraderUserVO.setAccountType(AccountTypeEnum.MT4.getType());
+                    followTraderUserVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
                     followTraderUserVO.setServerNode(followTraderVO.getServerNode());
                     followTraderUserService.save(followTraderUserVO);
+                }else{
+                    entities.forEach(e -> {
+                        e.setAccount(vo.getAccount());
+                        e.setPlatform(vo.getPlatform());
+                        e.setPassword(password);
+                        e.setAccountType(AccountTypeEnum.MT4.getType());
+                        e.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                        followTraderUserService.updateById(e);
+                    });
                 }
             }
             newID=followTraderVO.getId();
@@ -234,7 +243,8 @@ public class FollowSlaveController {
             followTraderService.updateById(followTraderEntity);
             //修改trader_user
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(FollowTraderUserEntity::getId, followTraderEntity.getId());
+            updateWrapper.eq(FollowTraderUserEntity::getAccount, followTraderEntity.getAccount());
+            updateWrapper.eq(FollowTraderUserEntity::getPlatformId, followTraderEntity.getPlatformId());
             updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderUserService.update(updateWrapper);
             //查看绑定跟单账号

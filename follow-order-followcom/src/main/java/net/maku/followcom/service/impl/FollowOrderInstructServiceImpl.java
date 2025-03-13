@@ -9,6 +9,7 @@ import net.maku.api.module.system.UserApi;
 import net.maku.followcom.convert.FollowOrderInstructConvert;
 import net.maku.followcom.dao.FollowOrderInstructDao;
 import net.maku.followcom.entity.FollowOrderInstructEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowOrderInstructQuery;
 import net.maku.followcom.service.FollowOrderInstructService;
 import net.maku.followcom.service.UserService;
@@ -77,7 +78,10 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
         LambdaQueryWrapper<FollowOrderInstructEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(ObjectUtil.isNotEmpty(query.getType()), FollowOrderInstructEntity::getType, query.getType());
         wrapper.eq(ObjectUtil.isNotEmpty(query.getInstructionType()), FollowOrderInstructEntity::getInstructionType, query.getInstructionType());
-        wrapper.like(ObjectUtil.isNotEmpty(query.getSymbol()), FollowOrderInstructEntity::getSymbol, query.getSymbol());
+        if (ObjectUtil.isNotEmpty(query.getSymbol())){
+            String symbol = query.getSymbol().replaceAll("%", "\\\\%");
+            wrapper.like(FollowOrderInstructEntity::getSymbol,symbol);
+        }
     //    List<Integer> userIdList = userApi.getUser(query.getCreator());
 //        List<Integer> userIdList =null;
 //        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);

@@ -44,6 +44,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -237,7 +238,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             }
             //查询表头是否与标准模板的一致   String[] expectedHeaders = {"账号", "密码", "账号类型", "服务器", "节点", "备注", "排序"};
             try (InputStream inputStream = file.getInputStream();
-                 InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+//                 InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+                 InputStreamReader reader = new InputStreamReader(inputStream, Charset.forName("GBK"));
+
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
                 Iterator<CSVRecord> iterator = csvParser.iterator();
                 if (iterator.hasNext()) {

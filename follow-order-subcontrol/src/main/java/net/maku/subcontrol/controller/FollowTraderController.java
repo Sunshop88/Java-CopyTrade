@@ -150,14 +150,23 @@ public class FollowTraderController {
                     followTraderUserVO.setAccount(vo.getAccount());
                     followTraderUserVO.setPassword(password);
                     followTraderUserVO.setPlatform(vo.getPlatform());
-                    followTraderUserVO.setAccountType("MT4");
+                    followTraderUserVO.setAccountType(AccountTypeEnum.MT4.getType());
                     Long id = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, vo.getPlatform())).getFirst().getId();
                     followTraderUserVO.setPlatformId(Math.toIntExact(id));
-                    followTraderUserVO.setStatus(1);
+                    followTraderUserVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     followTraderUserVO.setServerNode(followTraderVO.getServerNode());
                     followTraderUserService.save(followTraderUserVO);
                     //查询最新的id
                     newUserId=followTraderUserService.getOne(new QueryWrapper<FollowTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
+                }else {
+                    entities.forEach(e -> {
+                        e.setAccount(vo.getAccount());
+                        e.setPassword(password);
+                        e.setPlatform(vo.getPlatform());
+                        e.setAccountType(AccountTypeEnum.MT4.getType());
+                        e.setStatus(CloseOrOpenEnum.OPEN.getValue());
+                        followTraderUserService.updateById(e);
+                    });
                 }
             }
             //保存从表数据
@@ -209,7 +218,8 @@ public class FollowTraderController {
         followTraderService.update(vo);
         //修改trader_user
         LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(FollowTraderUserEntity::getId, old.getId());
+        updateWrapper.eq(FollowTraderUserEntity::getAccount, old.getAccount());
+        updateWrapper.eq(FollowTraderUserEntity::getPlatformId, old.getPlatformId());
         updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
         followTraderUserService.update(updateWrapper);
         //重连
