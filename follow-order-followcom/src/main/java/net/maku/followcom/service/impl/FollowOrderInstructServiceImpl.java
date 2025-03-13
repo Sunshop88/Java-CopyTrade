@@ -63,10 +63,14 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
             vo.setCreatorName(creatorNameMap.get(vo.getCreator()));
         }
         //查询用户名
-        if (ObjectUtil.isNotEmpty(query.getCreator())){
+        if (ObjectUtil.isNotEmpty(query.getCreatorNmae())){
+            String creatorFilter = query.getCreatorNmae();
             vos = vos.stream()
                     //过滤出当前用户
-                    .filter(vo -> creatorNameMap.get(vo.getCreator()).equals(query.getCreator()))
+                    .filter(vo -> {
+                        String creatorName = creatorNameMap.get(vo.getCreatorName());
+                        return creatorName != null && creatorName.equals(creatorFilter);
+                    })
                     .collect(Collectors.toList());
         }
 

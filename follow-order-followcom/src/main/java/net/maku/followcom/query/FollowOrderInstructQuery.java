@@ -30,7 +30,7 @@ public class FollowOrderInstructQuery extends Query {
     private String symbol;
 
     @Schema(description = "操作人")
-    private String creator;
+    private String creatorNmae;
 
     @Schema(description = "开始时间")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
