@@ -241,12 +241,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
 
-                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_UPDATE_TRADER, followTraderVO, headerApplicationJsonAndToken);
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                     } else {
                         log.info("账号重连成功: {}", followTraderEntity.getAccount());
                     }
+                }else {
+
                 }
             } catch (Exception e) {
                 log.error("异步任务执行过程中发生异常", e);
@@ -376,7 +378,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //                }
                     if (password.isEmpty()) {
                         errorMsg.append("密码不能为空; ");
-                    } else if (password.length() < 6 || password.length() > 16) {
+                    } else if (record.get(1).length() < 6 || record.get(1).length() > 16) {
                         errorMsg.append("密码需在6 ~ 16位之间; ");
                     }
                     if (platform.isEmpty()) {
