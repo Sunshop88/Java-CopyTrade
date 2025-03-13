@@ -2,6 +2,7 @@ package net.maku.mascontrol.websocket;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnMessage;
@@ -22,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -40,40 +42,23 @@ public class BarginInstructWebSocket {
     private FollowOrderInstructService followOrderInstructService = SpringContextUtils.getBean(FollowOrderInstructServiceImpl.class);
     private FollowOrderDetailService followOrderDetailService = SpringContextUtils.getBean(FollowOrderDetailServiceImpl.class);
     private UserApi userApi = SpringContextUtils.getBean(UserApi.class);
+    private static Map<String, Future<?>> scheduledTasks = new ConcurrentHashMap<>(); // 用于存储每个连接的定时任务
 
     @OnOpen
     public void onOpen(Session session) {
-        try {
-            this.session = session;
-            // 启动周期任务
-            startPeriodicTask();
-            // 添加到 sessionPool
-            String sessionKey = session.getId();
-            sessionPool.computeIfAbsent(sessionKey, k -> new HashSet<>()).add(session);
-            log.info("WebSocket connection opened, session ID: " + sessionKey);
-        } catch (Exception e) {
-            log.info("连接异常" + e);
-            throw new RuntimeException();
-        }
     }
 
-    private void startPeriodicTask() {
+    private void startPeriodicTask(String id,Session session) {
         // 每秒钟发送一次消息
-        if (scheduledExecutorService.isShutdown() || scheduledExecutorService.isTerminated()) {
-            scheduledExecutorService = Executors.newScheduledThreadPool(0, Thread.ofVirtual().factory());
-        }
-        scheduledExecutorService.scheduleAtFixedRate(this::sendPeriodicMessage, 0, 2, TimeUnit.SECONDS);
+        Future<?> scheduledTask = scheduledExecutorService.scheduleAtFixedRate(() -> sendPeriodicMessage( id,session), 0, 2, TimeUnit.SECONDS);
+        scheduledTasks.put(session.getId(), scheduledTask); // 将任务保存到任务映射中
     }
 
-    private void stopPeriodicTask() {
-        scheduledExecutorService.shutdown();
-    }
-
-    private void sendPeriodicMessage() {
+    private void sendPeriodicMessage(String id,Session session) {
         FollowBaiginInstructVO followBaiginInstructVO = new FollowBaiginInstructVO();
         FollowOrderInstructEntity followOrderInstruct = null;
         // 获取最新指令
-        Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
+        Optional<FollowOrderInstructEntity> followOrderInstruct1 = followOrderInstructService.list(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getCreator,id).orderByDesc(FollowOrderInstructEntity::getCreateTime)).stream().findFirst();
         if (followOrderInstruct1.isPresent()) {
             followOrderInstruct = followOrderInstruct1.get();
         }
@@ -103,35 +88,35 @@ public class BarginInstructWebSocket {
             });
             followBaiginInstructVO.setFollowBaiginInstructSubVOList(followBaiginInstructSubVOList);
         }
-        pushMessage(JsonUtils.toJsonString(followBaiginInstructVO));
+        pushMessage(session,JsonUtils.toJsonString(followBaiginInstructVO));
     }
 
     @OnClose
     public void onClose() {
         try {
-            if (session != null && session.isOpen()) {
-                stopPeriodicTask();
-                session.close();
-                // 从 sessionPool 中移除当前 session
-                sessionPool.entrySet().removeIf(entry -> entry.getValue().remove(session) && entry.getValue().isEmpty());
+            String id = session.getId();
+            Future<?> future = scheduledTasks.get(id);
+            if (future != null && !future.isCancelled()) {
+                future.cancel(true);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (session != null && session.getBasicRemote() != null) {
+                session.close();
+            }
+
+        } catch (IOException e) {
+            log.error("关闭链接异常{}", e);
+            throw new RuntimeException(e);
         }
     }
 
     /**
      * 服务器端推送消息
      */
-    public void pushMessage(String message) {
+    public void pushMessage(Session session,String message) {
         try {
-            for (Set<Session> sessions : sessionPool.values()) {
-                for (Session s : sessions) {
-                    if (s.isOpen()) {
-                        synchronized (s) {
-                            s.getBasicRemote().sendText(message);
-                        }
-                    }
+            if (session != null && session.getBasicRemote() != null) {
+                synchronized (session) {
+                    session.getBasicRemote().sendText(message);
                 }
             }
         } catch (Exception e) {
@@ -140,11 +125,22 @@ public class BarginInstructWebSocket {
     }
 
     @OnMessage
-    public void onMessage(String message) {
-        // 处理接收到的消息
+    public void onMessage(Session session,String message) {
+        JSONObject jsonObj = JSONObject.parseObject(message);
+        String userId = jsonObj.getString("id");
+        //多账号获取数据
+        String id = session.getId();
+        Future<?> st = scheduledTasks.get(id);
+        if (st != null) {
+            st.cancel(true);
+            scheduledTasks.clear();
+        }
+        if (!scheduledTasks.containsKey(id)) {
+            startPeriodicTask(userId,session); // 启动定时任务
+        }
     }
 
-    public Boolean isConnection(String traderId, String symbol) {
-        return sessionPool.containsKey(traderId + symbol);
+    public Boolean isConnection(String id) {
+        return sessionPool.containsKey(id);
     }
 }

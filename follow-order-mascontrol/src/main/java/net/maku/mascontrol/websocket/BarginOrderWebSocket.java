@@ -231,7 +231,7 @@ public class BarginOrderWebSocket {
         }
     }
 
-    private QuoteClient loginMt4(String traderId,String account, String password, String[] s) {
+    private QuoteClient loginMt4(Session session,String traderId,String account, String password, String[] s) {
         try {
             QuoteClient  quoteClient = new QuoteClient(Integer.parseInt(account), AesUtils.decryptStr(password),  s[0], Integer.valueOf(s[1]));
             quoteClient.Connect();
@@ -240,6 +240,9 @@ public class BarginOrderWebSocket {
             return quoteClient;
         }catch (Exception e){
             log.info("登录异常");
+            FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
+            followBarginOrderVO.setStatus(2);
+            pushMessage(session,JsonUtils.toJsonString(followBarginOrderVO));
             return null;
         }
     }
