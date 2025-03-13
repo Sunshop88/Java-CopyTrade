@@ -213,7 +213,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (ObjectUtil.isNotEmpty(first)){
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
-        entity.setPassword(AesUtils.aesEncryptStr(entity.getPassword()));
+        entity.setPassword(entity.getPassword());
 
         baseMapper.insert(entity);
 
@@ -237,7 +237,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                         .eq(FollowTraderEntity::getAccount, vo.getAccount())
                                         .eq(FollowTraderEntity::getPlatform, vo.getPlatform()));
 
-                if (ObjectUtil.isNotEmpty(followTraderEntities) && !followTraderEntities.getFirst().getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
+                if (ObjectUtil.isNotEmpty(followTraderEntities) && !followTraderEntities.getFirst().getPassword().equals(vo.getPassword())) {
                     FollowTraderEntity followTraderEntity = followTraderEntities.getFirst();
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
@@ -252,7 +252,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     //修改密码
                     FollowTraderUserEntity entity = new FollowTraderUserEntity();
                     entity.setId(vo.getId());
-                    entity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+                    entity.setPassword(vo.getPassword());
                     updateById(entity);
                 }
             } catch (Exception e) {
@@ -522,7 +522,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             throw new ServerException("两次密码输入不一致");
         }
         // 加密后
-        String s = AesUtils.aesEncryptStr(password);
+//        String s = AesUtils.aesEncryptStr(password);
 
         // 设置状态
         FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
@@ -589,7 +589,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         // 更新traderUser密码并记录备注
                         LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                         updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
-                                .set(FollowTraderUserEntity::getPassword, s);
+                                .set(FollowTraderUserEntity::getPassword, password);
                         baseMapper.update(updateWrapper);
                         successCount.incrementAndGet(); // 数据库更新成功算作成功
                     }
@@ -632,7 +632,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
-        String s = AesUtils.aesEncryptStr(password);
+//        String s = AesUtils.aesEncryptStr(password);
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
@@ -671,7 +671,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             // 等待所有异步任务完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } else {
-            vo.setPassword(s);
+            vo.setPassword(password);
             FollowTraderUserEntity convert = FollowTraderUserConvert.INSTANCE.convert(vo);
             this.updateById(convert);
         }
@@ -789,7 +789,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                    o.setGroupColor(color);
                 }
                 try {
-                    o.setPassword(AesUtils.decryptStr(o.getPassword()));
+//                    o.setPassword(AesUtils.decryptStr(o.getPassword()));
+                    o.setPassword(o.getPassword());
                 } catch (Exception e) {
                     o.setPassword(o.getPassword());
                 }
@@ -897,7 +898,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setPlatformId(f.getPlatformId());
                         vo.setPlatform(f.getPlatform());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+//                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+                        vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
@@ -912,7 +914,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setFollowParam(hangVpsVO.getFollowParam());
                         vo.setFollowRep(CloseOrOpenEnum.OPEN.getValue());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+//                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+                        vo.setPassword(f.getPassword());
                         vo.setPlacedType(hangVpsVO.getPlacedType());
                         vo.setPlatform(f.getPlatform());
                         vo.setRemainder(hangVpsVO.getRemainder());

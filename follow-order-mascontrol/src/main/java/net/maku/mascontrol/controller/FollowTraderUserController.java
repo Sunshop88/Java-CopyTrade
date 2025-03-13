@@ -22,6 +22,7 @@ import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -366,9 +367,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
         List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
+        String desPassword = AesUtils.decryptStr(password);
         String confirmPassword = vos.getConfirmPassword();
         //检查密码在6-16位之间
-        if (password.length() < 6 || password.length() > 16) {
+        if (desPassword.length() < 6 || desPassword.length() > 16) {
             return Result.error("密码长度应在6到16位之间");
         }
 
@@ -385,8 +387,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
+        String desPassword = AesUtils.decryptStr(password);
         //检查密码在6-16位之间
-        if (password.length() < 6 || password.length() > 16) {
+        if (desPassword.length() < 6 || desPassword.length() > 16) {
             return Result.error("密码长度应在6到16位之间");
         }
 

@@ -122,7 +122,7 @@ public class FollowTraderController {
         String password = vo.getPassword();
         //本机处理
         try {
-            vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+//            vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
             FollowTraderVO followTraderVO = followTraderService.save(vo);
             newId=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
@@ -215,17 +215,17 @@ public class FollowTraderController {
             vo.setTemplateId(followVarietyService.getBeginTemplateId());
         }
         if(ObjectUtil.isNotEmpty(vo.getPassword())){
-            vo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            vo.setPassword(vo.getPassword());
         }
         followTraderService.update(vo);
         //修改trader_user
         LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(FollowTraderUserEntity::getAccount, old.getAccount());
         updateWrapper.eq(FollowTraderUserEntity::getPlatformId, old.getPlatformId());
-        updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
+        updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, vo.getPassword());
         followTraderUserService.update(updateWrapper);
         //重连
-        if(ObjectUtil.isNotEmpty(vo.getPassword()) && !AesUtils.decryptStr(old.getPassword()).equals(vo.getPassword())){
+        if(ObjectUtil.isNotEmpty(vo.getPassword()) && !old.getPassword().equals(vo.getPassword())){
             Boolean reconnect = reconnect(vo.getId().toString());
             if (!reconnect){
                 throw new ServerException("请检查账号密码，稍后再试");
@@ -1023,7 +1023,7 @@ public class FollowTraderController {
     public Result<Boolean> reconnectionTrader(@RequestBody FollowTraderVO vo) {
         QuoteClient quoteClient = null;
         Long traderId = vo.getId();
-        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
+        String s = AesUtils.decryptStr(vo.getPassword());
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
         try {
@@ -1031,19 +1031,19 @@ public class FollowTraderController {
                 quoteClient.ChangePassword(vo.getNewPassword(), false);
             }
         } catch (IOException e) {
-            throw new ServerException("MT4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
+            throw new ServerException("MT4修改密码异常,检查参数"+"密码："+s+"是否投资密码"+ false+",异常原因"+e);
         } catch (online.mtapi.mt4.Exception.ServerException e) {
-            throw new ServerException("mt4修改密码异常,检查参数"+"密码："+vo.getPassword()+"是否投资密码"+ false+",异常原因"+e);
+            throw new ServerException("mt4修改密码异常,检查参数"+"密码："+s+"是否投资密码"+ false+",异常原因"+e);
         }
 
             LambdaUpdateWrapper<FollowTraderUserEntity> wrapper = new LambdaUpdateWrapper<>();
             wrapper.eq(FollowTraderUserEntity::getAccount, vo.getAccount())
-                    .set(FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+                    .set(FollowTraderUserEntity::getPassword, vo.getNewPassword());
             followTraderUserService.update(wrapper);
             //修改密码
             LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderEntity::getId, traderId)
-                    .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+                    .set(FollowTraderEntity::getPassword,vo.getNewPassword());
             followTraderService.update(updateWrapper);
             reconnect(String.valueOf(traderId));
         return Result.ok();
@@ -1054,15 +1054,15 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:speed')")
     public Result<Boolean> reconnectionUpdateTrader(@RequestBody FollowTraderVO vo) {
         Long traderId = vo.getId();
-        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
+//        vo.setPassword(AesUtils.decryptStr(vo.getPassword()));
         LambdaUpdateWrapper<FollowTraderUserEntity> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(FollowTraderUserEntity::getAccount, vo.getAccount())
-                .set(FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+                .set(FollowTraderUserEntity::getPassword, vo.getNewPassword());
         followTraderUserService.update(wrapper);
         //修改密码
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(FollowTraderEntity::getId, traderId)
-                .set(FollowTraderEntity::getPassword, AesUtils.aesEncryptStr(vo.getNewPassword()));
+                .set(FollowTraderEntity::getPassword, vo.getNewPassword());
         followTraderService.update(updateWrapper);
         reconnect(String.valueOf(traderId));
         return Result.ok();
