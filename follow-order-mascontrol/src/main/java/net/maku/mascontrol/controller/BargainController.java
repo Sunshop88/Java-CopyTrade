@@ -61,7 +61,6 @@ public class BargainController {
     private BargainService bargainService;
     private final FollowTraderUserService followTraderUserService;
     private final FollowTraderService followTraderService;
-    private final FollowOrderInstructSubService followOrderInstructSubService;
     private final FollowOrderInstructService followOrderInstructService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final  FollowOrderDetailService followOrderDetailService;
