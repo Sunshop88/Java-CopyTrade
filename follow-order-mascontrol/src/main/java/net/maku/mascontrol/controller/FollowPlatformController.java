@@ -110,6 +110,18 @@ public class FollowPlatformController {
 //                followPlatformService.update(Wrappers.<FollowPlatformEntity>lambdaUpdate().eq(FollowPlatformEntity::getServer,followBrokeServer.getServerName()).set(FollowPlatformEntity::getServerNode,followBrokeServer.getServerNode()+":"+followBrokeServer.getServerPort()));
 //            });
 //        });
+        //查询服务器是否有节点
+        String server = vo.getPlatformList().getFirst();
+        List<FollowBrokeServerEntity> list = followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>().eq(FollowBrokeServerEntity::getServerName, server));
+        if(ObjectUtil.isNotEmpty(list)) {
+            for (FollowBrokeServerEntity followBrokeServer : list) {
+                //查询服务器是否同时有server_node和server_port
+                if (ObjectUtil.isNotEmpty(followBrokeServer.getServerNode()) && ObjectUtil.isNotEmpty(followBrokeServer.getServerPort())) {
+                    break;
+                }
+                throw new ServerException("该服务器节点为空");
+            }
+        }
         return masControlService.insertPlatform(vo) ? Result.ok() : Result.error();
     }
 

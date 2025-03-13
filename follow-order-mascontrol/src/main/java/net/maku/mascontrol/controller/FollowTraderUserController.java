@@ -2,6 +2,7 @@ package net.maku.mascontrol.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
@@ -20,6 +22,7 @@ import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.query.FollowUploadTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.FollowBrokeServerServiceImpl;
+import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -70,6 +73,7 @@ public class FollowTraderUserController {
     private final FollowFailureDetailService followFailureDetailService;
     private final FollowTraderService followTraderService;
     private final FollowBrokeServerService followBrokeServerService;
+    private final FollowVpsService followVpsService;
 
 
 
@@ -274,7 +278,18 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             FollowUploadTraderUserEntity saved = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1"));
             Long savedId = saved.getId();
             // 导入文件
-            followTraderUserService.addByExcel(file,savedId);
+
+            //查询follow_vps最小的id
+            LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+            wrapper.orderByAsc(FollowVpsEntity::getId);
+            wrapper.last("LIMIT 1");
+            Integer id = followVpsService.getOne(wrapper).getId();
+            FollowTestServerQuery query = new FollowTestServerQuery();
+            query.setVpsId(id);
+            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
+            List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
+            followTraderUserService.addByExcel(file,savedId,vos);
             return Result.ok("新增成功");
         } catch (Exception e) {
             return Result.error("新增失败：" + e.getMessage());
@@ -352,9 +367,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
         List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
         String password = vos.getPassword();
+        String desPassword = AesUtils.decryptStr(password);
         String confirmPassword = vos.getConfirmPassword();
         //检查密码在6-16位之间
-        if (password.length() < 6 || password.length() > 16) {
+        if (desPassword.length() < 6 || desPassword.length() > 16) {
             return Result.error("密码长度应在6到16位之间");
         }
 
@@ -371,8 +387,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
+        String desPassword = AesUtils.decryptStr(password);
         //检查密码在6-16位之间
-        if (password.length() < 6 || password.length() > 16) {
+        if (desPassword.length() < 6 || desPassword.length() > 16) {
             return Result.error("密码长度应在6到16位之间");
         }
 

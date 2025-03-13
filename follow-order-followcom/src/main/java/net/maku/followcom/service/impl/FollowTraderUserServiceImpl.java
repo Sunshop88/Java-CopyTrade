@@ -22,6 +22,7 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.AesUtils;
@@ -212,7 +213,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (ObjectUtil.isNotEmpty(first)){
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
-        entity.setPassword(AesUtils.aesEncryptStr(entity.getPassword()));
+        entity.setPassword(entity.getPassword());
 
         baseMapper.insert(entity);
 
@@ -231,13 +232,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 headers.put("Content-Type", "application/json");*/
 
                 // 根据account和platform查询出对应的信息
-                FollowTraderEntity followTraderEntity = followTraderService.list(
+                List<FollowTraderEntity> followTraderEntities = followTraderService.list(
                                 new LambdaQueryWrapper<FollowTraderEntity>()
                                         .eq(FollowTraderEntity::getAccount, vo.getAccount())
-                                        .eq(FollowTraderEntity::getPlatform, vo.getPlatform()))
-                        .getFirst();
+                                        .eq(FollowTraderEntity::getPlatform, vo.getPlatform()));
 
-                if (followTraderEntity != null && !followTraderEntity.getPassword().equals(AesUtils.aesEncryptStr(vo.getPassword()))) {
+                if (ObjectUtil.isNotEmpty(followTraderEntities) && !followTraderEntities.getFirst().getPassword().equals(vo.getPassword())) {
+                    FollowTraderEntity followTraderEntity = followTraderEntities.getFirst();
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
 
@@ -251,7 +252,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     //修改密码
                     FollowTraderUserEntity entity = new FollowTraderUserEntity();
                     entity.setId(vo.getId());
-                    entity.setPassword(AesUtils.aesEncryptStr(AesUtils.aesEncryptStr(vo.getPassword())));
+                    entity.setPassword(vo.getPassword());
                     updateById(entity);
                 }
             } catch (Exception e) {
@@ -274,7 +275,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         for (Long id : idList) {
             FollowTraderUserVO vo = get(id);
             //根据账号删除
-            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()));
+            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatformId, vo.getPlatformId()));
             if (ObjectUtil.isNotEmpty(List)){
                 //查看喊单账号是否存在用户
                 List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
@@ -285,12 +286,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
                     Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
-                    removeById(id);
+                    if(result.getCode()!=CloseOrOpenEnum.CLOSE.getValue()){
+                        throw new ServerException(result.getMsg());
+                    }
                     log.info("删除成功:{}", result);
                 }
             }
         }
-//        removeByIds(idList);
+        removeByIds(idList);
 
     }
 
@@ -341,7 +344,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public void addByExcel(MultipartFile file, Long savedId) {
+    public void addByExcel(MultipartFile file, Long savedId ,List<FollowTestDetailVO> vos) {
             //成功
             List<FollowTraderUserEntity> entityList = new ArrayList<>();
             //失败
@@ -353,15 +356,20 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
 
-
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
                     String password = AesUtils.aesEncryptStr(record.get(1));
-                    String accountType = record.get(2).isEmpty() ? "MT4" : record.get(2).toUpperCase();
+                    String accountType = record.get(2).isEmpty() ? CloseOrOpenEnum.CLOSE.getValue() +"" : record.get(2).toUpperCase();
                     String platform = record.get(3);
                     String node = record.get(4);
                     String remark = record.get(5);
                     String sort = record.get(6).isEmpty() ? "1" : record.get(6);
+                    if (accountType.equals("MT5")){
+                        accountType = CloseOrOpenEnum.OPEN.getValue() +"";
+                    }
+                    if (accountType.equals("MT4")){
+                        accountType = CloseOrOpenEnum.CLOSE.getValue() +"";
+                    }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
                     if (ObjectUtil.isNotEmpty(entities)) {
@@ -393,10 +401,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             errorMsg.append("服务器不存在; ");
                         }
                     }
-                    if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
+                    if (!accountType.equals("0") && !accountType.equals("1")) {
                         errorMsg.append("账号类型必须是MT4或MT5; ");
                     }
-                    if (ObjectUtil.isNotEmpty(node)) {
+                    if (ObjectUtil.isNotEmpty(node) && ObjectUtil.isNotEmpty(platform)) {
                         //将node拆分
                         String[] split = node.split(":");
                         if (split.length != 2) {
@@ -406,6 +414,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 .eq(FollowBrokeServerEntity::getServerNode, split[0])
                                 .eq(FollowBrokeServerEntity::getServerPort, split[1])).size() == 0) {
                             errorMsg.append("节点不存在; ");
+                        }
+                    }
+                    if (ObjectUtil.isEmpty(node) && ObjectUtil.isNotEmpty(platform)){
+                        //根据platform 查询默认节点
+                        List<FollowTestDetailVO> list = vos.stream().filter(vo -> vo.getServerName().equals(platform)).toList();
+                        if (ObjectUtil.isNotEmpty(list)){
+                            node = list.get(0).getServerNode();
                         }
                     }
 
@@ -507,7 +522,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             throw new ServerException("两次密码输入不一致");
         }
         // 加密后
-        String s = AesUtils.aesEncryptStr(password);
+//        String s = AesUtils.aesEncryptStr(password);
 
         // 设置状态
         FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
@@ -566,13 +581,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 followFailureDetailService.save(failureDetail);
                                 failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
+                            }else{
+                                successCount.incrementAndGet(); // 数据库更新成功算作成功
                             }
                         }
                     } else {
                         // 更新traderUser密码并记录备注
                         LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                         updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
-                                .set(FollowTraderUserEntity::getPassword, s);
+                                .set(FollowTraderUserEntity::getPassword, password);
                         baseMapper.update(updateWrapper);
                         successCount.incrementAndGet(); // 数据库更新成功算作成功
                     }
@@ -595,7 +612,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
 
         // 等待所有任务完成
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         allOf.join(); // 阻塞直到所有任务完成
 
         followUploadTraderUserVO.setUploadTotal(uploadTotal);
@@ -615,7 +632,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
-        String s = AesUtils.aesEncryptStr(password);
+//        String s = AesUtils.aesEncryptStr(password);
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
@@ -654,7 +671,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             // 等待所有异步任务完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } else {
-            vo.setPassword(s);
+            vo.setPassword(password);
             FollowTraderUserEntity convert = FollowTraderUserConvert.INSTANCE.convert(vo);
             this.updateById(convert);
         }
@@ -772,7 +789,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                    o.setGroupColor(color);
                 }
                 try {
-                    o.setPassword(AesUtils.decryptStr(o.getPassword()));
+//                    o.setPassword(AesUtils.decryptStr(o.getPassword()));
+                    o.setPassword(o.getPassword());
                 } catch (Exception e) {
                     o.setPassword(o.getPassword());
                 }
@@ -880,7 +898,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setPlatformId(f.getPlatformId());
                         vo.setPlatform(f.getPlatform());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+//                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+                        vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
@@ -895,7 +914,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setFollowParam(hangVpsVO.getFollowParam());
                         vo.setFollowRep(CloseOrOpenEnum.OPEN.getValue());
                         vo.setFollowStatus(hangVpsVO.getFollowStatus());
-                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+//                        vo.setPassword(AesUtils.decryptStr(f.getPassword()));
+                        vo.setPassword(f.getPassword());
                         vo.setPlacedType(hangVpsVO.getPlacedType());
                         vo.setPlatform(f.getPlatform());
                         vo.setRemainder(hangVpsVO.getRemainder());

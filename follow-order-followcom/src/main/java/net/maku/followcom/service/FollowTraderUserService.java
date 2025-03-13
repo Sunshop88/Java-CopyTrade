@@ -4,10 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
-import net.maku.followcom.vo.FollowTraderCountVO;
-import net.maku.followcom.vo.FollowTraderUserVO;
-import net.maku.followcom.vo.HangVpsVO;
-import net.maku.followcom.vo.TraderUserStatVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,7 +36,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void generateCsv(ByteArrayOutputStream outputStream) throws IOException;
 
-    void addByExcel(MultipartFile file, Long savedId);
+    void addByExcel(MultipartFile file, Long savedId ,List<FollowTestDetailVO> vos);
 
     void updateGroup(List<Long> idList, Long group);
 

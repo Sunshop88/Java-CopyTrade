@@ -12,13 +12,37 @@
         GROUP BY platform
     </select>
     <select id="getDefaultAccountCounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
-        SELECT platform   AS serverName,
-               login_node AS defaultServerNode,
-               count(1)   AS nodeCount
-        FROM follow_trader
---         WHERE `status` = 0
-        GROUP BY platform,
-                 login_node
+--         SELECT platform   AS serverName,
+--                login_node AS defaultServerNode,
+--                count(1)   AS nodeCount
+--         FROM follow_trader
+-- --         WHERE `status` = 0
+--         GROUP BY platform,
+--                  login_node
+
+SELECT
+    ft.platform as serverName,
+    COUNT(CASE
+              WHEN t1.`server_node` = ft.`login_node` THEN 1
+              ELSE NULL
+        END) AS nodeCount
+FROM (
+         SELECT
+             t1.`server_name`,
+             t1.`server_node`,
+             t1.`vps_id`
+         FROM follow_test_detail t1
+                  RIGHT JOIN (
+             SELECT MAX(id) AS id
+             FROM follow_test_detail
+             WHERE deleted = 0
+             GROUP BY server_name, platform_type, COALESCE(server_node, ''), vps_id
+         ) t2
+                             ON t1.id = t2.id
+         WHERE t1.`is_default_server` = 0
+     ) AS t1
+         JOIN follow_trader ft ON t1.`server_name` = ft.`platform` AND t1.`vps_id` = ft.`server_id`
+GROUP BY ft.platform
     </select>
     <select id="getServerNodeCounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
         SELECT platform AS serverName,
