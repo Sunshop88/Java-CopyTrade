@@ -96,7 +96,7 @@ public class VpsInfoWebSocket {
             List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(ObjectUtil.isNotEmpty(ipList), FollowTraderEntity::getServerId, ipList));
             Map<Integer, Map<Integer, List<FollowTraderEntity>>> map = list.stream().collect(Collectors.groupingBy(FollowTraderEntity::getServerId, Collectors.groupingBy(FollowTraderEntity::getType)));
             //查询订阅关系
-            Map<Long, Long> subscribeMap = followTraderSubscribeService.list().stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
+//            Map<Long, Long> subscribeMap = followTraderSubscribeService.list().stream().collect(Collectors.toMap(FollowTraderSubscribeEntity::getSlaveId, FollowTraderSubscribeEntity::getMasterId));
             //策略数量
             pageData.getList().forEach(o -> {
                 Map<Integer, List<FollowTraderEntity>> vpsMap = map.get(o.getId());
@@ -121,7 +121,7 @@ public class VpsInfoWebSocket {
                         Map<Long, FollowTraderEntity> finalMasterTrader = masterTrader;
                         stream.forEach(x -> {
                             //拿到masterid
-                            Long masterId = subscribeMap.get(x.getId());
+                            Long masterId = followTraderSubscribeService.getFollowSub(x.getId()).getMasterId();
                             //获取master喊单者,开启了的才统计
                             FollowTraderEntity masterTraderEntity = finalMasterTrader.get(masterId);
                             if (ObjectUtil.isNotEmpty(masterTraderEntity) && masterTraderEntity.getFollowStatus()== CloseOrOpenEnum.OPEN.getValue() && masterTraderEntity.getStatus().equals(TraderStatusEnum.NORMAL.getValue())) {

@@ -92,7 +92,7 @@ public class BarginInstructWebSocket {
     }
 
     @OnClose
-    public void onClose() {
+    public void onClose(Session session) {
         try {
             String id = session.getId();
             Future<?> future = scheduledTasks.get(id);
