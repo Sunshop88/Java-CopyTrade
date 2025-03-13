@@ -135,7 +135,8 @@ public class MasControlServiceImpl implements MasControlService {
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(List<Integer> idList) {
         try {
-//            clientService.delete(idList);
+            clientService.delete(idList);
+            clientServicePt.delete(idList);
             followVpsService.delete(idList);
             //删除其vps下的所有测速记录
             List<FollowTestDetailEntity> testDetails = followTestDetailService.list(
