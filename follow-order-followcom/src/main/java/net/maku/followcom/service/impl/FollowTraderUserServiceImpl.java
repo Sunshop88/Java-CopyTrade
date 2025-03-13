@@ -22,6 +22,7 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.AesUtils;
@@ -343,7 +344,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
-    public void addByExcel(MultipartFile file, Long savedId) {
+    public void addByExcel(MultipartFile file, Long savedId ,List<FollowTestDetailVO> vos) {
             //成功
             List<FollowTraderUserEntity> entityList = new ArrayList<>();
             //失败
@@ -355,17 +356,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 //             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
 
-
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
                     String password = AesUtils.aesEncryptStr(record.get(1));
-                    String accountType = record.get(2).isEmpty() ? "0" : record.get(2).toUpperCase();
+                    String accountType = record.get(2).isEmpty() ? CloseOrOpenEnum.CLOSE.getValue() +"" : record.get(2).toUpperCase();
                     String platform = record.get(3);
                     String node = record.get(4);
                     String remark = record.get(5);
                     String sort = record.get(6).isEmpty() ? "1" : record.get(6);
                     if (accountType.equals("MT5")){
-                        accountType = "1";
+                        accountType = CloseOrOpenEnum.OPEN.getValue() +"";
+                    }
+                    if (accountType.equals("MT4")){
+                        accountType = CloseOrOpenEnum.CLOSE.getValue() +"";
                     }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
@@ -401,7 +404,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     if (!accountType.equals("0") && !accountType.equals("1")) {
                         errorMsg.append("账号类型必须是MT4或MT5; ");
                     }
-                    if (ObjectUtil.isNotEmpty(node)) {
+                    if (ObjectUtil.isNotEmpty(node) && ObjectUtil.isNotEmpty(platform)) {
                         //将node拆分
                         String[] split = node.split(":");
                         if (split.length != 2) {
@@ -411,6 +414,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 .eq(FollowBrokeServerEntity::getServerNode, split[0])
                                 .eq(FollowBrokeServerEntity::getServerPort, split[1])).size() == 0) {
                             errorMsg.append("节点不存在; ");
+                        }
+                    }
+                    if (ObjectUtil.isEmpty(node) && ObjectUtil.isNotEmpty(platform)){
+                        //根据platform 查询默认节点
+                        List<FollowTestDetailVO> list = vos.stream().filter(vo -> vo.getServerName().equals(platform)).toList();
+                        if (ObjectUtil.isNotEmpty(list)){
+                            node = list.get(0).getServerNode();
                         }
                     }
 
