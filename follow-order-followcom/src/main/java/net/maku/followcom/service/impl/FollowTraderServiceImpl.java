@@ -98,8 +98,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
         followTraderVOS.forEach(o->{
-         //   o.setPassword(o.getPassword().length()==32?AesUtils.decryptStr(o.getPassword()):o.getPassword());
-            o.setPassword(AesUtils.decryptStr(o.getPassword()));
+            o.setPassword(o.getPassword().length() % 32 == 0?AesUtils.decryptStr(o.getPassword()):o.getPassword());
         });
         return new PageResult<>(followTraderVOS, page.getTotal());
     }
@@ -338,6 +337,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         if (ObjectUtil.isNotEmpty(query.getTraderId())) {
             wrapper.eq(FollowOrderDetailEntity::getTraderId, query.getTraderId());
+            //默认只查询系统下单
+            wrapper.eq(FollowOrderDetailEntity::getIsExternal, CloseOrOpenEnum.CLOSE.getValue());
         }
 
         if (ObjectUtil.isNotEmpty(query.getTraderIdList())) {
@@ -425,7 +426,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
 
         wrapper.like(ObjectUtil.isNotEmpty(query.getSourceUser()), FollowOrderDetailEntity::getSourceUser, query.getSourceUser());
 //        wrapper.eq(ObjectUtil.isNotEmpty(query.getIsExternal()), FollowOrderDetailEntity::getIsExternal, query.getIsExternal());
-        wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         wrapper.orderByDesc(FollowOrderDetailEntity::getId);
         Page<FollowOrderDetailEntity> page = new Page<>(query.getPage(), query.getLimit());
         Page<FollowOrderDetailEntity> pageOrder = followOrderDetailService.page(page, wrapper);
@@ -1172,20 +1172,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 order = oc.OrderSend(symbol, Buy, lotsPerOrder, asksub, 0, 0, 0,ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 long end = System.currentTimeMillis();
                 log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(ask));
+                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(asksub));
             } else {
                 long start = System.currentTimeMillis();
                 order = oc.OrderSend(symbol, Sell, lotsPerOrder, bidsub, 0, 0, 0, ObjectUtil.isNotEmpty(remark)?remark:"", Integer.valueOf(RandomStringUtil.generateNumeric(5)), null);
                 long end = System.currentTimeMillis();
                 log.info("MT4下单时间差 订单:"+order.Ticket+"内部时间差:"+order.sendTimeDifference+"外部时间差:"+(end-start));
-                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bid));
+                followOrderDetailEntity.setRequestOpenPrice(BigDecimal.valueOf(bidsub));
             }
             followOrderDetailEntity.setOpenTimeDifference((int) order.sendTimeDifference);
             followOrderDetailEntity.setResponseOpenTime(LocalDateTime.now());
             log.info("下单详情 账号:"+traderId+"平台:"+platform+"节点:"+oc.QuoteClient.Host+":"+oc.QuoteClient.Port);
             log.info("订单" + orderId + "开仓时刻数据价格:" + order.OpenPrice + " 时间" + order.OpenTime);
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
-            followOrderDetailEntity.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), -8)));
+            followOrderDetailEntity.setOpenTime(order.OpenTime);
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
@@ -1386,10 +1386,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             int randomOrderIndex = rand.nextInt(orders.size());
             orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
-        // 确保每个订单的手数不超过 maxLots
-        orders = orders.stream()
-                .map(order -> order.min(maxLots).setScale(2, RoundingMode.HALF_UP))
-                .collect(Collectors.toList());
 
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());

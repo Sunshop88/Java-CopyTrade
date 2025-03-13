@@ -184,7 +184,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             //账号缓存移除
             Cache cache = cacheManager.getCache("followFollowCache");
             if (cache != null) {
-                cache.evict(o); // 移除指定缓存条目
+                cache.evict(o.getId()); // 移除指定缓存条目
             }
         });
 

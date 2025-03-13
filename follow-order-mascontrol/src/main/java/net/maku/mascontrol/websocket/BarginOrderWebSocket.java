@@ -208,19 +208,19 @@ public class BarginOrderWebSocket {
                     try {
                         QuoteClient quoteClient =quoteClientConcurrentHashMap.get(followTrader.getId().toString());
                         if (ObjectUtil.isEmpty(quoteClient)){
-                            quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                            quoteClient =loginMt4(session,followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
                         }else {
                             if (!quoteClient.Connected()){
-                                quoteClient =loginMt4(followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
+                                quoteClient =loginMt4(session,followTrader.getId().toString(),followTrader.getAccount(),followTrader.getPassword(),split);
                             }
                         }
                         //查品种模版
-                        String symbol1 = getSymbol(traderId, symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
+                        String symbol1 = getSymbol(followTrader.getId().toString(), symbol, quoteClient, followTrader, followPlatformServiceOne.getBrokerName());
                         if (ObjectUtil.isEmpty(symbol1)){
                             continue;
                         }
                         if (!scheduledTasks.containsKey(id)) {
-                            startPeriodicTask(traderId, symbol1, quoteClient,session); // 启动定时任务
+                            startPeriodicTask(followTrader.getId().toString(), symbol1, quoteClient,session); // 启动定时任务
                             break;
                         }
                     }catch (Exception e){
@@ -231,7 +231,7 @@ public class BarginOrderWebSocket {
         }
     }
 
-    private QuoteClient loginMt4(String traderId,String account, String password, String[] s) {
+    private QuoteClient loginMt4(Session session,String traderId,String account, String password, String[] s) {
         try {
             QuoteClient  quoteClient = new QuoteClient(Integer.parseInt(account), AesUtils.decryptStr(password),  s[0], Integer.valueOf(s[1]));
             quoteClient.Connect();
@@ -240,6 +240,9 @@ public class BarginOrderWebSocket {
             return quoteClient;
         }catch (Exception e){
             log.info("登录异常");
+            FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
+            followBarginOrderVO.setStatus(2);
+            pushMessage(session,JsonUtils.toJsonString(followBarginOrderVO));
             return null;
         }
     }

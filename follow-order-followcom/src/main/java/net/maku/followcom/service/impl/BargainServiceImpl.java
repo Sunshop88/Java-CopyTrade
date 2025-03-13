@@ -116,11 +116,6 @@ public class BargainServiceImpl implements BargainService {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
-                        if (new BigDecimal(aDouble).compareTo(vo.getStartSize())<0){
-                            //低于最小手数报错
-                            insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1, TradeErrorCodeEnum.CONNECTION_LOST.getDescription());
-                            return;
-                        }
                         //发送请求
                         MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
                         masToSubOrderSendDto.setRemark(vo.getRemark());
@@ -347,7 +342,6 @@ public class BargainServiceImpl implements BargainService {
         }
     }
 
-
     //分配下单
      public static Map<FollowTraderEntity, Double> executeOrdersRandomTotalLots(List<FollowTraderEntity> traderId, BigDecimal totalLots, BigDecimal minLots, BigDecimal maxLots) {
         Random rand = new Random();
@@ -407,11 +401,6 @@ public class BargainServiceImpl implements BargainService {
             int randomOrderIndex = rand.nextInt(orders.size());
             orders.set(randomOrderIndex, orders.get(randomOrderIndex).add(deficit).setScale(2, RoundingMode.HALF_UP));
         }
-
-        // 确保每个订单的手数不超过 maxLots
-        orders = orders.stream()
-                .map(order -> order.min(maxLots).setScale(2, RoundingMode.HALF_UP))
-                .collect(Collectors.toList());
 
         // 过滤 0 值
         orders = orders.stream().filter(o -> o.compareTo(BigDecimal.ZERO) > 0).collect(Collectors.toList());
