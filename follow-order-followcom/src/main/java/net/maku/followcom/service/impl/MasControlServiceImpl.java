@@ -248,28 +248,30 @@ public class MasControlServiceImpl implements MasControlService {
                     }
 
                     list.parallelStream().forEach(o -> {
-                        String ipAddress = o.getServerNode(); // 目标IP地址
-                        int port = Integer.valueOf(o.getServerPort()); // 目标端口号
-                        try {
-                            AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
-                            long startTime = System.currentTimeMillis(); // 记录起始时间
-                            Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
-                            // 等待连接完成
-                            long timeout = 5000; // 设置超时时间
+                        if (ObjectUtil.isNotEmpty(o.getServerNode()) && ObjectUtil.isNotEmpty(o.getServerPort())) {
+                            String ipAddress = o.getServerNode(); // 目标IP地址
+                            int port = Integer.valueOf(o.getServerPort()); // 目标端口号
                             try {
-                                future.get(timeout, TimeUnit.MILLISECONDS);
-                            } catch (TimeoutException e) {
-                                log.error("连接超时，服务器：" + ipAddress + ":" + port);
-                                return; // 连接超时，返回
+                                AsynchronousSocketChannel socketChannel = AsynchronousSocketChannel.open();
+                                long startTime = System.currentTimeMillis(); // 记录起始时间
+                                Future<Void> future = socketChannel.connect(new InetSocketAddress(ipAddress, port));
+                                // 等待连接完成
+                                long timeout = 5000; // 设置超时时间
+                                try {
+                                    future.get(timeout, TimeUnit.MILLISECONDS);
+                                } catch (TimeoutException e) {
+                                    log.error("连接超时，服务器：" + ipAddress + ":" + port);
+                                    return; // 连接超时，返回
+                                }
+                                long endTime = System.currentTimeMillis(); // 记录结束时间
+                                o.setSpeed((int) (endTime - startTime));
+                                System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
+                                followBrokeServerService.updateById(o);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                latch.countDown();
                             }
-                            long endTime = System.currentTimeMillis(); // 记录结束时间
-                            o.setSpeed((int) (endTime - startTime));
-                            System.out.println("连接成功，延迟：" + (endTime - startTime) + "ms");
-                            followBrokeServerService.updateById(o);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        } finally {
-                            latch.countDown();
                         }
                     });
                 } catch (Exception e) {
