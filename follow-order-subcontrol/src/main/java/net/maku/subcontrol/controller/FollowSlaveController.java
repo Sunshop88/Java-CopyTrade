@@ -243,7 +243,8 @@ public class FollowSlaveController {
             followTraderService.updateById(followTraderEntity);
             //修改trader_user
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(FollowTraderUserEntity::getId, followTraderEntity.getId());
+            updateWrapper.eq(FollowTraderUserEntity::getAccount, followTraderEntity.getAccount());
+            updateWrapper.eq(FollowTraderUserEntity::getPlatformId, followTraderEntity.getPlatformId());
             updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
             followTraderUserService.update(updateWrapper);
             //查看绑定跟单账号
