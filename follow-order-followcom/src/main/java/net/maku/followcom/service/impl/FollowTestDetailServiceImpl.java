@@ -176,15 +176,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
      */
     public PageResult<String[]> pageServer(FollowTestServerQuery query) {
         List<FollowTestDetailVO> detailVOList = baseMapper.selectServer(query);
-        Map<String, FollowTestDetailVO> map = detailVOList.stream()
-                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
-                .collect(Collectors.toMap(
-                        FollowTestDetailVO::getServerName,
-                        detail -> detail,                       // 保留每个 ServerName 的第一条数据
-                        (existing, replacement) -> existing));
-
-        // 将 map 的值转回列表
-        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
+//        Map<String, FollowTestDetailVO> map = detailVOList.stream()
+//                .filter(detail -> detail.getIsDefaultServer() != null && detail.getIsDefaultServer() == 0)
+//                .collect(Collectors.toMap(
+//                        item -> item.getServerName() + "_" + item.getVpsId(),
+//                        item -> item));                // 保留每个 ServerName 的第一条数据
+//
+//        // 将 map 的值转回列表
+//        List<FollowTestDetailVO> collect = map.values().stream().collect(Collectors.toList());
         // 用于最终结果的列表
         List<String[]> result = new ArrayList<>();
 
@@ -230,10 +229,10 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 
         // 将每个字段对应的数据全量获取，通过map赋值
 //        //severName默认节点
-        Map<String, String> defaultServerNodeMap = new HashMap<>();
+//        Map<String, String> defaultServerNodeMap = new HashMap<>();
 //        //更新时间
         Map<String, LocalDateTime> serverUpdateTimeMap = new HashMap<>();
-        if (ObjectUtil.isNotEmpty(collect)) {
+        if (ObjectUtil.isNotEmpty(detailVOList)) {
             // 确保每个元素的关键字段不为 null
 //            for (FollowTestDetailVO item : collect) {
 //                if (item.getServerName() == null || item.getServerNode() == null) {
@@ -242,11 +241,12 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
 //                }
 //            }
 
-            defaultServerNodeMap = collect.stream()
-                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
-                    .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
+//            defaultServerNodeMap = detailVOList.stream()
+//                    .filter(item -> item.getServerName() != null && item.getServerNode() != null)
+//                    .collect(Collectors.toMap(
+//                        item -> item.getServerName() + "_" + item.getVpsName(), FollowTestDetailVO::getServerNode, (existing, replacement) -> existing));
 
-            serverUpdateTimeMap = collect.stream()
+            serverUpdateTimeMap = detailVOList.stream()
                     .filter(item -> item.getServerName() != null && item.getServerUpdateTime() != null)
                     .collect(Collectors.toMap(FollowTestDetailVO::getServerName, FollowTestDetailVO::getServerUpdateTime, (existing, replacement) -> existing));
         }
@@ -267,13 +267,14 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
         List<FollowTraderCountVO> serverNodeCounts = followTraderUserService.getServerNodeCounts();
         Map<String, Integer> serverNodeCountMap = new HashMap<>();
         if (ObjectUtil.isNotEmpty(serverNodeCounts)) {
-            serverNodeCountMap = serverNodeCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getNodeCount));
+            serverNodeCountMap = serverNodeCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getNodeCount, (existingValue, newValue) -> existingValue + newValue));
         }
         // 统计每个服务对应的节点数量
+//        List<FollowTraderCountVO> defaultAccountCounts = followTraderService.getDefaultAccountCounts();
         List<FollowTraderCountVO> defaultAccountCounts = followTraderService.getDefaultAccountCounts();
         Map<String, Integer> defaultAccountCountMap = new HashMap<>();
         if (ObjectUtil.isNotEmpty(defaultAccountCounts)) {
-            defaultAccountCountMap = defaultAccountCounts.stream().collect(Collectors.toMap(f -> f.getServerName() + f.getDefaultServerNode(), FollowTraderCountVO::getNodeCount));
+            defaultAccountCountMap = defaultAccountCounts.stream().collect(Collectors.toMap(FollowTraderCountVO::getServerName, FollowTraderCountVO::getNodeCount));
         }
 
         for (Map.Entry<String, Map<String, String>> entry : sortedEntries) {
@@ -300,16 +301,19 @@ public class FollowTestDetailServiceImpl extends BaseServiceImpl<FollowTestDetai
             dataRow[2] = platformType;
             //获取账号数量
 //            dataRow[2] = followTraderService.getAccountCount(serverName);
-            dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName) : "0";
+            Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
+            dataRow[3] = String.valueOf(serverNodeCount);
+//            dataRow[3] = accountCountMap.get(serverName) != null ? accountCountMap.get(serverName) : "0";
 //            log.warn("账号数量：" + accountCountMap.get(serverName));
 
             //非默认节点账号数量
             //查询该severName默认节点
-            String defaultServerNode = defaultServerNodeMap.get(serverName) != null ? defaultServerNodeMap.get(serverName) : "null";
+//            String defaultServerNode = defaultServerNodeMap.get(serverName) != null ? defaultServerNodeMap.get(serverName) : "null";
 
 //            dataRow[3] = followTraderService.getDefaultAccountCount(serverName, defaultServerNode);
-            Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
-            Integer defaultAccountCount = defaultAccountCountMap.get(serverName.concat(defaultServerNode)) != null ? defaultAccountCountMap.get(serverName.concat(defaultServerNode)) : 0;
+//            Integer serverNodeCount = serverNodeCountMap.get(serverName) != null ? serverNodeCountMap.get(serverName) : 0;
+//            Integer defaultAccountCount = defaultAccountCountMap.get(serverName.concat(defaultServerNode)) != null ? defaultAccountCountMap.get(serverName.concat(defaultServerNode)) : 0;
+            Integer defaultAccountCount = defaultAccountCountMap.get(serverName) != null ? defaultAccountCountMap.get(serverName) : 0;
             dataRow[4] = String.valueOf(Math.max(serverNodeCount - defaultAccountCount, 0));
             //服务器节点
             dataRow[5] = serverNode;

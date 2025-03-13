@@ -359,11 +359,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
                     String password = AesUtils.aesEncryptStr(record.get(1));
-                    String accountType = record.get(2).isEmpty() ? "MT4" : record.get(2).toUpperCase();
+                    String accountType = record.get(2).isEmpty() ? "0" : record.get(2).toUpperCase();
                     String platform = record.get(3);
                     String node = record.get(4);
                     String remark = record.get(5);
                     String sort = record.get(6).isEmpty() ? "1" : record.get(6);
+                    if (accountType.equals("MT5")){
+                        accountType = "1";
+                    }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
                     if (ObjectUtil.isNotEmpty(entities)) {
@@ -395,7 +398,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             errorMsg.append("服务器不存在; ");
                         }
                     }
-                    if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
+                    if (!accountType.equals("0") && !accountType.equals("1")) {
                         errorMsg.append("账号类型必须是MT4或MT5; ");
                     }
                     if (ObjectUtil.isNotEmpty(node)) {
