@@ -53,6 +53,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final ServerServicePt serverServicePt;
     private final FollowTestDetailService followTestDetailService;
     private final FollowVpsUserService followVpsUserService;
+    private final UserService userService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -81,47 +82,57 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("更新 Client-pt 失败");
             return false;
         }
-        //修改vps的用户列表
-        List<String> existingUserList = followVpsUserService.list(
-                        new LambdaQueryWrapper<FollowVpsUserEntity>()
-                                .eq(FollowVpsUserEntity::getVpsId, vo.getId())
-                ).stream()
-                .map(FollowVpsUserEntity::getVpsName)
-                .collect(Collectors.toList());
-        // 转换为 Set 以便进行集合操作
-        Set<String> existingUserSet = existingUserList.stream().collect(Collectors.toSet());
-       if(ObjectUtil.isEmpty(vo.getUserList())) {
-           vo.setUserList(new ArrayList<>());
-       }
-        Set<String> userSet = vo.getUserList().stream().collect(Collectors.toSet());
+//        //修改vps的用户列表
+//        List<String> existingUserList = followVpsUserService.list(
+//                        new LambdaQueryWrapper<FollowVpsUserEntity>()
+//                                .eq(FollowVpsUserEntity::getVpsId, vo.getId())
+//                ).stream()
+//                .map(FollowVpsUserEntity::getVpsName)
+//                .collect(Collectors.toList());
+//        // 转换为 Set 以便进行集合操作
+//        Set<String> existingUserSet = existingUserList.stream().collect(Collectors.toSet());
+//       if(ObjectUtil.isEmpty(vo.getUserList())) {
+//           vo.setUserList(new ArrayList<>());
+//       }
+//        Set<String> userSet = vo.getUserList().stream().collect(Collectors.toSet());
+//
+//        // 找出需要删除的用户
+//        List<String> usersToDelete = existingUserSet.stream()
+//                .filter(user -> !userSet.contains(user))
+//                .collect(Collectors.toList());
+//
+//        // 找出需要添加的用户
+//        List<String> usersToAdd = userSet.stream()
+//                .filter(user -> !existingUserSet.contains(user))
+//                .collect(Collectors.toList());
+//
+//        // 删除用户
+//        if (ObjectUtil.isNotEmpty(usersToDelete)) {
+//            for (String userToDelete : usersToDelete) {
+//                followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>()
+//                        .eq(FollowVpsUserEntity::getVpsId, vo.getId())
+//                        .eq(FollowVpsUserEntity::getVpsName, userToDelete));
+//            }
+//        }
+//        if (ObjectUtil.isNotEmpty(usersToAdd)) {
+//            // 添加用户
+//            for (String userToAdd : usersToAdd) {
+//                FollowVpsUserEntity newUser = new FollowVpsUserEntity();
+//                newUser.setUserId(SecurityUser.getUserId());
+//                newUser.setVpsId(vo.getId());
+//                newUser.setVpsName(userToAdd);
+//                followVpsUserService.save(newUser);
+//            }
+//        }
 
-        // 找出需要删除的用户
-        List<String> usersToDelete = existingUserSet.stream()
-                .filter(user -> !userSet.contains(user))
-                .collect(Collectors.toList());
-
-        // 找出需要添加的用户
-        List<String> usersToAdd = userSet.stream()
-                .filter(user -> !existingUserSet.contains(user))
-                .collect(Collectors.toList());
-
-        // 删除用户
-        if (ObjectUtil.isNotEmpty(usersToDelete)) {
-            for (String userToDelete : usersToDelete) {
-                followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>()
-                        .eq(FollowVpsUserEntity::getVpsId, vo.getId())
-                        .eq(FollowVpsUserEntity::getVpsName, userToDelete));
-            }
-        }
-        if (ObjectUtil.isNotEmpty(usersToAdd)) {
-            // 添加用户
-            for (String userToAdd : usersToAdd) {
-                FollowVpsUserEntity newUser = new FollowVpsUserEntity();
-                newUser.setUserId(SecurityUser.getUserId());
-                newUser.setVpsId(vo.getId());
-                newUser.setVpsName(userToAdd);
-                followVpsUserService.save(newUser);
-            }
+        followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
+        List<Long> userIdList = userService.getUserNameId(vo.getUserList());
+        for (Long userId : userIdList) {
+            FollowVpsUserEntity entity = new FollowVpsUserEntity();
+            entity.setUserId(userId);
+            entity.setVpsId(vo.getId());
+            entity.setVpsName(vo.getName());
+            followVpsUserService.save(entity);
         }
 
         followVpsService.update(vo);

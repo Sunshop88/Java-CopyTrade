@@ -17,4 +17,6 @@ public interface UserService extends BaseService<UserEntity> {
     List<String> getUserId(List<Long> vpsUserVO);
 
     Map<Long, String> getUserName(List<Long> creatorIds);
+
+    List<Long> getUserNameId(List<String> userList);
 }
