@@ -55,4 +55,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void modify(List<FollowTraderUserVO> vos);
 
     List<FollowTraderCountVO> getServerNodeCounts();
+
+    String getAccountCount(String serverName);
 }

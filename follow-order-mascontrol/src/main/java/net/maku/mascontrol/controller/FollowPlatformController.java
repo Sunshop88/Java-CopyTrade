@@ -12,11 +12,9 @@ import net.maku.followcom.convert.FollowPlatformConvert;
 import net.maku.followcom.entity.FollowBrokeServerEntity;
 import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowPlatformQuery;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowPlatformService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.MasControlService;
+import net.maku.followcom.service.*;
 import net.maku.followcom.vo.FollowPlatformInfoVO;
 import net.maku.followcom.vo.FollowPlatformVO;
 import net.maku.framework.common.exception.ServerException;
@@ -52,7 +50,7 @@ public class FollowPlatformController {
     private final UserApi userApi;
     private final FollowTraderService followTraderService;
     private final MasControlService masControlService;
-
+    private final FollowTraderUserService followTraderUserService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('mascontrol:platform')")
@@ -178,6 +176,10 @@ public class FollowPlatformController {
         //查看是否存在该平台用户
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getPlatformId, idList));
         if (ObjectUtil.isNotEmpty(list)) {
+            throw new ServerException("请先删除该平台用户");
+        }
+        List<FollowTraderUserEntity> list1 = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getPlatformId, idList));
+        if (ObjectUtil.isNotEmpty(list1)) {
             throw new ServerException("请先删除该平台用户");
         }
 //        followPlatformService.delete(idList);

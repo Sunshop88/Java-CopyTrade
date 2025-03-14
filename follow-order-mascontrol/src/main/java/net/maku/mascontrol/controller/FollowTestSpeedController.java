@@ -71,6 +71,7 @@ public class FollowTestSpeedController {
     private final ObjectMapper objectMapper;
     private final FollowTraderService followTraderService;
     private final FollowSpeedSettingService followSpeedSettingService;
+    private final FollowTraderUserService followTraderUserService;
 
     @GetMapping("{id}")
     @Operation(summary = "信息")
@@ -840,7 +841,7 @@ public class FollowTestSpeedController {
         List<FollowTestDetailVO> newlist = followTestDetailService.selectServerNode(query);
 
         //判断该服务器名称的账号数量是否为0
-        String accountCount = followTraderService.getAccountCount(followTestServerVO.getServerName());
+        String accountCount = followTraderUserService.getAccountCount(followTestServerVO.getServerName());
         if (Integer.parseInt(accountCount) > 0) {
             return Result.error("该服务器账号数量不为0，无法删除");
         }
