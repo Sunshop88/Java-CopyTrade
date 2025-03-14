@@ -412,4 +412,6 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             return Result.ok(entity);
         }
 
+
+
 }

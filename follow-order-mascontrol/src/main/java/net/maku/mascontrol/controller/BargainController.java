@@ -74,7 +74,7 @@ public class BargainController {
         Long userId = followOrderHistoryQuery.getTraderUserId();
         List<FollowTraderEntity> list = getByUserId(userId);
         if(list==null||list.size()<=0){
-            throw new ServerException("vps不存在");
+            throw new ServerException("账号未挂靠VPS");
         }
     /*    FollowVpsEntity vps = followVpsService.getById(vpsId);
         if (vps==null) {
