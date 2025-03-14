@@ -126,6 +126,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PostMapping("hangVps")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "挂靠vps")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     public Result<String> hangVps(@RequestBody HangVpsVO hangVpsVO,HttpServletRequest request){
         followTraderUserService.hangVps(hangVpsVO,request);
         return Result.ok();
@@ -134,6 +135,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PostMapping("belowVps")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "下架vps")
+    @OperateLog(type = OperateTypeEnum.DELETE)
     public Result<String> belowVps(@RequestBody List<Long>  traderUserIds,HttpServletRequest request){
         followTraderUserService.belowVps(traderUserIds,request);
         return Result.ok();
