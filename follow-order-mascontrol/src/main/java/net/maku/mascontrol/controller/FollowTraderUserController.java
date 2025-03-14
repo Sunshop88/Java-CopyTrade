@@ -1,5 +1,6 @@
 package net.maku.mascontrol.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -247,6 +248,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 
                  CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withSkipHeaderRecord())) {
                 Iterator<CSVRecord> iterator = csvParser.iterator();
+                if (iterator.hasNext()==false){
+                    throw new ServerException("CSV文件内容为空");
+                }
                 if (iterator.hasNext()) {
                     CSVRecord firstRecord = iterator.next();
                     List<String> actualHeaders = firstRecord.getParser().getHeaderNames().stream()
@@ -397,5 +401,13 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
 
         return Result.ok("修改密码成功");
     }
+
+    @GetMapping("getAccount")
+    @Operation(summary = "获取账号信息")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<FollowTraderEntity> getAccount(@RequestParam("account") String account) {
+            FollowTraderEntity entity= followTraderService.getByAccount(account);
+            return Result.ok(entity);
+        }
 
 }

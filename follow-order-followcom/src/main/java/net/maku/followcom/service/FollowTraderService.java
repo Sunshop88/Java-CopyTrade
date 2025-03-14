@@ -3,7 +3,6 @@ package net.maku.followcom.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.FollowOrderSendEntity;
-import net.maku.followcom.entity.FollowPlatformEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.query.FollowOrderSendQuery;
@@ -15,7 +14,6 @@ import net.maku.framework.mybatis.service.BaseService;
 import online.mtapi.mt4.QuoteClient;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * mt4账号
@@ -105,4 +103,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     List<FollowSendAccountListVO> accountPage();
 
     FollowMasOrderVo masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract);
+
+    FollowTraderEntity getByAccount(String account);
 }

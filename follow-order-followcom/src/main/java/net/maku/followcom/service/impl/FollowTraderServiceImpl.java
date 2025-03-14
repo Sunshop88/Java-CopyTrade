@@ -1,9 +1,7 @@
 package net.maku.followcom.service.impl;
 
-import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -25,7 +23,6 @@ import net.maku.followcom.query.FollowTraderQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
-import net.maku.followcom.util.SymbolUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
@@ -47,7 +44,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,9 +93,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
-        followTraderVOS.forEach(o->{
+      /*  followTraderVOS.forEach(o->{
             o.setPassword(o.getPassword().length() % 32 == 0?AesUtils.decryptStr(o.getPassword()):o.getPassword());
-        });
+        });*/
         return new PageResult<>(followTraderVOS, page.getTotal());
     }
 
@@ -1819,6 +1815,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             });
             return followMasOrderVo;
         }
+    }
+
+    @Override
+    public FollowTraderEntity getByAccount(String account) {
+        List<FollowTraderEntity> list = list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account).eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+        if (ObjectUtil.isNotEmpty(list)) {
+            return list.get(0);
+        }
+        return null;
     }
 
     public FollowMasOrderVo orderSendMasCopy(MasToSubOrderSendDto masToSubOrderSendDto,QuoteClient quoteClient, FollowTraderVO vo, double pr,String brokeName) {

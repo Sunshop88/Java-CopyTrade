@@ -794,8 +794,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 } catch (Exception e) {
                     o.setPassword(o.getPassword());
                 }
-                FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
-            o.setBrokerName(followPlatformEntity.getBrokerName());
+             FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
+
+            if(ObjectUtil.isNotEmpty(followPlatformEntity)){
+                o.setBrokerName(followPlatformEntity.getBrokerName());
+            }
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
             List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
@@ -1041,5 +1044,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public List<FollowTraderCountVO> getServerNodeCounts() {
         return baseMapper.getServerNodeCounts();
+    }
+
+    @Override
+    public String getAccountCount(String serverName) {
+        long count = this.count(new LambdaQueryWrapper<FollowTraderUserEntity>()
+                .eq(FollowTraderUserEntity::getPlatform, serverName));
+        return String.valueOf(count);
     }
 }

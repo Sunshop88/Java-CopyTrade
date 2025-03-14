@@ -943,9 +943,9 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             List<FollowVarietyEntity> variety1 =list(wrapper);
             if (ObjectUtil.isEmpty(variety1)){
                 //删除variety
-                if (ObjectUtil.isNotEmpty(variety)) {
-                    removeBatchByIds(variety);
-                }
+//                if (ObjectUtil.isNotEmpty(variety)) {
+//                    removeBatchByIds(variety);
+//                }
                 FollowVarietyEntity followVarietyEntity = new FollowVarietyEntity();
                 followVarietyEntity.setTemplateId(entity.getTemplateId());
                 followVarietyEntity.setBrokerName(entity.getBrokerName());
