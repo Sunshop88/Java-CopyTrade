@@ -41,6 +41,8 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -311,6 +313,7 @@ public class PushRedisTask {
                                     Order[] orders = quoteClient.GetOpenedOrders();
                                     //账号信息
                                     ConGroup account = quoteClient.Account();
+                                    accountCache.setTimeZone(quoteClient.ServerTimeZone());
                                     accountCache.setCredit(quoteClient.Credit);
                                     Map<Op, List<Order>> orderMap = Arrays.stream(orders).collect(Collectors.groupingBy(order -> order.Type));
                                     accountCache.setLots(0.00);
@@ -374,8 +377,10 @@ public class PushRedisTask {
                                                 //  orderCacheVO.setId(x.);
                                                 //    orderCacheVO.setLogin(x.);
                                                 orderCacheVO.setTicket(x.Ticket);
-                                                orderCacheVO.setOpenTime(x.OpenTime);
-                                                orderCacheVO.setCloseTime(x.CloseTime);
+                                                ZonedDateTime openTimeUtc = x.OpenTime.atZone(ZoneId.of("UTC"));
+                                                orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
+                                                ZonedDateTime closeTimeUtc = x.CloseTime.atZone(ZoneId.of("UTC"));
+                                                orderCacheVO.setCloseTime(closeTimeUtc.toLocalDateTime());
                                                 orderCacheVO.setType(x.Type);
                                                 orderCacheVO.setLots(x.Lots);
                                                 orderCacheVO.setSymbol(x.Symbol);
@@ -417,6 +422,7 @@ public class PushRedisTask {
                                         accountCache.setOrders(orderCaches);
                                     });
                                 }else{
+                                    accountCache.setTimeZone(0);
                                     accountCache.setCredit(0.00);
                                     accountCache.setLots(0.00);
                                     accountCache.setCount(0);

@@ -100,5 +100,6 @@ public class AccountCacheVO {
     private Integer platformId;
     @JsonProperty(value = "Orders")
     private List<OrderCacheVO> Orders;
-
+    @JsonProperty(value = "Timezone")
+    private Integer timeZone;
 }
