@@ -398,4 +398,12 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         return Result.ok("修改密码成功");
     }
 
+    @GetMapping("getAccount")
+    @Operation(summary = "获取账号信息")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> getAccount(@RequestParam("account") String account) {
+            String password = followTraderService.getByAccount(account);
+            return Result.ok(password);
+        }
+
 }

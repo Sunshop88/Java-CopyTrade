@@ -1821,6 +1821,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         }
     }
 
+    @Override
+    public String getByAccount(String account) {
+        List<FollowTraderEntity> list = list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account).eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()));
+        if (ObjectUtil.isNotEmpty(list)) {
+            return list.get(0).getPassword();
+        }
+        return null;
+    }
+
     public FollowMasOrderVo orderSendMasCopy(MasToSubOrderSendDto masToSubOrderSendDto,QuoteClient quoteClient, FollowTraderVO vo, double pr,String brokeName) {
         FollowMasOrderVo followMasOrderVo =null;
         //根据情况进行下单
