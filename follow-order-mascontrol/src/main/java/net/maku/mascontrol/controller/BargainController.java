@@ -73,7 +73,7 @@ public class BargainController {
         Long userId = followOrderHistoryQuery.getTraderUserId();
         List<FollowTraderEntity> list = getByUserId(userId);
         if(list==null||list.size()<=0){
-            throw new ServerException("vps不存在");
+            throw new ServerException("账号未挂靠VPS");
         }
     /*    FollowVpsEntity vps = followVpsService.getById(vpsId);
         if (vps==null) {
@@ -96,6 +96,7 @@ public class BargainController {
     }
     @GetMapping("reconnection")
     @Operation(summary = "重连账号")
+    @OperateLog(type = OperateTypeEnum.GET)
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> reconnection(@Parameter(description = "traderUserId") String traderUserId,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(Long.parseLong(traderUserId));
@@ -116,6 +117,7 @@ public class BargainController {
     }
     @GetMapping("batchReconnection")
     @Operation(summary = "重连账号")
+    @OperateLog(type = OperateTypeEnum.GET)
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
     public Result<Boolean> reconnection(@Parameter(description = "traderUserIds") Long[] traderUserIds,HttpServletRequest request) {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
@@ -140,6 +142,7 @@ public class BargainController {
     @PostMapping("orderClose")
     @Operation(summary = "平仓")
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     public Result<Boolean> orderClose(@RequestBody @Valid BargainCloseVO vo,HttpServletRequest request) {
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());
         if(ObjectUtil.isEmpty(users)){
@@ -158,6 +161,7 @@ public class BargainController {
     @PostMapping("repairOrderClose")
     @Operation(summary = "一键漏平")
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     public Result<Boolean> repairOrderClose(@RequestBody TraderUserClose  vo,HttpServletRequest request) {
 
         List<FollowTraderEntity> users = getByUserId(vo.getTraderUserId());

@@ -34,6 +34,7 @@ import net.maku.framework.security.user.SecurityUser;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -126,6 +127,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PostMapping("hangVps")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "挂靠vps")
+    @OperateLog(type = OperateTypeEnum.INSERT)
     public Result<String> hangVps(@RequestBody HangVpsVO hangVpsVO,HttpServletRequest request){
         followTraderUserService.hangVps(hangVpsVO,request);
         return Result.ok();
@@ -134,6 +136,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PostMapping("belowVps")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "下架vps")
+    @OperateLog(type = OperateTypeEnum.DELETE)
     public Result<String> belowVps(@RequestBody List<Long>  traderUserIds,HttpServletRequest request){
         followTraderUserService.belowVps(traderUserIds,request);
         return Result.ok();
@@ -160,6 +163,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> save(@RequestBody @Valid FollowTraderUserVO vo){
+        //查看账号是否纯数字
+        if (!NumberUtils.isDigits(vo.getAccount())) {
+            throw new ServerException("账号只能为数字");
+        }
         followTraderUserService.save(vo);
 
         return Result.ok();
@@ -291,7 +298,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             Integer id = followVpsService.getOne(wrapper).getId();
             FollowTestServerQuery query = new FollowTestServerQuery();
             query.setVpsId(id);
-            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
+//            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
             List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
             followTraderUserService.addByExcel(file,savedId,vos);
             return Result.ok("新增成功");
@@ -391,10 +398,16 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
-        String desPassword = AesUtils.decryptStr(password);
+//        String desPassword = AesUtils.decryptStr(password);
         //检查密码在6-16位之间
-        if (desPassword.length() < 6 || desPassword.length() > 16) {
-            return Result.error("密码长度应在6到16位之间");
+//        if (desPassword.length() < 6 || desPassword.length() > 16) {
+//            return Result.error("密码长度应在6到16位之间");
+//        }
+        if (!password.equals(confirmPassword)) {
+            throw new ServerException("两次密码输入不一致");
+        }
+        if (vo.getPassword().equals(password)){
+            return Result.ok("修改密码成功");
         }
 
         followTraderUserService.updatePassword(vo,password,confirmPassword,req);
@@ -409,5 +422,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             FollowTraderEntity entity= followTraderService.getByAccount(account);
             return Result.ok(entity);
         }
+
+
 
 }
