@@ -640,9 +640,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
-        if (!password.equals(confirmPassword)) {
-            throw new ServerException("两次密码输入不一致");
-        }
 //        String s = AesUtils.aesEncryptStr(password);
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
@@ -660,8 +657,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(password);
-                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-                    RestTemplate restTemplate = new RestTemplate();
+//                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+//                    RestTemplate restTemplate = new RestTemplate();
 
                     // 使用提前提取的 headers 构建请求头
 //                    HttpHeaders httpHeaders = new HttpHeaders();

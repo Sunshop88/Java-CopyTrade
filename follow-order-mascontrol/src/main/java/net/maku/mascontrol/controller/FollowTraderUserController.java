@@ -398,10 +398,16 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
-        String desPassword = AesUtils.decryptStr(password);
+//        String desPassword = AesUtils.decryptStr(password);
         //检查密码在6-16位之间
-        if (desPassword.length() < 6 || desPassword.length() > 16) {
-            return Result.error("密码长度应在6到16位之间");
+//        if (desPassword.length() < 6 || desPassword.length() > 16) {
+//            return Result.error("密码长度应在6到16位之间");
+//        }
+        if (!password.equals(confirmPassword)) {
+            throw new ServerException("两次密码输入不一致");
+        }
+        if (vo.getPassword().equals(password)){
+            return Result.ok("修改密码成功");
         }
 
         followTraderUserService.updatePassword(vo,password,confirmPassword,req);
