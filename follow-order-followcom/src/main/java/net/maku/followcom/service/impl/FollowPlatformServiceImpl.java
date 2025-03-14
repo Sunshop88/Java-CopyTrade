@@ -126,39 +126,6 @@ public class FollowPlatformServiceImpl extends BaseServiceImpl<FollowPlatformDao
     }
 
     @Override
-    public QuoteClient tologin(FollowTraderEntity trader) {
-        try {
-            String serverNode;
-            if (ObjectUtil.isNotEmpty(redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform()))){
-                serverNode=(String)redisCache.hGet(Constant.VPS_NODE_SPEED+trader.getServerId(),trader.getPlatform());
-            }else {
-                FollowPlatformEntity followPlatformServiceOne = this.getOne(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, trader.getPlatform()));
-                serverNode=followPlatformServiceOne.getServerNode();
-            }
-            if (ObjectUtil.isNotEmpty(serverNode)){
-                try {
-                    //处理节点格式
-                    String[] split = serverNode.split(":");
-                    QuoteClient quoteClient = new QuoteClient(Integer.parseInt(trader.getAccount()), AesUtils.decryptStr(trader.getPassword()),  split[0], Integer.valueOf(split[1]));
-                    quoteClient.Connect();
-                    return quoteClient;
-                }catch (Exception e1){
-                    if (e1.getMessage().contains("Invalid account")){
-                        log.info("账号密码错误");
-                        throw new ServerException("账号密码错误");
-                    }else {
-                        //重连失败
-                        log.info("重连失败{}",trader.getId());
-                    }
-                }
-            }
-        }catch (Exception e){
-            log.error("登录有误",e);
-        }
-        return null;
-    }
-
-    @Override
     public List<FollowPlatformVO> listBroke() {
         List<FollowPlatformEntity> list = list(new LambdaQueryWrapper<FollowPlatformEntity>().select(FollowPlatformEntity::getBrokerName).groupBy(FollowPlatformEntity::getBrokerName));
         return FollowPlatformConvert.INSTANCE.convertList(list);

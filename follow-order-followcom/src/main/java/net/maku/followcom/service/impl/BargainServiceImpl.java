@@ -252,6 +252,7 @@ public class BargainServiceImpl implements BargainService {
             followOrderDetailEntity.setSize(new BigDecimal(aDouble));
             followOrderDetailEntity.setSymbol(vo.getSymbol());
             followOrderDetailEntity.setRemark(msg);
+            followOrderDetailEntity.setType(vo.getType());
             followOrderDetailEntity.setBrokeName(platFormById.getBrokerName());
             followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
             followOrderDetailEntity.setIpAddr(followTraderEntity.getIpAddr());

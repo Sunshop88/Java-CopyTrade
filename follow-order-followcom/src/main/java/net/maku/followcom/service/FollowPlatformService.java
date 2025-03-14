@@ -31,8 +31,6 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
 
     List<FollowPlatformVO> getList();
 
-    QuoteClient tologin(FollowTraderEntity trader);
-
     List<FollowPlatformVO> listBroke();
 
     String listByServerName(String serverName);
