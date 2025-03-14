@@ -795,6 +795,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     o.setPassword(o.getPassword());
                 }
              FollowPlatformEntity followPlatformEntity = platformMap.get().get(Long.parseLong(o.getPlatformId().toString()));
+
             if(ObjectUtil.isNotEmpty(followPlatformEntity)){
                 o.setBrokerName(followPlatformEntity.getBrokerName());
             }
