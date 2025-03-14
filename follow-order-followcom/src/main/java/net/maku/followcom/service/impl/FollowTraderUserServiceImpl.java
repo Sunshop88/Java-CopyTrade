@@ -1060,4 +1060,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 .eq(FollowTraderUserEntity::getPlatform, serverName));
         return String.valueOf(count);
     }
+
+    @Override
+    public FollowTraderUserEntity getByAccount(String account) {
+        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account));
+        if (ObjectUtil.isNotEmpty(list)) {
+            return list.get(0);
+        }
+        return null;
+    }
 }
