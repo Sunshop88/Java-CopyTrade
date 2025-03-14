@@ -97,9 +97,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public PageResult<FollowTraderVO> page(FollowTraderQuery query) {
         IPage<FollowTraderEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
         List<FollowTraderVO> followTraderVOS = FollowTraderConvert.INSTANCE.convertList(page.getRecords());
-        followTraderVOS.forEach(o->{
+      /*  followTraderVOS.forEach(o->{
             o.setPassword(o.getPassword().length() % 32 == 0?AesUtils.decryptStr(o.getPassword()):o.getPassword());
-        });
+        });*/
         return new PageResult<>(followTraderVOS, page.getTotal());
     }
 
