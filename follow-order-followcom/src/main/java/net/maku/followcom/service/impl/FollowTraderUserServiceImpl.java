@@ -285,7 +285,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
-                    Result result = RestUtil.sendRequest(request, "127.0.0.1", HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
+                    Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
                     if(result.getCode()!=CloseOrOpenEnum.CLOSE.getValue()){
                         throw new ServerException(result.getMsg());
                     }
