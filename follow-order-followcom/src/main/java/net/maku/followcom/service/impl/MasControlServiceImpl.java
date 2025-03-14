@@ -9,13 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.*;
+import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
-import net.maku.followcom.vo.FollowPlatformVO;
-import net.maku.followcom.vo.FollowVpsVO;
-import net.maku.followcom.vo.PlatformVO;
-import net.maku.followcom.vo.ServerVO;
+import net.maku.followcom.vo.*;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
@@ -127,6 +125,14 @@ public class MasControlServiceImpl implements MasControlService {
         }
 
         followVpsService.update(vo);
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setVpsId(vo.getId());
+        List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
+        //将vos的vps_name修改掉vo.getVpsName
+        for (FollowTestDetailVO vo1 : vos) {
+            vo1.setVpsName(vo.getName());
+            followTestDetailService.update(vo1);
+        }
         log.info("成功更新 Client 和 FollowVps");
         return true;
     }

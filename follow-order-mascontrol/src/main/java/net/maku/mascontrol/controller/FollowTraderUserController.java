@@ -291,7 +291,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
             Integer id = followVpsService.getOne(wrapper).getId();
             FollowTestServerQuery query = new FollowTestServerQuery();
             query.setVpsId(id);
-            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
+//            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
             List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
             followTraderUserService.addByExcel(file,savedId,vos);
             return Result.ok("新增成功");

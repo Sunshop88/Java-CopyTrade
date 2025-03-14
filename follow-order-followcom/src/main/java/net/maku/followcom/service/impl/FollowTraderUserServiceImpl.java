@@ -214,6 +214,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
         entity.setPassword(entity.getPassword());
+        if (ObjectUtil.isNotEmpty(vo.getSort())){
+            entity.setSort(1);
+        }
 
         baseMapper.insert(entity);
 
@@ -420,7 +423,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         //根据platform 查询默认节点
                         List<FollowTestDetailVO> list = vos.stream().filter(vo -> vo.getServerName().equals(platform)).toList();
                         if (ObjectUtil.isNotEmpty(list)){
-                            node = list.get(0).getServerNode();
+                            List<FollowTestDetailVO> list1 = list.stream().filter(vo -> vo.getIsDefaultServer() == 0).toList();
+                            if (ObjectUtil.isNotEmpty(list1)){
+                            node = list1.get(0).getServerNode();
+                            }else {
+                                node = list.get(0).getServerNode();
+                            }
                         }
                     }
 
