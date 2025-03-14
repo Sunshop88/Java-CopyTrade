@@ -85,7 +85,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 // 检查是否超过3秒
                 if (System.currentTimeMillis() - startTime > 3000) {
-                    return; // 超时直接返回
+                    break; // 超时直接返回
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -106,6 +106,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         if (ObjectUtils.isEmpty(cachedCopierOrderInfo)||ObjectUtils.isEmpty(cachedCopierOrderInfo.getSlaveTicket())) {
             log.error("[MT4跟单者:{}-{}-{}]没有找到对应平仓订单号,因为该对应的订单开仓失败，[喊单者:{}-{}-{}],喊单者订单信息[{}]", orderId, copier.getAccount(), copier.getServerName(), orderInfo.getMasterId(), orderInfo.getAccount(), orderInfo.getServer(), orderInfo);
         } else {
+            log.info("开始平仓CloseOrder"+cachedCopierOrderInfo.getSlaveTicket());
             closeOrder(trader, cachedCopierOrderInfo, orderInfo, flag, mapKey);
         }
     }
@@ -121,8 +122,10 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
         String ip="";
         try {
             Order order = null;
+            log.info("进入平仓获取信息"+copier.getId()+":"+orderInfo.getMasterId());
             FollowTraderSubscribeEntity leaderCopier = followTraderSubscribeService.subscription(copier.getId(), orderInfo.getMasterId());
-            if (leaderCopier == null) {
+            if (ObjectUtil.isEmpty(leaderCopier)) {
+                log.info("跟单关系不存在"+copier.getId()+":"+orderInfo.getMasterId());
                 throw new RuntimeException("跟随关系不存在");
             }
             log.info("平仓信息"+cachedCopierOrderInfo);
