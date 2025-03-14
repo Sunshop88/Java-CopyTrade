@@ -85,6 +85,7 @@ public class FollowSlaveController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> addSlave(@RequestBody @Valid FollowAddSalveVo vo) {
         long newID = 0;
+        //传输过来是密文
         String password = vo.getPassword();
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(vo.getTraderId());
@@ -116,7 +117,8 @@ public class FollowSlaveController {
 //            }
             FollowTraderVO followTraderVo = new FollowTraderVO();
             followTraderVo.setAccount(vo.getAccount());
-            followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+           // followTraderVo.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
+            followTraderVo.setPassword(vo.getPassword());
             followTraderVo.setPlatform(vo.getPlatform());
             followTraderVo.setType(TraderTypeEnum.SLAVE_REAL.getType());
             followTraderVo.setFollowStatus(vo.getFollowStatus());
@@ -164,6 +166,8 @@ public class FollowSlaveController {
             obtainOrderHistoryTask.update(convert,newList);
             //保存从表数据
             FollowInsertVO followInsertVO = followService.convert(followTraderVO, vo);
+            //修改从库
+            followInsertVO.setPassword(AesUtils.decryptStr(followInsertVO.getPassword()));
             followService.add(followInsertVO);
 
             ThreadPoolUtils.execute(() -> {
@@ -237,15 +241,15 @@ public class FollowSlaveController {
                 vo.setTemplateId(followVarietyService.getBeginTemplateId());
             }
             BeanUtil.copyProperties(vo, followTraderEntity);
-            if(ObjectUtil.isNotEmpty(vo.getPassword())){
+       /*     if(ObjectUtil.isNotEmpty(vo.getPassword())){
                 followTraderEntity.setPassword(AesUtils.aesEncryptStr(vo.getPassword()));
-            }
+            }*/
             followTraderService.updateById(followTraderEntity);
             //修改trader_user
             LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(FollowTraderUserEntity::getAccount, followTraderEntity.getAccount());
             updateWrapper.eq(FollowTraderUserEntity::getPlatformId, followTraderEntity.getPlatformId());
-            updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, AesUtils.aesEncryptStr(vo.getPassword()));
+            updateWrapper.set(ObjectUtil.isNotEmpty(vo.getPassword()),FollowTraderUserEntity::getPassword, vo.getPassword());
             followTraderUserService.update(updateWrapper);
             //查看绑定跟单账号
             FollowTraderSubscribeEntity followTraderSubscribeEntity = followTraderSubscribeService.getOne(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
