@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.service.FollowTraderService;
+import net.maku.followcom.util.AesUtils;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
@@ -771,7 +772,7 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         wrapper.select(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
                 .groupBy(FollowVarietyEntity::getStdSymbol, FollowVarietyEntity::getStdContract)
                 .eq(FollowVarietyEntity::getTemplateId, query.getTemplate())
-                .eq(ObjectUtil.isNotEmpty(query.getStdSymbol()),FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
+                .like(ObjectUtil.isNotEmpty(query.getStdSymbol()),FollowVarietyEntity::getStdSymbol, query.getStdSymbol());
         IPage<FollowVarietyEntity> page = baseMapper.selectPage(getPage(query), wrapper);
         return new PageResult<>(FollowVarietyConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
@@ -936,22 +937,29 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
             LambdaQueryWrapper<FollowVarietyEntity> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(FollowVarietyEntity::getStdSymbol,entity.getStdSymbol());
             wrapper.eq(FollowVarietyEntity::getTemplateId,entity.getTemplateId());
-            wrapper.eq(FollowVarietyEntity::getBrokerName,entity.getBrokerName());
+//            wrapper.eq(FollowVarietyEntity::getBrokerName,entity.getBrokerName());
             List<FollowVarietyEntity> variety =list(wrapper);
-            if (ObjectUtil.isEmpty(variety)){
+            wrapper.eq(FollowVarietyEntity::getBrokerName,entity.getBrokerName());
+            List<FollowVarietyEntity> variety1 =list(wrapper);
+            if (ObjectUtil.isEmpty(variety1)){
+                //删除variety
+                if (ObjectUtil.isNotEmpty(variety)) {
+                    removeBatchByIds(variety);
+                }
                 FollowVarietyEntity followVarietyEntity = new FollowVarietyEntity();
                 followVarietyEntity.setTemplateId(entity.getTemplateId());
                 followVarietyEntity.setBrokerName(entity.getBrokerName());
                 followVarietyEntity.setStdSymbol(entity.getStdSymbol());
                 followVarietyEntity.setBrokerSymbol(entity.getBrokerSymbol());
                 followVarietyEntity.setStdContract(entity.getStdContract());
+                followVarietyEntity.setTemplateName(variety.getLast().getTemplateName());
                 save(followVarietyEntity);
             }else {
                 LambdaUpdateWrapper<FollowVarietyEntity> update = new LambdaUpdateWrapper<>();
                 update.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdContract,entity.getStdContract());
                 update.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getBrokerSymbol,entity.getBrokerSymbol());
-                update.set(ObjectUtil.isNotEmpty(variety.getLast().getTemplateName()),FollowVarietyEntity::getTemplateName,entity.getTemplateName());
-                update.eq(FollowVarietyEntity::getId,variety.getLast().getId());
+                update.set(ObjectUtil.isNotEmpty(variety1.getLast().getTemplateName()),FollowVarietyEntity::getTemplateName,entity.getTemplateName());
+                update.eq(FollowVarietyEntity::getId,variety1.getLast().getId());
                 update(update);
             }
         }

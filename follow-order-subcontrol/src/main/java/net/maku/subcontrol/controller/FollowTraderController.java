@@ -250,15 +250,7 @@ public class FollowTraderController {
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<String> delete(@RequestBody List<Long> idList) {
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().in(FollowTraderEntity::getId, idList));
-        list.forEach(e -> {
-            List<FollowTraderEntity> list1 = list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, e.getAccount()));
-            if (list1.size() == 1) {
-                LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
-                updateWrapper.eq(FollowTraderUserEntity::getAccount, e.getAccount());
-                updateWrapper.set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue());
-                followTraderUserService.update(updateWrapper);
-            }
-        });
+
         List<FollowTraderEntity> masterList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.MASTER_REAL.getType())).toList();
         List<FollowTraderEntity> slaveList = list.stream().filter(o -> o.getType().equals(TraderTypeEnum.SLAVE_REAL.getType())).toList();
         if (ObjectUtil.isNotEmpty(masterList)) {
@@ -269,7 +261,16 @@ public class FollowTraderController {
             }
         }
         followTraderService.delete(idList);
-
+        list.forEach(e -> {
+            List<FollowTraderEntity> list1 = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, e.getAccount()).eq(FollowTraderEntity::getPlatformId, e.getPlatformId()));
+            if (list1.size() <= 0) {
+                LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(FollowTraderUserEntity::getAccount, e.getAccount());
+                updateWrapper.eq(FollowTraderUserEntity::getPlatformId, e.getPlatformId());
+                updateWrapper.set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue());
+                followTraderUserService.update(updateWrapper);
+            }
+        });
         //清空缓存
         list.stream().forEach(o ->{
             leaderApiTradersAdmin.removeTrader(o.getId().toString());
