@@ -928,40 +928,25 @@ public class FollowVarietyServiceImpl extends BaseServiceImpl<FollowVarietyDao, 
         }
     }
     @Override
-    public boolean updateSymbol(List<FollowVarietyVO> followVarietyVO) {
-        List<FollowVarietyEntity> list = FollowVarietyConvert.INSTANCE.convertList2(followVarietyVO);
-        for (FollowVarietyEntity entity : list){
-//            LambdaUpdateWrapper<FollowVarietyEntity> wrapper = new LambdaUpdateWrapper<>();
-//            wrapper.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdSymbol,entity.getStdContract());
-//            wrapper.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getStdSymbol,entity.getBrokerSymbol());
-            LambdaQueryWrapper<FollowVarietyEntity> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(FollowVarietyEntity::getStdSymbol,entity.getStdSymbol());
-            wrapper.eq(FollowVarietyEntity::getTemplateId,entity.getTemplateId());
-//            wrapper.eq(FollowVarietyEntity::getBrokerName,entity.getBrokerName());
-            List<FollowVarietyEntity> variety =list(wrapper);
-            wrapper.eq(FollowVarietyEntity::getBrokerName,entity.getBrokerName());
-            List<FollowVarietyEntity> variety1 =list(wrapper);
-            if (ObjectUtil.isEmpty(variety1)){
-                //删除variety
-//                if (ObjectUtil.isNotEmpty(variety)) {
-//                    removeBatchByIds(variety);
-//                }
-                FollowVarietyEntity followVarietyEntity = new FollowVarietyEntity();
-                followVarietyEntity.setTemplateId(entity.getTemplateId());
-                followVarietyEntity.setBrokerName(entity.getBrokerName());
-                followVarietyEntity.setStdSymbol(entity.getStdSymbol());
-                followVarietyEntity.setBrokerSymbol(entity.getBrokerSymbol());
-                followVarietyEntity.setStdContract(entity.getStdContract());
-                followVarietyEntity.setTemplateName(variety.getLast().getTemplateName());
-                save(followVarietyEntity);
-            }else {
-                LambdaUpdateWrapper<FollowVarietyEntity> update = new LambdaUpdateWrapper<>();
-                update.set(ObjectUtil.isNotEmpty(entity.getStdContract()),FollowVarietyEntity::getStdContract,entity.getStdContract());
-                update.set(ObjectUtil.isNotEmpty(entity.getBrokerSymbol()),FollowVarietyEntity::getBrokerSymbol,entity.getBrokerSymbol());
-                update.set(ObjectUtil.isNotEmpty(variety1.getLast().getTemplateName()),FollowVarietyEntity::getTemplateName,entity.getTemplateName());
-                update.eq(FollowVarietyEntity::getId,variety1.getLast().getId());
-                update(update);
-            }
+    public boolean updateSymbol(List<FollowVarietyVO> followVarietyVOS) {
+//        List<FollowVarietyEntity> list = FollowVarietyConvert.INSTANCE.convertList2(followVarietyVO);
+        FollowVarietyVO first = followVarietyVOS.getFirst();
+        LambdaQueryWrapper<FollowVarietyEntity> wrapper = new LambdaQueryWrapper<>();
+
+        wrapper.eq(FollowVarietyEntity::getStdSymbol,first.getStdSymbol());
+        wrapper.eq(FollowVarietyEntity::getTemplateId,first.getTemplateId());
+        List<FollowVarietyEntity> variety =list(wrapper);
+        String templateName = variety.getFirst().getTemplateName();
+        remove(wrapper);
+        for (FollowVarietyVO vo : followVarietyVOS) {
+            FollowVarietyEntity followVarietyEntity = new FollowVarietyEntity();
+            followVarietyEntity.setTemplateId(vo.getTemplateId());
+            followVarietyEntity.setBrokerName(vo.getBrokerName());
+            followVarietyEntity.setStdSymbol(vo.getStdSymbol());
+            followVarietyEntity.setBrokerSymbol(vo.getBrokerSymbol());
+            followVarietyEntity.setStdContract(vo.getStdContract());
+            followVarietyEntity.setTemplateName(templateName);
+            save(followVarietyEntity);
         }
         return true;
     }
