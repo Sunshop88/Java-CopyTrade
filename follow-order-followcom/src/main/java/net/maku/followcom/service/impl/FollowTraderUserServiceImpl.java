@@ -43,6 +43,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -214,7 +215,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
         entity.setPassword(entity.getPassword());
-        if (ObjectUtil.isNotEmpty(vo.getSort())){
+        if (ObjectUtil.isEmpty(vo.getSort())){
             entity.setSort(1);
         }
 
@@ -386,6 +387,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     StringBuilder errorMsg = new StringBuilder();
                     if (account.isEmpty()) {
                         errorMsg.append("账号不能为空; ");
+                    }else if (!NumberUtils.isDigits(account)){
+                        errorMsg.append("账号需为数字; ");
                     }
 //                }else {
 //                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {

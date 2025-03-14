@@ -34,6 +34,7 @@ import net.maku.framework.security.user.SecurityUser;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -162,6 +163,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> save(@RequestBody @Valid FollowTraderUserVO vo){
+        //查看账号是否纯数字
+        if (!NumberUtils.isDigits(vo.getAccount())) {
+            throw new ServerException("账号只能为数字");
+        }
         followTraderUserService.save(vo);
 
         return Result.ok();
