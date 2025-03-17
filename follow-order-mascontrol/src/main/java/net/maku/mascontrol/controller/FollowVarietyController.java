@@ -398,7 +398,7 @@ public class FollowVarietyController {
         return Result.ok(list);
     }
 
-    @PostMapping("updateSybol")
+    @PostMapping("updateSymbol")
     @Operation(summary = "修改该品种的信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
     public Result<String> updateSymbol(@RequestBody List<FollowVarietyVO> followVarietyVO){

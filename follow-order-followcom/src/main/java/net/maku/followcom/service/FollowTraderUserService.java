@@ -2,6 +2,7 @@ package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.*;
@@ -57,4 +58,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     List<FollowTraderCountVO> getServerNodeCounts();
 
     String getAccountCount(String serverName);
+
+    FollowTraderUserEntity getByAccount(String account);
 }

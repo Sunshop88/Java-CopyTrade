@@ -363,16 +363,22 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 for (CSVRecord record : csvParser) {
                     String account = record.get(0);
                     String password = AesUtils.aesEncryptStr(record.get(1));
-                    String accountType = record.get(2).isEmpty() ? CloseOrOpenEnum.CLOSE.getValue() +"" : record.get(2).toUpperCase();
+                    String accountType = record.get(2).isEmpty() ? "MT4" : record.get(2).toUpperCase();
                     String platform = record.get(3);
                     String node = record.get(4);
                     String remark = record.get(5);
                     String sort = record.get(6).isEmpty() ? "1" : record.get(6);
-                    if (accountType.equals("MT5")){
-                        accountType = CloseOrOpenEnum.OPEN.getValue() +"";
-                    }
-                    if (accountType.equals("MT4")){
-                        accountType = CloseOrOpenEnum.CLOSE.getValue() +"";
+
+                    StringBuilder errorMsg = new StringBuilder();
+                    if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
+                        errorMsg.append("账号类型必须是MT4或MT5; ");
+                    }else {
+                        if (accountType.equals("MT5")) {
+                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
+                        }
+                        if (accountType.equals("MT4")) {
+                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
+                        }
                     }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
@@ -384,7 +390,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     }
 
                     // 校验必填字段
-                    StringBuilder errorMsg = new StringBuilder();
+//                    StringBuilder errorMsg = new StringBuilder();
                     if (account.isEmpty()) {
                         errorMsg.append("账号不能为空; ");
                     }else if (!NumberUtils.isDigits(account)){
@@ -407,9 +413,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             errorMsg.append("服务器不存在; ");
                         }
                     }
-                    if (!accountType.equals("0") && !accountType.equals("1")) {
-                        errorMsg.append("账号类型必须是MT4或MT5; ");
-                    }
+//                    if (!accountType.equals("0") && !accountType.equals("1")) {
+//                        errorMsg.append("账号类型必须是MT4或MT5; ");
+//                    }
                     if (ObjectUtil.isNotEmpty(node) && ObjectUtil.isNotEmpty(platform)) {
                         //将node拆分
                         String[] split = node.split(":");
@@ -1059,5 +1065,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         long count = this.count(new LambdaQueryWrapper<FollowTraderUserEntity>()
                 .eq(FollowTraderUserEntity::getPlatform, serverName));
         return String.valueOf(count);
+    }
+
+    @Override
+    public FollowTraderUserEntity getByAccount(String account) {
+        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account));
+        if (ObjectUtil.isNotEmpty(list)) {
+            return list.get(0);
+        }
+        return null;
     }
 }
