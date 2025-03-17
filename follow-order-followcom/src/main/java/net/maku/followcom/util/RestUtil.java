@@ -19,6 +19,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
@@ -360,7 +362,7 @@ public class RestUtil {
         }else{
              headers = RestUtil.getHeaderApplicationJsonAndToken(req);
         }
-
+        headers.setContentType(MediaType.APPLICATION_JSON);
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
         ObjectMapper objectMapper = new ObjectMapper();
         // 将对象序列化为 JSON
