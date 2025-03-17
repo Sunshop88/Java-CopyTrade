@@ -127,4 +127,4 @@ CREATE TABLE `follow_order_instruct` (
 ALTER TABLE `follow-order-cp`.`follow_order_detail`
     AUTO_INCREMENT=3042143,
     ADD COLUMN `open_price_difference` DECIMAL(16,5)   NULL     COMMENT '开仓价格差'  AFTER `comment`,
-    ADD COLUMN `clsoe_price_difference` DECIMAL(16,5)   NULL     COMMENT '平仓价格差'  AFTER `open_price_difference`;
+    ADD COLUMN `close_price_difference` DECIMAL(16,5)   NULL     COMMENT '平仓价格差'  AFTER `open_price_difference`;

@@ -151,6 +151,9 @@ public interface Constant {
     public static final String     SYSTEM_PARAM_LOTS_MAX="system:params";
     //最大手数
     public static final String     LOTS_MAX="max_lots";
+    //最低下单允许差
+    String ALLOW_LOTS="allow_lots";
+
     //飞书通知签名
     public static final String      FS_NOTICE_SECRET="secret";
     //飞书通知url
