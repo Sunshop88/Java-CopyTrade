@@ -1,5 +1,6 @@
 package net.maku.followcom.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.dao.UserDao;
 import net.maku.followcom.entity.UserEntity;
@@ -43,6 +44,15 @@ public class UserServiceImpl extends BaseServiceImpl<UserDao, UserEntity> implem
                 (m, v) -> m.put(v.getId(), v.getUsername()),
                 HashMap::putAll
         );
+    }
+
+    @Override
+    public List<Long> getUserNameId(List<String> userList) {
+        if (userList.isEmpty()){
+            return null;
+        }
+        List<Long> userIdList = list(new LambdaQueryWrapper<UserEntity>().in(UserEntity::getUsername, userList)).stream().map(UserEntity::getId).toList();
+        return userIdList;
     }
 
 }

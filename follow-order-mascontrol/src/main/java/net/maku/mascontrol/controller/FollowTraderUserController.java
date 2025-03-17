@@ -34,6 +34,7 @@ import net.maku.framework.security.user.SecurityUser;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -162,6 +163,10 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> save(@RequestBody @Valid FollowTraderUserVO vo){
+        //查看账号是否纯数字
+        if (!NumberUtils.isDigits(vo.getAccount())) {
+            throw new ServerException("账号只能为数字");
+        }
         followTraderUserService.save(vo);
 
         return Result.ok();
@@ -393,10 +398,16 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         FollowTraderUserVO vo = followTraderUserService.get(vos.getId());
         String password = vos.getPassword();
         String confirmPassword = vos.getConfirmPassword();
-        String desPassword = AesUtils.decryptStr(password);
+//        String desPassword = AesUtils.decryptStr(password);
         //检查密码在6-16位之间
-        if (desPassword.length() < 6 || desPassword.length() > 16) {
-            return Result.error("密码长度应在6到16位之间");
+//        if (desPassword.length() < 6 || desPassword.length() > 16) {
+//            return Result.error("密码长度应在6到16位之间");
+//        }
+        if (!password.equals(confirmPassword)) {
+            throw new ServerException("两次密码输入不一致");
+        }
+        if (vo.getPassword().equals(password)){
+            return Result.ok("修改密码成功");
         }
 
         followTraderUserService.updatePassword(vo,password,confirmPassword,req);
@@ -407,8 +418,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("getAccount")
     @Operation(summary = "获取账号信息")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<FollowTraderEntity> getAccount(@RequestParam("account") String account) {
-            FollowTraderEntity entity= followTraderService.getByAccount(account);
+    public Result<FollowTraderUserEntity> getAccount(@RequestParam("account") String account) {
+        FollowTraderUserEntity entity= followTraderUserService.getByAccount(account);
             return Result.ok(entity);
         }
 

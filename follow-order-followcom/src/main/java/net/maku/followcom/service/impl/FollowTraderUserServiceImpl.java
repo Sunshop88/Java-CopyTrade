@@ -43,6 +43,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -214,7 +215,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             entity.setPlatformId(Math.toIntExact(first.getId()));
         }
         entity.setPassword(entity.getPassword());
-        if (ObjectUtil.isNotEmpty(vo.getSort())){
+        if (ObjectUtil.isEmpty(vo.getSort())){
             entity.setSort(1);
         }
 
@@ -386,6 +387,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     StringBuilder errorMsg = new StringBuilder();
                     if (account.isEmpty()) {
                         errorMsg.append("账号不能为空; ");
+                    }else if (!NumberUtils.isDigits(account)){
+                        errorMsg.append("账号需为数字; ");
                     }
 //                }else {
 //                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {
@@ -637,9 +640,6 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public void updatePassword(FollowTraderUserVO vo, String password, String confirmPassword, HttpServletRequest req) throws Exception {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
-        if (!password.equals(confirmPassword)) {
-            throw new ServerException("两次密码输入不一致");
-        }
 //        String s = AesUtils.aesEncryptStr(password);
         LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
@@ -657,8 +657,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(password);
-                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-                    RestTemplate restTemplate = new RestTemplate();
+//                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+//                    RestTemplate restTemplate = new RestTemplate();
 
                     // 使用提前提取的 headers 构建请求头
 //                    HttpHeaders httpHeaders = new HttpHeaders();
@@ -1059,5 +1059,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         long count = this.count(new LambdaQueryWrapper<FollowTraderUserEntity>()
                 .eq(FollowTraderUserEntity::getPlatform, serverName));
         return String.valueOf(count);
+    }
+
+    @Override
+    public FollowTraderUserEntity getByAccount(String account) {
+        List<FollowTraderUserEntity> list = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account));
+        if (ObjectUtil.isNotEmpty(list)) {
+            return list.get(0);
+        }
+        return null;
     }
 }
