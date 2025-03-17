@@ -182,7 +182,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
             BigDecimal leaderProfit = orderInfo.getSwap().add(orderInfo.getCommission()).add(orderInfo.getProfit()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal copierProfit = new BigDecimal(order.Swap + order.Commission + order.Profit).setScale(2, RoundingMode.HALF_UP);
             // 创建订单结果事件
-            OrderResultCloseEvent event = new OrderResultCloseEvent(order, orderInfo, copier,flag,leaderProfit, copierProfit, startTime, endTime, startPrice, ip);
+            OrderResultCloseEvent event = new OrderResultCloseEvent(order, orderInfo, copier,flag,leaderProfit, copierProfit, startTime, endTime, startPrice, ip,BigDecimal.valueOf(ask).subtract(BigDecimal.valueOf(bid)));
             ObjectMapper mapper = JacksonConfig.getObjectMapper();
             String jsonEvent = null;
             try {

@@ -311,4 +311,16 @@ public class FollowOrderDetailEntity {
 	 */
 	@TableField(value = "comment")
 	private String comment;
+
+	/**
+	 * 平仓价格差
+	 */
+	@TableField(value = "close_price_difference")
+	private BigDecimal closePriceDifference;
+
+	/**
+	 * 开仓价格差
+	 */
+	@TableField(value = "open_price_difference")
+	private BigDecimal openPriceDifference;
 }

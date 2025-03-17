@@ -193,6 +193,10 @@ public class FollowOrderDetailVO  implements Serializable {
 	@Schema(description = " MT4备注")
 	private String comment;
 
+	@Schema(description = "平仓价格差")
+	private BigDecimal closePriceDifference;
 
+	@Schema(description = "开仓价格差")
+	private BigDecimal openPriceDifference;
 
 }

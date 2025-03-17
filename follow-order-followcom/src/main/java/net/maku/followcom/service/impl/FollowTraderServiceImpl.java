@@ -900,20 +900,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //开始平仓
         list.forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-                BigDecimal hd;
-                if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                    //如果forex 并包含JPY 也是100
-                    if (o.getSymbol().contains("JPY")) {
-                        hd = new BigDecimal("100");
-                    } else {
-                        hd = new BigDecimal("10000");
-                    }
-                } else {
-                    //如果非forex 都是 100
-                    hd = new BigDecimal("100");
+                if (o.getType().equals(Buy.getValue())){
+                    o.setClosePriceDifference(o.getRequestClosePrice().subtract(o.getClosePrice()));
+                }else {
+                    o.setClosePriceDifference(o.getClosePrice().subtract(o.getRequestClosePrice()));
                 }
-                o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
         });
@@ -967,6 +958,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setRequestCloseTime(nowdate);
             followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
             followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
+            followOrderDetailEntity.setClosePriceSlip(BigDecimal.valueOf(ask).subtract(BigDecimal.valueOf(bid)));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
@@ -1112,20 +1104,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //进行滑点分析
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-                BigDecimal hd;
-                if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                    //如果forex 并包含JPY 也是100
-                    if (o.getSymbol().contains("JPY")) {
-                        hd = new BigDecimal("100");
-                    } else {
-                        hd = new BigDecimal("10000");
-                    }
-                } else {
-                    //如果非forex 都是 100
-                    hd = new BigDecimal("100");
+                if (o.getType().equals(Buy.getValue())){
+                    o.setOpenPriceDifference(o.getOpenPrice().subtract(o.getRequestOpenPrice()));
+                }else {
+                    o.setOpenPriceDifference(o.getRequestOpenPrice().subtract(o.getOpenPrice()));
                 }
-                o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
         });
@@ -1183,6 +1166,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
             followOrderDetailEntity.setOpenTime(order.OpenTime);
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+            followOrderDetailEntity.setOpenPriceSlip(BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bid)));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
             followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));

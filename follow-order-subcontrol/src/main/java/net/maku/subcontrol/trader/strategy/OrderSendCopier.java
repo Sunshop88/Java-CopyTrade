@@ -324,7 +324,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping);
                 cacheCopierOrder(orderInfo, order,openOrderMapping);
                 // 创建订单结果事件
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip,BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bidsub)));
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = null;
                 try {
@@ -495,7 +495,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             followSubscribeOrderService.saveOrUpdate(openOrderMapping);
             cacheCopierOrder(orderInfo, order,openOrderMapping);
             // 创建订单结果事件
-            OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+            OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip,BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bidsub)));
             ObjectMapper mapper = JacksonConfig.getObjectMapper();
             String jsonEvent = null;
             try {
