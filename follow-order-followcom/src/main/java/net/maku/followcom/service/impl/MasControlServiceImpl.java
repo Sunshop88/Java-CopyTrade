@@ -30,10 +30,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static net.maku.followcom.util.RestUtil.getHeader;
@@ -78,53 +75,6 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("更新 Client 失败");
             return false;
         }
-//        Boolean result2 = clientServicePt.update(vo);
-//        if (!result2) {
-//            log.error("更新 Client-pt 失败");
-//            return false;
-//        }
-//        //修改vps的用户列表
-//        List<String> existingUserList = followVpsUserService.list(
-//                        new LambdaQueryWrapper<FollowVpsUserEntity>()
-//                                .eq(FollowVpsUserEntity::getVpsId, vo.getId())
-//                ).stream()
-//                .map(FollowVpsUserEntity::getVpsName)
-//                .collect(Collectors.toList());
-//        // 转换为 Set 以便进行集合操作
-//        Set<String> existingUserSet = existingUserList.stream().collect(Collectors.toSet());
-//       if(ObjectUtil.isEmpty(vo.getUserList())) {
-//           vo.setUserList(new ArrayList<>());
-//       }
-//        Set<String> userSet = vo.getUserList().stream().collect(Collectors.toSet());
-//
-//        // 找出需要删除的用户
-//        List<String> usersToDelete = existingUserSet.stream()
-//                .filter(user -> !userSet.contains(user))
-//                .collect(Collectors.toList());
-//
-//        // 找出需要添加的用户
-//        List<String> usersToAdd = userSet.stream()
-//                .filter(user -> !existingUserSet.contains(user))
-//                .collect(Collectors.toList());
-//
-//        // 删除用户
-//        if (ObjectUtil.isNotEmpty(usersToDelete)) {
-//            for (String userToDelete : usersToDelete) {
-//                followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>()
-//                        .eq(FollowVpsUserEntity::getVpsId, vo.getId())
-//                        .eq(FollowVpsUserEntity::getVpsName, userToDelete));
-//            }
-//        }
-//        if (ObjectUtil.isNotEmpty(usersToAdd)) {
-//            // 添加用户
-//            for (String userToAdd : usersToAdd) {
-//                FollowVpsUserEntity newUser = new FollowVpsUserEntity();
-//                newUser.setUserId(SecurityUser.getUserId());
-//                newUser.setVpsId(vo.getId());
-//                newUser.setVpsName(userToAdd);
-//                followVpsUserService.save(newUser);
-//            }
-//        }
 
         followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
         List<Long> userIdList = userService.getUserNameId(vo.getUserList());
@@ -141,11 +91,21 @@ public class MasControlServiceImpl implements MasControlService {
             FollowTestServerQuery query = new FollowTestServerQuery();
             query.setVpsId(vo.getId());
             List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
+            ExecutorService executor = Executors.newFixedThreadPool(20);
             //将vos的vps_name修改掉vo.getVpsName
             for (FollowTestDetailVO vo1 : vos) {
                 vo1.setVpsName(vo.getName());
-                followTestDetailService.update(vo1);
+//                followTestDetailService.update(vo1);
+                executor.execute(() -> {
+                    try {
+                        followTestDetailService.update(vo1);
+                    } catch (Exception e) {
+                        log.error("更新 FollowTestDetailVO 失败: {}", vo1.getId(), e);
+                    }
+                });
             }
+            log.info("vps名称成功更新");
+//            executor.shutdown();
         }
         log.info("成功更新 Client 和 FollowVps");
         return true;

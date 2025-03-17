@@ -47,7 +47,6 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
     public PageResult<FollowOrderInstructVO> page(FollowOrderInstructQuery query) {
         IPage<FollowOrderInstructEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
 
-//        return new PageResult<>(FollowOrderInstructConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
         List<FollowOrderInstructEntity> records = page.getRecords();
         List<FollowOrderInstructVO> vos = FollowOrderInstructConvert.INSTANCE.convertList(records);
 
@@ -62,17 +61,18 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
         for (FollowOrderInstructVO vo : vos) {
             vo.setCreatorName(creatorNameMap.get(vo.getCreator()));
         }
-        //查询用户名
-        if (ObjectUtil.isNotEmpty(query.getCreatorName())) {
-            String creatorFilter = query.getCreatorName().replace("%", "\\%"); // 转义 %
-            vos = vos.stream()
-                    .filter(vo -> {
-                        String creatorName = creatorNameMap.get(vo.getCreator());
-                        return creatorName != null && creatorName.contains(creatorFilter);
-                    })
-                    .collect(Collectors.toList());
-        }
-
+//        //查询用户名
+//        if (ObjectUtil.isNotEmpty(query.getCreatorName())) {
+//            String creatorFilter = query.getCreatorName().replace("%", "\\%"); // 转义 %
+//            vos = vos.stream()
+//                    .filter(vo -> {
+//                        String creatorName = creatorNameMap.get(vo.getCreator());
+//                        return creatorName != null && creatorName.contains(creatorFilter);
+//                    })
+//                    .collect(Collectors.toList());
+//        }
+        // 重新计算总数
+//        long total = vos.size();
         return new PageResult<>(vos, page.getTotal());
     }
 
@@ -85,10 +85,10 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
             String symbol = query.getSymbol().replaceAll("%", "\\\\%");
             wrapper.like(FollowOrderInstructEntity::getSymbol,symbol);
         }
-    //    List<Integer> userIdList = userApi.getUser(query.getCreator());
-//        List<Integer> userIdList =null;
-//        wrapper.in(ObjectUtil.isNotEmpty(userIdList), FollowOrderInstructEntity::getCreator, userIdList);
-//        wrapper.like(ObjectUtil.isNotEmpty(query.getCreator()),FollowOrderInstructEntity);
+        if (ObjectUtil.isNotEmpty(query.getCreatorName())) {
+            List<Long> creatorIds = userService.getUserIds(query.getCreatorName());
+            wrapper.in(FollowOrderInstructEntity::getCreator, creatorIds);
+        }
         //如果没有时间，默认一个月
         if (ObjectUtil.isNotEmpty(query.getStartTime()) && ObjectUtil.isNotEmpty(query.getEndTime())) {
             wrapper.ge(FollowOrderInstructEntity::getCreateTime, query.getStartTime());
