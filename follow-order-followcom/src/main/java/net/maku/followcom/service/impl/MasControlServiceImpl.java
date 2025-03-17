@@ -137,16 +137,16 @@ public class MasControlServiceImpl implements MasControlService {
         }
         FollowVpsVO followVpsVO = followVpsService.get(Long.valueOf(vo.getId()));
         followVpsService.update(vo);
-        if (!vo.getName().equals(followVpsVO.getName())){
+        if (!vo.getName().equals(followVpsVO.getName())) {
             FollowTestServerQuery query = new FollowTestServerQuery();
-        query.setVpsId(vo.getId());
-        List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
-        //将vos的vps_name修改掉vo.getVpsName
-        for (FollowTestDetailVO vo1 : vos) {
-            vo1.setVpsName(vo.getName());
-            followTestDetailService.update(vo1);
+            query.setVpsId(vo.getId());
+            List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
+            //将vos的vps_name修改掉vo.getVpsName
+            for (FollowTestDetailVO vo1 : vos) {
+                vo1.setVpsName(vo.getName());
+                followTestDetailService.update(vo1);
+            }
         }
-    }
         log.info("成功更新 Client 和 FollowVps");
         return true;
     }
