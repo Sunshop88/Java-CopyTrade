@@ -239,7 +239,10 @@ public class BarginOrderWebSocket {
             log.info(account+"登录完成");
             return quoteClient;
         }catch (Exception e){
-            log.info("登录异常");
+            if (e.getMessage().contains("Invalid account")) {
+                log.info("账户密码登录异常");
+            }
+            log.info("BarginOrderWebSocket登录异常"+e.getMessage());
             FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
             followBarginOrderVO.setStatus(2);
             pushMessage(session,JsonUtils.toJsonString(followBarginOrderVO));

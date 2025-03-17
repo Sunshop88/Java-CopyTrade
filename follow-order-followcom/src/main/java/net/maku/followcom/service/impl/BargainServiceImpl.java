@@ -116,26 +116,31 @@ public class BargainServiceImpl implements BargainService {
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
-                        //发送请求
-                        MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
-                        masToSubOrderSendDto.setRemark(vo.getRemark());
-                        masToSubOrderSendDto.setSymbol(vo.getSymbol());
-                        masToSubOrderSendDto.setType(vo.getType());
-                        masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
-                        masToSubOrderSendDto.setStartSize(vo.getStartSize());
-                        masToSubOrderSendDto.setEndSize(vo.getEndSize());
-                        masToSubOrderSendDto.setTotalNum(1);
-                        masToSubOrderSendDto.setIntervalTime(0);
-                        masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
-                        masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
-                        masToSubOrderSendDto.setSendNo(orderNo);
-                        Result result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
-                        if (result.getCode() != 0) {
-                            //增加子指令数据
-                            insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1,result.getMsg());
-                            log.info("分配交易下单请求异常"+followTraderEntity.getId());
+                        try {
+                            //发送请求
+                            MasToSubOrderSendDto masToSubOrderSendDto = new MasToSubOrderSendDto();
+                            masToSubOrderSendDto.setRemark(vo.getRemark());
+                            masToSubOrderSendDto.setSymbol(vo.getSymbol());
+                            masToSubOrderSendDto.setType(vo.getType());
+                            masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
+                            masToSubOrderSendDto.setStartSize(vo.getStartSize());
+                            masToSubOrderSendDto.setEndSize(vo.getEndSize());
+                            masToSubOrderSendDto.setTotalNum(1);
+                            masToSubOrderSendDto.setIntervalTime(0);
+                            masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
+                            masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
+                            masToSubOrderSendDto.setSendNo(orderNo);
+                            Result result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
+                            if (result.getCode() != 0) {
+                                //增加子指令数据
+                                insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1,result.getMsg());
+                                log.info("分配交易下单请求异常"+followTraderEntity.getId());
+                            }
+                        }catch (Exception e) {
+                            log.error("订单处理异常", e);
+                            insertOrderDetail(followTraderEntity,vo,orderNo,aDouble,1,"服务器异常");
                         }
-                        }, ThreadPoolUtils.getExecutor());
+                    }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
                 });
                 CompletableFuture<Void> allOrdersCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -187,6 +192,7 @@ public class BargainServiceImpl implements BargainService {
                             }
                         } catch (Exception e) {
                             log.error("订单处理异常", e);
+                            insertOrderDetail(followTraderEntity,vo,orderNo,vo.getStartSize().doubleValue(),vo.getTotalNum(),"服务器异常");
                         }
                     }, ThreadPoolUtils.getExecutor());
                     futures.add(orderFuture);
@@ -252,6 +258,7 @@ public class BargainServiceImpl implements BargainService {
             followOrderDetailEntity.setSize(new BigDecimal(aDouble));
             followOrderDetailEntity.setSymbol(vo.getSymbol());
             followOrderDetailEntity.setRemark(msg);
+            followOrderDetailEntity.setType(vo.getType());
             followOrderDetailEntity.setBrokeName(platFormById.getBrokerName());
             followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
             followOrderDetailEntity.setIpAddr(followTraderEntity.getIpAddr());

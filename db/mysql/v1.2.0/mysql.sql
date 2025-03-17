@@ -91,3 +91,34 @@ ALTER TABLE follow_vps ADD is_monitor_repair tinyint(1) NULL DEFAULT 1 COMMENT '
 ALTER TABLE follow_trader ADD cfd varchar(50) NULL  COMMENT '品种 ' ;
 ALTER TABLE follow_trader ADD forex varchar(50) NULL   COMMENT '品种 ' ;
 ALTER TABLE follow_trader_user MODIFY COLUMN sort INT;
+
+--------总指令表
+CREATE TABLE `follow_order_instruct` (
+                                         `id` int NOT NULL AUTO_INCREMENT,
+                                         `instruction_type` tinyint NOT NULL COMMENT '指令类型0-分配 1-复制',
+                                         `symbol` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '品种',
+                                         `type` tinyint NOT NULL COMMENT '类型 0-buy 1-sell',
+                                         `min_lot_size` decimal(10,2) DEFAULT '0.00' COMMENT '手数范围开始',
+                                         `max_lot_size` decimal(10,2) DEFAULT '0.00' COMMENT ' 手数范围结束',
+                                         `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '备注',
+                                         `total_lots` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '下单总手数',
+                                         `total_orders` int NOT NULL DEFAULT '0' COMMENT '下单总订单',
+                                         `interval_time` int DEFAULT '0' COMMENT '间隔时间',
+                                         `true_total_lots` decimal(10,2) DEFAULT '0.00' COMMENT '实际下单总手数',
+                                         `true_total_orders` int DEFAULT '0' COMMENT '实际下单总单数',
+                                         `traded_lots` decimal(10,2) DEFAULT '0.00' COMMENT '成交手数',
+                                         `traded_orders` int DEFAULT '0' COMMENT '成交订单',
+                                         `status` tinyint DEFAULT '0' COMMENT '状态0-执行中 1-全部成功 2-存在失败',
+                                         `version` int DEFAULT NULL COMMENT '版本号',
+                                         `deleted` tinyint DEFAULT '0' COMMENT '删除标识  0：正常   1：已删除',
+                                         `creator` bigint DEFAULT NULL COMMENT '创建者',
+                                         `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+                                         `updater` bigint DEFAULT NULL COMMENT '更新者',
+                                         `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+                                         `end_time` datetime DEFAULT NULL COMMENT '指令结束时间',
+                                         `order_no` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '订单号',
+                                         `fail_orders` int DEFAULT '0' COMMENT '失败订单数',
+                                         `trader_id` int DEFAULT NULL COMMENT '用户id',
+                                         PRIMARY KEY (`id`) USING BTREE,
+                                         KEY `orderkey` (`order_no`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='下单总指令表';

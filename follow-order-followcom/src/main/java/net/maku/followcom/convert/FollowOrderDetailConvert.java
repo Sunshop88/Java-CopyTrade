@@ -3,7 +3,6 @@ package net.maku.followcom.convert;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.vo.FollowOrderDetailVO;
 import net.maku.followcom.vo.FollowOrderDetailExcelVO;
-import net.maku.followcom.vo.FollowOrderInstructSubVO;
 import net.maku.followcom.vo.OrderClosePageVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -27,8 +26,6 @@ public interface FollowOrderDetailConvert {
     FollowOrderDetailVO convert(FollowOrderDetailEntity entity);
 
     List<FollowOrderDetailVO> convertList(List<FollowOrderDetailEntity> list);
-
-    List<FollowOrderInstructSubVO> convertPage(List<FollowOrderDetailVO> list);
 
     List<FollowOrderDetailEntity> convertList2(List<FollowOrderDetailVO> list);
 

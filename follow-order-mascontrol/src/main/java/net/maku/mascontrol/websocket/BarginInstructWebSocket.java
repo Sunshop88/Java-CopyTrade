@@ -15,7 +15,6 @@ import net.maku.followcom.enums.TradeErrorCodeEnum;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.SpringContextUtils;
-import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.utils.JsonUtils;
 import net.maku.mascontrol.vo.FollowBaiginInstructSubVO;
 import net.maku.mascontrol.vo.FollowBaiginInstructVO;

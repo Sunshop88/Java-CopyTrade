@@ -61,8 +61,8 @@ maku:
     exclude-urls:
       - /maku-generator/**
   security:
-    # 2小时过期
-    access-token-expire: 7200
+    # 24小时过期
+    access-token-expire: 86400
     # 14天过期
     refresh-token-expire: 1209600
 
