@@ -19,6 +19,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
@@ -404,7 +406,13 @@ public class RestUtil {
                 if(!sb.isEmpty()){
                     Random random=new Random();
                     int randomNum  = random.nextInt(10000);
-                    url=url+"?randomNum="+randomNum+"&"+sb.toString().substring(0,sb.toString().length()-1);
+                    String encodedParam = null;
+                    try {
+                        encodedParam = URLEncoder.encode(sb.toString(), StandardCharsets.UTF_8.toString());
+                    } catch (UnsupportedEncodingException e) {
+                        log.error("参数转换异常: {}", e);
+                    }
+                    url=url+"?randomNum="+randomNum+"&"+encodedParam.substring(0,sb.toString().length()-1);
                 }
             }
             try {
