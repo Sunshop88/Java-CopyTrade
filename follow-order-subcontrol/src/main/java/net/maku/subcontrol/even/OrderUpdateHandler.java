@@ -21,8 +21,7 @@ import online.mtapi.mt4.Order;
 import online.mtapi.mt4.OrderUpdateEventArgs;
 import online.mtapi.mt4.OrderUpdateEventHandler;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -116,8 +115,16 @@ public class OrderUpdateHandler implements OrderUpdateEventHandler {
         messagePayload.setUser(Long.parseLong(leader.getAccount()));
         OrderCacheVO orderCacheVO = new OrderCacheVO();
         orderCacheVO.setTicket(x.Ticket);
-        orderCacheVO.setOpenTime(x.OpenTime);
-        orderCacheVO.setCloseTime(x.CloseTime);
+        ZonedDateTime openTimeUtc = x.OpenTime
+                .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                .withZoneSameInstant(ZoneOffset.UTC);
+        orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
+
+        ZonedDateTime closeTimeUtc = x.CloseTime
+                .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                .withZoneSameInstant(ZoneOffset.UTC);
+        orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
+        orderCacheVO.setCloseTime(closeTimeUtc.toLocalDateTime());
         orderCacheVO.setType(x.Type);
         orderCacheVO.setLots(x.Lots);
         orderCacheVO.setSymbol(x.Symbol);

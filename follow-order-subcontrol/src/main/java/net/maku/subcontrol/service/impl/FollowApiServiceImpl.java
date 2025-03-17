@@ -605,12 +605,11 @@ public class FollowApiServiceImpl implements FollowApiService {
                     String desc = PlacedTypeEnum.getDesc(followOrderDetailEntity.getPlacedType());
                     orderVo.setPlaceType(desc);
                 }
-
-
                 orderVos.add(orderVo);
             });
             orderList.setTotalCount(pageOrder.getTotal());
             orderList.setOrders(orderVos);
+
         }else{
             QuoteClient quoteClient = null;
             List<AccountModelVO> accounts = vo.getAccount();
@@ -628,11 +627,19 @@ public class FollowApiServiceImpl implements FollowApiService {
                         orderVo.setId(trader.getId());
                         ZoneId zoneId = ZoneId.systemDefault();
                         LocalDateTime localDateTime = order.OpenTime;
-                        ZonedDateTime zdt = localDateTime.atZone(zoneId);
-                        Date openTime = Date.from(zdt.toInstant());
+                      //  ZonedDateTime zdt = localDateTime.atZone(zoneId);
+                        ZonedDateTime openTimeUtc =localDateTime
+                                .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                                .withZoneSameInstant(ZoneOffset.UTC);
+                  //      orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
+                        Date openTime = Date.from(openTimeUtc.toInstant());
                         orderVo.setOpenTime(openTime);
+
+                        ZonedDateTime closeTimeUtc =  order.CloseTime
+                                .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                                .withZoneSameInstant(ZoneOffset.UTC);
                         ZonedDateTime zonedDateTime = order.CloseTime.atZone(zoneId);
-                        Date closeTime = Date.from(zonedDateTime.toInstant());
+                        Date closeTime = Date.from(closeTimeUtc.toInstant());
                         orderVo.setCloseTime(closeTime);
                       //  orderVo.setPlaceType(order);
                         orderVo.setSymbol(order.Symbol);

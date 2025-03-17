@@ -42,6 +42,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -84,7 +85,7 @@ public class PushRedisTask {
                 //  FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                 //"39.98.109.212" FollowConstant.LOCAL_HOST FollowConstant.LOCAL_HOST
                FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST).eq(FollowVpsEntity::getDeleted, 0));
-              //  FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
+               // FollowVpsEntity one = followVpsService.getOne(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getIpAddress,"39.101.133.150").eq(FollowVpsEntity::getDeleted,0));
                 if (one != null) {
                     pushCache(one.getId(),trader,type);
                     pushRepair(one.getId());
@@ -377,9 +378,15 @@ public class PushRedisTask {
                                                 //  orderCacheVO.setId(x.);
                                                 //    orderCacheVO.setLogin(x.);
                                                 orderCacheVO.setTicket(x.Ticket);
-                                                ZonedDateTime openTimeUtc = x.OpenTime.atZone(ZoneId.of("UTC"));
+
+                                                ZonedDateTime openTimeUtc = x.OpenTime
+                                                        .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                                                        .withZoneSameInstant(ZoneOffset.UTC);
                                                 orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
-                                                ZonedDateTime closeTimeUtc = x.CloseTime.atZone(ZoneId.of("UTC"));
+
+                                                ZonedDateTime closeTimeUtc = x.CloseTime
+                                                        .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                                                        .withZoneSameInstant(ZoneOffset.UTC);
                                                 orderCacheVO.setCloseTime(closeTimeUtc.toLocalDateTime());
                                                 orderCacheVO.setType(x.Type);
                                                 orderCacheVO.setLots(x.Lots);
