@@ -418,8 +418,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("getAccount")
     @Operation(summary = "获取账号信息")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<FollowTraderEntity> getAccount(@RequestParam("account") String account) {
-            FollowTraderEntity entity= followTraderService.getByAccount(account);
+    public Result<FollowTraderUserEntity> getAccount(@RequestParam("account") String account) {
+        FollowTraderUserEntity entity= followTraderUserService.getByAccount(account);
             return Result.ok(entity);
         }
 
