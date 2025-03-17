@@ -262,7 +262,7 @@ public class BargainServiceImpl implements BargainService {
             followOrderDetailEntity.setBrokeName(platFormById.getBrokerName());
             followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
             followOrderDetailEntity.setIpAddr(followTraderEntity.getIpAddr());
-            followOrderDetailEntity.setServerName(followTraderEntity.getServerName());
+            followOrderDetailEntity.setPlatform(platFormById.getServer());
             followOrderDetailEntities.add(followOrderDetailEntity);
         }
         followOrderDetailService.saveBatch(followOrderDetailEntities);

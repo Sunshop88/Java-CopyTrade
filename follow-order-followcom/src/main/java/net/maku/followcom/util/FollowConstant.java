@@ -53,6 +53,8 @@ public class FollowConstant {
 
     public static String REQUEST_PORT = "9000";
 
+    public static String MYSQL_DB = "follow-order-cp";
+
     /**
      * VPS请求路径
      */
