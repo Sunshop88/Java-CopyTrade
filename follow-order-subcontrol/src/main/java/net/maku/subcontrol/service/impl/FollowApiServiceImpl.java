@@ -571,10 +571,17 @@ public class FollowApiServiceImpl implements FollowApiService {
                 OrderClosePageVO.OrderVo orderVo = new OrderClosePageVO.OrderVo();
                 orderVo.setId(followOrderDetailEntity.getTraderId());
                 if (followOrderDetailEntity.getOpenTime() != null) {
-                    orderVo.setOpenTime(Date.from(followOrderDetailEntity.getOpenTime().toInstant(ZoneOffset.UTC)));
+                    ZonedDateTime openTimeUtc =followOrderDetailEntity.getOpenTime()
+                            .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                            .withZoneSameInstant(ZoneOffset.UTC);
+                    orderVo.setOpenTime(openTimeUtc.toLocalDateTime());
                 }
                 if (followOrderDetailEntity.getCloseTime() != null) {
-                    orderVo.setCloseTime(Date.from(followOrderDetailEntity.getCloseTime().toInstant(ZoneOffset.UTC)));
+                    ZonedDateTime closeTimeUtc =  followOrderDetailEntity.getCloseTime()
+                            .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
+                            .withZoneSameInstant(ZoneOffset.UTC);
+
+                    orderVo.setCloseTime(closeTimeUtc.toLocalDateTime());
                 }
                 if (followOrderDetailEntity.getType() != null) {
                     orderVo.setType(String.valueOf(followOrderDetailEntity.getType()));
@@ -633,14 +640,14 @@ public class FollowApiServiceImpl implements FollowApiService {
                                 .withZoneSameInstant(ZoneOffset.UTC);
                   //      orderCacheVO.setOpenTime(openTimeUtc.toLocalDateTime());
                         Date openTime = Date.from(openTimeUtc.toInstant());
-                        orderVo.setOpenTime(openTime);
+                        orderVo.setOpenTime(openTimeUtc.toLocalDateTime());
 
                         ZonedDateTime closeTimeUtc =  order.CloseTime
                                 .atZone(ZoneId.of("Asia/Shanghai")) // 强制指定北京时区
                                 .withZoneSameInstant(ZoneOffset.UTC);
                         ZonedDateTime zonedDateTime = order.CloseTime.atZone(zoneId);
                         Date closeTime = Date.from(closeTimeUtc.toInstant());
-                        orderVo.setCloseTime(closeTime);
+                        orderVo.setCloseTime(closeTimeUtc.toLocalDateTime());
                       //  orderVo.setPlaceType(order);
                         orderVo.setSymbol(order.Symbol);
                         orderVo.setOpenPrice(new BigDecimal(order.OpenPrice));

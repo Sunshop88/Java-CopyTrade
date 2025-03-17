@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -38,9 +39,9 @@ public class OrderClosePageVO implements Serializable {
         @JsonProperty(value = "Ticket")
         private Integer ticket;
         @JsonProperty(value = "OpenTime")
-        private Date openTime;
+        private LocalDateTime openTime;
         @JsonProperty(value = "CloseTime")
-        private Date closeTime;
+        private LocalDateTime closeTime;
         @JsonProperty(value = "Type")
         private String type;
         @JsonProperty(value = "Lots")
