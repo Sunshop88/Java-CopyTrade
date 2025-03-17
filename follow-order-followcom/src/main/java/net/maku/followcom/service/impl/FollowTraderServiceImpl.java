@@ -84,6 +84,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     private final RedisUtil redisUtil;
     private final FollowOrderInstructService followOrderInstructService;
     private final RedissonLockUtil redissonLockUtil;
+    
 
     @Autowired
     @Qualifier(value = "commonThreadPool")
@@ -274,7 +275,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         vo.setPlatform(followTraderEntity.getPlatform());
         vo.setBrokeName(followPlatform.getBrokerName());
         vo.setIpAddr(followTraderEntity.getIpAddr());
-        vo.setServerName(followTraderEntity.getServerName());
+        FollowVpsEntity vps = followVpsService.getById(followTraderEntity.getServerId());
+        vo.setServerName(vps.getName());
         vo.setServer(followTraderEntity.getPlatform());
 
         double pr = 1;
