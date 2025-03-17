@@ -170,6 +170,16 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
 
                     });
                     repairSend(follow,master,copier4ApiTrader.quoteClient);
+                    log.info("跟单发送平仓mq" + leader.getId());
+                    ThreadPoolUtils.getExecutor().execute(()-> {
+                        //发送平仓MQ
+                        ObjectMapper mapper = JacksonConfig.getObjectMapper();
+                        try {
+                            producer.sendMessage(mapper.writeValueAsString(getMessagePayload(order)));
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                     break;
                 default:
                     log.error("Unexpected value: " + orderUpdateEventArgs.Action);
