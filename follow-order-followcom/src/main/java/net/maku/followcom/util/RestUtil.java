@@ -362,7 +362,7 @@ public class RestUtil {
         }else{
              headers = RestUtil.getHeaderApplicationJsonAndToken(req);
         }
-
+        headers.setContentType(MediaType.APPLICATION_JSON);
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
         ObjectMapper objectMapper = new ObjectMapper();
         // 将对象序列化为 JSON
