@@ -619,7 +619,13 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             // 提取 list 中的订单号
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
             log.info("需要平仓数量{},持仓数量{},平台持仓数量{}", orderCount, orderActive.size(), listOrderNos.size());
-            orderActive.retainAll(listOrderNos);
+            if(vo.getFlag().equals(CloseOrOpenEnum.CLOSE.getValue())){
+                orderActive.retainAll(listOrderNos);
+            }else{
+                //等于二,平外部订单
+             orderActive.removeAll(listOrderNos);
+            }
+
             log.info("可平仓数量{}", orderActive.size());
             if (orderCount > orderActive.size()) {
                 //不超过可平仓总数
