@@ -27,11 +27,13 @@ import net.maku.framework.common.utils.RandomStringUtil;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
+import online.mtapi.mt4.QuoteClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -98,7 +100,7 @@ public class BargainServiceImpl implements BargainService {
         });
         //创建父指令
         String orderNo = RandomStringUtil.generateNumeric(13);
-        FollowOrderInstructEntity followOrderInstructEntity = FollowOrderInstructEntity.builder().instructionType(vo.getType())
+        FollowOrderInstructEntity followOrderInstructEntity = FollowOrderInstructEntity.builder().instructionType(vo.getTradeType())
                 .maxLotSize(vo.getStartSize()).minLotSize(vo.getEndSize()).remark(vo.getRemark()).totalLots(vo.getTotalSzie())
                 .totalOrders(vo.getTotalNum()).intervalTime(vo.getIntervalTime()).symbol(vo.getSymbol()).type(vo.getType())
                 .orderNo(orderNo).creator(SecurityUser.getUserId()).createTime(LocalDateTime.now()).build();
