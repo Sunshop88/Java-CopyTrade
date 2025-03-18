@@ -101,6 +101,8 @@ public class FollowTraderUserVO implements Serializable {
 	private BigDecimal freeMargin;
 	@Schema(description = "已用预付款")
 	private  Double margin;
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
 	@Schema(description = "总持仓订单数量")
 	private Integer total;
 
