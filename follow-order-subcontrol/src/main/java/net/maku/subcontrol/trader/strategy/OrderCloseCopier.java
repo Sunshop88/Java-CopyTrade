@@ -85,7 +85,7 @@ public class OrderCloseCopier extends AbstractOperation implements IOperationStr
                 cachedCopierOrderInfo = (CachedCopierOrderInfo) redisUtil.hGet(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()));
                 // 检查是否超过3秒
                 if (System.currentTimeMillis() - startTime > 3000) {
-                    return; // 超时直接返回
+                    break; // 超时直接返回
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
