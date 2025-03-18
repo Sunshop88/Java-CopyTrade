@@ -401,9 +401,27 @@ public class FollowVarietyController {
     @PostMapping("updateSymbol")
     @Operation(summary = "修改该品种的信息")
     @PreAuthorize("hasAuthority('mascontrol:variety')")
-    public Result<String> updateSymbol(@RequestBody List<FollowVarietyVO> followVarietyVO){
+    public Result<String> updateSymbol(@RequestBody List<FollowVarietyVO> followVarietyVO, HttpServletRequest req){
         boolean b = followVarietyService.updateSymbol(followVarietyVO);
         if (b){
+            //修改缓存
+            String authorization=req.getHeader("Authorization");
+            ThreadPoolUtils.execute(()->{
+                for (FollowVpsEntity o : followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted,0))){
+                    try{
+                        String url = MessageFormat.format("http://{0}:{1}{2}", o.getIpAddress(), FollowConstant.VPS_PORT, FollowConstant.VPS_UPDATE_CACHE_VARIETY_CACHE);
+                        JSONObject jsonObject=new JSONObject();
+                        Integer template = followVarietyVO.getFirst().getTemplateId();
+                        jsonObject.put("template",template);
+                        HttpHeaders header = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                        header.add("Authorization", authorization);
+                        JSONObject body = RestUtil.request(url, HttpMethod.GET,header, jsonObject, null, JSONObject.class).getBody();
+                        log.info("修改缓存"+body.toString());
+                    }catch (Exception e){
+                        log.info("修改缓存失败"+e);
+                    }
+                }
+            });
             return Result.ok("修改成功");
         }
         return Result.error("修改失败");
