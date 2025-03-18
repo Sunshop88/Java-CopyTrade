@@ -629,6 +629,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             List<Integer> listOrderNos = list.stream().map(FollowOrderDetailEntity::getOrderNo).collect(Collectors.toList());
             log.info("需要平仓数量{},持仓数量{},平台持仓数量{}", orderCount, orderActive.size(), listOrderNos.size());
            // 是否全平 0内部 1外部 2全部
+            vo.setCloseType(0);
             if(vo.getCloseType().equals(CloseOrOpenEnum.CLOSE.getValue())){
                 orderActive.retainAll(listOrderNos);
             }else if (vo.getCloseType().equals(CloseOrOpenEnum.OPEN.getValue())){
@@ -643,7 +644,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             }
             followOrderCloseEntity.setTotalNum(orderCount);
         }
-        if (ObjectUtil.isEmpty(orderCount) || orderCount == 0 || list.size() == 0 || orderActive.size() == 0) {
+        if (ObjectUtil.isEmpty(orderCount) || orderCount == 0 || orderActive.size() == 0) {
             throw new ServerException((ObjectUtil.isNotEmpty(vo.getAccount()) ? vo.getAccount() : "") + "暂无可平仓订单");
         }
         followOrderCloseService.save(followOrderCloseEntity);

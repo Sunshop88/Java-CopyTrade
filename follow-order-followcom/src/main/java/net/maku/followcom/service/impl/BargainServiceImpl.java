@@ -294,6 +294,7 @@ public class BargainServiceImpl implements BargainService {
         if (ObjectUtil.isEmpty(followTraderEntityList)){
             throw new ServerException("无可下单账号");
         }
+        log.info("followOrderSendCloseVO开始++++++++++++");
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         followTraderEntityList.forEach(followTraderEntity -> {
@@ -303,6 +304,7 @@ public class BargainServiceImpl implements BargainService {
                     FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
                     BeanUtil.copyProperties(vo,followOrderSendCloseVO);
                     followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
+                    followOrderSendCloseVO.setCloseType(0);
                     followOrderSendCloseVO.setMasType(true);
                     // 需等待发起请求
                     sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
