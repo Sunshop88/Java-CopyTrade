@@ -354,35 +354,39 @@ public class WebDashboardSymbolSocket {
 
         }
          //map
-        Map<String,StdSymbolAnalysisVO> stdMap = new HashMap<>();
-        symbolAnalysis.forEach(o->{
-            String stdSymbol = symbolMap.get(o.getSymbol());
-            StdSymbolAnalysisVO chartVO = stdMap.get(stdSymbol);
-            if(ObjectUtil.isEmpty(chartVO)){
-                chartVO=StdSymbolAnalysisVO.builder().symbol(stdSymbol).num(BigDecimal.ZERO)
-                        .profit(BigDecimal.ZERO).lots(BigDecimal.ZERO).position(BigDecimal.ZERO)
-                        .sellLots(BigDecimal.ZERO).sellNum(BigDecimal.ZERO).sellProfit(BigDecimal.ZERO)
-                        .buyLots(BigDecimal.ZERO).buyNum(BigDecimal.ZERO).buyProfit(BigDecimal.ZERO).symbolVos(new ArrayList<>()).build();
-            }
-            chartVO.setNum(chartVO.getNum().add(o.getNum()));
-            chartVO.setProfit(chartVO.getProfit().add(o.getProfit()));
-            chartVO.setLots(chartVO.getLots().add(o.getLots()));
-            chartVO.setPosition(chartVO.getPosition().add(o.getPosition()));
+        if(ObjectUtil.isNotEmpty(symbolAnalysis)){
+            Map<String,StdSymbolAnalysisVO> stdMap = new HashMap<>();
+            symbolAnalysis.forEach(o->{
+                String stdSymbol = symbolMap.get(o.getSymbol());
+                StdSymbolAnalysisVO chartVO = stdMap.get(stdSymbol);
+                if(ObjectUtil.isEmpty(chartVO)){
+                    chartVO=StdSymbolAnalysisVO.builder().symbol(stdSymbol).num(BigDecimal.ZERO)
+                            .profit(BigDecimal.ZERO).lots(BigDecimal.ZERO).position(BigDecimal.ZERO)
+                            .sellLots(BigDecimal.ZERO).sellNum(BigDecimal.ZERO).sellProfit(BigDecimal.ZERO)
+                            .buyLots(BigDecimal.ZERO).buyNum(BigDecimal.ZERO).buyProfit(BigDecimal.ZERO).symbolVos(new ArrayList<>()).build();
+                }
+                chartVO.setNum(chartVO.getNum().add(o.getNum()));
+                chartVO.setProfit(chartVO.getProfit().add(o.getProfit()));
+                chartVO.setLots(chartVO.getLots().add(o.getLots()));
+                chartVO.setPosition(chartVO.getPosition().add(o.getPosition()));
 
-            chartVO.setSellLots(chartVO.getSellLots().add(o.getLots()));
-            chartVO.setSellProfit(chartVO.getSellProfit().add(o.getProfit()));
-            chartVO.setSellNum(chartVO.getSellNum().add(o.getSellNum()));
+                chartVO.setSellLots(chartVO.getSellLots().add(o.getLots()));
+                chartVO.setSellProfit(chartVO.getSellProfit().add(o.getProfit()));
+                chartVO.setSellNum(chartVO.getSellNum().add(o.getSellNum()));
 
-            chartVO.setBuyNum(chartVO.getBuyNum().add(o.getBuyNum()));
-            chartVO.setBuyProfit(chartVO.getBuyProfit().add(o.getBuyProfit()));
-            chartVO.setBuyLots(chartVO.getBuyLots().add(o.getBuyLots()));
-            chartVO.getSymbolVos().add(o);
-            chartVO.setSymbol(stdSymbol);
-            stdMap.put(stdSymbol, chartVO);
+                chartVO.setBuyNum(chartVO.getBuyNum().add(o.getBuyNum()));
+                chartVO.setBuyProfit(chartVO.getBuyProfit().add(o.getBuyProfit()));
+                chartVO.setBuyLots(chartVO.getBuyLots().add(o.getBuyLots()));
+                chartVO.getSymbolVos().add(o);
+                chartVO.setSymbol(stdSymbol);
+                stdMap.put(stdSymbol, chartVO);
 
-        });
-        Collection<StdSymbolAnalysisVO> chartVOs = stdMap.values();
-        json.put("chartVO", chartVOs);
+            });
+            Collection<StdSymbolAnalysisVO> chartVOs = stdMap.values();
+            json.put("chartVO", chartVOs);
+        }
+
+
      //   json.put("symbolAnalysis", symbolAnalysis);
         //仪表盘-头寸监控-统计明细
         //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
@@ -493,7 +497,9 @@ public class WebDashboardSymbolSocket {
             if (st != null) {
                 st.cancel(true);
             }
-            List<FollowVarietyEntity> followVarietyVOS = followVarietyService.list();
+            LambdaQueryWrapper<FollowVarietyEntity> wrapper = new LambdaQueryWrapper<>();
+            wrapper.groupBy(FollowVarietyEntity::getStdSymbol,FollowVarietyEntity::getBrokerSymbol);
+            List<FollowVarietyEntity> followVarietyVOS = followVarietyService.list(wrapper);
             Map<String, String> symbolMap = followVarietyVOS.stream().collect(Collectors.toMap(FollowVarietyEntity::getBrokerSymbol, FollowVarietyEntity::getStdSymbol,(o1, o2) -> o1));
             ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
