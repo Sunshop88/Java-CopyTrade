@@ -24,8 +24,9 @@ public class OrderResultCloseEvent implements Serializable {
     private final String ipAddress;
     private final BigDecimal leaderProfit;
     private final BigDecimal copierProfit;
+    private final BigDecimal priceSlip;
     public OrderResultCloseEvent(Order order, EaOrderInfo orderInfo,
-                                 FollowTraderEntity copier, Integer flag, BigDecimal leaderProfit, BigDecimal copierProfit, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress) {
+                                 FollowTraderEntity copier, Integer flag, BigDecimal leaderProfit, BigDecimal copierProfit, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress, BigDecimal priceSlip) {
         this.order = order;
         this.orderInfo = orderInfo;
         this.copier = copier;
@@ -36,6 +37,7 @@ public class OrderResultCloseEvent implements Serializable {
         this.ipAddress = ipAddress;
         this.leaderProfit = leaderProfit;
         this.copierProfit = copierProfit;
+        this.priceSlip = priceSlip;
     }
 
     // Getters
