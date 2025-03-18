@@ -121,6 +121,7 @@ public class BarginOrderWebSocket {
             followBarginOrderVO.setScheduleNum(followOrderInstruct.getTrueTotalOrders());
             followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
             followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
+            followBarginOrderVO.setOrderNo(followOrderInstruct.getOrderNo());
         }else {
             followBarginOrderVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
         }

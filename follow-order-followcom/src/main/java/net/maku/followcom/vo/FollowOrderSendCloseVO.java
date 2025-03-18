@@ -67,4 +67,8 @@ public class FollowOrderSendCloseVO implements Serializable {
     private Integer profitOrLoss;
     //账号列表id
     private Long traderUserId;
+
+    @Schema(description = "是否交易下单")
+    private Boolean masType=false;
+
 }

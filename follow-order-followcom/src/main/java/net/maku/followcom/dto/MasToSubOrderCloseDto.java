@@ -49,4 +49,9 @@ public class MasToSubOrderCloseDto implements Serializable {
     @Schema(description = "mt4全平 0-盈利 1-亏损")
     private Integer profitOrLoss;
 
+    @Schema(description = "是否全平 0内部 1外部 2全部")
+    //@NotNull(message = "是否全平不能为空")
+    private Integer closeType;
+
+
 }

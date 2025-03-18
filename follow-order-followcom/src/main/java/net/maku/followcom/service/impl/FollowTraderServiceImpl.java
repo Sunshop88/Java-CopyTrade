@@ -508,8 +508,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     @Override
     public boolean orderClose(FollowOrderSendCloseVO vo, QuoteClient quoteClient) {
         //判断是否正在平仓
-        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
-            return false;
+        if (vo.getMasType()){
+            //交易下单
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + vo.getTraderId()))) {
+                return false;
+            }
+        }else {
+            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
+                return false;
+            }
         }
         //登录
         OrderClient oc;
@@ -692,7 +699,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         } else {
             //只有间隔会创建平仓标识
             if (vo.getIntervalTime() != 0) {
-                redisCache.set(Constant.TRADER_CLOSE + vo.getTraderId(), 1);
+                if (vo.getMasType()){
+                    //交易下单
+                    redisCache.set(Constant.TRADER_CLOSE_MAS + vo.getTraderId(), 1);
+                }else {
+                    redisCache.set(Constant.TRADER_CLOSE + vo.getTraderId(), 1);
+                }
             }
             // 有间隔时间的下单，依次执行并等待
             Integer finalOrderCount1 = orderCount;
@@ -702,6 +714,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     List<CompletableFuture<Void>> futures = new ArrayList<>();
                     for (int i = 0; i < finalOrderCount1; i++) {
                         Object cacheValue = redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId());
+                        if (vo.getMasType()){
+                            //交易下单
+                            cacheValue = redisCache.get(Constant.TRADER_CLOSE_MAS + vo.getTraderId());
+                        }
                         if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                             try {
                                 int finalI = i;
@@ -731,9 +747,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
                             followOrderCloseEntity.setFinishTime(LocalDateTime.now());
                             followOrderCloseService.updateById(followOrderCloseEntity);
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
-                                redisCache.delete(Constant.TRADER_CLOSE + vo.getTraderId());
-                            }
+                            if (vo.getMasType()){
+                                //交易下单
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + vo.getTraderId()))) {
+                                    redisCache.delete(Constant.TRADER_CLOSE_MAS + vo.getTraderId());
+                                }
+                            }else {
+                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
+                                    redisCache.delete(Constant.TRADER_CLOSE + vo.getTraderId());
+                                }                            }
+
                         } catch (Exception e) {
                             log.error("平仓任务出错", e);
                         }
@@ -741,6 +764,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 }else {
                     for (int i = 0; i < finalOrderCount1; i++) {
                         Object cacheValue = redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId());
+                        if (vo.getMasType()){
+                            //交易下单
+                            cacheValue = redisCache.get(Constant.TRADER_CLOSE_MAS + vo.getTraderId());
+                        }
                         if (ObjectUtil.isEmpty(cacheValue) || (ObjectUtil.isNotEmpty(cacheValue) && cacheValue.equals(1))) {
                             try {
                                 int finalI = i;
@@ -761,8 +788,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     followOrderCloseEntity.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     followOrderCloseEntity.setFinishTime(LocalDateTime.now());
                     followOrderCloseService.updateById(followOrderCloseEntity);
-                    if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
-                        redisCache.delete(Constant.TRADER_CLOSE + vo.getTraderId());
+                    if (vo.getMasType()){
+                        //交易下单
+                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + vo.getTraderId()))) {
+                            redisCache.delete(Constant.TRADER_CLOSE_MAS + vo.getTraderId());
+                        }
+                    }else {
+                        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE + vo.getTraderId()))) {
+                            redisCache.delete(Constant.TRADER_CLOSE + vo.getTraderId());
+                        }
                     }
                 }
             });

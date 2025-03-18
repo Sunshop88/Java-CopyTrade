@@ -303,6 +303,7 @@ public class BargainServiceImpl implements BargainService {
                     FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
                     BeanUtil.copyProperties(vo,followOrderSendCloseVO);
                     followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
+                    followOrderSendCloseVO.setMasType(true);
                     // 需等待发起请求
                     sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
                 } catch (Exception e) {
@@ -337,7 +338,20 @@ public class BargainServiceImpl implements BargainService {
                     redisCache.set(Constant.TRADER_SEND_MAS + orderNo, 2);
                 }
                 orderInstructServiceOne.setEndTime(LocalDateTime.now());
-                orderInstructServiceOne.setStatus(FollowMasOrderStatusEnum.PARTIALFAILURE.getValue());
+                FollowOrderInstructEntity followOrderInstruct = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
+                List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+                followOrderInstruct.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
+                followOrderInstruct.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
+                followOrderInstruct.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
+                if (followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                    log.info("停止校验-全部成功");
+                    followOrderInstruct.setEndTime(LocalDateTime.now());
+                    followOrderInstruct.setStatus(FollowMasOrderStatusEnum.ALLSUCCESS.getValue());
+                }else if (followOrderInstruct.getFailOrders()+followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                    log.info("停止校验-部分成功");
+                    followOrderInstruct.setEndTime(LocalDateTime.now());
+                    followOrderInstruct.setStatus(FollowMasOrderStatusEnum.PARTIALFAILURE.getValue());
+                }
                 followOrderInstructService.updateById(orderInstructServiceOne);
             }else {
                 throw new ServerException("不存在正在执行订单");
