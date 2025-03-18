@@ -2,9 +2,11 @@ package net.maku.subcontrol.filter;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import net.maku.followcom.entity.FollowVpsEntity;
+import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.service.FollowVpsService;
 import net.maku.followcom.service.FollowVpsUserService;
 import net.maku.followcom.util.FollowConstant;
@@ -13,8 +15,10 @@ import net.maku.framework.security.user.SecurityUser;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Author:  zsd
@@ -49,12 +53,20 @@ public class RequestFilter implements Filter {
         if(uri.startsWith("/subcontrol/follow") || uri.startsWith("/subcontrol/trader")) {
             Long userId = SecurityUser.getUserId();
             if (userId!=null && userId != 10000) {
-                List<String> vpsList = followVpsUserService.getVpsListByUserId(userId);
-              if(ObjectUtil.isEmpty(vpsList) || !vpsList.contains(FollowConstant.LOCAL_HOST) ) {
+                LambdaQueryWrapper<FollowVpsUserEntity> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(FollowVpsUserEntity::getUserId, userId);
+                List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(wrapper);
+                List<String> vpsList =new ArrayList<>();
+                if(ObjectUtil.isNotEmpty(vpsUserEntities)) {
+                    List<Integer> id = vpsUserEntities.stream().map(FollowVpsUserEntity::getVpsId).collect(Collectors.toList());
+                    List<FollowVpsEntity> followVpsEntities = followVpsService.listByIds(id);
+                     vpsList = followVpsEntities.stream().map(FollowVpsEntity::getIpAddress).collect(Collectors.toList());
+                }
+                if(ObjectUtil.isEmpty(vpsList) || !vpsList.contains(FollowConstant.LOCAL_HOST) ) {
                     ServletOutputStream out = servletResponse.getOutputStream();
                     String jsonString = JSON.toJSONString(Result.error("无vps权限"));
                     out.write(jsonString.getBytes());
-                  return;
+                    return;
                 }
 
             }
