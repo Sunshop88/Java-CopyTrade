@@ -749,13 +749,13 @@ public class FollowTraderController {
         List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
         Map<String,FollowSysmbolSpecificationEntity> map = new HashMap<>();
         list.forEach(x->{
-            String symbol = processString(x.getSymbol());
+            String symbol = processString(x.getSymbol()).toString();
             if(ObjectUtil.isNotEmpty(symbol)){
                 FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
                 if(ObjectUtil.isEmpty(followSysmbolSpecificationEntity)){
                     x.setSymbol(symbol);
                     symbols.add(x);
-                    map.put(symbol,followSysmbolSpecificationEntity);
+                    map.put(symbol,x);
                 }
 
             }
