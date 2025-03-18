@@ -133,6 +133,15 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         return Result.ok();
     }
     //挂靠vps
+    @PostMapping("synchData/{traderId}")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    @Operation(summary = "同步")
+    public Result<String> synchData(@PathVariable("traderId") Long traderId,HttpServletRequest request){
+        followTraderUserService.synchData(traderId,request);
+        return Result.ok();
+    }
+
+    //挂靠vps
     @PostMapping("belowVps")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     @Operation(summary = "下架vps")
