@@ -17,10 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.maku.api.module.system.UserApi;
 import net.maku.followcom.convert.FollowVpsConvert;
 import net.maku.followcom.dao.FollowVpsDao;
-import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.entity.FollowTraderSubscribeEntity;
-import net.maku.followcom.entity.FollowVpsEntity;
-import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderStatusEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
@@ -122,7 +119,15 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 List<String> userList = userService.getUserId(vpsUserVO);
                 o.setUserList(userList);
             }
-            o.setVersions(FollowConstant.SUB_VERSION);
+            String version1 = FollowConstant.MAS_VERSION;
+            //分割
+            String[] split = version1.split("_");
+            String version = split[0];
+             List<FollowVersionEntity> list1= followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, o.getIpAddress()).eq(FollowVersionEntity::getVersion, version).eq(FollowVersionEntity::getDeleted, 0));
+             if(ObjectUtil.isNotEmpty(list1)){
+                 FollowVersionEntity followVersionEntity = list1.get(0);
+                 o.setVersions(followVersionEntity.getVersion());
+             }
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }
