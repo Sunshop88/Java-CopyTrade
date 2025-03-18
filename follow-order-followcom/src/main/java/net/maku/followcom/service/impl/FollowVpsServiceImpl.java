@@ -123,10 +123,10 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             //分割
             String[] split = version1.split("_");
             String version = split[0];
-             List<FollowVersionEntity> list1= followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, o.getIpAddress()).eq(FollowVersionEntity::getVersion, version).eq(FollowVersionEntity::getDeleted, 0));
+             List<FollowVersionEntity> list1= followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, o.getIpAddress()).eq(FollowVersionEntity::getVersions, version).eq(FollowVersionEntity::getDeleted, 0));
              if(ObjectUtil.isNotEmpty(list1)){
                  FollowVersionEntity followVersionEntity = list1.get(0);
-                 o.setVersions(followVersionEntity.getVersion());
+                 o.setVersions(followVersionEntity.getVersions());
              }
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
