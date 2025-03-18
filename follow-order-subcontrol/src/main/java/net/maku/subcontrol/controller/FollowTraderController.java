@@ -746,8 +746,40 @@ public class FollowTraderController {
     @Operation(summary = "品种规格列表")
     public Result<List<FollowSysmbolSpecificationEntity>> getSpecificationList(@ParameterObject FollowSysmbolSpecificationQuery query) {
         List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
-        return Result.ok(list);
+        List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
+        list.forEach(x->{
+            String symbol = processString(x.getSymbol());
+            if(ObjectUtil.isNotEmpty(symbol)){
+                x.setSymbol(symbol);
+                symbols.add(x);
+            }
+        });
+        return Result.ok(symbols);
     }
+
+    public static String processString(String input) {
+        // 如果字符串包含 '.'，截取 . 后面的部分
+        if (input.contains(".")) {
+            return input.substring(input.indexOf("."));
+        }
+
+        // 如果不包含 '.', 判断是否包含需要截取的字符
+        String[] substringsToRemove = {"@","-", "'", "zero","+", "dec24","ft","r","#","i","x"};
+        Boolean flag=true;
+        for (String substr : substringsToRemove) {
+            if (input.contains(substr)) {
+                // 一旦找到包含的字符串，截取掉
+                input = input.substring(input.indexOf(substr));
+                flag = false;
+            }
+        }
+         if(flag){
+             input="";
+         }
+        return input;
+    }
+
+  
 
     private Boolean reconnect(String traderId) {
         Boolean result=false;
@@ -878,7 +910,7 @@ public class FollowTraderController {
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
             //增加forex
-            String forex = followTraderEntity.getForex();
+            String forex = symbol+followTraderEntity.getForex();
             if(ObjectUtil.isNotEmpty(forex) && forex.contains(symbol)){
                 List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
                 for (FollowSysmbolSpecificationEntity o : list) {
@@ -890,8 +922,8 @@ public class FollowTraderController {
                     }
                 }
             }
-            String cfd = followTraderEntity.getCfd();
-            if(ObjectUtil.isNotEmpty(cfd) && forex.contains(symbol)){
+            String cfd =  symbol+followTraderEntity.getCfd();
+            if(ObjectUtil.isNotEmpty(cfd) && cfd.contains(symbol)){
                 List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
                 for (FollowSysmbolSpecificationEntity o : list) {
                     log.info("品种规格获取报价"+o.getSymbol());

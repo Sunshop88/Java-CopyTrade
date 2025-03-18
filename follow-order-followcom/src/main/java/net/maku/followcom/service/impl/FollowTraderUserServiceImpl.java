@@ -857,6 +857,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     o.setSellNum(redisTraderVo.getSellNum());
                     o.setBuyNum(redisTraderVo.getBuyNum());
                     o.setLeverage(redisTraderVo.getLeverage());
+                    o.setProfit(redisTraderVo.getProfit());
                     statInfo.get().getParagraph().add(o.getFreeMargin());
                 }
                 o.setVpsDesc(vpsDesc);

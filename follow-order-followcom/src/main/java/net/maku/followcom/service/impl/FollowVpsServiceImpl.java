@@ -66,6 +66,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
     private final FollowTraderSubscribeService followTraderSubscribeService;
     private final FollowVpsUserService followVpsUserService;
     private final UserService userService;
+    private final FollowVersionService followVersionService;
 
     @Override
     public PageResult<FollowVpsVO> page(FollowVpsQuery query) {
@@ -121,6 +122,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 List<String> userList = userService.getUserId(vpsUserVO);
                 o.setUserList(userList);
             }
+            o.setVersions(FollowConstant.SUB_VERSION);
         });
         return new PageResult<>(followVpsVOS, page.getTotal());
     }
