@@ -89,6 +89,8 @@ public class FollowOrderInstructServiceImpl extends BaseServiceImpl<FollowOrderI
             List<Long> creatorIds = userService.getUserIds(query.getCreatorName());
             if (ObjectUtil.isNotEmpty(creatorIds)) {
                 wrapper.in(FollowOrderInstructEntity::getCreator, creatorIds);
+            }else{
+                wrapper.eq(FollowOrderInstructEntity::getCreator, -1);
             }
         }
         //如果没有时间，默认一个月

@@ -58,7 +58,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserDao, UserEntity> implem
 
     @Override
     public List<Long> getUserIds(String creatorName) {
-        List<UserEntity> list = list(new LambdaQueryWrapper<UserEntity>().like(UserEntity::getUsername, creatorName));
+        // 转义 % 和 _ 字符
+        String escapedCreatorName = creatorName.replace("%", "\\%").replace("_", "\\_");
+
+        // 使用转义后的名称进行模糊搜索
+        List<UserEntity> list = list(new LambdaQueryWrapper<UserEntity>()
+                .like(UserEntity::getUsername, escapedCreatorName));
         if (ObjectUtil.isNotEmpty(list)){
             List<Long> list1 = list.stream().map(UserEntity::getId).toList();
             return list1;
