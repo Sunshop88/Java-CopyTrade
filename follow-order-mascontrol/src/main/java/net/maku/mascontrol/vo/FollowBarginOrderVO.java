@@ -32,4 +32,7 @@ public class FollowBarginOrderVO implements Serializable {
 
 	@Schema(description = "状态0-进行中 1-已完成")
 	private Integer status;
+
+	@Schema(description = "订单号")
+	private String orderNo;
 }

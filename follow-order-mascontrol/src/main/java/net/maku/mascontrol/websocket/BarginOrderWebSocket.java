@@ -109,6 +109,10 @@ public class BarginOrderWebSocket {
     }
 
     private void sendPeriodicMessage(QuoteClient client,String trader,String symbol,Session session){
+        if (session == null || !session.isOpen()) {  // 确保 session 可用
+            log.warn("WebSocket session 已关闭，跳过发送消息");
+            return;
+        }
         FollowBarginOrderVO followBarginOrderVO = new FollowBarginOrderVO();
         QuoteEventArgs eventArgs = getEventArgs(symbol,client);
         followBarginOrderVO.setBuyPrice(eventArgs.Ask);
@@ -121,6 +125,7 @@ public class BarginOrderWebSocket {
             followBarginOrderVO.setScheduleNum(followOrderInstruct.getTrueTotalOrders());
             followBarginOrderVO.setScheduleSuccessNum(followOrderInstruct.getTradedOrders());
             followBarginOrderVO.setScheduleFailNum(followOrderInstruct.getFailOrders());
+            followBarginOrderVO.setOrderNo(followOrderInstruct.getOrderNo());
         }else {
             followBarginOrderVO.setStatus(CloseOrOpenEnum.OPEN.getValue());
         }
@@ -132,35 +137,35 @@ public class BarginOrderWebSocket {
     public void onClose(Session session) {
         try {
             String id = session.getId();
-            Future<?> future = scheduledTasks.get(id);
+            Future<?> future = scheduledTasks.remove(id); // 仅移除当前 session 的任务
             if (future != null && !future.isCancelled()) {
                 future.cancel(true);
             }
-            if (session != null && session.getBasicRemote() != null) {
+
+            if (session.isOpen()) {  // 只在 session 仍然打开时关闭
                 session.close();
             }
-
         } catch (IOException e) {
-            log.error("关闭链接异常{}", e);
-            throw new RuntimeException(e);
+            log.error("关闭 WebSocket 连接失败: {}", e.getMessage());
         }
-
     }
-
     /**
      * 服务器端推送消息
      */
-    public void pushMessage(Session session,String message) {
+    public void pushMessage(Session session, String message) {
         try {
-            if (session != null && session.getBasicRemote() != null) {
+            if (session != null && session.isOpen()) {  // 新增 isOpen() 检查
                 synchronized (session) {
                     session.getBasicRemote().sendText(message);
                 }
+            } else {
+                log.warn("WebSocket session 已关闭，无法发送消息");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("发送 WebSocket 消息失败: {}", e.getMessage());
         }
     }
+
 
     @OnMessage
     public void onMessage(String message,Session session) {

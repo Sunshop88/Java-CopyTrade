@@ -64,7 +64,7 @@ public class BarginInstructWebSocket {
         if (ObjectUtil.isNotEmpty(followOrderInstruct)) {
             BeanUtil.copyProperties(followOrderInstruct, followBaiginInstructVO);
             followBaiginInstructVO.setCreator(userApi.getUserById(followBaiginInstructVO.getCreator()).getUsername());
-            List<FollowOrderDetailEntity> list = followOrderDetailService.getInstruct(followOrderInstruct.getOrderNo());
+            List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo,followOrderInstruct.getOrderNo()).orderByDesc(FollowOrderDetailEntity::getId));
             List<FollowBaiginInstructSubVO> followBaiginInstructSubVOList = new ArrayList<>();
             list.forEach(o -> {
                 FollowBaiginInstructSubVO followBaiginInstructSubVO = new FollowBaiginInstructSubVO();
