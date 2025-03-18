@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -62,6 +63,17 @@ public class OrderActiveInfoVO implements Serializable {
 	 * 开仓请求时间
 	 */
 	private Integer openTimeDifference;
+
+	/**
+	 * 开仓价格差
+	 */
+	private BigDecimal openPriceDifference;
+
+
+	/**
+	 * 开仓价格滑点
+	 */
+	private BigDecimal openPriceSlip;
 
 
 
