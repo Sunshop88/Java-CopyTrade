@@ -1799,18 +1799,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 pr = (double) contract / followSysmbolSpecificationEntity.getContractSize();
             }
         }
-        if (pr!= 0) {
-            // 使用索引更新列表中的值
-            BigDecimal newOrderValue = vo.getTotalSzie().multiply(BigDecimal.valueOf(pr));
-            if (newOrderValue.compareTo(new BigDecimal("0.01")) < 0) {
-                // 如果小于 0.01，则设置为 0.01
-                vo.setTotalSzie(new BigDecimal("0.01"));
-            }else {
-                vo.setTotalSzie(newOrderValue);
-            }
-        }
         if (vo.getTradeType().equals(FollowInstructEnum.DISTRIBUTION.getValue())){
             //分配下单
+            if (pr!= 0) {
+                // 使用索引更新列表中的值
+                BigDecimal newOrderValue = vo.getTotalSzie().multiply(BigDecimal.valueOf(pr));
+                if (newOrderValue.compareTo(new BigDecimal("0.01")) < 0) {
+                    // 如果小于 0.01，则设置为 0.01
+                    vo.setTotalSzie(new BigDecimal("0.01"));
+                }else {
+                    vo.setTotalSzie(newOrderValue);
+                }
+            }
             executeOrder(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), vo.getTotalNum(), Arrays.asList(vo.getTotalSzie().doubleValue()), vo.getTraderId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),1);
             return followMasOrderVo;
         }else {
