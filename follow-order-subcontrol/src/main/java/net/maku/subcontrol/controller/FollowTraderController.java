@@ -747,11 +747,17 @@ public class FollowTraderController {
     public Result<List<FollowSysmbolSpecificationEntity>> getSpecificationList(@ParameterObject FollowSysmbolSpecificationQuery query) {
         List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
         List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
+        Map<String,FollowSysmbolSpecificationEntity> map = new HashMap<>();
         list.forEach(x->{
             String symbol = processString(x.getSymbol());
             if(ObjectUtil.isNotEmpty(symbol)){
-                x.setSymbol(symbol);
-                symbols.add(x);
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
+                if(ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)){
+                    x.setSymbol(symbol);
+                    symbols.add(x);
+                    map.put(symbol,followSysmbolSpecificationEntity);
+                }
+
             }
         });
         return Result.ok(symbols);

@@ -372,14 +372,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     StringBuilder errorMsg = new StringBuilder();
                     if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
                         errorMsg.append("账号类型必须是MT4或MT5; ");
-                    }else {
-                        if (accountType.equals("MT5")) {
-                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
-                        }
-                        if (accountType.equals("MT4")) {
-                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
-                        }
                     }
+//                    }else {
+//                        if (accountType.equals("MT5")) {
+//                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
+//                        }
+//                        if (accountType.equals("MT4")) {
+//                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
+//                        }
+//                    }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
                     if (ObjectUtil.isNotEmpty(entities)) {
@@ -446,6 +447,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     // 如果有错误，设置 upload_status 为 0
 //                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
                     if (errorMsg.length() == 0) {
+                        if (accountType.equals("MT5")) {
+                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
+                        }
+                        if (accountType.equals("MT4")) {
+                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
+                        }
                         entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, sort));
                         successCount++;
                     } else {
