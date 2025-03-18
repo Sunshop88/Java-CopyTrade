@@ -428,7 +428,7 @@ public class FollowVpsController {
 
     @GetMapping("version")
     @Operation(summary = "系统版本")
-    public Result<FollowVersionEntity> version(List<String> ips){
+    public List<FollowVersionEntity> version(@RequestBody List<String> ips){
 //        String ip = FollowConstant.LOCAL_HOST;
         String version1 = FollowConstant.MAS_VERSION;
         //分割
@@ -439,8 +439,8 @@ public class FollowVpsController {
                 .in(FollowVersionEntity::getIp, ips)
                 .eq(FollowVersionEntity::getVersion, version)
                 .eq(FollowVersionEntity::getDeleted, 0));
-        FollowVersionEntity entity = list.getFirst();
-        return Result.ok(entity);
+//        FollowVersionEntity entity = list.getFirst();
+        return list;
 
     }
 
