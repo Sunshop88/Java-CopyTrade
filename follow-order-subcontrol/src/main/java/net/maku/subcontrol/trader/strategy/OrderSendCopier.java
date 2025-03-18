@@ -94,7 +94,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         //查询品种规格数据
         List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(copier.getId()).stream().filter(o ->o.getSymbol().contains(finalStdSymbol)).toList();
         //增加forex
-        String forex = copier.getForex();
+        String forex =finalStdSymbol+ copier.getForex();
         if(ObjectUtil.isNotEmpty(forex) && forex.contains(finalStdSymbol)){
             List<FollowSysmbolSpecificationEntity> list = sysmbolSpecificationEntity.stream().filter(item -> item.getSymbol().equals(forex)).toList();
             for (FollowSysmbolSpecificationEntity o : list) {
@@ -111,7 +111,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             }
         }
 
-        String cfd = copier.getCfd();
+        String cfd = finalStdSymbol+copier.getCfd();
         if(ObjectUtil.isNotEmpty(cfd) && cfd.contains(finalStdSymbol)){
             List<FollowSysmbolSpecificationEntity> list = sysmbolSpecificationEntity.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
             for (FollowSysmbolSpecificationEntity o : list) {
