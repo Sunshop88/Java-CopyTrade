@@ -882,6 +882,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     }
 
     @Override
+    public void synchData(Long traderId,HttpServletRequest request) {
+        List<FollowTraderEntity> list = getByUserId(traderId);
+        if(ObjectUtil.isNotEmpty(list)){
+            FollowTraderEntity followTraderEntity = list.get(0);
+            Result result = RestUtil.sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.SYNCH_DATA+followTraderEntity.getId(), null, null);
+        }
+    }
+
+    @Override
     public void hangVps(HangVpsVO hangVpsVO,HttpServletRequest request) {
         FollowVpsEntity vps = followVpsService.getById(hangVpsVO.getVpsId());
         if(ObjectUtil.isEmpty(vps)){

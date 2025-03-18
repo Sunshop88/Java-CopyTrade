@@ -114,6 +114,7 @@ public class FollowConstant {
     public static String ADD_TRADER = "/subcontrol/trader";
     public static String ADD_SLAVE = "/subcontrol/follow/addSlave";
     public static String DEL_TRADER = "/subcontrol/trader";
+    public static String SYNCH_DATA = "/subcontrol/trader/synchData/";
 
 
 
