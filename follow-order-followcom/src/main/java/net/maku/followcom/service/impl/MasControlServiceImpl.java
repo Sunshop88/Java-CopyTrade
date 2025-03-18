@@ -51,6 +51,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final FollowTestDetailService followTestDetailService;
     private final FollowVpsUserService followVpsUserService;
     private final UserService userService;
+    private final FollowVersionService followVersionService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -63,6 +64,16 @@ public class MasControlServiceImpl implements MasControlService {
         clientService.insert(vo);
 //        clientServicePt.insert(vo);
         log.info("成功插入 FollowVps 和 Client");
+        String version1 = FollowConstant.MAS_VERSION;
+        //分割
+        String[] split = version1.split("_");
+        String version = split[0];
+        FollowVersionEntity entity = new FollowVersionEntity();
+        entity.setIp(vo.getIpAddress());
+        entity.setVersion(version);
+        entity.setVersionNumber("0001");
+        entity.setDeleted(0);
+        followVersionService.save(entity);
         return true;
     }
 
@@ -106,7 +117,13 @@ public class MasControlServiceImpl implements MasControlService {
             }
             log.info("vps名称成功更新");
 //            executor.shutdown();
+
         }
+        String version1 = FollowConstant.MAS_VERSION;
+        //分割
+        String[] split = version1.split("_");
+        String version = split[0];
+        followVersionService.remove(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, vo.getIpAddress()).eq(FollowVersionEntity::getVersion, version));
         log.info("成功更新 Client 和 FollowVps");
         return true;
     }
@@ -131,6 +148,7 @@ public class MasControlServiceImpl implements MasControlService {
                 followTestDetailService.delete(testDetailIds);
             }
             log.info("成功删除 ID 列表: {}", idList);
+
             return true;
         } catch (Exception e) {
             log.error("删除 ID 列表时发生错误: {}", idList, e);

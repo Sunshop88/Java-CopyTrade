@@ -14,7 +14,9 @@ import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.query.DashboardAccountQuery;
 import net.maku.followcom.service.DashboardService;
+import net.maku.followcom.service.FollowVarietyService;
 import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.service.impl.FollowVarietyServiceImpl;
 import net.maku.followcom.service.impl.FollowVpsUserServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
@@ -28,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Author:  zsd
@@ -44,6 +47,7 @@ public class WebDashboardSymbolSocket {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private Map<String, ScheduledFuture<?>> scheduledFutureMap = new HashMap<>();
     private FollowVpsUserService followVpsUserService=SpringContextUtils.getBean(FollowVpsUserServiceImpl.class);
+    private FollowVarietyService followVarietyService=SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
 
     // 当客户端连接时调用
 /*    @OnOpen
@@ -67,13 +71,15 @@ public class WebDashboardSymbolSocket {
 
     private JSONObject send(String rankOrder, Boolean rankAsc, String brokerName,
                             String accountOrder, Integer accountPage, Boolean accountAsc, Integer accountLimit, String server, String vpsName, String account, String sourceAccount,
-                            TraderAnalysisVO analysisVO,String userId) {
+                            TraderAnalysisVO analysisVO,String userId, Map<String, String> symbolMap) {
         //仪表盘-头部统计
         StatDataVO statData = dashboardService.getStatData();
         //仪表盘-头寸监控-统计
         //  List<SymbolChartVO> symbolAnalysis = dashboardService.getSymbolAnalysis();
         Map<String, SymbolChartVO> symbolAnalysisMap = new HashMap<>();
         //List<SymbolChartVO> symbolAnalysis=new ArrayList<>();
+        
+
         //仪表盘-头寸监控-统计明细
         if (ObjectUtil.isNotEmpty(userId) && !ObjectUtil.equals(Objects.requireNonNull(userId).toString(), "10000")) {
             List<FollowVpsUserEntity> vpsUserEntityList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,userId).eq(FollowVpsUserEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
@@ -346,7 +352,36 @@ public class WebDashboardSymbolSocket {
             }
 
         }
+         //map
+        Map<String,StdSymbolAnalysisVO> stdMap = new HashMap<>();
+        symbolAnalysis.forEach(o->{
+            String stdSymbol = symbolMap.get(o.getSymbol());
+            StdSymbolAnalysisVO chartVO = stdMap.get(stdSymbol);
+            if(ObjectUtil.isEmpty(chartVO)){
+                chartVO=StdSymbolAnalysisVO.builder().num(BigDecimal.ZERO)
+                        .profit(BigDecimal.ZERO).lots(BigDecimal.ZERO).position(BigDecimal.ZERO)
+                        .sellLots(BigDecimal.ZERO).sellNum(BigDecimal.ZERO).sellProfit(BigDecimal.ZERO)
+                        .buyLots(BigDecimal.ZERO).buyNum(BigDecimal.ZERO).buyProfit(BigDecimal.ZERO).symbolVos(new ArrayList<>()).build();
+            }
+            chartVO.setNum(chartVO.getNum().add(o.getNum()));
+            chartVO.setProfit(chartVO.getProfit().add(o.getProfit()));
+            chartVO.setLots(chartVO.getLots().add(o.getLots()));
+            chartVO.setPosition(chartVO.getPosition().add(o.getPosition()));
 
+            chartVO.setSellLots(chartVO.getSellLots().add(o.getLots()));
+            chartVO.setSellProfit(chartVO.getSellProfit().add(o.getProfit()));
+            chartVO.setSellNum(chartVO.getSellNum().add(o.getSellNum()));
+
+            chartVO.setBuyNum(chartVO.getBuyNum().add(o.getBuyNum()));
+            chartVO.setBuyProfit(chartVO.getBuyProfit().add(o.getBuyProfit()));
+            chartVO.setBuyLots(chartVO.getBuyLots().add(o.getBuyLots()));
+            chartVO.getSymbolVos().add(o);
+            chartVO.setSymbol(stdSymbol);
+            stdMap.put(stdSymbol, chartVO);
+
+        });
+        Collection<StdSymbolAnalysisVO> chartVOs = stdMap.values();
+        json.put("chartVO", chartVOs);
         json.put("symbolAnalysis", symbolAnalysis);
         //仪表盘-头寸监控-统计明细
         //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
@@ -457,9 +492,11 @@ public class WebDashboardSymbolSocket {
             if (st != null) {
                 st.cancel(true);
             }
+            List<FollowVarietyVO> followVarietyVOS = followVarietyService.listSymbol();
+            Map<String, String> symbolMap = followVarietyVOS.stream().collect(Collectors.toMap(FollowVarietyVO::getBrokerSymbol, FollowVarietyVO::getStdSymbol,(o1, o2) -> o1));
             ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
-                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo,userId);
+                    JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo,userId,symbolMap);
                     session.getBasicRemote().sendText(json.toJSONString());
                 } catch (Exception e) {
                     e.printStackTrace();

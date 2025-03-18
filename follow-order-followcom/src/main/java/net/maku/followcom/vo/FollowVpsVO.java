@@ -100,4 +100,6 @@ public class FollowVpsVO implements Serializable {
 	 */
 	private Integer isMonitorRepair;
 
+	private String versions;
+
 }
