@@ -193,8 +193,8 @@ public class FollowTraderEntity {
 	@TableField(value = "login_node")
 	private String loginNode;
 
-	@TableField(value = "forex")
+	@TableField(value = "forex", updateStrategy = FieldStrategy.IGNORED)
 	private String forex;
-	@TableField(value = "cfd")
+	@TableField(value = "cfd", updateStrategy = FieldStrategy.IGNORED)
 	private String cfd;
 }
