@@ -9,6 +9,7 @@ import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderAnalysisEntity;
+import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.entity.FollowVpsUserEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderTypeEnum;
@@ -358,7 +359,7 @@ public class WebDashboardSymbolSocket {
             String stdSymbol = symbolMap.get(o.getSymbol());
             StdSymbolAnalysisVO chartVO = stdMap.get(stdSymbol);
             if(ObjectUtil.isEmpty(chartVO)){
-                chartVO=StdSymbolAnalysisVO.builder().num(BigDecimal.ZERO)
+                chartVO=StdSymbolAnalysisVO.builder().symbol(stdSymbol).num(BigDecimal.ZERO)
                         .profit(BigDecimal.ZERO).lots(BigDecimal.ZERO).position(BigDecimal.ZERO)
                         .sellLots(BigDecimal.ZERO).sellNum(BigDecimal.ZERO).sellProfit(BigDecimal.ZERO)
                         .buyLots(BigDecimal.ZERO).buyNum(BigDecimal.ZERO).buyProfit(BigDecimal.ZERO).symbolVos(new ArrayList<>()).build();
@@ -382,7 +383,7 @@ public class WebDashboardSymbolSocket {
         });
         Collection<StdSymbolAnalysisVO> chartVOs = stdMap.values();
         json.put("chartVO", chartVOs);
-        json.put("symbolAnalysis", symbolAnalysis);
+     //   json.put("symbolAnalysis", symbolAnalysis);
         //仪表盘-头寸监控-统计明细
         //  json.put("symbolAnalysisMapDetails",symbolAnalysisMapDetails);
         //仪表盘-Symbol数据图表 和 仪表盘-头寸监控-统计
@@ -492,8 +493,8 @@ public class WebDashboardSymbolSocket {
             if (st != null) {
                 st.cancel(true);
             }
-            List<FollowVarietyVO> followVarietyVOS = followVarietyService.listSymbol();
-            Map<String, String> symbolMap = followVarietyVOS.stream().collect(Collectors.toMap(FollowVarietyVO::getBrokerSymbol, FollowVarietyVO::getStdSymbol,(o1, o2) -> o1));
+            List<FollowVarietyEntity> followVarietyVOS = followVarietyService.list();
+            Map<String, String> symbolMap = followVarietyVOS.stream().collect(Collectors.toMap(FollowVarietyEntity::getBrokerSymbol, FollowVarietyEntity::getStdSymbol,(o1, o2) -> o1));
             ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
                     JSONObject json = send(rankOrder, rankAsc, brokerName, accountOrder, accountPage, accountAsc, accountLimit, server, vpsName, account, sourceAccount, vo,userId,symbolMap);
