@@ -23,6 +23,7 @@ import net.maku.followcom.query.FollowTestDetailQuery;
 import net.maku.followcom.query.FollowTestServerQuery;
 import net.maku.followcom.query.FollowVpsQuery;
 import net.maku.followcom.service.*;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
 import net.maku.framework.common.cache.RedisUtil;
@@ -70,6 +71,7 @@ public class FollowVpsController {
     private final  FollowTestDetailService followTestDetailService;
     private final RedisUtil redisUtil;
     private final FollowTraderUserService followTraderUserService;
+    private final FollowVersionService followVersionService;
 
     @GetMapping("page")
     @Operation(summary = "分页")
@@ -424,5 +426,22 @@ public class FollowVpsController {
         return Result.ok(collect);
     }
 
+    @GetMapping("version")
+    @Operation(summary = "系统版本")
+    public Result<FollowVersionEntity> version(List<String> ips){
+//        String ip = FollowConstant.LOCAL_HOST;
+        String version1 = FollowConstant.MAS_VERSION;
+        //分割
+        String[] split = version1.split("_");
+        String version = split[0];
+//        for (String ip : ips) {
+        List<FollowVersionEntity> list = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>()
+                .in(FollowVersionEntity::getIp, ips)
+                .eq(FollowVersionEntity::getVersion, version)
+                .eq(FollowVersionEntity::getDeleted, 0));
+        FollowVersionEntity entity = list.getFirst();
+        return Result.ok(entity);
+
+    }
 
 }
