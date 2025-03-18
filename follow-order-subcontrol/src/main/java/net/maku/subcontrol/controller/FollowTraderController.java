@@ -911,7 +911,7 @@ public class FollowTraderController {
         if (ObjectUtil.isNotEmpty(symbol)) {
             //增加forex
             String forex = symbol+followTraderEntity.getForex();
-            if(ObjectUtil.isNotEmpty(forex) && forex.contains(symbol)){
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getForex()) && forex.contains(symbol)){
                 List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
                 for (FollowSysmbolSpecificationEntity o : list) {
                     log.info("品种规格获取报价"+o.getSymbol());
@@ -923,7 +923,7 @@ public class FollowTraderController {
                 }
             }
             String cfd =  symbol+followTraderEntity.getCfd();
-            if(ObjectUtil.isNotEmpty(cfd) && cfd.contains(symbol)){
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getCfd()) && cfd.contains(symbol)){
                 List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
                 for (FollowSysmbolSpecificationEntity o : list) {
                     log.info("品种规格获取报价"+o.getSymbol());
