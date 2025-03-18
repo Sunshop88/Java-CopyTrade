@@ -752,7 +752,7 @@ public class FollowTraderController {
             String symbol = processString(x.getSymbol());
             if(ObjectUtil.isNotEmpty(symbol)){
                 FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
-                if(ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)){
+                if(ObjectUtil.isEmpty(followSysmbolSpecificationEntity)){
                     x.setSymbol(symbol);
                     symbols.add(x);
                     map.put(symbol,followSysmbolSpecificationEntity);
