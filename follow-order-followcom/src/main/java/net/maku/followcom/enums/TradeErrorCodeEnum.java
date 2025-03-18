@@ -12,7 +12,6 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     TRADE_DISABLED("Trade is disabled", "市场关闭"),
     NOT_EXIST("not exist", "品种异常"),
     NOT_ENOUGH_MONEY("Not enough money", "资金不足"),
-    MAX_VOLUME_LIMIT_EXCEEDED("超过最大手数限制", "超过最大手数限制"),
     CONNECTION_LOST("Connection lost during order execution", "断开连接"),
     NO_REPLY_FROM_SERVER("No reply from server in 30000 ms", "请求超时"),
     MARKET_CLOSED("Market is closed", "市场关闭"),
@@ -26,7 +25,8 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     LOGIN_ERROR("登录异常", "登录异常"),
     SEVICE_ERRROR("服务器异常", "服务器异常"),
     LOTS_NUM_ERROR("超过最大手数限制", "超过最大手数限制"),
-    LOTS_NUM_LOWER("低于最低手数限制", "低于最低手数限制");
+    LOTS_NUM_LOWER("低于最低手数限制", "低于最低手数限制"),
+    LOTS_NUM_ALLOW("超过最低下单允许差", "超过最低下单允许差");
 
 
 

@@ -480,7 +480,27 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
             asksub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
             log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
-
+            List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(trader.getTrader().getId()).stream().filter(o ->o.getSymbol().contains(orderInfo.getSymbol())).toList();
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = sysmbolSpecificationEntity.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(orderInfo.getSymbol());
+            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                if (openOrderMapping.getSlaveLots().compareTo(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()))<0){
+                    Object allowLots = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.ALLOW_LOTS);
+                    if(ObjectUtil.isNotEmpty(allowLots)) {
+                        //如果小于最小下单规格 判断允许值
+                        if (BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()).subtract(openOrderMapping.getSlaveLots()).compareTo(new BigDecimal(allowLots.toString())) >= 0) {
+                            //超过允许值 不允许下单
+                            throw new ServerException("超过最低下单允许差");
+                        } else {
+                            //下单最小值
+                            openOrderMapping.setSlaveLots(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()));
+                        }
+                    }
+                }else {
+                    //步长校验
+                    double newLots = calculateActualValue(openOrderMapping.getSlaveLots().doubleValue(), followSysmbolSpecificationEntity.getLotStep(), followSysmbolSpecificationEntity.getMinLot());
+                    openOrderMapping.setSlaveLots(BigDecimal.valueOf(newLots));
+                }
+            }
             // 执行订单发送
             double startPrice=op.equals(Op.Buy) ? asksub : bidsub;
             // 记录开始时间
