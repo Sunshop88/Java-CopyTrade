@@ -50,6 +50,10 @@ public class FollowOrderSendCloseVO implements Serializable {
     //@NotNull(message = "是否全平不能为空")
     private Integer flag;
 
+    @Schema(description = "是否全平 0内部 1外部 2全部")
+    //@NotNull(message = "是否全平不能为空")
+    private Integer closeType;
+
     @Schema(description = "订单号")
     private Integer orderNo;
 
