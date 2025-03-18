@@ -1255,7 +1255,7 @@ public class FollowApiServiceImpl implements FollowApiService {
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
                 .isNotNull(FollowOrderDetailEntity::getRequestClosePrice)
                 .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
-                .isNull(FollowOrderDetailEntity::getClosePriceSlip);
+                .isNull(FollowOrderDetailEntity::getClosePriceDifference);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
             followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);

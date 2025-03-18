@@ -932,15 +932,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 .isNotNull(FollowOrderDetailEntity::getClosePrice)
                 .isNotNull(FollowOrderDetailEntity::getRequestClosePrice)
                 .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
-                .isNull(FollowOrderDetailEntity::getClosePriceSlip);
+                .isNull(FollowOrderDetailEntity::getClosePriceDifference);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
             followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
-        //开始平仓
         list.forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
                 if (o.getType().equals(Buy.getValue())){
