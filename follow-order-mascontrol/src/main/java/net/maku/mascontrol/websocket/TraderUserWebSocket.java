@@ -123,6 +123,8 @@ public class TraderUserWebSocket {
                 orderActiveInfoList.forEach(o->{
                     FollowOrderDetailEntity followOrderDetailEntity = map.get(o.getOrderNo());
                     if(followOrderDetailEntity!=null){
+                        o.setOpenPriceDifference(followOrderDetailEntity.getOpenPriceDifference());
+                        o.setOpenPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
                         if(followOrderDetailEntity.getType().equals(TraderCloseEnum.BUY.getType())){
                             o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
                             o.setOpenTimeDifference(followOrderDetailEntity.getOpenTimeDifference());
