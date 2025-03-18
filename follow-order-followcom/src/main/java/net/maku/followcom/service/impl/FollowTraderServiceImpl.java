@@ -1562,10 +1562,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             //删除缓存
                             if (masFlag==1){
                                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                    redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                    redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                                 }
                                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                    redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                    redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                                 }
                             }else {
                                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
@@ -1661,10 +1661,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         Thread.sleep(200);
                         if (masFlag==1){
                             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                             }
                             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                redisCache.delete(Constant.TRADER_SEND_MAS + traderId);
+                                redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                             }
                         }else {
                             //删除缓存

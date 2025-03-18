@@ -357,11 +357,14 @@ public class BargainServiceImpl implements BargainService {
                 throw new ServerException("不存在正在执行订单");
             }
         } else {
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + orderNo))) {
-                redisCache.set(Constant.TRADER_CLOSE_MAS + orderNo, 2);
-            }else {
-                throw new ServerException("不存在正在平仓订单");
-            }
+            List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getTraderId).eq(FollowOrderDetailEntity::getSendNo, orderNo).groupBy(FollowOrderDetailEntity::getTraderId));
+            list.forEach(o->{
+                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS +o.getTraderId() ))) {
+                    redisCache.set(Constant.TRADER_CLOSE_MAS + o.getTraderId(), 2);
+                }else {
+                    throw new ServerException("不存在正在平仓订单");
+                }
+            });
         }
     }
 
