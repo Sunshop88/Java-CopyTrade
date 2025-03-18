@@ -78,10 +78,10 @@
             </foreach>
         </if>
         <if test="symbol != null and symbol != ''">
-            AND fs.symbol LIKE CONCAT('%', #{symbol}, '%')
+            AND fs.symbol LIKE CONCAT('%', REPLACE(#{symbol}, '%', '\\%'), '%') ESCAPE '\\'
         </if>
         <if test="account != null and account != ''">
-            AND ft.account LIKE CONCAT('%', #{account}, '%')
+            AND ft.account LIKE CONCAT('%', REPLACE(#{account}, '%', '\\%'), '%') ESCAPE '\\'
         </if>
     </select>
 </mapper>
