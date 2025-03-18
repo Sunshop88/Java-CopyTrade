@@ -1261,24 +1261,13 @@ public class FollowApiServiceImpl implements FollowApiService {
             followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //开始平仓
         list.parallelStream().forEach(o -> {
-            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-            BigDecimal hd;
-            if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                //如果forex 并包含JPY 也是100
-                if (o.getSymbol().contains("JPY")) {
-                    hd = new BigDecimal("100");
-                } else {
-                    hd = new BigDecimal("10000");
-                }
-            } else {
-                //如果非forex 都是 100
-                hd = new BigDecimal("100");
+            if (o.getType().equals(Buy.getValue())){
+                o.setClosePriceDifference(o.getRequestClosePrice().subtract(o.getClosePrice()));
+            }else {
+                o.setClosePriceDifference(o.getClosePrice().subtract(o.getRequestClosePrice()));
             }
-            o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
             followOrderDetailService.updateById(o);
         });
     }
@@ -1324,6 +1313,7 @@ public class FollowApiServiceImpl implements FollowApiService {
             followOrderDetailEntity.setRequestCloseTime(nowdate);
             followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
             followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
+            followOrderDetailEntity.setClosePriceSlip(BigDecimal.valueOf(ask).subtract(BigDecimal.valueOf(bid)));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));

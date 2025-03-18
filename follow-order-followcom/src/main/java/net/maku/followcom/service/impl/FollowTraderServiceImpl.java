@@ -908,20 +908,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //开始平仓
         list.forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-                BigDecimal hd;
-                if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                    //如果forex 并包含JPY 也是100
-                    if (o.getSymbol().contains("JPY")) {
-                        hd = new BigDecimal("100");
-                    } else {
-                        hd = new BigDecimal("10000");
-                    }
-                } else {
-                    //如果非forex 都是 100
-                    hd = new BigDecimal("100");
+                if (o.getType().equals(Buy.getValue())){
+                    o.setClosePriceDifference(o.getRequestClosePrice().subtract(o.getClosePrice()));
+                }else {
+                    o.setClosePriceDifference(o.getClosePrice().subtract(o.getRequestClosePrice()));
                 }
-                o.setClosePriceSlip(o.getClosePrice().subtract(o.getRequestClosePrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
         });
@@ -975,6 +966,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setRequestCloseTime(nowdate);
             followOrderDetailEntity.setCloseTime(orderResult.CloseTime);
             followOrderDetailEntity.setClosePrice(BigDecimal.valueOf(orderResult.ClosePrice));
+            followOrderDetailEntity.setClosePriceSlip(BigDecimal.valueOf(ask).subtract(BigDecimal.valueOf(bid)));
             followOrderDetailEntity.setSwap(BigDecimal.valueOf(orderResult.Swap));
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(orderResult.Commission));
             followOrderDetailEntity.setProfit(BigDecimal.valueOf(orderResult.Profit));
@@ -1120,20 +1112,11 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //进行滑点分析
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-                BigDecimal hd;
-                if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                    //如果forex 并包含JPY 也是100
-                    if (o.getSymbol().contains("JPY")) {
-                        hd = new BigDecimal("100");
-                    } else {
-                        hd = new BigDecimal("10000");
-                    }
-                } else {
-                    //如果非forex 都是 100
-                    hd = new BigDecimal("100");
+                if (o.getType().equals(Buy.getValue())){
+                    o.setOpenPriceDifference(o.getOpenPrice().subtract(o.getRequestOpenPrice()));
+                }else {
+                    o.setOpenPriceDifference(o.getRequestOpenPrice().subtract(o.getOpenPrice()));
                 }
-                o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
         });
@@ -1157,15 +1140,38 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         //下单方式
         Order order = null;
         try {
+            List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(traderId);
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = sysmbolSpecificationEntity.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(symbol);
+            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                if (BigDecimal.valueOf(lotsPerOrder).compareTo(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()))<0){
+                    Object allowLots = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.ALLOW_LOTS);
+                    if(ObjectUtil.isNotEmpty(allowLots)) {
+                        //如果小于最小下单规格 判断允许值
+                        if (BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()).subtract(BigDecimal.valueOf(lotsPerOrder)).compareTo(new BigDecimal(allowLots.toString())) >= 0) {
+                            //超过允许值 不允许下单
+                            throw new ServerException("超过最低下单允许差");
+                        } else {
+                            //下单最小值
+                            lotsPerOrder=followSysmbolSpecificationEntity.getMinLot();
+                        }
+                    }
+                }else {
+                    //步长校验
+                    double newLots = calculateActualValue(lotsPerOrder, followSysmbolSpecificationEntity.getLotStep(), followSysmbolSpecificationEntity.getMinLot());
+                    lotsPerOrder=newLots;
+                }
+            }
+
+            BigDecimal lots = new BigDecimal(lotsPerOrder);
             //检查最大手数
             Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
             if(ObjectUtil.isNotEmpty(o1)){
                 BigDecimal max = new BigDecimal(o1.toString());
-                BigDecimal lots = new BigDecimal(lotsPerOrder);
                 if (lots.compareTo(max)>0) {
                     throw  new ServerException("超过最大手数限制");
                 }
             }
+
             double asksub = quoteClient.GetQuote(symbol).Ask;
             double bidsub = quoteClient.GetQuote(symbol).Bid;
             followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
@@ -1191,6 +1197,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setCommission(BigDecimal.valueOf(order.Commission));
             followOrderDetailEntity.setOpenTime(order.OpenTime);
             followOrderDetailEntity.setOpenPrice(BigDecimal.valueOf(order.OpenPrice));
+            followOrderDetailEntity.setOpenPriceSlip(BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bid)));
             followOrderDetailEntity.setOrderNo(order.Ticket);
             followOrderDetailEntity.setRequestOpenTime(nowdate);
             followOrderDetailEntity.setSize(BigDecimal.valueOf(lotsPerOrder));
@@ -1938,5 +1945,41 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     public long removeFollowRelation(String callerId, String followerId) {
         String key = Constant.FOLLOW_RELATION_KEY + callerId;
         return redisUtil.setRemove(key, followerId);
+    }
+
+    /**
+     * 根据给定的参数计算实际值。
+     * 四舍五入到最近的步长，当值恰好在中间时向下取整。
+     *
+     * @param value 要处理的输入值
+     * @param stepSize 步长或间隔
+     * @param minValue 允许的最小值
+     * @return 根据取整规则计算的实际值
+     */
+    public static double calculateActualValue(double value, double stepSize, double minValue) {
+        // 如果值小于最小值，返回最小值
+        if (value < minValue) {
+            return minValue;
+        }
+
+        // 计算离最小值有多少步
+        double stepsFromMin = (value - minValue) / stepSize;
+
+        // 获取小数部分
+        double decimal = stepsFromMin - Math.floor(stepsFromMin);
+
+        // 浮点比较的精度
+        double epsilon = 1e-10;
+
+        // 四舍五入到最近的步长，当值恰好在中间时向下取整
+        long roundedSteps;
+        if (Math.abs(decimal - 0.5) < epsilon) {
+            roundedSteps = (long)Math.floor(stepsFromMin);
+        } else {
+            roundedSteps = Math.round(stepsFromMin);
+        }
+
+        // 计算并返回结果
+        return minValue + (roundedSteps * stepSize);
     }
 }

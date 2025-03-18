@@ -9,6 +9,7 @@ import online.mtapi.mt4.Order;
 import org.springframework.context.ApplicationEvent;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 // 订单发送成功事件
@@ -24,10 +25,11 @@ public class OrderResultEvent implements Serializable {
     private final LocalDateTime endTime;
     private final double startPrice;
     private final String ipAddress;
+    private final BigDecimal priceSlip;
 
     public OrderResultEvent(Order order, EaOrderInfo orderInfo,
                             FollowSubscribeOrderEntity openOrderMapping,
-                            FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress) {
+                            FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime, double startPrice, String ipAddress,BigDecimal priceSlip) {
         this.order = order;
         this.orderInfo = orderInfo;
         this.openOrderMapping = openOrderMapping;
@@ -37,6 +39,7 @@ public class OrderResultEvent implements Serializable {
         this.endTime = endTime;
         this.startPrice = startPrice;
         this.ipAddress = ipAddress;
+        this.priceSlip=priceSlip;
     }
 
     // Getters

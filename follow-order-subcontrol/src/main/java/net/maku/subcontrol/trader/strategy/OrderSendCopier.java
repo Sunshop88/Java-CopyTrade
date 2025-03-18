@@ -278,6 +278,28 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
                 asksub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
                 log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
+                List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(trader.getTrader().getId()).stream().filter(o ->o.getSymbol().contains(orderInfo.getSymbol())).toList();
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = sysmbolSpecificationEntity.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(orderInfo.getSymbol());
+                if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                    if (openOrderMapping.getSlaveLots().compareTo(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()))<0){
+                        Object allowLots = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.ALLOW_LOTS);
+                        if(ObjectUtil.isNotEmpty(allowLots)) {
+                            //如果小于最小下单规格 判断允许值
+                            if (BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()).subtract(openOrderMapping.getSlaveLots()).compareTo(new BigDecimal(allowLots.toString())) >= 0) {
+                                //超过允许值 不允许下单
+                                throw new ServerException("超过最低下单允许差");
+                            } else {
+                                //下单最小值
+                                openOrderMapping.setSlaveLots(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()));
+                            }
+                        }
+                    }else {
+                        //步长校验
+                        double newLots = calculateActualValue(openOrderMapping.getSlaveLots().doubleValue(), followSysmbolSpecificationEntity.getLotStep(), followSysmbolSpecificationEntity.getMinLot());
+                        openOrderMapping.setSlaveLots(BigDecimal.valueOf(newLots));
+                    }
+                }
+
                 Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
                 if(ObjectUtil.isNotEmpty(o1)){
                     String s = o1.toString().replaceAll("\"", "");
@@ -324,7 +346,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 followSubscribeOrderService.saveOrUpdate(openOrderMapping);
                 cacheCopierOrder(orderInfo, order,openOrderMapping);
                 // 创建订单结果事件
-                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+                OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip,BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bidsub)));
                 ObjectMapper mapper = JacksonConfig.getObjectMapper();
                 String jsonEvent = null;
                 try {
@@ -458,7 +480,31 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             bidsub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
             asksub =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
             log.info("下单详情 账号: " + followTraderEntity.getId() + " 品种: " + orderInfo.getSymbol() + " 手数: " + openOrderMapping.getSlaveLots());
+
             Object o1 = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.LOTS_MAX);
+          
+           List<FollowSysmbolSpecificationEntity> sysmbolSpecificationEntity = followSysmbolSpecificationService.getByTraderId(trader.getTrader().getId()).stream().filter(o ->o.getSymbol().contains(orderInfo.getSymbol())).toList();
+            FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = sysmbolSpecificationEntity.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(orderInfo.getSymbol());
+            if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity)) {
+                if (openOrderMapping.getSlaveLots().compareTo(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()))<0){
+                    Object allowLots = redisCache.hGet(Constant.SYSTEM_PARAM_LOTS_MAX, Constant.ALLOW_LOTS);
+                    if(ObjectUtil.isNotEmpty(allowLots)) {
+                        //如果小于最小下单规格 判断允许值
+                        if (BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()).subtract(openOrderMapping.getSlaveLots()).compareTo(new BigDecimal(allowLots.toString())) >= 0) {
+                            //超过允许值 不允许下单
+                            throw new ServerException("超过最低下单允许差");
+                        } else {
+                            //下单最小值
+                            openOrderMapping.setSlaveLots(BigDecimal.valueOf(followSysmbolSpecificationEntity.getMinLot()));
+                        }
+                    }
+                }else {
+                    //步长校验
+                    double newLots = calculateActualValue(openOrderMapping.getSlaveLots().doubleValue(), followSysmbolSpecificationEntity.getLotStep(), followSysmbolSpecificationEntity.getMinLot());
+                    openOrderMapping.setSlaveLots(BigDecimal.valueOf(newLots));
+
+                }
+            }
             if(ObjectUtil.isNotEmpty(o1)){
                 String s = o1.toString().replaceAll("\"", "");
                 BigDecimal max = new BigDecimal(s.toString());
@@ -467,6 +513,8 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                     throw new ServerException("超过最大手数限制");
                 }
             }
+
+           
             // 执行订单发送
             double startPrice=op.equals(Op.Buy) ? asksub : bidsub;
             // 记录开始时间
@@ -503,7 +551,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
             followSubscribeOrderService.saveOrUpdate(openOrderMapping);
             cacheCopierOrder(orderInfo, order,openOrderMapping);
             // 创建订单结果事件
-            OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip);
+            OrderResultEvent event = new OrderResultEvent(order, orderInfo, openOrderMapping, followTraderEntity, flag, startTime, endTime, startPrice, ip,BigDecimal.valueOf(asksub).subtract(BigDecimal.valueOf(bidsub)));
             ObjectMapper mapper = JacksonConfig.getObjectMapper();
             String jsonEvent = null;
             try {
@@ -517,7 +565,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
                 FollowOrderRepairSocketVO followOrderRepairSocketVO = setRepairWebSocket(leaderCopier.getMasterId().toString(), leaderCopier.getSlaveId().toString(), quoteClient);
                 traderOrderRepairWebSocket.pushMessage(leaderCopier.getMasterId().toString(),leaderCopier.getSlaveId().toString(), JsonUtils.toJsonString(followOrderRepairSocketVO));
                 redisUtil.set(Constant.TRADER_TEMPORARILY_REPAIR+leaderCopier.getSlaveId(),followOrderRepairSocketVO);
-            }
+            } 
 //            //删除漏单redis记录
 //            Object o2 = redisUtil.hGetStr(Constant.REPAIR_SEND + openOrderMapping.getMasterAccount() + ":" +openOrderMapping.getMasterId(), openOrderMapping.getSlaveAccount().toString());
 //            Map<Integer, OrderRepairInfoVO> repairInfoVOS = new HashMap();
@@ -560,5 +608,39 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
         return true;
     }
 
+    /**
+     * 根据给定的参数计算实际值。
+     * 四舍五入到最近的步长，当值恰好在中间时向下取整。
+     *
+     * @param value 要处理的输入值
+     * @param stepSize 步长或间隔
+     * @param minValue 允许的最小值
+     * @return 根据取整规则计算的实际值
+     */
+    public static double calculateActualValue(double value, double stepSize, double minValue) {
+        // 如果值小于最小值，返回最小值
+        if (value < minValue) {
+            return minValue;
+        }
 
+        // 计算离最小值有多少步
+        double stepsFromMin = (value - minValue) / stepSize;
+
+        // 获取小数部分
+        double decimal = stepsFromMin - Math.floor(stepsFromMin);
+
+        // 浮点比较的精度
+        double epsilon = 1e-10;
+
+        // 四舍五入到最近的步长，当值恰好在中间时向下取整
+        long roundedSteps;
+        if (Math.abs(decimal - 0.5) < epsilon) {
+            roundedSteps = (long)Math.floor(stepsFromMin);
+        } else {
+            roundedSteps = Math.round(stepsFromMin);
+        }
+
+        // 计算并返回结果
+        return minValue + (roundedSteps * stepSize);
+    }
 }

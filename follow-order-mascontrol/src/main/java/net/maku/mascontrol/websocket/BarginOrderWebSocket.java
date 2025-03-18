@@ -180,7 +180,7 @@ public class BarginOrderWebSocket {
             //发送远程调用vps存入报价到redis
             FollowTraderUserEntity followTraderUserEntity = followTraderUserService.getById(traderId);
             //查询各VPS状态正常的账号
-            FollowTraderEntity followTrader=new FollowTraderEntity();
+            FollowTraderEntity followTrader=null;
             List<FollowTraderEntity> followTraderEntity = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getStatus, CloseOrOpenEnum.CLOSE.getValue()).eq(FollowTraderEntity::getAccount, followTraderUserEntity.getAccount()).eq(FollowTraderEntity::getPlatformId, followTraderUserEntity.getPlatformId()).orderByDesc(FollowTraderEntity::getType));
             if (ObjectUtil.isNotEmpty(followTraderEntity)){
                 for (FollowTraderEntity fo : followTraderEntity) {

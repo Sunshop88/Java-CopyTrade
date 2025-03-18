@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static online.mtapi.mt4.Op.Buy;
+
 @Service
 @Slf4j
 @AllArgsConstructor
@@ -79,7 +81,8 @@ public class KafkaMessageConsumer {
                                 orderResultEvent.getStartTime(),
                                 orderResultEvent.getEndTime(),
                                 orderResultEvent.getStartPrice(),
-                                orderResultEvent.getIpAddress()
+                                orderResultEvent.getIpAddress(),
+                                orderResultEvent.getPriceSlip()
                         );
                     } catch (Exception e) {
                         log.info("消费异常");
@@ -148,7 +151,7 @@ public class KafkaMessageConsumer {
                 FollowOrderDetailEntity detailServiceOne = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, order.Ticket).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId()).eq(FollowOrderDetailEntity::getIpAddr, FollowConstant.LOCAL_HOST));
                 if (ObjectUtil.isNotEmpty(detailServiceOne)) {
                     log.info("记录详情"+detailServiceOne.getTraderId()+"订单"+detailServiceOne.getOrderNo());
-                    updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice(),orderResultEvent.getIpAddress());
+                    updateCloseOrder(detailServiceOne, order, orderResultEvent.getStartTime(), orderResultEvent.getEndTime(), orderResultEvent.getStartPrice(),orderResultEvent.getIpAddress(),orderResultEvent.getPriceSlip());
                 }
                 //删除redis中的缓存
                 String mapKey = followTraderEntity.getId() + "#" + followTraderEntity.getAccount();
@@ -550,7 +553,7 @@ public class KafkaMessageConsumer {
         }
     }
 
-    private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price,String ipaddr) {
+    private void updateCloseOrder(FollowOrderDetailEntity followOrderDetailEntity, Order order, LocalDateTime startTime, LocalDateTime endTime, double price,String ipaddr,BigDecimal priceSlip) {
         //保存平仓信息
         followOrderDetailEntity.setCloseTimeDifference((int)order.sendTimeDifference);
         followOrderDetailEntity.setRequestCloseTime(startTime);
@@ -567,52 +570,32 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setCloseServerHost(ipaddr);
         followOrderDetailEntity.setCloseIpAddr(FollowConstant.LOCAL_HOST);
         followOrderDetailEntity.setCloseId(0);
+        followOrderDetailEntity.setClosePriceSlip(priceSlip);
         followOrderDetailEntity.setRemark(null);
         //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(followOrderDetailEntity.getTraderId());
-        FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(followOrderDetailEntity.getSymbol());
-        BigDecimal hd;
-        if (followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-            //如果forex 并包含JPY 也是100
-            if (followOrderDetailEntity.getSymbol().contains("JPY")) {
-                hd = new BigDecimal("100");
-            } else {
-                hd = new BigDecimal("10000");
-            }
-        } else {
-            //如果非forex 都是 100
-            hd = new BigDecimal("100");
+        if (followOrderDetailEntity.getType().equals(Buy.getValue())){
+            followOrderDetailEntity.setClosePriceDifference(followOrderDetailEntity.getRequestClosePrice().subtract(followOrderDetailEntity.getClosePrice()));
+        }else {
+            followOrderDetailEntity.setClosePriceDifference(followOrderDetailEntity.getClosePrice().subtract(followOrderDetailEntity.getRequestClosePrice()));
         }
-        followOrderDetailEntity.setClosePriceSlip(followOrderDetailEntity.getClosePrice().subtract(followOrderDetailEntity.getRequestClosePrice()).multiply(hd).abs());
         followOrderDetailService.updateById(followOrderDetailEntity);
     }
 
     private void handleOrderResult(Order order, EaOrderInfo orderInfo,
-                                   FollowSubscribeOrderEntity openOrderMapping, FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
+                                   FollowSubscribeOrderEntity openOrderMapping, FollowTraderEntity copier, Integer flag, LocalDateTime startTime, LocalDateTime endTime,double price,String ip,BigDecimal priceSlip) {
         copier=followTraderService.getFollowById(copier.getId());
         // 处理下单成功结果，记录日志和缓存
         log.info("[MT4跟单者:{}] 下单成功, 订单: {}", copier.getAccount(), order);
 
         // 数据持久化操作
-        persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price,ip);
+        persistOrderMapping(openOrderMapping, order, orderInfo, copier, startTime, endTime,price,ip,priceSlip);
 
         // 日志记录
         logFollowOrder(copier, orderInfo, openOrderMapping, flag,ip);
 
     }
 
-
-//    private void handleOrderFailure(EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Exception e) {
-//        openOrderMapping.setSlaveType(Op.forValue(orderInfo.getType()).getValue());
-//        openOrderMapping.setSlaveTicket(null);
-//        openOrderMapping.setFlag(CopyTradeFlag.OF1);
-//        openOrderMapping.setExtra("[开仓]即时价格开仓失败" + e.getMessage());
-//
-//        // 数据持久化失败状态
-//        persistOrderMapping(openOrderMapping);
-//    }
-
-    private void persistOrderMapping(FollowSubscribeOrderEntity openOrderMapping, Order order, EaOrderInfo orderInfo, FollowTraderEntity trader, LocalDateTime startTime, LocalDateTime endTime,double price,String ip) {
+    private void persistOrderMapping(FollowSubscribeOrderEntity openOrderMapping, Order order, EaOrderInfo orderInfo, FollowTraderEntity trader, LocalDateTime startTime, LocalDateTime endTime,double price,String ip,BigDecimal priceSlip) {
         FollowPlatformEntity platForm = followPlatformService.getPlatFormById(trader.getPlatformId().toString());
         log.info("记录详情"+trader.getId()+"订单"+order.Ticket);
         FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
@@ -645,6 +628,7 @@ public class KafkaMessageConsumer {
         followOrderDetailEntity.setMagical(orderInfo.getTicket());
         followOrderDetailEntity.setSourceUser(orderInfo.getAccount());
         followOrderDetailEntity.setServerHost(ip);
+        followOrderDetailEntity.setOpenPriceSlip(priceSlip);
         followOrderDetailService.save(followOrderDetailEntity);
         //滑点分析
         updateSendOrder(trader.getId(),order.Ticket);
@@ -676,28 +660,16 @@ public class KafkaMessageConsumer {
 
 
     private void updateSendOrder(long traderId, Integer orderNo) {
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         //查看下单所有数据
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderNo));
         //进行滑点分析
         list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).collect(Collectors.toList()).forEach(o -> {
             ThreadPoolUtils.getExecutor().execute(()->{
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = specificationEntityMap.stream().collect(Collectors.toMap(FollowSysmbolSpecificationEntity::getSymbol, i -> i)).get(o.getSymbol());
-                BigDecimal hd;
-                //增加一下判空
-                if (ObjectUtil.isNotEmpty(followSysmbolSpecificationEntity) && followSysmbolSpecificationEntity.getProfitMode().equals("Forex")) {
-                    //如果forex 并包含JPY 也是100
-                    if (o.getSymbol().contains("JPY")) {
-                        hd = new BigDecimal("100");
-                    } else {
-                        hd = new BigDecimal("10000");
-                    }
-                } else {
-                    //如果非forex 都是 100
-                    hd = new BigDecimal("100");
+                if (o.getType().equals(Buy.getValue())){
+                    o.setOpenPriceDifference(o.getOpenPrice().subtract(o.getRequestOpenPrice()));
+                }else {
+                    o.setOpenPriceDifference(o.getRequestOpenPrice().subtract(o.getOpenPrice()));
                 }
-                o.setOpenPriceSlip(o.getOpenPrice().subtract(o.getRequestOpenPrice()).multiply(hd).abs());
                 followOrderDetailService.updateById(o);
             });
         });
