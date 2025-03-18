@@ -70,7 +70,7 @@ public class MasControlServiceImpl implements MasControlService {
         String version = split[0];
         FollowVersionEntity entity = new FollowVersionEntity();
         entity.setIp(vo.getIpAddress());
-        entity.setVersion(version);
+        entity.setVersions(version);
         entity.setVersionNumber("0001");
         entity.setDeleted(0);
         followVersionService.save(entity);
@@ -123,7 +123,7 @@ public class MasControlServiceImpl implements MasControlService {
         //分割
         String[] split = version1.split("_");
         String version = split[0];
-        followVersionService.remove(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, vo.getIpAddress()).eq(FollowVersionEntity::getVersion, version));
+        followVersionService.remove(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, vo.getIpAddress()).eq(FollowVersionEntity::getVersions, version));
         log.info("成功更新 Client 和 FollowVps");
         return true;
     }

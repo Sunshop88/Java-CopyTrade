@@ -28,7 +28,7 @@ public class FollowVersionVO implements Serializable {
 	private String ip;
 
 	@Schema(description = "版本")
-	private String version;
+	private String versions;
 
 	@Schema(description = "版本号")
 	private String versionNumber;

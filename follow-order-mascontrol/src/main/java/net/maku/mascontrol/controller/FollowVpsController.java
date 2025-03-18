@@ -528,7 +528,7 @@ public class FollowVpsController {
         for (String ip : ips) {
             List<FollowVersionEntity> list1 = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>()
                     .eq(FollowVersionEntity::getIp, ip)
-                    .eq(FollowVersionEntity::getVersion, version)
+                    .eq(FollowVersionEntity::getVersions, version)
                     .eq(FollowVersionEntity::getDeleted, 0));
             if (ObjectUtil.isNotEmpty(list1)) {
                 list.addAll(list1);

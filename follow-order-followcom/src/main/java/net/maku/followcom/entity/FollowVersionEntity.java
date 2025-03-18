@@ -34,7 +34,7 @@ public class FollowVersionEntity {
 	* 版本
 	*/
 	@TableField(value = "version")
-	private String version;
+	private String versions;
 
 	/**
 	* 版本号
