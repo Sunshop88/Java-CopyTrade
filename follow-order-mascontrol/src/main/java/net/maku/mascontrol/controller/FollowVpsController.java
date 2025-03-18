@@ -272,58 +272,94 @@ public class FollowVpsController {
         //查询
        List<Long>  excludeIds=followTraderService.getShare(oldId,newId);
        //删除特殊订阅关系 1.ABCB 2.BAAC 3.BACB
-        if (ObjectUtil.isNotEmpty(excludeIds)){
-            for (Long excludeId : excludeIds) {
-                List<Long> subscribeIds = new ArrayList<>();
-                List<Long> traderIds = new ArrayList<>();
-                List<FollowTraderSubscribeEntity> list1 = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
-                        .eq(FollowTraderSubscribeEntity::getMasterId, excludeId)
-                        .or()
-                        .eq(FollowTraderSubscribeEntity::getSlaveId, excludeId));
-                if (ObjectUtil.isNotEmpty(list1)){
-                    //提取出 masterId 和 slaveId，合并后去重
-                  subscribeIds = list1.stream()
-                            .flatMap(o -> Stream.of(o.getMasterId(), o.getSlaveId()))
-                            .filter(Objects::nonNull) // 确保不包含 null 值
-                            .distinct()
-                            .toList();
-                }else {
-                    subscribeIds = null;
-                }
-                List<FollowTraderEntity> list2 = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
-                        .eq(FollowTraderEntity::getServerId, oldId)
-                        .ne(FollowTraderEntity::getId, excludeId));
-                if (ObjectUtil.isNotEmpty(list2)){
-                    //将id提取出来
-                 traderIds = list2.stream()
-                            .map(FollowTraderEntity::getId)
-                            .toList();
-                }else {
-                  traderIds = null;
-                }
-                //将subscribeIds和traderIds进行对比,相同的提取出来
-                List<Long> sameIds = subscribeIds.stream()
-                        .filter(traderIds::contains)
-                        .toList();
-                if (ObjectUtil.isEmpty(sameIds)){
-                    continue;
-                }
-                //ABAC
-                if (ObjectUtil.isEmpty(list1.stream().filter(o -> sameIds.contains(o.getSlaveId())).collect(Collectors.toList()))){
-                    continue;
-                }
-                //查询在list1里sameIds等于MasterId或者等于slaveId
-                List<FollowTraderSubscribeEntity> list3 = list1.stream()
-                        .filter(entity -> sameIds.contains(entity.getMasterId()) || sameIds.contains(entity.getSlaveId()))
-                        .collect(Collectors.toList());
-
-                // 删除这些订阅关系
-                if (ObjectUtil.isNotEmpty(list3)) {
-
-                    followTraderSubscribeService.removeByIds(list3.stream().map(FollowTraderSubscribeEntity::getId).toList());
-                }
-            }
-        }
+//        if (ObjectUtil.isNotEmpty(excludeIds)){
+//            for (Long excludeId : excludeIds) {
+//                List<Long> subscribeIds = new ArrayList<>();
+//                List<Long> traderIds = new ArrayList<>();
+//                List<FollowTraderSubscribeEntity> list1 = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
+//                        .eq(FollowTraderSubscribeEntity::getMasterId, excludeId)
+//                        .or()
+//                        .eq(FollowTraderSubscribeEntity::getSlaveId, excludeId));
+//                if (ObjectUtil.isNotEmpty(list1)){
+//                    //提取出 masterId 和 slaveId，合并后去重
+//                  subscribeIds = list1.stream()
+//                            .flatMap(o -> Stream.of(o.getMasterId(), o.getSlaveId()))
+//                            .filter(Objects::nonNull) // 确保不包含 null 值
+//                            .distinct()
+//                            .toList();
+//                }else {
+//                    subscribeIds = null;
+//                }
+//                List<FollowTraderEntity> list2 = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
+//                        .eq(FollowTraderEntity::getServerId, oldId)
+//                        .ne(FollowTraderEntity::getId, excludeId));
+//                if (ObjectUtil.isNotEmpty(list2)){
+//                    //将id提取出来
+//                 traderIds = list2.stream()
+//                            .map(FollowTraderEntity::getId)
+//                            .toList();
+//                }else {
+//                  traderIds = null;
+//                }
+//                //将subscribeIds和traderIds进行对比,相同的提取出来
+////                final List<Long> sameIds = new ArrayList<>();
+////                if (ObjectUtil.isEmpty(subscribeIds)) {
+////                    sameIds = subscribeIds.stream()
+////                            .filter(traderIds::contains)
+////                            .toList();
+////                }
+////                    if (ObjectUtil.isEmpty(sameIds)) {
+////                        continue;
+////                    }
+////                    //ABAC
+////                    if (ObjectUtil.isEmpty(list1.stream().filter(o -> sameIds.contains(o.getSlaveId())).collect(Collectors.toList()))) {
+////                        continue;
+////                    }
+////                    //查询在list1里sameIds等于MasterId或者等于slaveId
+////                    List<FollowTraderSubscribeEntity> list3 = list1.stream()
+////                            .filter(entity -> sameIds.contains(entity.getMasterId()) || sameIds.contains(entity.getSlaveId()))
+////                            .collect(Collectors.toList());
+////
+////                // 删除这些订阅关系
+////                if (ObjectUtil.isNotEmpty(list3)) {
+////
+////                    followTraderSubscribeService.removeByIds(list3.stream().map(FollowTraderSubscribeEntity::getId).toList());
+////                }
+//                final List<Long> sameIds = new ArrayList<>();
+//
+//                if (ObjectUtil.isNotEmpty(subscribeIds) && ObjectUtil.isNotEmpty(traderIds)) {
+//                    // 使用 Set 避免重复元素
+//                    Set<Long> subscribeSet = new HashSet<>(subscribeIds);
+//                    Set<Long> traderSet = new HashSet<>(traderIds);
+//
+//                    // 计算交集
+//                    sameIds.addAll(traderSet.stream()
+//                            .filter(subscribeSet::contains)
+//                            .toList());
+//                }
+//
+//                if (ObjectUtil.isEmpty(sameIds)) {
+//                    continue;
+//                }
+//
+//                // ABAC 检查
+//                if (ObjectUtil.isEmpty(list1.stream()
+//                        .filter(o -> sameIds.contains(o.getSlaveId())) // sameIds 已声明为 final
+//                        .collect(Collectors.toList()))) {
+//                    continue;
+//                }
+//
+//                // 查询相关订阅关系
+//                List<FollowTraderSubscribeEntity> list3 = list1.stream()
+//                        .filter(entity -> sameIds.contains(entity.getMasterId()) || sameIds.contains(entity.getSlaveId()))
+//                        .collect(Collectors.toList());
+//
+//                // 删除订阅关系
+//                if (ObjectUtil.isNotEmpty(list3)) {
+//                    followTraderSubscribeService.removeByIds(list3.stream().map(FollowTraderSubscribeEntity::getId).toList());
+//                }
+//            }
+//        }
 
         //转移账号
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
@@ -492,7 +528,7 @@ public class FollowVpsController {
         for (String ip : ips) {
             List<FollowVersionEntity> list1 = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>()
                     .eq(FollowVersionEntity::getIp, ip)
-                    .eq(FollowVersionEntity::getVersion, version)
+                    .eq(FollowVersionEntity::getVersions, version)
                     .eq(FollowVersionEntity::getDeleted, 0));
             if (ObjectUtil.isNotEmpty(list1)) {
                 list.addAll(list1);

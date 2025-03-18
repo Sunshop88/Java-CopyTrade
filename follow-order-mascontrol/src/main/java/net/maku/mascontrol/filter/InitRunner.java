@@ -41,13 +41,13 @@ public class InitRunner implements ApplicationRunner {
         String versionNumber = split[1];
 
         //获取当前版本
-        List<FollowVersionEntity> entities = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip + "主").eq(FollowVersionEntity::getVersion, version));
+        List<FollowVersionEntity> entities = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip + "主").eq(FollowVersionEntity::getVersions, version));
         if (ObjectUtil.isNotEmpty(entities)) {
             FollowVersionEntity entity = entities.getFirst();
             String currentVersion = entity.getVersionNumber();
             if (!versionNumber.equals(currentVersion)) {
                 //更新最新版本
-                followVersionService.update(new LambdaUpdateWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip).eq(FollowVersionEntity::getVersion, version).set(FollowVersionEntity::getVersionNumber, versionNumber));
+                followVersionService.update(new LambdaUpdateWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip).eq(FollowVersionEntity::getVersions, version).set(FollowVersionEntity::getVersionNumber, versionNumber));
             }
         }
     }

@@ -407,6 +407,7 @@ public class OrderSendCopier extends AbstractOperation implements IOperationStra
     private void cacheCopierOrder(EaOrderInfo orderInfo, Order order,FollowSubscribeOrderEntity openOrderMapping) {
         CachedCopierOrderInfo cachedOrderInfo = new CachedCopierOrderInfo(order);
         String mapKey = openOrderMapping.getSlaveId() + "#" + openOrderMapping.getSlaveAccount();
+        log.info("保存订单数据"+mapKey+"ticket"+orderInfo.getTicket());
         redisUtil.hset(Constant.FOLLOW_SUB_ORDER + mapKey, Long.toString(orderInfo.getTicket()), cachedOrderInfo, 0);
     }
     private void logFollowOrder(FollowTraderEntity copier, EaOrderInfo orderInfo, FollowSubscribeOrderEntity openOrderMapping, Integer flag,String ip,String ex,Op op) {

@@ -2,6 +2,8 @@ package net.maku.followcom.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
@@ -26,7 +28,7 @@ public class FollowVersionVO implements Serializable {
 	private String ip;
 
 	@Schema(description = "版本")
-	private String version;
+	private String versions;
 
 	@Schema(description = "版本号")
 	private String versionNumber;
@@ -38,12 +40,12 @@ public class FollowVersionVO implements Serializable {
 	private Long creator;
 
 	@Schema(description = "创建时间")
-	private Date createTime;
+	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
-	private Date updateTime;
+	private LocalDateTime updateTime;
 
 }

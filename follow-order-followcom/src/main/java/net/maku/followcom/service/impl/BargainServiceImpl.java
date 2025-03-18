@@ -294,6 +294,7 @@ public class BargainServiceImpl implements BargainService {
         if (ObjectUtil.isEmpty(followTraderEntityList)){
             throw new ServerException("无可下单账号");
         }
+        log.info("followOrderSendCloseVO开始++++++++++++");
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         followTraderEntityList.forEach(followTraderEntity -> {
@@ -303,6 +304,8 @@ public class BargainServiceImpl implements BargainService {
                     FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
                     BeanUtil.copyProperties(vo,followOrderSendCloseVO);
                     followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
+                    followOrderSendCloseVO.setCloseType(0);
+                    followOrderSendCloseVO.setMasType(true);
                     // 需等待发起请求
                     sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
                 } catch (Exception e) {
@@ -337,17 +340,20 @@ public class BargainServiceImpl implements BargainService {
                     redisCache.set(Constant.TRADER_SEND_MAS + orderNo, 2);
                 }
                 orderInstructServiceOne.setEndTime(LocalDateTime.now());
-                orderInstructServiceOne.setStatus(FollowMasOrderStatusEnum.PARTIALFAILURE.getValue());
+                orderInstructServiceOne.setStatus(FollowMasOrderStatusEnum.ALLSUCCESS.getValue());
                 followOrderInstructService.updateById(orderInstructServiceOne);
             }else {
                 throw new ServerException("不存在正在执行订单");
             }
         } else {
-            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS + orderNo))) {
-                redisCache.set(Constant.TRADER_CLOSE_MAS + orderNo, 2);
-            }else {
-                throw new ServerException("不存在正在平仓订单");
-            }
+            List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getTraderId).eq(FollowOrderDetailEntity::getSendNo, orderNo).groupBy(FollowOrderDetailEntity::getTraderId));
+            list.forEach(o->{
+                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS +o.getTraderId() ))) {
+                    redisCache.set(Constant.TRADER_CLOSE_MAS + o.getTraderId(), 2);
+                }else {
+                    throw new ServerException("不存在正在平仓订单");
+                }
+            });
         }
     }
 
