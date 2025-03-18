@@ -1856,6 +1856,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     }else {
                         executeOrderNoSyn(convert.getIpAddr(), convert.getServerName(), convert.getPlatform(), followPlatform.getBrokerName(), vo.getIntervalTime(), finalFollowMasOrderVo.getTotalNum(), finalFollowMasOrderVo.getOrderList(), convert.getId(), convert.getAccount(), quoteClient, vo.getSymbol(), vo.getType(), vo.getSendNo(), ObjectUtil.isNotEmpty(quoteClient.OrderClient.PlacedType)?quoteClient.OrderClient.PlacedType.getValue():0,vo.getRemark(),1);
                     }
+                    if (ObjectUtil.isNotEmpty(vo.getIntervalTime())&&vo.getIntervalTime() != 0) {
+                        redisCache.set(Constant.TRADER_SEND_MAS + vo.getSendNo(), 1);
+                    }
                 }else {
                     log.info(convert.getAccount()+"下单处理异常");
                 }
