@@ -79,8 +79,9 @@ public class FollowTraderUserController {
 
 
 
-
-    /*  public void init() {
+    @GetMapping("/init")
+    @Operation(summary = "初始化")
+      public void init() {
           List<FollowTraderEntity> list = followTraderService.list();
          List<FollowPlatformEntity> list1 = followPlatformService.list();
          Map<Long, FollowPlatformEntity> collect = list1.stream().collect(Collectors.toMap(FollowPlatformEntity::getId, Function.identity()));
@@ -108,7 +109,7 @@ public class FollowTraderUserController {
 
           });
           followTraderUserService.saveBatch(ls);
-      }*/
+      }
 @GetMapping("/getTrader/info")
 @Operation(summary = "获取账号列表")
 public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer type,@RequestParam("vpsId") Integer vpsId){
