@@ -128,3 +128,63 @@ ALTER TABLE `follow-order-cp`.`follow_order_detail`
     AUTO_INCREMENT=3042143,
     ADD COLUMN `open_price_difference` DECIMAL(16,5)   NULL     COMMENT '开仓价格差'  AFTER `comment`,
     ADD COLUMN `close_price_difference` DECIMAL(16,5)   NULL     COMMENT '平仓价格差'  AFTER `open_price_difference`;
+
+--------组别
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for follow_group
+-- ----------------------------
+DROP TABLE IF EXISTS `follow_group`;
+CREATE TABLE `follow_group`  (
+                                 `id` int NOT NULL AUTO_INCREMENT COMMENT 'ID',
+                                 `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '组别名称',
+                                 `number` int NULL DEFAULT NULL COMMENT '账号数量',
+                                 `color` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '颜色',
+                                 `version` int NULL DEFAULT NULL COMMENT '版本号',
+                                 `deleted` tinyint NULL DEFAULT NULL COMMENT '删除标识 0：正常 1：已删除',
+                                 `creator` bigint NULL DEFAULT NULL COMMENT '创建者',
+                                 `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
+                                 `updater` bigint NULL DEFAULT NULL COMMENT '更新者',
+                                 `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
+                                 PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '组别' ROW_FORMAT = DYNAMIC;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+
+    --------版本
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for follow_version
+-- ----------------------------
+DROP TABLE IF EXISTS `follow_version`;
+CREATE TABLE `follow_version`  (
+                                   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+                                   `ip` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'ip地址',
+                                   `version` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '版本',
+                                   `version_number` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '版本号',
+                                   `deleted` tinyint NULL DEFAULT NULL COMMENT '删除标识 0：正常 1：已删除',
+                                   `creator` bigint NULL DEFAULT NULL COMMENT '创建者',
+                                   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
+                                   `updater` bigint NULL DEFAULT NULL COMMENT '更新者',
+                                   `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
+                                   PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '项目版本' ROW_FORMAT = DYNAMIC;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+INSERT INTO `follow_version` VALUES (1, '39.99.241.16主', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (10, '39.99.241.16', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (2, '39.98.123.55', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (3, '8.211.207.234', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (4, '39.101.181.190', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (5, '47.100.171.3', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (6, '39.99.145.155', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (7, '47.112.171.121', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (8, '39.99.226.176', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `follow_version` VALUES (9, '139.196.230.69', '1.2.0', '0001', 0, NULL, NULL, NULL, NULL);
