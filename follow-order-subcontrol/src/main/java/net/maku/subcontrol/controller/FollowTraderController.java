@@ -730,10 +730,14 @@ public class FollowTraderController {
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
-        Boolean reconnect = reconnect(traderId);
-        if (!reconnect){
-            throw new ServerException("请检查账号密码，稍后再试");
-        }
+        //批量重连
+        String[] split = traderId.split(",");
+        Arrays.asList(split).forEach(o->{
+            Boolean reconnect = reconnect(o);
+            if (!reconnect){
+                log.info("重连失败，请检查账号密码"+o);
+            }
+        });
         return Result.ok();
     }
     @GetMapping("/specificationList")
