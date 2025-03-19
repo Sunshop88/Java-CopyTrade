@@ -1087,11 +1087,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     private void updateSendOrder(long traderId, String orderNo,Integer flag) {
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         //查看下单所有数据
         List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+        log.info("updateSendOrder"+list.size());
         if (ObjectUtil.isEmpty(list))return;
         if (ObjectUtil.isNotEmpty(sendServiceOne)) {
             //保存修改信息
@@ -1117,12 +1116,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             //查询数据
             FollowOrderInstructEntity followOrderInstructEntity = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
             if (redissonLockUtil.tryLockForShortTime("masOrder" + orderNo, 100, 120, TimeUnit.SECONDS)) {
-              try {
+                try {
                   //增加成交订单数和手数
                   followOrderInstructEntity.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
                   followOrderInstructEntity.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
                   followOrderInstructEntity.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
-                  if (followOrderInstructEntity.getTradedOrders()==followOrderInstructEntity.getTrueTotalOrders()){
+                    log.info("updateSendOrder数量"+followOrderInstructEntity);
+
+                    if (Objects.equals(followOrderInstructEntity.getTradedOrders(), followOrderInstructEntity.getTrueTotalOrders())){
                       log.info("交易下单已完成-全部成功");
                       //完成
                       followOrderInstructEntity.setEndTime(LocalDateTime.now());

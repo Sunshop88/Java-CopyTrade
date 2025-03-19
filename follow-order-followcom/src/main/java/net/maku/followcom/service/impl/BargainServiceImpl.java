@@ -70,9 +70,12 @@ public class BargainServiceImpl implements BargainService {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             throw new ServerException("开始手数不能大于结束手数");
         }
-        if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
-            throw new ServerException("总手数不能低于最低手数");
+        if (ObjectUtil.isNotEmpty(vo.getTotalSzie())){
+            if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
+                throw new ServerException("总手数不能低于最低手数");
+            }
         }
+
         //现在找出可下单账号
         List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
         vo.getTraderList().forEach(o->{
@@ -228,7 +231,7 @@ public class BargainServiceImpl implements BargainService {
                 followOrderInstruct.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
                 followOrderInstruct.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
                 followOrderInstruct.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
-                if (followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                if (Objects.equals(followOrderInstruct.getTradedOrders(), followOrderInstruct.getTrueTotalOrders())){
                     log.info("交易下单已完成-全部成功");
                     followOrderInstruct.setEndTime(LocalDateTime.now());
                     followOrderInstruct.setStatus(FollowMasOrderStatusEnum.ALLSUCCESS.getValue());
