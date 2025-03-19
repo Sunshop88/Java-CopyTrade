@@ -520,17 +520,12 @@ public class FollowVpsController {
     @Operation(summary = "系统版本")
     public Result<List<FollowVersionEntity>> version(@RequestBody List<String> ips){
 //        String ip = FollowConstant.LOCAL_HOST;
-        String version1 = FollowConstant.MAS_VERSION;
-        //分割
-        String[] split = version1.split("_");
-        String version = split[0];
-        String versionNumber = split[1];
+        String version = FollowConstant.MAS_VERSION;
         List<FollowVersionEntity> list = new ArrayList<>();
         for (String ip : ips) {
             List<FollowVersionEntity> list1 = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>()
                     .eq(FollowVersionEntity::getIp, ip)
-                    .eq(FollowVersionEntity::getVersions, version)
-                    .eq(FollowVersionEntity::getVersionNumber, versionNumber));
+                    .eq(FollowVersionEntity::getVersions, version));
             if (ObjectUtil.isNotEmpty(list1)) {
                 list.addAll(list1);
             }
