@@ -97,8 +97,11 @@ public class CopierOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(follow.getId());
                     List<Order> openedOrders = Arrays.stream(copier4ApiTrader.quoteClient.GetOpenedOrders()).filter(order1 -> order1.Type == Buy || order1.Type == Sell).collect(Collectors.toList());
                     FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
-                    followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,follow.getAccount()));
+                    List<OrderActiveInfoVO> orderActiveInfoVOS = convertOrderActive(openedOrders, follow.getAccount());
+                    followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoVOS);
                     log.info("发送消息"+follow.getId());
+                    //存入redis
+                    redisUtil.set(Constant.TRADER_ACTIVE + copier4ApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoVOS));
                     traderOrderActiveWebSocket.pushMessage(followSub.getMasterId().toString(),follow.getId().toString(), JsonUtils.toJsonString(followOrderActiveSocketVO));
                     pendingMessages.remove(follow.getId().toString());
                 }, 50, TimeUnit.MILLISECONDS);
