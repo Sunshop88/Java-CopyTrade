@@ -122,7 +122,7 @@ public class RedisConfig {
 
         // 如果有密码，设置密码
         if (redisProperties.getPassword() != null) {
-            config.useClusterServers().setPassword(redisProperties.getPassword());
+            config.useSingleServer().setPassword(redisProperties.getPassword());
         }
 
         // 连接池配置（可选）
