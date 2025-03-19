@@ -1066,6 +1066,7 @@ public class FollowTraderController {
         String s = AesUtils.decryptStr(vo.getPassword());
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
+        log.info("账号内容：{}",quoteClient);
         try {
             if (ObjectUtil.isNotEmpty(quoteClient)) {
                 quoteClient.ChangePassword(vo.getNewPassword(), false);
