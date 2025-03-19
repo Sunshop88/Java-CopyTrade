@@ -105,7 +105,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             Date endDate = DateUtil.date();
             long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
             if (endDate.after(startDate)) {
-                o.setRemainingDay(-1); // 已过期
+                o.setRemainingDay(0); // 已过期
             } else {
                 o.setRemainingDay((int) daysBetween);
             }
