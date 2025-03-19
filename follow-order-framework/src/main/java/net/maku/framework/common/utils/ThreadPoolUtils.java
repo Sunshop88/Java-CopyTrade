@@ -2,20 +2,18 @@ package net.maku.framework.common.utils;
 
 import cn.hutool.core.thread.ThreadFactoryBuilder;
 import cn.hutool.core.thread.ThreadUtil;
+import lombok.Getter;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ThreadPoolUtils {
 
-    // 定义一个固定大小的线程池
-    private static final ExecutorService executorService = ThreadUtil.newFixedExecutor(30,"POOLFIXED",true);
+    // 虚拟线程
+    private static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
-    // 定义一个固定大小的延时任务的线程池
-    private static final ScheduledThreadPoolExecutor scheduledExecutorService = ThreadUtil.createScheduledExecutor(200);
-
-
+    public static ExecutorService getExecutor() {
+        return executorService;
+    }
     /**
      * 提交任务到线程池执行
      *
@@ -25,21 +23,6 @@ public class ThreadPoolUtils {
         executorService.execute(runnable);
     }
 
-    /**
-     * 提交延时任务到线程池执行
-     *
-     * @param runnable 要执行的任务
-     */
-    public static void scheduledExecute(Runnable runnable,long time,TimeUnit timeUnit) {
-        scheduledExecutorService.schedule(runnable,time,timeUnit);
-    }
-
-    /**
-     * 提交延时任务到线程池执行
-     */
-    public static ScheduledThreadPoolExecutor getScheduledExecute() {
-        return scheduledExecutorService;
-    }
 
     /**
      * 优雅地关闭线程池

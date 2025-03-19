@@ -1,15 +1,11 @@
 package net.maku.followcom.vo;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 
 /**
  * 订阅关系表
@@ -33,9 +29,6 @@ public class FollowTraderSubscribeVO implements Serializable {
 	@Schema(description = "跟随模式0-固定手数 1-手数比例 2-净值比例")
 	private Integer followMode;
 
-	@Schema(description = "跟单手数")
-	private BigDecimal followLots;
-
 	@Schema(description = "跟单比例")
 	private BigDecimal followParam;
 
@@ -51,17 +44,14 @@ public class FollowTraderSubscribeVO implements Serializable {
 	@Schema(description = "跟单补单状态 0-未开启 1-开启")
 	private Integer followRep;
 
-	@Schema(description = "下单类型0-全部 1-多单 2-空单")
-	private Integer followType;
+	@Schema(description = "下单方式")
+	private Integer placedType;
 
 	@Schema(description = "止盈止损0-不跟随 1-跟随")
 	private Integer tpSl;
 
 	@Schema(description = "跟单方向0-正向1-反向")
 	private Integer followDirection;
-
-	@Schema(description = "暂停订阅0-否 1-是")
-	private Integer pause;
 
 	@Schema(description = "备注")
 	private String remark;
@@ -87,4 +77,12 @@ public class FollowTraderSubscribeVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "固定注释")
+	private String fixedComment;
+
+	@Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
+	private Integer commentType;
+
+	@Schema(description = "位数")
+	private Integer digits;
 }

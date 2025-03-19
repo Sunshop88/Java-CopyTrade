@@ -1,25 +1,35 @@
 package net.maku.system.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.maku.api.module.system.SmsApi;
+import net.maku.followcom.enums.MfaVerifyEnum;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
+import net.maku.framework.common.utils.Result;
 import net.maku.framework.security.cache.TokenStoreCache;
 import net.maku.framework.security.crypto.Sm2Util;
 import net.maku.framework.security.mobile.MobileAuthenticationToken;
 import net.maku.framework.security.third.ThirdAuthenticationToken;
 import net.maku.framework.security.third.ThirdLogin;
 import net.maku.framework.security.user.UserDetail;
+import net.maku.system.dto.MfaDto;
+import net.maku.system.dto.MfaVerifyDto;
+import net.maku.system.entity.SysUserEntity;
 import net.maku.system.enums.LoginOperationEnum;
 import net.maku.system.service.*;
 import net.maku.system.vo.*;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 /**
  * 权限认证服务
@@ -27,6 +37,7 @@ import org.springframework.stereotype.Service;
  * @author 阿沐 babamu@126.com
  * <a href="https://maku.net">MAKU</a>
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class SysAuthServiceImpl implements SysAuthService {
@@ -36,6 +47,7 @@ public class SysAuthServiceImpl implements SysAuthService {
     private final SysLogLoginService sysLogLoginService;
     private final SysUserService sysUserService;
     private final SysUserTokenService sysUserTokenService;
+    private final SysUserMfaVerifyService mfaVerifyService;
     private final SmsApi smsApi;
 
     @Override
@@ -49,6 +61,15 @@ public class SysAuthServiceImpl implements SysAuthService {
             throw new ServerException("验证码错误");
         }
 
+        //用户是禁用状态，直接抛出异常
+        SysUserVO SysUserVO = sysUserService.getByUsername(login.getUsername());
+        if(ObjectUtil.isEmpty(SysUserVO)){
+            throw new ServerException("用户名或密码错误");
+        }
+        if (SysUserVO.getStatus() == 0) {
+            throw new ServerException("您的账户已被禁用，请联系管理员。");
+        }
+
         Authentication authentication;
         try {
             // 用户认证
@@ -56,6 +77,24 @@ public class SysAuthServiceImpl implements SysAuthService {
                     new UsernamePasswordAuthenticationToken(login.getUsername(), Sm2Util.decrypt(login.getPassword())));
         } catch (BadCredentialsException e) {
             throw new ServerException("用户名或密码错误");
+        }
+
+        // MFA验证码验证
+        MfaDto mfaDto = new MfaDto();
+        BeanUtils.copyProperties(login, mfaDto);
+        MfaVo mfaVo = mfaVerifyService.mfaVerifyShow(mfaDto);
+        if (mfaVo != null && Objects.equals(login.getIsStartMfaVerify(), MfaVerifyEnum.START_CERTIFIED.getType())) {
+            MfaVerifyDto mfaVerifyDto = new MfaVerifyDto();
+            BeanUtils.copyProperties(login, mfaVerifyDto);
+            Result<Integer> result = mfaVerifyService.mfaVerify(mfaVerifyDto);
+            log.info("=========结果：{}", String.valueOf(result));
+            if (result == null) {
+                throw new ServerException("mfa认证失败");
+            }
+            Integer mfaCode = result.getCode();
+            if (mfaCode != 0) {
+                throw new ServerException(result.getMsg());
+            }
         }
 
         // 用户信息

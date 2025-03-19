@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="net.maku.followcom.dao.FollowTestSpeedDao">
+
+    <insert id="saveTestSpeed" parameterType="net.maku.followcom.dao.FollowTestSpeedDao" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO follow_test_speed (status, do_time, test_name, version,deleted, creator, create_time)
+        VALUES (#{status}, #{doTime}, #{testName},#{version},#{deleted},#{creator},#{createTime})
+    </insert>
+
+    </mapper>

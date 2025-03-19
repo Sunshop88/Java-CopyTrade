@@ -2,13 +2,15 @@ package net.maku.followcom.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
-import java.util.List;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.io.Serializable;
-import net.maku.framework.common.utils.DateUtils;
 import java.math.BigDecimal;
 
 /**
@@ -25,22 +27,33 @@ public class FollowTraderVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "mt4账号")
+	@NotBlank(message = "mt4账号不能为空")
 	private String account;
 
 	@Schema(description = "类型0-信号源 1-跟单者")
+	@Min(value = 0, message = "账号类型参数不合法")
+	@Max(value = 1, message = "账号类型参数不合法")
+	@NotNull(message = "账号类型不能为空")
 	private Integer type;
 
 	@Schema(description = "密码")
+	@NotBlank(message = "密码不能为空")
 	private String password;
 
 	@Schema(description = "平台id")
 	private Integer platformId;
 
 	@Schema(description = "平台服务器")
+	@NotBlank( message = "平台服务器不能为空")
 	private String platform;
 
 	@Schema(description = "状态0-正常 1-异常")
 	private Integer status;
+
+	@Schema(description = "跟单状态0-未开启 1-已开启")
+	private Integer followStatus;
+	@Schema(description = "盈亏")
+	private BigDecimal profit;
 
 	@Schema(description = "异常信息")
 	private String statusExtra;
@@ -106,5 +119,69 @@ public class FollowTraderVO implements Serializable {
 	private double buyNum;
 
 	private String serverIp;
+
+	@Schema(description = "模板ID")
+	private Integer templateId;
+
+	@Schema(description = "下单类型")
+	private Integer placedType;
+
+
+	/**
+	 * 跟随模式0-固定手数 1-手数比例 2-净值比例
+	 */
+	private Integer followMode;
+
+
+	/**
+	 * 跟单开仓状态 0-未开启 1-开启
+	 */
+	private Integer followOpen;
+
+	/**
+	 * 跟单平仓状态 0-未开启 1-开启
+	 */
+	private Integer followClose;
+
+	/**
+	 * 跟单补单状态 0-未开启 1-开启
+	 */
+	private Integer followRep;
+
+
+	/**
+	 * 跟单比例
+	 */
+	private BigDecimal followParam;
+
+	/**
+	 * 跟单方向0-正向1-反向
+	 */
+	@TableField(value = "follow_direction")
+	private Integer followDirection;
+
+	private Integer remainder;
+    //已用预付款
+	private  Double margin;
+	//服务器
+	private  String 	connectTrader;
+	//信用
+	private Double credit;
+
+	@Schema(description = "登录节点")
+	private String loginNode;
+
+	private String defaultServerAccount;
+
+
+
+	@Schema(description = "固定注释")
+	private String fixedComment;
+
+	@Schema(description = "注释类型0-英文 1-数字 2-英文+数字+符号")
+	private Integer commentType;
+
+	@Schema(description = "位数")
+	private Integer digits;
 
 }

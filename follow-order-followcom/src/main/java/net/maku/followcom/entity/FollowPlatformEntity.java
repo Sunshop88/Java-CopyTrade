@@ -19,7 +19,6 @@ public class FollowPlatformEntity {
 	 * ID
 	 */
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
@@ -27,6 +26,12 @@ public class FollowPlatformEntity {
 	 */
 	@TableField(value = "broker_name")
 	private String brokerName;
+
+	/**
+	 * 券商logo
+	 */
+	@TableField(value = "logo")
+	private String logo;
 
 	/**
 	 * 平台类型

@@ -19,7 +19,6 @@ import java.util.Date;
 @TableName("follow_order_detail")
 public class FollowOrderDetailEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
@@ -243,12 +242,72 @@ public class FollowOrderDetailEntity {
 	/**
 	 * vps地址
 	 */
-	@Schema(description = "ip_addr")
+	@TableField(value = "ip_addr")
 	private String ipAddr;
 
 	/**
 	 * vps名称
 	 */
-	@Schema(description = "server_name")
+	@TableField(value = "server_name")
 	private String serverName;
+
+	/**
+	 * 平仓ID
+	 */
+	@TableField(value = "close_id")
+	private Integer closeId;
+
+	/**
+	 * 平仓状态
+	 */
+	@TableField(value = "close_status")
+	private Integer closeStatus;
+    /**
+	 * 结算汇率
+	 * */
+	@TableField(value = "rate_margin")
+	private Double rateMargin;
+
+	//喊单账号
+	@TableField(value = "source_user")
+	private  String sourceUser;
+
+	//魔术号
+	@TableField(value = "magical")
+	private  Integer magical;
+
+	/**
+	 * 节点
+	 */
+	@TableField(value = "server_host")
+	private  String serverHost;
+
+	/**
+	 * 平仓VPS
+	 */
+	@TableField(value = "close_server_name")
+	private String closeServerName;
+
+	/**
+	 * 平仓VPS地址
+	 */
+	@TableField(value = "close_ip_addr")
+	private  String closeIpAddr;
+
+	/**
+	 * 平仓节点
+	 */
+	@TableField(value = "close_server_host")
+	private  String closeServerHost;
+
+	/**
+	 * 是否外部0-否 1-是
+	 */
+	@TableField(value = "is_external")
+	private  Integer isExternal;
+	/**
+	 * mt4备注
+	 */
+	@TableField(value = "comment")
+	private String comment;
 }

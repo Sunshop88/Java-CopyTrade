@@ -9,4 +9,5 @@ auth:
     - /swagger-ui/**
     - /socket/**
     - /doc.html
+    - /api/v1/**
     - /

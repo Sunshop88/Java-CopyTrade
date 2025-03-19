@@ -3,6 +3,7 @@ package net.maku.subcontrol.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import net.maku.followcom.vo.OrderActiveInfoVO;
+import net.maku.followcom.vo.OrderRepairInfoVO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -32,8 +33,5 @@ public class FollowOrderSendSocketVO implements Serializable {
 
 	@Schema(description = "状态0-进行中 1-已完成")
 	private Integer status;
-
-	@Schema(description = "持仓订单集合")
-	private List<OrderActiveInfoVO> OrderActiveInfoList;
 
 }

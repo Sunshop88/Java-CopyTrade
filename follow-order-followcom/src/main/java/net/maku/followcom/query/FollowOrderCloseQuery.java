@@ -18,4 +18,9 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "平仓记录查询")
 public class FollowOrderCloseQuery extends Query {
+    @Schema(description = "平仓时间-开始")
+    private String startTime;
+
+    @Schema(description = "平仓时间-结束")
+    private String endTime;
 }

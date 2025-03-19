@@ -1,7 +1,13 @@
 package net.maku.followcom.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+import net.maku.framework.common.utils.DateUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -22,12 +28,17 @@ public class FollowPlatformVO implements Serializable {
 	private Long id;
 
 	@Schema(description = "券商名称")
+	@NotBlank(message = "券商名称不能为空")
+	@Size(max = 100, message = "券商名称长度不能超过100个字符")
 	private String brokerName;
 
-	@Schema(description = "平台类型")
+	@Schema(description = "平台类型", example = "MT4或MT5")
+	@NotBlank(message = "平台类型不能为空")
+	@Size(max = 50, message = "平台类型长度不能超过50个字符")
 	private String platformType;
 
 	@Schema(description = "服务器")
+	@Size(max = 100, message = "服务器长度不能超过100个字符")
 	private String server;
 
 	@Schema(description = "服务器节点")
@@ -46,15 +57,21 @@ public class FollowPlatformVO implements Serializable {
 	private String creator;
 
 	@Schema(description = "创建时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime createTime;
 
 	@Schema(description = "更新者")
 	private Long updater;
 
 	@Schema(description = "更新时间")
+	@JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
 	private LocalDateTime updateTime;
 
 	@Schema(description = "服务名称集合")
+	@NotNull(message = "服务名称集合不能为空")
 	private List<String> platformList;
+
+	@Schema(description = "图片地址")
+	private String logo;
 
 }

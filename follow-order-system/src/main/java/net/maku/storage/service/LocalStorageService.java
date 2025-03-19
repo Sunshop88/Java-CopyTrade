@@ -48,6 +48,7 @@ public class LocalStorageService extends StorageService {
             throw new ServerException("上传文件失败：", e);
         }
 
-        return properties.getConfig().getDomain() + "/" + properties.getLocal().getUrl() + "/" + path;
+//        return properties.getConfig().getDomain() + "/" + properties.getLocal().getUrl() + "/" + path;
+        return  "/" + properties.getLocal().getUrl() + "/" + path;
     }
 }

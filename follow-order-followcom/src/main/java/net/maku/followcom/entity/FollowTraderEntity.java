@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 @TableName("follow_trader")
 public class FollowTraderEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
@@ -171,4 +170,28 @@ public class FollowTraderEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 模板ID
+	 */
+	@TableField(value = "template_id")
+	private Integer templateId;
+
+
+	/**
+	 * 跟单状态
+	 */
+	@TableField(value = "follow_status")
+	private Integer followStatus;
+
+	/**
+	 * 是否首次同步（1是0否）
+	 */
+	@TableField(value = "is_first_sync")
+	private Integer isFirstSync;
+
+	/**
+	 *登录节点地址
+	 */
+	@TableField(value = "login_node")
+	private String loginNode;
 }

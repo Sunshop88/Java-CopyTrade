@@ -1,10 +1,15 @@
 spring:
   data:
     redis:
-      database: 1
-      host: localhost
-      port: 6379
-      #timeout: 6000ms  # 连接超时时长（毫秒）
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: 127.0.0.1
+        port: 6379
+      redis2:
+        database: 2
+        host: 127.0.0.1
+        port: 6379
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
@@ -19,19 +24,18 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/follow-order?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          #          url: jdbc:mysql://localhost:3306/follow-order?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          #          username: root
+          #          password: 123456
+          url: jdbc:mysql://127.0.0.1:3306/maku?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
-          # 达梦
-          #    driver-class-name: dm.jdbc.driver.DmDriver
-          #    url: jdbc:dm://192.168.3.19:5236/maku_boot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
-          #    username: maku_boot
-          #    password: 12345678
-          # PostgreSQL
-          #    driver-class-name: org.postgresql.Driver
-          #    url: jdbc:postgresql://192.168.3.19:5432/postgres
-          #    username: postgres
-          #    password: 123456
+
+        slave:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: 123456
   mqtt:
     host: tcp://localhost:1883
     username: maku

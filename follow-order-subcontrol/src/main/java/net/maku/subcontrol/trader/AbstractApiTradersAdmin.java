@@ -1,16 +1,19 @@
 package net.maku.subcontrol.trader;
 
-import com.cld.message.pubsub.kafka.IKafkaProducer;
 import lombok.Data;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.enums.ConCodeEnum;
-import net.maku.followcom.service.FollowBrokeServerService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderSubscribeService;
-import net.maku.followcom.service.FollowPlatformService;
-import org.apache.kafka.clients.admin.AdminClient;
+import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.FollowPlatformServiceImpl;
+import net.maku.followcom.service.impl.FollowTestDetailServiceImpl;
+import net.maku.followcom.service.impl.FollowVpsServiceImpl;
+import net.maku.followcom.util.SpringContextUtils;
+import net.maku.framework.common.cache.RedisUtil;
+import net.maku.framework.common.cache.RedissonLockUtil;
+import net.maku.framework.common.utils.ThreadPoolUtils;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -19,25 +22,27 @@ import java.util.concurrent.*;
 @Data
 public abstract class AbstractApiTradersAdmin {
     protected ConcurrentHashMap<String, LeaderApiTrader> leader4ApiTraderConcurrentHashMap;
+    protected ConcurrentHashMap<String, CopierApiTrader> copier4ApiTraderConcurrentHashMap;
 
     protected FollowBrokeServerService followBrokeServerService;
     protected FollowTraderService followTraderService;
     protected FollowTraderSubscribeService followTraderSubscribeService;
-    protected IKafkaProducer<String, Object> kafkaProducer;
-    protected AdminClient adminClient;
-    protected ScheduledExecutorService scheduledExecutorService;
     protected FollowPlatformService followPlatformService;
+    protected RedisUtil redisUtil;
+    protected FollowTestDetailService followTestDetailService;
+    protected FollowVpsService followVpsService;
+    protected final RedissonLockUtil redissonLockUtil;
 
     public AbstractApiTradersAdmin() {
         this.leader4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
-        scheduledExecutorService=Executors.newScheduledThreadPool(10);
+        this.copier4ApiTraderConcurrentHashMap = new ConcurrentHashMap<>();
+        this.followPlatformService= SpringContextUtils.getBean(FollowPlatformServiceImpl.class);
+        this.followTestDetailService=SpringContextUtils.getBean(FollowTestDetailServiceImpl.class);
+        this.followVpsService=SpringContextUtils.getBean(FollowVpsServiceImpl.class);
+        this.redissonLockUtil= SpringContextUtils.getBean(RedissonLockUtil.class);
     }
 
     protected int traderCount = 0;
-    protected ExecutorService kafkaConsumerCachedThreadPool = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<Runnable>(),
-            new CustomizableThreadFactory("MT-Kafka消费线程-"));
 
     /**
      * 启动
@@ -45,6 +50,13 @@ public abstract class AbstractApiTradersAdmin {
      * @throws Exception 异常
      */
     public abstract void startUp() throws Exception;
+
+    /**
+     * 启动部分账号
+     *
+     * @throws Exception 异常
+     */
+    public abstract void startUp(List<FollowTraderEntity> list) throws Exception;
 
     /**
      * 删除账号

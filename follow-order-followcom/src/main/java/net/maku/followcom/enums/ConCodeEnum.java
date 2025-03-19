@@ -26,7 +26,9 @@ public enum ConCodeEnum implements IEnum<String> {
     NETWORK_FAILURE("NETWORK_FAILURE", "网络错误"),
     TRADE_NOT_ALLOWED("TRADE_NOT_ALLOWED", "经纪商不允许交易"),
     EXCEPTION("EXCEPTION", "异常"),
-    ERROR("ERROR", "未知错误");
+    ERROR("ERROR", "未知错误"),
+    AGAIN("AGAIN", "重复提交");
+
 
     /**
      * 枚举对象的值

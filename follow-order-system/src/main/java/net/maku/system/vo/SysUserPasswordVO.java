@@ -22,8 +22,12 @@ public class SysUserPasswordVO implements Serializable {
     @NotBlank(message = "原密码不能为空")
     private String password;
 
-    @Schema(description = "新密码，密码长度为 4-20 位", required = true)
-    @Length(min = 4, max = 20, message = "新密码长度为 4-20 位")
+    @Schema(description = "新密码，密码长度为 6-32 位", required = true)
+    @Length(min = 6, max = 32, message = "新密码长度为 6-32 位")
     private String newPassword;
+
+    @Schema(description = "确认新密码，密码长度为 6-32 位", required = true)
+    @Length(min = 6, max = 32, message = "确认新密码长度为 6-32 位")
+    private String confirmPassword;
 
 }

@@ -21,6 +21,9 @@ public class SysUserQuery extends Query {
     @Schema(description = "手机号")
     private String mobile;
 
+    @Schema(description = "邮箱")
+    private String email;
+
     @Schema(description = "性别")
     private Integer gender;
 

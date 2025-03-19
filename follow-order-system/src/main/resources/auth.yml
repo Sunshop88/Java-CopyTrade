@@ -10,4 +10,5 @@ auth:
     - /sys/third/callback/**
     - /sys/third/render/**
     - /upload/**
+    - /api/**
     - /

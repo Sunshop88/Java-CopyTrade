@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import net.maku.followcom.vo.VpsUserVO;
 import net.maku.framework.common.utils.DateUtils;
 import net.maku.system.entity.SysOrgEntity;
 import org.hibernate.validator.constraints.Range;
@@ -53,6 +54,7 @@ public class SysUserVO implements Serializable, TransPojo {
 
     @Schema(description = "邮箱")
     @Email(message = "邮箱格式不正确")
+    @NotBlank(message = "邮箱不能为空")
     private String email;
 
     @Schema(description = "手机号", required = true)
@@ -69,6 +71,7 @@ public class SysUserVO implements Serializable, TransPojo {
     private Integer status;
 
     @Schema(description = "角色ID列表")
+    @NotNull(message = "角色不能为空")
     private List<Long> roleIdList;
 
     @Schema(description = "岗位ID列表")
@@ -86,4 +89,19 @@ public class SysUserVO implements Serializable, TransPojo {
     @Schema(description = "创建时间")
     @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
     private LocalDateTime createTime;
+
+    @Schema(description = "VPS列表")
+    private List<VpsUserVO> vpsList;
+
+    @Schema(description = "角色")
+    private List<String> roleNameList;
+
+    @Schema(description = "上次登录时间")
+    private LocalDateTime lastLoginTime;
+
+    @Schema(description = "上次登录IP")
+    private String ip;
+
+    @Schema(description = "用户MFA是否已认证（1：已认证；0：未认证）")
+    private Integer isMfaVerified;
 }

@@ -56,4 +56,12 @@ public class FollowOrderSlipPointVO implements Serializable {
 	@Schema(description = "平仓平均滑点")
 	private BigDecimal meanClosePriceSlip;
 
+	//喊单账号
+	private  String sourceUser;
+	//结算汇率
+	private  String rateMargin;
+	//魔术号
+	private  String magical;
+	//ip
+	private String ipAddr;
 }

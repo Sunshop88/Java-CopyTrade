@@ -1,27 +1,29 @@
 package net.maku.followcom.service.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.fhs.trans.service.impl.TransService;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
+import net.maku.followcom.dao.FollowSysmbolSpecificationDao;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
+import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
+import net.maku.followcom.service.FollowSysmbolSpecificationService;
+import net.maku.followcom.vo.FollowSysmbolSpecificationExcelVO;
+import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
+import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
-import net.maku.followcom.convert.FollowSysmbolSpecificationConvert;
-import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
-import net.maku.followcom.query.FollowSysmbolSpecificationQuery;
-import net.maku.followcom.vo.FollowSysmbolSpecificationVO;
-import net.maku.followcom.dao.FollowSysmbolSpecificationDao;
-import net.maku.followcom.service.FollowSysmbolSpecificationService;
-import com.fhs.trans.service.impl.TransService;
-import net.maku.framework.common.utils.ExcelUtils;
-import net.maku.followcom.vo.FollowSysmbolSpecificationExcelVO;
-import net.maku.framework.common.excel.ExcelFinishCallBack;
-import org.springframework.web.multipart.MultipartFile;
-import cn.hutool.core.util.ObjectUtil;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 品种规格
@@ -42,9 +44,11 @@ public class FollowSysmbolSpecificationServiceImpl extends BaseServiceImpl<Follo
     }
 
 
-    private LambdaQueryWrapper<FollowSysmbolSpecificationEntity> getWrapper(FollowSysmbolSpecificationQuery query){
+    private LambdaQueryWrapper<FollowSysmbolSpecificationEntity> getWrapper(FollowSysmbolSpecificationQuery query) {
         LambdaQueryWrapper<FollowSysmbolSpecificationEntity> wrapper = Wrappers.lambdaQuery();
-
+        wrapper.eq(query.getTraderId() != null, FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId());
+        wrapper.like(ObjectUtil.isNotEmpty(query.getSymbol()), FollowSysmbolSpecificationEntity::getSymbol, query.getSymbol());
+        wrapper.eq(ObjectUtil.isNotEmpty(query.getProfitMode()), FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode());
         return wrapper;
     }
 
@@ -87,9 +91,19 @@ public class FollowSysmbolSpecificationServiceImpl extends BaseServiceImpl<Follo
 
     @Override
     public void export() {
-    List<FollowSysmbolSpecificationExcelVO> excelList = FollowSysmbolSpecificationConvert.INSTANCE.convertExcelList(list());
+        List<FollowSysmbolSpecificationExcelVO> excelList = FollowSysmbolSpecificationConvert.INSTANCE.convertExcelList(list());
         transService.transBatch(excelList);
         ExcelUtils.excelExport(FollowSysmbolSpecificationExcelVO.class, "品种规格", null, excelList);
+    }
+
+    @Override
+    @Cacheable(
+            value = "followSymbolCache",
+            key = "#traderId ?: 'defaultKey'",
+            unless = "#result == null"
+    )
+    public List<FollowSysmbolSpecificationEntity> getByTraderId(long traderId) {
+        return this.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId)).stream().toList();
     }
 
 }

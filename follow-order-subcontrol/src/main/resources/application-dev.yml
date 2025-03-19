@@ -1,16 +1,40 @@
 spring:
   data:
     redis:
-      database: 1
-      host: localhost
-      port: 6379
-      #timeout: 6000ms  # 连接超时时长（毫秒）
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: 192.168.77.154
+        port: 6379
+
+      redis2:
+        database: 2
+        host: 192.168.77.154
+        port: 6379
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  kafka:
+    bootstrap-servers: 192.168.77.154:9092
+    consumer:
+      group-id: order-group  # 消费者组 ID
+      auto-offset-reset: earliest  # 消费起始位置
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 1000 # 每次批量拉取消息数量
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
   datasource:
     dynamic:
       hikari: # Hikari 连接池全局配置
         connection-timeout: 30000     # 等待连接池分配链接的最大时长（毫秒），超过这个时长还没有可用的连接则发生 SQLException，默认：30 秒
-        minimum-idle: 2               # 最小空闲连接数
-        maximum-pool-size: 10         # 最大连接数
+        minimum-idle: 10               # 最小空闲连接数
+        maximum-pool-size: 100         # 最大连接数
         idle-timeout: 600000          # 连接超时的最大时长（毫秒），超时则被释放（retired），默认：10 分钟
         max-lifetime: 1800000         # 连接的生命时长（毫秒），超时而且没被使用则被释放（retired），默认： 30 分钟
         connection-test-query: SELECT 1
@@ -19,22 +43,19 @@ spring:
         master:
           # MySQL8
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/follow-order?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          url: jdbc:mysql://192.168.77.154:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: 123456
+
+        slave:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://192.168.77.154:3306/copier_alan?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
           username: root
           password: 123456
   mqtt:
-    host: tcp://localhost:1883
+    host: tcp://192.168.77.154:1883
     username: maku
     password: maku
     clientId: maku_boot_service_dev
     default-topic: topic_default
 
-cld:
-  kafka:
-    servers: 39.103.138.2:9092
-    partition: 1
-    replication: 1
-    maxIdle: 20
-    minIdle: 10
-    # block synchronous callback 三种发送模式
-    sendMode: callback

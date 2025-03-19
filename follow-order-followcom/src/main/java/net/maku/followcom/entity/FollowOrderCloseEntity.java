@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -18,7 +19,6 @@ import java.util.Date;
 @TableName("follow_order_close")
 public class FollowOrderCloseEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**
@@ -37,10 +37,10 @@ public class FollowOrderCloseEntity {
 	* 账号id
 	*/
 	@TableField(value = "trader_id")
-	private Integer traderId;
+	private Long traderId;
 
 	/**
-	* 类型0-buy 1-sell
+	* 类型0-buy 1-sell 2-buy&sell
 	*/
 	@TableField(value = "type")
 	private Integer type;
@@ -110,5 +110,35 @@ public class FollowOrderCloseEntity {
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
+
+	/**
+	 * 券商
+	 */
+	@TableField(value = "broker_name")
+	private String brokeName;
+
+	/**
+	 * 服务器
+	 */
+	@TableField(value = "server")
+	private String server;
+
+	/**
+	 * vps地址
+	 */
+	@TableField(value = "ip_addr")
+	private String ipAddr;
+
+	/**
+	 * vps名称
+	 */
+	@TableField(value = "server_name")
+	private String serverName;
+
+	/**
+	 * 完成时间
+	 */
+	@TableField(value = "finish_time")
+	private LocalDateTime finishTime;
 
 }

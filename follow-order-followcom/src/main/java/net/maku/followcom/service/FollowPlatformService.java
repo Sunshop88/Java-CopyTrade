@@ -1,5 +1,7 @@
 package net.maku.followcom.service;
 
+import net.maku.followcom.entity.FollowTraderEntity;
+import net.maku.followcom.vo.FollowTraderCountVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
 import net.maku.followcom.entity.FollowPlatformEntity;
@@ -27,12 +29,23 @@ public interface FollowPlatformService extends BaseService<FollowPlatformEntity>
 
     void export();
 
-//    List<String> getBrokeName(List<Long> idList);
-
     List<FollowPlatformVO> getList();
 
-
-    QuoteClient tologin(String account, String password, String platform);
+    QuoteClient tologin(FollowTraderEntity trader);
 
     List<FollowPlatformVO> listBroke();
+
+    String listByServerName(String serverName);
+
+    List<FollowPlatformVO> listHavingServer(String name);
+
+    List<FollowPlatformVO> listByServer();
+    
+    FollowPlatformEntity getPlatFormById(String id);
+
+    FollowPlatformEntity updatePlatCache(String id);
+
+    String getbrokerName(String serverName);
+
+    List<FollowTraderCountVO> getBrokerNames();
 }

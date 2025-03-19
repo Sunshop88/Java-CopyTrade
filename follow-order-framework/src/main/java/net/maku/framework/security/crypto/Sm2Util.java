@@ -83,6 +83,8 @@ public class Sm2Util {
 
         System.out.println("ceshi"+Sm2Util.decrypt("040ee4a8cfaf472a4883dec3e2577502c75dbe50c396ff8ec60bdf81cde3956e7be591db530dd0433787e6cf5bb459afd6bd3164f32f4edb9a15a98d2939fc36c6d581e7248b96294fd6cb5b33d4e8cf7c2152cec7bea873fa55a63e710cd6238bcd42eaceb2"));
 
-
+        String password1 = "123456";
+        String sm3Password = Sm2Util.encrypt(password1);
+        System.out.println("sm2 加密:" + sm3Password);
     }
 }

@@ -48,7 +48,7 @@ public class FollowOrderDetailVO  implements Serializable {
 	private BigDecimal requestOpenPrice;
 
 	@Schema(description = "开仓时间")
-	private Date openTime;
+	private LocalDateTime openTime;
 
 	@Schema(description = "开仓价格")
 	private BigDecimal openPrice;
@@ -142,4 +142,54 @@ public class FollowOrderDetailVO  implements Serializable {
 
 	@Schema(description = "vps名称")
 	private String serverName;
+	/**
+	 * 平仓状态
+	 */
+	@Schema(description = "平仓状态")
+	private Integer closeStatus;
+
+	//喊单账号
+	@Schema(description = "喊单账号")
+	private  String sourceUser;
+
+	//结算汇率
+	@Schema(description = "结算汇率")
+	private  String rateMargin;
+
+	//魔术号
+	@Schema(description = "魔术号")
+	private  String magical;
+
+	//节点地址
+	@Schema(description = "节点地址")
+	private  String serverHost;
+
+	/**
+	 * 平仓VPS
+	 */
+	@Schema(description = "平仓VPS")
+	private String closeServerName;
+
+	/**
+	 * 平仓VPS地址
+	 */
+	@Schema(description = "平仓VPS地址")
+	private  String closeIpAddr;
+
+	/**
+	 * 平仓节点
+	 */
+	@Schema(description = "平仓节点")
+	private  String closeServerHost;
+
+	@Schema(description = "是否外部")
+	private Integer isExternal;
+	/***
+	 * MT4备注
+	 * */
+	@Schema(description = " MT4备注")
+	private String comment;
+
+
+
 }

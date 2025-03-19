@@ -5,6 +5,7 @@ import net.maku.followcom.vo.FollowOrderSendVO;
 import net.maku.followcom.vo.FollowOrderSendExcelVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import org.springframework.boot.web.server.MimeMappings.Mapping;
 
 import java.util.List;
 

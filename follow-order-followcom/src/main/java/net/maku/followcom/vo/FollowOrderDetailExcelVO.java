@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.alibaba.excel.annotation.ExcelIgnore;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -23,14 +24,22 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 	@ExcelProperty("品种")
 	private String symbol;
 
+	@ExcelIgnore
 	private Integer type;
 
 	@ExcelProperty("类型")
 	private String typeName;
 
+	@ExcelProperty("喊单账号")
+	private  String sourceUser;
+
+	@ExcelProperty("魔术号")
+	private  String magical;
+
 	@ExcelProperty("订单号")
 	private Integer orderNo;
 
+	@ExcelIgnore
 	@ExcelProperty("账号id")
 	private Long traderId;
 
@@ -84,9 +93,11 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 	@ExcelProperty("利息")
 	private BigDecimal swap;
 
+	@ExcelIgnore
 	@ExcelProperty("下单号")
 	private String sendNo;
 
+	@ExcelIgnore
 	@ExcelProperty("异常信息")
 	private String remark;
 
@@ -106,6 +117,12 @@ public class FollowOrderDetailExcelVO implements TransPojo {
 
 	@ExcelProperty("盈亏")
 	private BigDecimal profit;
+
+	@ExcelProperty("结算汇率")
+	private  String rateMargin;
+
+	@ExcelProperty("节点地址")
+	private  String serverHost;
 
 	@ExcelProperty("券商")
 	private String brokeName;

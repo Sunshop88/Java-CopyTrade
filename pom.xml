@@ -27,12 +27,25 @@
         <module>follow-order-followcom</module>
     </modules>
 
+    <distributionManagement>
+        <repository>
+            <id>maven-releases</id>
+            <name>maven-releases</name>
+            <url>http://172.96.192.137:8081/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven-snapshots</id>
+            <name>maven-snapshots</name>
+            <url>http://172.96.192.137:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <properties>
         <revision>4.5.0</revision>
         <skipTests>true</skipTests>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <mybatisplus.version>3.5.7</mybatisplus.version>
         <dynamic-datasource.version>4.3.1</dynamic-datasource.version>
         <redisson.version>3.21.3</redisson.version>
@@ -235,27 +248,101 @@
 
     </dependencyManagement>
 
+<!--    <repositories>-->
+<!--        <repository>-->
+<!--            <id>public</id>-->
+<!--            <name>阿里云公共仓库</name>-->
+<!--            <url>https://maven.aliyun.com/repository/public/</url>-->
+<!--            <releases>-->
+<!--                <enabled>true</enabled>-->
+<!--            </releases>-->
+<!--        </repository>-->
+<!--    </repositories>-->
+<!--    <pluginRepositories>-->
+<!--        <pluginRepository>-->
+<!--            <id>public</id>-->
+<!--            <name>阿里云公共仓库</name>-->
+<!--            <url>https://maven.aliyun.com/repository/public/</url>-->
+<!--            <releases>-->
+<!--                <enabled>true</enabled>-->
+<!--            </releases>-->
+<!--            <snapshots>-->
+    <!--                <enabled>false</enabled>-->
+    <!--            </snapshots>-->
+    <!--        </pluginRepository>-->
+    <!--    </pluginRepositories>-->
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>**/*.xdb</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.xdb</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
     <repositories>
         <repository>
-            <id>public</id>
-            <name>阿里云公共仓库</name>
-            <url>https://maven.aliyun.com/repository/public/</url>
+            <id>maven-public</id>
+            <name>Maven public</name>
+            <url>http://172.96.192.137:8081/repository/maven-public/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
             <releases>
                 <enabled>true</enabled>
             </releases>
         </repository>
     </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>public</id>
-            <name>阿里云公共仓库</name>
-            <url>https://maven.aliyun.com/repository/public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
+    <!-- 环境 -->
+    <profiles>
+        <!-- dev -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <!--默认激活配置-->
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <profile.name>dev</profile.name>
+            </properties>
+        </profile>
+        <!-- test -->
+        <profile>
+            <id>test</id>
+            <properties>
+                <profile.name>test</profile.name>
+            </properties>
+        </profile>
+        <!-- test -->
+        <profile>
+            <id>test-pt</id>
+            <properties>
+                <profile.name>test-pt</profile.name>
+            </properties>
+        </profile>
+        <!-- uat -->
+        <profile>
+            <id>uat</id>
+            <properties>
+                <profile.name>uat</profile.name>
+            </properties>
+        </profile>
+        <!-- prod -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <profile.name>prod</profile.name>
+            </properties>
+        </profile>
+    </profiles>
 </project>

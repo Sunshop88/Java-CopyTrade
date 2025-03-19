@@ -31,7 +31,10 @@ public class FollowTraderLogVO implements Serializable {
 	@Schema(description = "vpsId")
 	private Integer vpsId;
 
-	@Schema(description = "账号类型0-信号源 1-跟单者")
+	@Schema(description = "vpsClient")
+	private String vpsClient;
+
+	@Schema(description = "操作类型1-策略管理 2-跟单管理 3-跟单操作")
 	private Integer traderType;
 
 	@Schema(description = "类型0-新增 1-编辑 2-删除 3-下单 4-平仓 5-补单")
@@ -39,9 +42,6 @@ public class FollowTraderLogVO implements Serializable {
 
 	@Schema(description = "是否主动0-否 1-是")
 	private Integer ifInitiative;
-
-	@Schema(description = "单号")
-	private Integer orderNo;
 
 	@Schema(description = "版本号")
 	private Integer version;
@@ -61,4 +61,6 @@ public class FollowTraderLogVO implements Serializable {
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
 
+	@Schema(description = "状态0-失败 1-成功")
+	private Integer status;
 }

@@ -1,0 +1,60 @@
+spring:
+  data:
+    redis:
+      primary: redis1 # 默认 Redis 数据源为 redis1
+      redis1:
+        database: 1
+        host: r-8vb1a249o1w1q605bppd.redis.zhangbei.rds.aliyuncs.com
+        port: 6379
+        password: diVMn9bMpACrXh79QyYY
+        #timeout: 6000ms  # 连接超时时长（毫秒）
+      redis2:
+        database: 3
+        host: 66.112.212.130
+        port: 6379
+        password: kU7c7E2rhbRA
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      auto-offset-reset: earliest  # 消费起始位置
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 1000 # 每次批量拉取消息数量
+      enable-auto-commit: false # 禁用自动提交，改为手动提交
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      type: batch # 设置监听器类型为批量
+
+  datasource:
+    dynamic:
+      hikari: # Hikari 连接池全局配置
+        connection-timeout: 30000     # 等待连接池分配链接的最大时长（毫秒），超过这个时长还没有可用的连接则发生 SQLException，默认：30 秒
+        minimum-idle: 10               # 最小空闲连接数
+        maximum-pool-size: 1000         # 最大连接数
+        idle-timeout: 600000          # 连接超时的最大时长（毫秒），超时则被释放（retired），默认：10 分钟
+        max-lifetime: 1800000         # 连接的生命时长（毫秒），超时而且没被使用则被释放（retired），默认： 30 分钟
+        connection-test-query: SELECT 1
+      primary: master
+      datasource:
+        master:
+          # MySQL8
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://39.99.136.49:3306/follow-order-cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: xizcJWmXFkB5f4fm
+
+        slave:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://66.112.212.130:3306/copier_alan_cp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
+          username: root
+          password: 7a6d5cbcdcdc8c85
+  mqtt:
+    host: tcp://localhost:1883
+    username: maku
+    password: maku
+    clientId: maku_boot_service_dev
+    default-topic: topic_default
+

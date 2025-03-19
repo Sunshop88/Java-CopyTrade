@@ -63,7 +63,7 @@ public class SysPostController {
     @Operation(summary = "保存")
     @OperateLog(type = OperateTypeEnum.INSERT)
     @PreAuthorize("hasAuthority('sys:post:save')")
-    public Result<String> save(@RequestBody SysPostVO vo) {
+    public Result<String> save(@RequestBody @Valid SysPostVO vo) {
         sysPostService.save(vo);
 
         return Result.ok();

@@ -56,4 +56,5 @@ public class AddressUtils {
          */
         private String city;
     }
+
 }

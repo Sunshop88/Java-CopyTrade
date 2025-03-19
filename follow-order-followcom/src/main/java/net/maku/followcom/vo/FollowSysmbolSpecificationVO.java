@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -87,4 +88,9 @@ public class FollowSysmbolSpecificationVO implements Serializable {
 
 	@Schema(description = "保证金除数")
 	private Double marginDivider;
+
+	@Schema(description = "标准品种")
+	private String stdSymbol;
+
+
 }

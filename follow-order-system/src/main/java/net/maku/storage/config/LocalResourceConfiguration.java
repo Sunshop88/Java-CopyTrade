@@ -30,6 +30,7 @@ public class LocalResourceConfiguration implements WebMvcConfigurer {
 
         LocalStorageProperties local = properties.getLocal();
         registry.addResourceHandler("/" + local.getUrl() + "/**")
-                .addResourceLocations("file:" + local.getPath() + "/");
+//                .addResourceLocations("file:" + local.getPath() + "/");
+                .addResourceLocations("file:" + local.getLinuxpath() + "/");
     }
 }

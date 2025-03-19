@@ -3,6 +3,7 @@ package net.maku.followcom.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -14,18 +15,19 @@ import java.time.LocalDateTime;
 
 @Data
 @TableName("follow_variety")
-public class FollowVarietyEntity {
+public class FollowVarietyEntity implements Serializable {
+	private static final long serialVersionUID = 1L;
+
 	/**
 	* ID
 	*/
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**
 	 * 标准合约
 	 */
-	@TableField(value = "std_contract")
+	@TableField(value = "std_contract",updateStrategy  = FieldStrategy.IGNORED)
 	private Integer stdContract;
 
 	/**
@@ -45,6 +47,18 @@ public class FollowVarietyEntity {
 	*/
 	@TableField(value = "broker_symbol")
 	private String brokerSymbol;
+
+	/**
+	 * 模板ID
+	 */
+	@TableField(value = "template_id")
+	private Integer templateId;
+
+	/**
+	 * 模板ID
+	 */
+	@TableField(value = "template_name")
+	private String templateName;
 
 	/**
 	* 版本号

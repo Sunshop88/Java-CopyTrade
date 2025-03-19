@@ -20,22 +20,8 @@ import java.util.List;
 @Mapper
 public interface FollowVarietyDao extends BaseDao<FollowVarietyEntity> {
 
-    //返回所有品种的列表
-    @Select("select std_symbol from follow_variety ")
-    List<String> queryVarieties();
-
-    //根据品种名称来查询券商名称和券商对应的品种名称
-    @Select("select broker_name,broker_symbol from follow_variety where std_symbol=#{symbol} ")
-    List<FollowVarietyEntity> getlist(@Param("symbol") String symbol);
-
     IPage<FollowVarietyEntity> pageSymbolList(Page<FollowVarietyEntity> page, String stdSymbol);
-
-    int updateCustom(FollowVarietyEntity updateEntity);
 
     void updateStdContractByStdSymbol(String stdSymbol, Integer stdContract);
 
-//    void saveAll(List<FollowVarietyExcelVO> brokerDataList);
-
-//    @Insert("INSERT INTO follow_variety_excel (std_symbol, broker_name, broker_symbol) VALUES (#{stdSymbol}, #{brokerName}, #{brokerSymbol})")
-//    void save(FollowVarietyExcelVO vo);
 }

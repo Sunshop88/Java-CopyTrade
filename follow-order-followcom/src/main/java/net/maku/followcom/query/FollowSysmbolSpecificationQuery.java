@@ -4,9 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import net.maku.framework.common.query.Query;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import java.util.Date;
 
 /**
  * 品种规格查询
@@ -18,4 +15,10 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "品种规格查询")
 public class FollowSysmbolSpecificationQuery extends Query {
+    @Schema(description = "账号id")
+    private Long traderId;
+    @Schema(description = "品种")
+    private String symbol;
+    @Schema(description = "品种类型")
+    private String profitMode;
 }

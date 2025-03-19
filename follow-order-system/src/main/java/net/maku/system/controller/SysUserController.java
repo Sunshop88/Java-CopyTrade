@@ -1,27 +1,32 @@
 package net.maku.system.controller;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowVpsUserEntity;
+import net.maku.followcom.enums.MfaVerifyEnum;
+import net.maku.followcom.service.FollowVpsUserService;
+import net.maku.followcom.vo.VpsUserVO;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
+import net.maku.framework.security.cache.TokenStoreCache;
 import net.maku.framework.security.user.SecurityUser;
 import net.maku.framework.security.user.UserDetail;
 import net.maku.system.convert.SysUserConvert;
 import net.maku.system.entity.SysUserEntity;
+import net.maku.system.entity.SysUserMfaVerifyEntity;
 import net.maku.system.query.SysUserQuery;
-import net.maku.system.service.SysPostService;
-import net.maku.system.service.SysUserPostService;
-import net.maku.system.service.SysUserRoleService;
-import net.maku.system.service.SysUserService;
-import net.maku.system.vo.SysUserAvatarVO;
-import net.maku.system.vo.SysUserBaseVO;
-import net.maku.system.vo.SysUserPasswordVO;
-import net.maku.system.vo.SysUserVO;
+import net.maku.system.service.*;
+import net.maku.system.vo.*;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +34,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -47,12 +54,26 @@ public class SysUserController {
     private final SysUserPostService sysUserPostService;
     private final SysPostService sysPostService;
     private final PasswordEncoder passwordEncoder;
-
+    private final RedisCache redisCache;
+    private final FollowVpsUserService followVpsUserService;
+    private final SysUserTokenService sysUserTokenService;
+    private final TokenStoreCache tokenStoreCache;
+    private final SysUserMfaVerifyService mfaVerifyService;
     @GetMapping("page")
     @Operation(summary = "分页")
     @PreAuthorize("hasAuthority('sys:user:page')")
     public Result<PageResult<SysUserVO>> page(@ParameterObject @Valid SysUserQuery query) {
         PageResult<SysUserVO> page = sysUserService.page(query);
+
+        // 获取用户认证
+        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
+        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
+        // 存入认证状态
+        List<SysUserVO> sysUserVOList = page.getList();
+        for (SysUserVO sysUserVO : sysUserVOList) {
+            setIntoSysUserVo(sysUserVO, mfaVerifyMap);
+        }
+        page.setList(sysUserVOList);
 
         return Result.ok(page);
     }
@@ -73,7 +94,41 @@ public class SysUserController {
         List<Long> postIdList = sysUserPostService.getPostIdList(id);
         vo.setPostIdList(postIdList);
 
+        //用户VPS
+        if (ObjectUtil.isNotEmpty(redisCache.get(Constant.SYSTEM_VPS_USER+id))){
+            vo.setVpsList((List<VpsUserVO>) redisCache.get(Constant.SYSTEM_VPS_USER+id));
+        }else {
+            List<FollowVpsUserEntity> list =followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId,id));
+            List<VpsUserVO> vpsUserVOS = convertoVpsUser(list);
+            redisCache.set(Constant.SYSTEM_VPS_USER+ id, JSONObject.toJSON(vpsUserVOS));
+            vo.setVpsList(vpsUserVOS);
+        }
+
+        // 获取用户认证
+        List<SysUserMfaVerifyEntity> mfaVerifies = mfaVerifyService.getMfaVerifies();
+        Map<String, SysUserMfaVerifyEntity> mfaVerifyMap = mfaVerifies.stream().collect(Collectors.toMap(SysUserMfaVerifyEntity::getUsername, s -> s));
+        setIntoSysUserVo(vo, mfaVerifyMap);
+
         return Result.ok(vo);
+    }
+
+    private void setIntoSysUserVo(SysUserVO vo, Map<String, SysUserMfaVerifyEntity> mfaVerifyMap) {
+        SysUserMfaVerifyEntity sysUserMfaVerifyEntity = mfaVerifyMap.get(vo.getUsername());
+        if (sysUserMfaVerifyEntity != null) {
+            Integer isMfaVerified = sysUserMfaVerifyEntity.getIsMfaVerified();
+            vo.setIsMfaVerified((isMfaVerified != null && isMfaVerified.equals(MfaVerifyEnum.CERTIFIED.getType())) ? isMfaVerified : 0);
+        }else {
+            vo.setIsMfaVerified(0);
+        }
+    }
+
+    private List<VpsUserVO> convertoVpsUser(List<FollowVpsUserEntity> list) {
+      return list.stream().map(o->{
+            VpsUserVO vpsUserVO = new VpsUserVO();
+            vpsUserVO.setId(o.getVpsId());
+            vpsUserVO.setName(o.getVpsName());
+            return vpsUserVO;
+        }).toList();
     }
 
     @GetMapping("info")
@@ -113,7 +168,12 @@ public class SysUserController {
     @PutMapping("password")
     @Operation(summary = "修改密码")
     @OperateLog(type = OperateTypeEnum.UPDATE)
-    public Result<String> password(@RequestBody @Valid SysUserPasswordVO vo) {
+    public Result<SysUserTokenVO> password(@RequestBody @Valid SysUserPasswordVO vo) {
+        // 确认密码是否一致
+        if (!vo.getNewPassword().equals(vo.getConfirmPassword())) {
+            return Result.error("新密码和确认密码不一致");
+        }
+
         // 原密码不正确
         UserDetail user = SecurityUser.getUser();
         if (!passwordEncoder.matches(vo.getPassword(), user.getPassword())) {
@@ -123,7 +183,32 @@ public class SysUserController {
         // 修改密码
         sysUserService.updatePassword(user.getId(), passwordEncoder.encode(vo.getNewPassword()));
 
+        // 使所有旧Token失效
+        sysUserTokenService.expireToken(user.getId());
+
+
+        List<String> keyList = tokenStoreCache.getUserKeyList();
+        for (String key : keyList) {
+//            String userId = key.split(":")[1];
+            // 获取用户 ID
+//            long userId = ((Map<String, Object>)jsonData[1]).get("id");
+            UserDetail userDetail = (UserDetail) redisCache.get(key);
+            Long userId = userDetail.getId();
+            if (userId.equals(user.getId())) {
+                //sys:token:d9bf996b62b441ef98b630dad169455b
+                String accessToken = key.split(":")[2];
+                tokenStoreCache.deleteUser(accessToken);
+            }
+        }
         return Result.ok();
+
+//        // 生成 accessToken
+//        SysUserTokenVO userTokenVO = sysUserTokenService.createToken(user.getId());
+//
+//        // 保存用户信息到缓存
+//        tokenStoreCache.saveUser(userTokenVO.getAccessToken(), user);
+//
+//        return Result.ok(userTokenVO);
     }
 
     @PostMapping
@@ -158,6 +243,9 @@ public class SysUserController {
         }
 
         sysUserService.update(vo);
+
+        // 修改mfa认证
+        mfaVerifyService.editMfaVerify(vo);
 
         return Result.ok();
     }

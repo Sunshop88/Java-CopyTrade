@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowOrderSendConvert;
@@ -39,14 +40,19 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
     @Override
     public PageResult<FollowOrderSendVO> page(FollowOrderSendQuery query) {
         IPage<FollowOrderSendEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
+        List<FollowOrderSendVO> followOrderSendVOS = FollowOrderSendConvert.INSTANCE.convertList(page.getRecords());
+        followOrderSendVOS.forEach(o->o.setPlatform(o.getServer()));
+        return new PageResult<>(followOrderSendVOS, page.getTotal());
 
-        return new PageResult<>(FollowOrderSendConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
     }
 
 
     private LambdaQueryWrapper<FollowOrderSendEntity> getWrapper(FollowOrderSendQuery query){
         LambdaQueryWrapper<FollowOrderSendEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(FollowOrderSendEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+        //当前VPS
+        wrapper.eq(FollowOrderSendEntity::getIpAddr, FollowConstant.LOCAL_HOST);
+        wrapper.in(ObjectUtil.isNotEmpty(query.getTraderIdList()),FollowOrderSendEntity::getTraderId,query.getTraderIdList());
         if (ObjectUtil.isNotEmpty(query.getTraderId())){
             wrapper.eq(FollowOrderSendEntity::getTraderId,query.getTraderId());
         }
@@ -60,7 +66,7 @@ public class FollowOrderSendServiceImpl extends BaseServiceImpl<FollowOrderSendD
             wrapper.ge(FollowOrderSendEntity::getCreateTime, query.getStartTime());  // 大于或等于开始时间
             wrapper.le(FollowOrderSendEntity::getCreateTime, query.getEndTime());    // 小于或等于结束时间
         }
-        wrapper.orderByDesc(FollowOrderSendEntity::getCreateTime);
+        wrapper.orderByDesc(FollowOrderSendEntity::getId);
         return wrapper;
     }
 

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="net.maku.followcom.dao.FollowTraderDao">
+
+
+    <select id="getServerAccounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
+        SELECT platform as serverName,
+               count(1) as accountCount
+        FROM follow_trader
+--         WHERE `status` = 0
+        GROUP BY platform
+    </select>
+    <select id="getDefaultAccountCounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
+        SELECT platform   AS serverName,
+               login_node AS defaultServerNode,
+               count(1)   AS nodeCount
+        FROM follow_trader
+--         WHERE `status` = 0
+        GROUP BY platform,
+                 login_node
+    </select>
+    <select id="getServerNodeCounts" resultType="net.maku.followcom.vo.FollowTraderCountVO">
+        SELECT platform AS serverName,
+               count(1) AS nodeCount
+        FROM follow_trader
+--         WHERE `status` = 0
+        GROUP BY platform
+    </select>
+</mapper>

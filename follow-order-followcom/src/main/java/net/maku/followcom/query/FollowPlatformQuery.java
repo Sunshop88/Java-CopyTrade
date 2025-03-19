@@ -15,4 +15,11 @@ import net.maku.framework.common.query.Query;
 @EqualsAndHashCode(callSuper = false)
 @Schema(description = "平台管理查询")
 public class FollowPlatformQuery extends Query {
+
+    private String brokerName;
+
+    /**
+     * 服务器
+     */
+    private String server;
 }

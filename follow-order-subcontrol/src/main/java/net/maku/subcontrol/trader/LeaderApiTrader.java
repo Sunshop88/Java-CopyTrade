@@ -2,7 +2,7 @@ package net.maku.subcontrol.trader;
 
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.subcontrol.even.OnQuoteHandler;
+import net.maku.subcontrol.task.UpdateTraderInfoTask;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -17,7 +17,7 @@ public class LeaderApiTrader extends AbstractApiTrader {
         super(trader, host, port);
     }
 
-    public LeaderApiTrader(FollowTraderEntity trader, String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
+    public LeaderApiTrader(FollowTraderEntity trader,String host, int port, LocalDateTime closedOrdersFrom, LocalDateTime closedOrdersTo) throws IOException {
         super(trader, host, port, closedOrdersFrom, closedOrdersTo);
     }
 
@@ -26,21 +26,13 @@ public class LeaderApiTrader extends AbstractApiTrader {
         super.connect2Broker();
     }
 
-    public void startTrade() {
-        super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateLeaderTraderInfoTask(this), 6, 30, TimeUnit.SECONDS);
-    }
+//    public Boolean startTrade(List<String> subscriptions) {
+////        return startTrade( subscriptions);
+//    }
 
-    @Override
-    public void addOnQuoteHandler(OnQuoteHandler onQuoteHandler) {
-        super.addOnQuoteHandler(onQuoteHandler);
-    }
-
-    public OnQuoteHandler getQuoteHandler() {
-        return super.getQuoteHandler();
-    }
-
-    @Override
-    public void removeOnQuoteHandler() {
-        super.removeOnQuoteHandler();
+    public Boolean startTrade() {
+        //建立跟单关系
+        super.updateTradeInfoFuture = this.scheduledExecutorService.scheduleWithFixedDelay(new UpdateTraderInfoTask(this), 6, 30, TimeUnit.SECONDS);
+        return true;
     }
 }

@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 @TableName("follow_vps")
 public class FollowVpsEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Integer id;
 
 	/**
@@ -68,6 +67,12 @@ public class FollowVpsEntity {
 	private Integer connectionStatus;
 
 	/**
+	 * 复制状态，0：失败 1：进行中 2：成功
+	 */
+	@TableField(value = "copy_status")
+	private Integer copyStatus;
+
+	/**
 	* 版本号
 	*/
 	@TableField(value = "version", fill = FieldFill.INSERT)
@@ -103,4 +108,14 @@ public class FollowVpsEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 是否同步处理，0否，1是
+	 */
+	@TableField(value = "is_syn")
+	private Integer isSyn;
+	/**
+	 * 是否监控漏单 0不监控 1监控
+	 */
+	@TableField(value = "is_monitor_repair")
+	private Integer isMonitorRepair;
 }

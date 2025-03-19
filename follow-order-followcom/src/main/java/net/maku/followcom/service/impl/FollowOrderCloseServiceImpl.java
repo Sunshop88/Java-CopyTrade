@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.util.FollowConstant;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.followcom.convert.FollowOrderCloseConvert;
@@ -44,7 +46,13 @@ public class FollowOrderCloseServiceImpl extends BaseServiceImpl<FollowOrderClos
 
     private LambdaQueryWrapper<FollowOrderCloseEntity> getWrapper(FollowOrderCloseQuery query){
         LambdaQueryWrapper<FollowOrderCloseEntity> wrapper = Wrappers.lambdaQuery();
-
+        //当前vps
+        wrapper.eq(FollowOrderCloseEntity::getIpAddr, FollowConstant.LOCAL_HOST);
+        if (ObjectUtil.isNotEmpty(query.getStartTime())&&ObjectUtil.isNotEmpty(query.getEndTime())){
+            wrapper.ge(FollowOrderCloseEntity::getCreateTime, query.getStartTime());  // 大于或等于开始时间
+            wrapper.le(FollowOrderCloseEntity::getCreateTime, query.getEndTime());    // 小于或等于结束时间
+        }
+        wrapper.orderByDesc(FollowOrderCloseEntity::getId);
         return wrapper;
     }
 

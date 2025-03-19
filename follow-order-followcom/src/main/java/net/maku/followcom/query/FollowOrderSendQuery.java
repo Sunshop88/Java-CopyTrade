@@ -1,5 +1,6 @@
 package net.maku.followcom.query;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -67,4 +68,43 @@ public class FollowOrderSendQuery extends Query {
     private String sendNo;
 
     private String serverIp;
+
+    @Schema(description = "平仓id")
+    private Integer closeId;
+
+    @Schema(description = "魔术号")
+    private Integer magical;
+
+    @Schema(description = "开仓VPS名称")
+    private String serverName;
+
+    @Schema(description = "平仓VPS名称")
+    private String closeServerName;
+
+    @Schema(description = "开仓请求时间-开始")
+    private String requestOpenTimeStart;
+
+    @Schema(description = "开仓请求时间-结束")
+    private String requestOpenTimeEnd;
+
+    @Schema(description = "平仓请求时间-开始")
+    private String requestCloseTimeStart;
+
+    @Schema(description = "平仓请求时间-结束")
+    private String requestCloseTimeEnd;
+
+    //喊单账号
+    @Schema(description = "喊单账号")
+    private  String sourceUser;
+
+    /**
+     * 是否外部0-否 1-是
+     */
+    @Schema(description = "是否外部0-否 1-是")
+    private  Integer isExternal;
+
+    @Schema(description = "是否平仓详情0-否 1-是")
+    private  Integer isClose;
+
+
 }

@@ -1,6 +1,7 @@
 package net.maku.followcom.convert;
 
 import net.maku.followcom.entity.FollowTraderSubscribeEntity;
+import net.maku.followcom.vo.FollowAddSalveVo;
 import net.maku.followcom.vo.FollowTraderSubscribeVO;
 import net.maku.followcom.vo.FollowTraderSubscribeExcelVO;
 import org.mapstruct.Mapper;
@@ -21,6 +22,8 @@ public interface FollowTraderSubscribeConvert {
     FollowTraderSubscribeEntity convert(FollowTraderSubscribeVO vo);
 
     FollowTraderSubscribeVO convert(FollowTraderSubscribeEntity entity);
+
+    FollowTraderSubscribeVO convert(FollowAddSalveVo vo);
 
     List<FollowTraderSubscribeVO> convertList(List<FollowTraderSubscribeEntity> list);
 

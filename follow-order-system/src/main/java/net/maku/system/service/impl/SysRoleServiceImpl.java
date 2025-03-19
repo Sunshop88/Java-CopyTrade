@@ -1,15 +1,19 @@
 package net.maku.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.AllArgsConstructor;
+import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.impl.BaseServiceImpl;
 import net.maku.system.convert.SysRoleConvert;
 import net.maku.system.dao.SysRoleDao;
+import net.maku.system.entity.SysOrgEntity;
 import net.maku.system.entity.SysRoleEntity;
+import net.maku.system.entity.SysUserRoleEntity;
 import net.maku.system.enums.DataScopeEnum;
 import net.maku.system.query.SysRoleQuery;
 import net.maku.system.service.*;
@@ -20,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 角色
@@ -38,8 +44,16 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
     @Override
     public PageResult<SysRoleVO> page(SysRoleQuery query) {
         IPage<SysRoleEntity> page = baseMapper.selectPage(getPage(query), getWrapper(query));
-
-        return new PageResult<>(SysRoleConvert.INSTANCE.convertList(page.getRecords()), page.getTotal());
+         //查询用户角色中间
+        List<SysUserRoleEntity> userRoles = sysUserRoleService.list();
+        List<SysRoleVO> sysRoleList = SysRoleConvert.INSTANCE.convertList(page.getRecords());
+        if(ObjectUtil.isNotEmpty(userRoles)){
+            Map<Long, List<SysUserRoleEntity>> map = userRoles.stream().collect(Collectors.groupingBy(SysUserRoleEntity::getRoleId));
+            sysRoleList.forEach(sysRole -> {
+                List<SysUserRoleEntity> userList = map.get(sysRole.getId());
+                sysRole.setUserNum(userList==null?0:userList.size());});
+        }
+        return new PageResult<>(sysRoleList, page.getTotal());
     }
 
     @Override
@@ -63,20 +77,32 @@ public class SysRoleServiceImpl extends BaseServiceImpl<SysRoleDao, SysRoleEntit
     @Transactional(rollbackFor = Exception.class)
     public void save(SysRoleVO vo) {
         SysRoleEntity entity = SysRoleConvert.INSTANCE.convert(vo);
-
+        //检查角色名称唯一
+        checkNameUnique(entity.getName(),null);
         // 保存角色
-        entity.setDataScope(DataScopeEnum.SELF.getValue());
+        entity.setDataScope(DataScopeEnum.ALL.getValue());
         baseMapper.insert(entity);
 
         // 保存角色菜单关系
         sysRoleMenuService.saveOrUpdate(entity.getId(), vo.getMenuIdList());
     }
 
+    /**
+     * 检查角色名称唯一性
+     * */
+    private void checkNameUnique(String roleName, Long rolId) {
+        Long count = lambdaQuery().eq(SysRoleEntity::getName, roleName).ne(rolId != null, SysRoleEntity::getId, rolId).count();
+        if (count!=null && count>0){
+            throw new ServerException("角色名称已存在，请勿重复添加");
+        }
+
+    }
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(SysRoleVO vo) {
         SysRoleEntity entity = SysRoleConvert.INSTANCE.convert(vo);
-
+        //检查角色名称唯一
+        checkNameUnique(entity.getName(),entity.getId());
         // 更新角色
         updateById(entity);
 

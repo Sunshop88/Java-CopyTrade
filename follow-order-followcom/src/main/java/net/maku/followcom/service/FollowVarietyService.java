@@ -3,7 +3,6 @@ package net.maku.followcom.service;
 import jakarta.servlet.http.HttpServletResponse;
 import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.query.FollowVarietyQuery;
-import net.maku.followcom.vo.FollowVarietyExcelVO;
 import net.maku.followcom.vo.FollowVarietyVO;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
@@ -12,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 品种匹配
@@ -25,35 +25,40 @@ public interface FollowVarietyService extends BaseService<FollowVarietyEntity> {
 
     FollowVarietyVO get(Long id);
 
-
     void save(FollowVarietyVO vo);
 
     void update(FollowVarietyVO vo);
 
     void delete(List<Long> idList);
 
-
-
     void export();
 
     void download(HttpServletResponse response)throws Exception;
-    
-
-    List<String> listSymbol();
-
-    List<FollowVarietyExcelVO> importByExcel(MultipartFile file)throws Exception;
-
-    List<FollowVarietyVO> getlist(String stdSymbol);
 
     PageResult<FollowVarietyVO> pageSmybol(FollowVarietyQuery query);
 
     PageResult<FollowVarietyVO> pageSmybolList(FollowVarietyQuery query);
 
-
-    void exportCsv(ByteArrayOutputStream outputStream) throws IOException;
+    void exportCsv(ByteArrayOutputStream outputStream,Integer template) throws IOException;
 
     void generateCsv(ByteArrayOutputStream outputStream)throws IOException;
 
+    CompletableFuture<Void> addByExcel(MultipartFile file, String templateName) throws Exception;
 
-//   void byte[] generateCsv() throws IOException;
+    CompletableFuture<Void> importByExcel(MultipartFile file, Integer template,String templateName) throws Exception;
+
+    List<FollowVarietyEntity> getListByTemplated(Integer templateId);
+
+    List<FollowVarietyVO> getListByTemplate();
+
+    void updateTemplateName(Integer template, String templateName);
+
+    List<FollowVarietyVO> listSymbol();
+
+    boolean deleteTemplate(List<Integer> idList);
+
+    int getBeginTemplateId();
+
+    boolean updateCache(Integer template);
+
 }

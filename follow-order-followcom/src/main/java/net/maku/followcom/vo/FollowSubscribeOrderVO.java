@@ -1,5 +1,6 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -22,6 +23,9 @@ public class FollowSubscribeOrderVO implements Serializable {
 
 	@Schema(description = "喊单者的ID")
 	private Long masterId;
+
+	@Schema(description = "喊单者的账号")
+	private Integer masterAccount;
 
 	@Schema(description = "喊单者的订单号")
 	private Integer masterTicket;
@@ -55,6 +59,9 @@ public class FollowSubscribeOrderVO implements Serializable {
 
 	@Schema(description = "跟单者的ID")
 	private Long slaveId;
+
+	@Schema(description = "跟单者账号")
+	private Integer slaveAccount;
 
 	@Schema(description = "跟单者对应的订单号，允许为null，为null时就是跟单没跟上")
 	private Integer slaveTicket;

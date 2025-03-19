@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 @TableName("follow_trader_log")
 public class FollowTraderLogEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
@@ -39,7 +38,13 @@ public class FollowTraderLogEntity {
 	private Integer vpsId;
 
 	/**
-	* 账号类型0-信号源 1-跟单者
+	 * vpsClient
+	 */
+	@TableField(value = "vps_client")
+	private String vpsClient;
+
+	/**
+	* 操作类型1-策略管理 2-跟单管理 3-跟单操作
 	*/
 	@TableField(value = "trader_type")
 	private Integer traderType;
@@ -55,12 +60,6 @@ public class FollowTraderLogEntity {
 	*/
 	@TableField(value = "if_initiative")
 	private Integer ifInitiative;
-
-	/**
-	* 单号
-	*/
-	@TableField(value = "order_no")
-	private Integer orderNo;
 
 	/**
 	* 版本号
@@ -97,5 +96,12 @@ public class FollowTraderLogEntity {
 	*/
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
+
+	/**
+	 * 状态 0-失败 1-成功
+	 */
+	@TableField(value = "status")
+	private Integer status;
+
 
 }

@@ -16,10 +16,10 @@ import net.maku.followcom.service.FollowBrokeServerService;
 import com.fhs.trans.service.impl.TransService;
 import net.maku.framework.common.utils.ExcelUtils;
 import net.maku.followcom.vo.FollowBrokeServerExcelVO;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -103,7 +103,14 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
 
     @Override
     public List<FollowBrokeServerEntity> listByServerName(List<String> name) {
-        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().in(FollowBrokeServerEntity::getServerName,name).orderByAsc(FollowBrokeServerEntity::getCreateTime));
+        if (name == null || name.isEmpty()) {
+            // 如果 name 列表为空，直接返回空列表
+            return Collections.emptyList();
+        } else {
+            return list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                    .in(FollowBrokeServerEntity::getServerName, name)
+                    .orderByAsc(FollowBrokeServerEntity::getCreateTime));
+        }
     }
 
     @Override
@@ -114,4 +121,35 @@ public class FollowBrokeServerServiceImpl extends BaseServiceImpl<FollowBrokeSer
             return list(new LambdaQueryWrapper<FollowBrokeServerEntity>().select(FollowBrokeServerEntity::getServerName).groupBy(FollowBrokeServerEntity::getServerName));
         }
     }
+
+    @Override
+    public FollowBrokeServerEntity getByName(String server) {
+        return list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                .eq(FollowBrokeServerEntity::getServerName, server)
+                .orderByDesc(FollowBrokeServerEntity::getCreateTime)) // 按照创建时间降序排列
+                .stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public FollowBrokeServerEntity existsByServerNodeAndServerPort(String serverName, String serverNode, String serverPort) {
+        return baseMapper.selectOne(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+                .eq(FollowBrokeServerEntity::getServerName, serverName)
+                .eq(FollowBrokeServerEntity::getServerNode, serverNode)
+                .eq(FollowBrokeServerEntity::getServerPort, serverPort)
+                .orderByDesc(FollowBrokeServerEntity::getCreateTime)
+                .last("LIMIT 1")); // 确保只返回一条记录
+    }
+
+    @Override
+    public List<FollowBrokeServerVO> listByServer() {
+        // 查询所有服务器名称
+        LambdaQueryWrapper<FollowBrokeServerEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.select(FollowBrokeServerEntity::getServerName)
+                .groupBy(FollowBrokeServerEntity::getServerName);
+        List<FollowBrokeServerEntity> list = baseMapper.selectList(wrapper);
+        return FollowBrokeServerConvert.INSTANCE.convertList(list);
+    }
+
 }

@@ -62,7 +62,7 @@ public class SysFileUploadController {
         vo.setPlatform(storageService.properties.getConfig().getType().name());
 
         //如果上传为service.ini文件，异步处理
-        if (file.getOriginalFilename().equalsIgnoreCase("servers.ini")){
+        if (file.getOriginalFilename().contains(".ini")){
             // 定义正则表达式，匹配 "YYYYMMDD/任意文件名.后缀" 的部分
             String regex = "\\d{8}/[^/]+\\.ini";
             Pattern pattern = Pattern.compile(regex);
@@ -70,14 +70,19 @@ public class SysFileUploadController {
             if (matcher.find()) {
                 String result1 = matcher.group();
                 //1秒后执行
-                ThreadPoolUtils.scheduledExecute(()->{
-                    String uppath= OSUtil.isWindows()?properties.getLocal().getPath():properties.getLocal().getLinuxpath();
+                ThreadPoolUtils.getExecutor().execute(()->{
                     try {
-                        serversDatIniUtil.ExportServersIni(uppath+"/"+result1);
-                    } catch (IOException e) {
+                        Thread.sleep(1000);
+                        String uppath= OSUtil.isWindows()?properties.getLocal().getPath():properties.getLocal().getLinuxpath();
+                        try {
+                            serversDatIniUtil.ExportServersIni(uppath+"/"+result1);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                },1,TimeUnit.SECONDS);
+                });
             }
             return Result.ok(vo);
         }
@@ -87,17 +92,26 @@ public class SysFileUploadController {
     @PostMapping("uploads")
     @Operation(summary = "上传")
     @OperateLog(type = OperateTypeEnum.INSERT)
-    public SysFileUploadVO uploads(@RequestParam("file") MultipartFile file) throws Exception {
+    public SysFileUploadVO uploads(@RequestParam(value = "file", required = false) MultipartFile file) throws Exception {
+        SysFileUploadVO vo = new SysFileUploadVO();
         if (file.isEmpty()) {
-            throw new ServerException("请选择需要上传的文件");
+//            throw new ServerException("请选择需要上传的文件");
+            return vo;
         }
-
+        String contentType = file.getContentType();
+        if (!contentType.startsWith("image/")) {
+            throw new ServerException("上传的文件必须为图片格式");
+        }
+        // 检查文件大小
+        long maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.getSize() > maxSize) {
+            throw new ServerException("上传的文件大小不能超过 10MB");
+        }
         // 上传路径
         String path = storageService.getPath(file.getOriginalFilename());
         // 上传文件
         String url = storageService.upload(file.getBytes(), path);
 
-        SysFileUploadVO vo = new SysFileUploadVO();
         vo.setUrl(url);
         vo.setName(file.getOriginalFilename());
 

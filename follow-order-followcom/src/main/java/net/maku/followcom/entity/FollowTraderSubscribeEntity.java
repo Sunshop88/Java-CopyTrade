@@ -1,5 +1,9 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -18,7 +22,6 @@ import java.time.LocalDateTime;
 @TableName("follow_trader_subscribe")
 public class FollowTraderSubscribeEntity {
 	@TableId(type = IdType.AUTO)
-	@TableField(value = "id")
 	private Long id;
 
 	/**
@@ -33,17 +36,25 @@ public class FollowTraderSubscribeEntity {
 	@TableField(value = "slave_id")
 	private Long slaveId;
 
+
+	/**
+	 * 交易员账号
+	 */
+	@TableField(value = "master_account")
+	private String masterAccount;
+
+	/**
+	 * 跟单者账号
+	 */
+	@TableField(value = "slave_account")
+	private String slaveAccount;
+
+
 	/**
 	* 跟随模式0-固定手数 1-手数比例 2-净值比例
 	*/
 	@TableField(value = "follow_mode")
 	private Integer followMode;
-
-	/**
-	* 跟单手数
-	*/
-	@TableField(value = "follow_lots")
-	private BigDecimal followLots;
 
 	/**
 	* 跟单比例
@@ -76,10 +87,10 @@ public class FollowTraderSubscribeEntity {
 	private Integer followRep;
 
 	/**
-	* 下单类型0-全部 1-多单 2-空单
+	* 下单方式
 	*/
-	@TableField(value = "follow_type")
-	private Integer followType;
+	@TableField(value = "placed_type")
+	private Integer placedType;
 
 	/**
 	* 止盈止损0-不跟随 1-跟随
@@ -92,12 +103,6 @@ public class FollowTraderSubscribeEntity {
 	*/
 	@TableField(value = "follow_direction")
 	private Integer followDirection;
-
-	/**
-	* 暂停订阅0-否 1-是
-	*/
-	@TableField(value = "pause")
-	private Integer pause;
 
 	/**
 	* 备注
@@ -147,4 +152,27 @@ public class FollowTraderSubscribeEntity {
 	@TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
 	private LocalDateTime updateTime;
 
+	/**
+	 * 手数取余
+	 */
+	@TableField(value = "remainder")
+	private Integer remainder;
+
+	/**
+	 * 固定注释
+	 */
+	@TableField(value = "fixed_comment")
+	private String fixedComment;
+
+	/**
+	 * 注释类型0-英文 1-数字 2-英文+数字+符号
+	 */
+	@TableField(value = "comment_type")
+	private Integer commentType;
+
+	/**
+	 * 位数
+	 */
+	@TableField(value = "digits")
+	private Integer digits;
 }
