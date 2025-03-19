@@ -8,16 +8,23 @@ spring:
         port: 6379
         password: diVMn9bMpACrXh79QyYY
         #timeout: 6000ms  # 连接超时时长（毫秒）
+
       redis2:
-        database: 2
-        host: 39.99.241.16
+        database: 3
+        host: 98.142.143.187
         port: 6379
-        password: d@OgcOQdvQ09
+        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
   #      redis2:
   #        database: 0
   #        host: 98.142.143.187
   #        port: 6379
   #        password: t7CzvhZ8u6QgT%D^44Xzh@Dv%ednUK
+
+  rabbitmq:
+    host: 39.101.132.253
+    port: 5672
+    username: user2
+    password: user2123
 
   kafka:
     bootstrap-servers: 127.0.0.1:9092

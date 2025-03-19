@@ -173,7 +173,6 @@ public class BargainServiceImpl implements BargainService {
                             masToSubOrderSendDto.setTraderId(followTraderEntity.getId());
                             masToSubOrderSendDto.setStartSize(vo.getStartSize());
                             masToSubOrderSendDto.setEndSize(vo.getEndSize());
-                            masToSubOrderSendDto.setTotalNum(vo.getTotalNum());
                             masToSubOrderSendDto.setIntervalTime(vo.getIntervalTime());
                             masToSubOrderSendDto.setTradeType(FollowInstructEnum.COPY.getValue());
                             masToSubOrderSendDto.setTotalSzie(vo.getTotalSzie());
