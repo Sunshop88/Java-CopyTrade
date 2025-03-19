@@ -205,7 +205,8 @@ public class BargainWebSocket {
         if(ObjectUtil.isNotEmpty(o2)){
             orderActiveInfoList.forEach(o->{
                 if(ObjectUtil.isNotEmpty(symbol)){
-                    if(list.contains(o.getSymbol())){
+
+                    if(list.contains(o.getSymbol().toUpperCase()) || list.contains(o.getSymbol().toUpperCase())){
                         if(o.getType().equals("Buy")){
                             //多单
                             tBuyNum.add(new BigDecimal(o.getLots()));
