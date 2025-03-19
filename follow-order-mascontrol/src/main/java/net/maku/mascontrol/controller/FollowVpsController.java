@@ -524,12 +524,13 @@ public class FollowVpsController {
         //分割
         String[] split = version1.split("_");
         String version = split[0];
+        String versionNumber = split[1];
         List<FollowVersionEntity> list = new ArrayList<>();
         for (String ip : ips) {
             List<FollowVersionEntity> list1 = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>()
                     .eq(FollowVersionEntity::getIp, ip)
                     .eq(FollowVersionEntity::getVersions, version)
-                    .eq(FollowVersionEntity::getDeleted, 0));
+                    .eq(FollowVersionEntity::getVersionNumber, versionNumber));
             if (ObjectUtil.isNotEmpty(list1)) {
                 list.addAll(list1);
             }

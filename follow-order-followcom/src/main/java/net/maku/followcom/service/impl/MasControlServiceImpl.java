@@ -51,7 +51,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final FollowTestDetailService followTestDetailService;
     private final FollowVpsUserService followVpsUserService;
     private final UserService userService;
-    private final FollowVersionService followVersionService;
+//    private final FollowVersionService followVersionService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -66,14 +66,14 @@ public class MasControlServiceImpl implements MasControlService {
         log.info("成功插入 FollowVps 和 Client");
         String version1 = FollowConstant.MAS_VERSION;
         //分割
-        String[] split = version1.split("_");
-        String version = split[0];
-        FollowVersionEntity entity = new FollowVersionEntity();
-        entity.setIp(vo.getIpAddress());
-        entity.setVersions(version);
-        entity.setVersionNumber("0001");
-        entity.setDeleted(0);
-        followVersionService.save(entity);
+//        String[] split = version1.split("_");
+//        String version = split[0];
+//        FollowVersionEntity entity = new FollowVersionEntity();
+//        entity.setIp(vo.getIpAddress());
+//        entity.setVersions(version);
+//        entity.setVersionNumber("0001");
+//        entity.setDeleted(0);
+//        followVersionService.save(entity);
         return true;
     }
 
@@ -119,11 +119,11 @@ public class MasControlServiceImpl implements MasControlService {
 //            executor.shutdown();
 
         }
-        String version1 = FollowConstant.MAS_VERSION;
-        //分割
-        String[] split = version1.split("_");
-        String version = split[0];
-        followVersionService.remove(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, vo.getIpAddress()).eq(FollowVersionEntity::getVersions, version));
+//        String version1 = FollowConstant.MAS_VERSION;
+//        //分割
+//        String[] split = version1.split("_");
+//        String version = split[0];
+//        followVersionService.remove(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, vo.getIpAddress()).eq(FollowVersionEntity::getVersions, version));
         log.info("成功更新 Client 和 FollowVps");
         return true;
     }
