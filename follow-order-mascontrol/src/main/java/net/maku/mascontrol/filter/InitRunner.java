@@ -41,14 +41,19 @@ public class InitRunner implements ApplicationRunner {
         String versionNumber = split[1];
 
         //获取当前版本
-        List<FollowVersionEntity> entities = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip + "主").eq(FollowVersionEntity::getVersions, version));
-        if (ObjectUtil.isNotEmpty(entities)) {
-            FollowVersionEntity entity = entities.getFirst();
-            String currentVersion = entity.getVersionNumber();
-            if (!versionNumber.equals(currentVersion)) {
-                //更新最新版本
-                followVersionService.update(new LambdaUpdateWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip).eq(FollowVersionEntity::getVersions, version).set(FollowVersionEntity::getVersionNumber, versionNumber));
-            }
+        List<FollowVersionEntity> entities = followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip + "主").eq(FollowVersionEntity::getVersions, version).eq(FollowVersionEntity::getVersionNumber, versionNumber));
+        if (ObjectUtil.isEmpty(entities)) {
+//            FollowVersionEntity entity = entities.getFirst();
+//            String currentVersion = entity.getVersionNumber();
+//            if (!versionNumber.equals(currentVersion)) {
+//                //更新最新版本
+//                followVersionService.update(new LambdaUpdateWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, ip).eq(FollowVersionEntity::getVersions, version).set(FollowVersionEntity::getVersionNumber, versionNumber));
+//            }
+            FollowVersionEntity entity = new FollowVersionEntity();
+            entity.setIp(ip + "主");
+            entity.setVersions(version);
+            entity.setVersionNumber(versionNumber);
+            followVersionService.save(entity);
         }
     }
 }
