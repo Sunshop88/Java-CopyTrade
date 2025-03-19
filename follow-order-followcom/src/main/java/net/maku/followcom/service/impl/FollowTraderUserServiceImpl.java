@@ -187,7 +187,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
 
 
-        wrapper.orderByDesc(FollowTraderUserEntity::getCreateTime);
+        wrapper.orderByDesc(FollowTraderUserEntity::getId);
 
 
         return wrapper;
