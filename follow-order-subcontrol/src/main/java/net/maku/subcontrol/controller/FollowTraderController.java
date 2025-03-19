@@ -777,6 +777,7 @@ public class FollowTraderController {
                 // 一旦找到包含的字符串，截取掉
                 input = input.substring(input.indexOf(substr));
                 flag = false;
+                return input;
             }
         }
          if(flag){

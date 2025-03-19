@@ -14,12 +14,13 @@ import jakarta.websocket.server.ServerEndpoint;
 import net.maku.followcom.entity.FollowOrderDetailEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
+import net.maku.followcom.entity.FollowVarietyEntity;
 import net.maku.followcom.enums.CloseOrOpenEnum;
 import net.maku.followcom.enums.TraderCloseEnum;
 import net.maku.followcom.query.FollowTraderUserQuery;
-import net.maku.followcom.service.DashboardService;
-import net.maku.followcom.service.FollowTraderService;
-import net.maku.followcom.service.FollowTraderUserService;
+import net.maku.followcom.service.*;
+import net.maku.followcom.service.impl.FollowVarietyServiceImpl;
+import net.maku.followcom.service.impl.FollowVpsUserServiceImpl;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -55,7 +56,7 @@ public class BargainWebSocket {
     private RedisCache redisCache = SpringContextUtils.getBean(RedisCache.class);
     private final FollowTraderUserService followTraderUserService=SpringContextUtils.getBean(FollowTraderUserService.class);
     private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
-
+    private FollowVarietyService followVarietyService=SpringContextUtils.getBean(FollowVarietyServiceImpl.class);
     @OnOpen
     public void onOpen(Session session) throws IOException {
     }
@@ -76,6 +77,18 @@ public class BargainWebSocket {
             if (st != null) {
                 st.cancel(true);
             }
+            LambdaQueryWrapper<FollowVarietyEntity> wrapper = new LambdaQueryWrapper<>();
+            wrapper.groupBy(FollowVarietyEntity::getStdSymbol,FollowVarietyEntity::getBrokerSymbol);
+            List<FollowVarietyEntity> followVarietyVOS = followVarietyService.list(wrapper);
+            Map<String,List<String>> symbolMap = new HashMap<>();
+            followVarietyVOS.stream().forEach(o->{
+                List<String> symbols = symbolMap.get(o.getStdSymbol());
+                if(ObjectUtil.isEmpty(symbols)){
+                    symbols = new ArrayList<>();
+                }
+                symbols.add(o.getBrokerSymbol());
+                symbolMap.put(o.getStdSymbol(),symbols);
+            });
           ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 BargainAccountVO bargainAccountVO = new BargainAccountVO();
@@ -122,7 +135,7 @@ public class BargainWebSocket {
                         if(json == null) {
                             //判断是否连接成功
                             if(t.getStatus()==CloseOrOpenEnum.CLOSE.getValue()){
-                                addData(t, totalJson, sucessmap, accountVos, currentJson,symbol);
+                                addData(t, totalJson, sucessmap, accountVos, currentJson,symbol,symbolMap);
 
                             }else{
                                 errmap.put(t.getAccount() + "-" + t.getPlatformId(), t);
@@ -139,7 +152,7 @@ public class BargainWebSocket {
                 errmap.forEach((k,v)->{
                     FollowTraderEntity followTraderEntity = sucessmap.get(k);
                     if(followTraderEntity==null){
-                        addData(v, totalJson, sucessmap, accountVos, currentJson,symbol);
+                        addData(v, totalJson, sucessmap, accountVos, currentJson,symbol,symbolMap);
                     }
                 });
                 ls1.set(0, totalJson.get("tBuyNum").getValue());
@@ -177,7 +190,7 @@ public class BargainWebSocket {
     }
 
 
-    private void addData(FollowTraderEntity t, Map<String,AtomicBigDecimal> totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos,  Map<String,AtomicBigDecimal> currentJson,String symbol) {
+    private void addData(FollowTraderEntity t, Map<String,AtomicBigDecimal> totalJson, Map<String, FollowTraderEntity> sucessmap, JSONArray accountVos,  Map<String,AtomicBigDecimal> currentJson,String symbol,Map<String,List<String>> symbolMap) {
         AtomicBigDecimal tBuyNum = totalJson.get("tBuyNum");
         AtomicBigDecimal tSellNum = totalJson.get("tSellNum");
         AtomicBigDecimal tProfit = totalJson.get("tProfit");
@@ -188,10 +201,11 @@ public class BargainWebSocket {
         if (ObjectUtil.isNotEmpty(o2)){
             orderActiveInfoList = JSONObject.parseArray(o2.toString(), OrderActiveInfoVO.class);
         }
+        List<String> list = symbolMap.get(symbol);
         if(ObjectUtil.isNotEmpty(o2)){
             orderActiveInfoList.forEach(o->{
                 if(ObjectUtil.isNotEmpty(symbol)){
-                    if(symbol.equals(o.getSymbol())){
+                    if(list.contains(o.getSymbol())){
                         if(o.getType().equals("Buy")){
                             //多单
                             tBuyNum.add(new BigDecimal(o.getLots()));
