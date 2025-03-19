@@ -97,7 +97,7 @@ public class FollowTraderUserController {
                   entity.setPlatformId(t.getPlatformId());
                   entity.setPlatform(t.getPlatform());
                   entity.setPassword(t.getPassword());
-                  entity.setAccountType("MT4");
+                  entity.setAccountType("0");
                   entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
                   entity.setGroupName("默认");
                   entity.setGroupId(1);

@@ -1,6 +1,7 @@
 package net.maku.subcontrol.even;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -138,8 +139,11 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
             ScheduledFuture<?> newTask = scheduler.schedule(() -> {
                 List<Order> openedOrders = Arrays.stream(abstractApiTrader.quoteClient.GetOpenedOrders()).filter(order1 ->(order1.Type == Buy || order1.Type == Sell)).collect(Collectors.toList());
                 FollowOrderActiveSocketVO followOrderActiveSocketVO = new FollowOrderActiveSocketVO();
-                followOrderActiveSocketVO.setOrderActiveInfoList(convertOrderActive(openedOrders,leader.getAccount()));
+                List<OrderActiveInfoVO> orderActiveInfoVOS = convertOrderActive(openedOrders, leader.getAccount());
+                followOrderActiveSocketVO.setOrderActiveInfoList(orderActiveInfoVOS);
                 log.info("发送消息"+leader.getId());
+                //存入redis
+                redisUtil.set(Constant.TRADER_ACTIVE + abstractApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoVOS));
                 traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
                 pendingMessages.remove(leader.getId().toString());
             }, 50, TimeUnit.MILLISECONDS);
@@ -361,8 +365,6 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                     log.info(leader.getId() + "喊单账号状态未开启");
                 }
 
-                //发送消息 注释推送
-                traderOrderActiveWebSocket.sendPeriodicMessage(leader.getId().toString(), "0");
                 //保存历史数据
                 //   followOrderHistoryService.saveOrderHistory(abstractApiTrader.quoteClient, leader,DateUtil.toLocalDateTime(DateUtil.offsetDay(DateUtil.date(),-5)));
             }

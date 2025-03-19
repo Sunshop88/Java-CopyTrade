@@ -31,11 +31,9 @@ public class MasOrderSendDto implements Serializable {
 	private Integer type;
 
 	@Schema(description = "总单数")
-	@NotNull(message = "总单数不能为空")
 	private Integer totalNum;
 
 	@Schema(description = "总手数")
-	@NotNull(message = "总手数不能为空")
 	private BigDecimal totalSzie;
 
 	@Schema(description = "开始手数范围from")
