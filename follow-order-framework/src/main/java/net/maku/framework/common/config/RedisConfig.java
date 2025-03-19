@@ -122,16 +122,16 @@ public class RedisConfig {
 
         // 如果有密码，设置密码
         if (redisProperties.getPassword() != null) {
-            config.useSingleServer().setPassword(redisProperties.getPassword());
+            config.useClusterServers().setPassword(redisProperties.getPassword());
         }
 
         // 连接池配置（可选）
         config.useSingleServer()
                 .setConnectionPoolSize(500)  // 连接池大小
                 .setConnectionMinimumIdleSize(100) // 最小空闲连接数
-                .setConnectTimeout(10000)    // 连接超时时间
-                .setTimeout(5000)           // 命令超时时间
-                .setIdleConnectionTimeout(5000)   // 空闲连接超时时间
+                .setConnectTimeout(30000)    // 连接超时时间
+                .setTimeout(50000)           // 命令超时时间
+                .setIdleConnectionTimeout(50000)   // 空闲连接超时时间
                 .setRetryAttempts(3)        // 重试次数
                 .setRetryInterval(1000);    // 重试间隔
 
