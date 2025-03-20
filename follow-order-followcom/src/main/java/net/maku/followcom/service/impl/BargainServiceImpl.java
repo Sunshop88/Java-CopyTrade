@@ -338,7 +338,7 @@ public class BargainServiceImpl implements BargainService {
     }
 
     @Override
-    public void stopOrder(Integer type, String orderNo,List<Long> traderList) {
+    public void stopOrder(Integer type, String orderNo,String traderList) {
         //指令停止
         if (type == 0) {
             FollowOrderInstructEntity orderInstructServiceOne = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));

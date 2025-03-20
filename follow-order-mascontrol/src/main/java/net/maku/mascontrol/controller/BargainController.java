@@ -204,7 +204,7 @@ public class BargainController {
     @Operation(summary = "停止下单/平仓")
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
-    public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "orderNo") String orderNo, @Parameter(description = "traderList") List<Long> traderList) {
+    public Result<Boolean> stopOrder(@Parameter(description = "type") Integer type, @Parameter(description = "orderNo") String orderNo, @Parameter(description = "traderList") String traderList) {
         bargainService.stopOrder(type, orderNo,traderList);
         return Result.ok();
     }

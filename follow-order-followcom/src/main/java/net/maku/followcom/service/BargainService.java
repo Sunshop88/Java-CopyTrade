@@ -16,5 +16,5 @@ public interface BargainService {
 
     void masOrderClose(MasToSubOrderCloseDto vo, HttpServletRequest request);
 
-    void stopOrder(Integer type, String orderNo, List<Long> traderList);
+    void stopOrder(Integer type, String orderNo, String traderList);
 }
