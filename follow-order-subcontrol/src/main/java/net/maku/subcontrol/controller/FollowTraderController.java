@@ -781,7 +781,12 @@ public class FollowTraderController {
             }
         }
          if(flag){
-             input="";
+             if(input.length()>6){
+                 input=input.substring(0,6);
+             }else{
+                 input="";
+             }
+
          }
         return input;
     }
