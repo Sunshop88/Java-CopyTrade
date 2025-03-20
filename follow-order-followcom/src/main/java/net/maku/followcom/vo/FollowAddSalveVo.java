@@ -102,6 +102,6 @@ public class FollowAddSalveVo  implements Serializable {
     private Integer digits;
     //用于挂号vps(true 需要新增)
     private Boolean isAdd;
-
-
+    //用于挂号vps true
+    private Boolean isSyncLogin;
 }

@@ -155,66 +155,24 @@ public class FollowSlaveController {
             newID=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
-            ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                followTraderService.removeById(followTraderVO.getId());
-                return Result.error("账号无法连接");
+            if(ObjectUtil.isEmpty(vo.getIsSyncLogin())){
+                ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
+                if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
+                    followTraderService.removeById(followTraderVO.getId());
+                    return Result.error("账号无法连接");
+                }
+                exec(vo, convert, followTraderVO, followTraderEntity, leaderApiTrader);
+            }else{
+               ThreadPoolUtils.execute(()->{
+                   ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
+                   if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
+                       followTraderService.removeById(followTraderVO.getId());
+                   }
+                   exec(vo, convert, followTraderVO, followTraderEntity, leaderApiTrader);
+               });
             }
-            //添加订单数据
-            List<FollowTraderEntity> newList = new ArrayList<>();
-            convert.setIsFirstSync(1);
-            obtainOrderHistoryTask.update(convert,newList);
-            //保存从表数据
-            FollowInsertVO followInsertVO = followService.convert(followTraderVO, vo);
-            //修改从库
-            followInsertVO.setPassword(AesUtils.decryptStr(followInsertVO.getPassword()));
-            followService.add(followInsertVO);
 
-            ThreadPoolUtils.execute(() -> {
-                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-                leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
-                followTraderService.saveQuo(copierApiTrader.quoteClient, convert);
-                //设置下单方式
-                copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
-                //建立跟单关系
-                vo.setSlaveId(followTraderVO.getId());
-                vo.setSlaveAccount(vo.getAccount());
-                vo.setMasterAccount(followTraderEntity.getAccount());
-                followTraderSubscribeService.addSubscription(vo);
-                copierApiTrader.startTrade();
-                //保存状态到redis
-                Map<String, Object> map = new HashMap<>();
-                map.put("followStatus", vo.getFollowStatus());
-                map.put("followOpen", vo.getFollowOpen());
-                map.put("followClose", vo.getFollowClose());
-                map.put("followRep", vo.getFollowRep());
-                //设置跟单关系缓存值 保存状态
-                redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
-                //移除喊单的跟单缓存
-                Cache cache = cacheManager.getCache("followSubOrderCache");
-                if (cache != null) {
-                    cache.evict(vo.getTraderId()); // 移除指定缓存条目
-                }
-                //查看是否该VPS存在过此账号
-                if (ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform()+"#"+vo.getAccount() + "#" + followTraderEntity.getAccount())) &&
-                        ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform()+"#" + vo.getAccount() + "#" + followTraderEntity.getAccount()))) {
-                    //建立漏单关系 查询喊单所有持仓
-                    Order[] orders = leaderApiTrader.quoteClient.GetOpenedOrders();
-                    if (orders.length > 0) {
-                        Arrays.stream(orders).toList().forEach(order -> {
-                            EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), followTraderEntity);
-                            redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+vo.getPlatform()+"#"+followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
-                            //发送漏单通知
-                            FollowTraderEntity master = followTraderService.getFollowById(eaOrderInfo.getMasterId());
-                            messagesService.isRepairSend(eaOrderInfo,convert,master,copierApiTrader.quoteClient);
-                        });
 
-                    }
-                }else{
-                    FollowTraderEntity master = followTraderService.getFollowById(followTraderEntity.getId());
-                    messagesService.checkRepairSend(convert,master,copierApiTrader.quoteClient);
-                }
-            });
         } catch (Exception e) {
             log.error("跟单账号保存失败:", e);
             followTraderService.removeById(newID);
@@ -227,6 +185,64 @@ public class FollowSlaveController {
         }
 
         return Result.ok();
+    }
+
+    private void exec(FollowAddSalveVo vo, FollowTraderEntity convert, FollowTraderVO followTraderVO, FollowTraderEntity followTraderEntity, LeaderApiTrader leaderApiTrader) {
+        //添加订单数据
+        List<FollowTraderEntity> newList = new ArrayList<>();
+        convert.setIsFirstSync(1);
+        obtainOrderHistoryTask.update(convert,newList);
+        //保存从表数据
+        FollowInsertVO followInsertVO = followService.convert(followTraderVO, vo);
+        //修改从库
+        followInsertVO.setPassword(AesUtils.decryptStr(followInsertVO.getPassword()));
+        followService.add(followInsertVO);
+
+        ThreadPoolUtils.execute(() -> {
+            CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+            leaderApiTradersAdmin.pushRedisData(followTraderVO, copierApiTrader.quoteClient);
+            followTraderService.saveQuo(copierApiTrader.quoteClient, convert);
+            //设置下单方式
+            copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
+            //建立跟单关系
+            vo.setSlaveId(followTraderVO.getId());
+            vo.setSlaveAccount(vo.getAccount());
+            vo.setMasterAccount(followTraderEntity.getAccount());
+            followTraderSubscribeService.addSubscription(vo);
+            copierApiTrader.startTrade();
+            //保存状态到redis
+            Map<String, Object> map = new HashMap<>();
+            map.put("followStatus", vo.getFollowStatus());
+            map.put("followOpen", vo.getFollowOpen());
+            map.put("followClose", vo.getFollowClose());
+            map.put("followRep", vo.getFollowRep());
+            //设置跟单关系缓存值 保存状态
+            redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
+            //移除喊单的跟单缓存
+            Cache cache = cacheManager.getCache("followSubOrderCache");
+            if (cache != null) {
+                cache.evict(vo.getTraderId()); // 移除指定缓存条目
+            }
+            //查看是否该VPS存在过此账号
+            if (ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST + "#"+ vo.getPlatform()+"#"+ followTraderEntity.getPlatform()+"#"+ vo.getAccount() + "#" + followTraderEntity.getAccount())) &&
+                    ObjectUtil.isEmpty(redisCache.hGetAll(Constant.FOLLOW_REPAIR_CLOSE + FollowConstant.LOCAL_HOST+ "#"+ vo.getPlatform()+"#"+ followTraderEntity.getPlatform()+"#" + vo.getAccount() + "#" + followTraderEntity.getAccount()))) {
+                //建立漏单关系 查询喊单所有持仓
+                Order[] orders = leaderApiTrader.quoteClient.GetOpenedOrders();
+                if (orders.length > 0) {
+                    Arrays.stream(orders).toList().forEach(order -> {
+                        EaOrderInfo eaOrderInfo = send2Copiers(OrderChangeTypeEnum.NEW, order, 0, leaderApiTrader.quoteClient.Account().currency, LocalDateTime.now(), followTraderEntity);
+                        redisCache.hSet(Constant.FOLLOW_REPAIR_SEND + FollowConstant.LOCAL_HOST+ "#"+ vo.getPlatform()+"#"+ followTraderEntity.getPlatform() + "#" + vo.getAccount() + "#" + followTraderEntity.getAccount(), String.valueOf(order.Ticket), eaOrderInfo);
+                        //发送漏单通知
+                        FollowTraderEntity master = followTraderService.getFollowById(eaOrderInfo.getMasterId());
+                        messagesService.isRepairSend(eaOrderInfo, convert,master,copierApiTrader.quoteClient);
+                    });
+
+                }
+            }else{
+                FollowTraderEntity master = followTraderService.getFollowById(followTraderEntity.getId());
+                messagesService.checkRepairSend(convert,master,copierApiTrader.quoteClient);
+            }
+        });
     }
 
 
