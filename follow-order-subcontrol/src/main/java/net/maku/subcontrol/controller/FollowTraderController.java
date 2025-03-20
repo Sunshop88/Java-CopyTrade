@@ -1070,12 +1070,13 @@ public class FollowTraderController {
         QuoteClient quoteClient = null;
         Long traderId = vo.getId();
         String s = AesUtils.decryptStr(vo.getPassword());
+        String s1 = AesUtils.decryptStr(vo.getNewPassword());
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
         log.info("账号内容：{}",quoteClient);
         try {
             if (ObjectUtil.isNotEmpty(quoteClient)) {
-                quoteClient.ChangePassword(vo.getNewPassword(), false);
+                quoteClient.ChangePassword(s1, false);
             }
         } catch (IOException e) {
             throw new ServerException("MT4修改密码异常,检查参数"+"密码："+s+"是否投资密码"+ false+",异常原因"+e);
