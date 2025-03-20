@@ -673,10 +673,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                if(ObjectUtil.isNotEmpty(one)){
                                    updateCloseOrder(one, quoteClient, oc, followOrderCloseEntity);
                                }else{
-                                   log.info("外部订单平仓{},{}", orderActiveInfoVO,finalOrderMap);
                                    //增加外部平
                                    closeOrder(quoteClient, oc, followOrderCloseEntity,orderActiveInfoVO);
-                                   log.info("完成外部订单平仓{}", orderActiveInfoVO);
                                }
 
                             } catch (Exception e) {
