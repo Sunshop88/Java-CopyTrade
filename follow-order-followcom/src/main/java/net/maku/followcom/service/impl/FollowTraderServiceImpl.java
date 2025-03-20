@@ -16,12 +16,8 @@ import net.maku.followcom.dao.FollowTraderDao;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.*;
-import net.maku.followcom.query.DashboardAccountQuery;
-import net.maku.followcom.query.FollowOrderSendQuery;
-import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.service.*;
-import net.maku.followcom.util.AesUtils;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
@@ -56,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -176,12 +173,57 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return followTraderVO;
     }
 
+    @Override
+    public List<FollowSysmbolSpecificationEntity> getSpecificationList(FollowSysmbolSpecificationQuery query) {
+        List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
+        List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
+        Map<String,FollowSysmbolSpecificationEntity> map = new HashMap<>();
+        list.forEach(x->{
+            String symbol = processString(x.getSymbol(),query.getProfitMode()).toString();
+            if(ObjectUtil.isNotEmpty(symbol)){
+                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
+                if(ObjectUtil.isEmpty(followSysmbolSpecificationEntity)){
+                    x.setSymbol(symbol);
+                    symbols.add(x);
+                    map.put(symbol,x);
+                }
+
+            }
+        });
+        return symbols;
+    }
+    public static String processString(String input,String profitMode) {
+        // CFD就用 XAUUSD 进行匹配，也是6位截取
+        String in="";
+        if(profitMode.equals("CFD")){
+            if(input.contains("XAUUSD")){
+                in=input.replaceAll("XAUUSD","").trim();
+            }
+
+        }
+        //   forex 就用这个货币AUDUSD ， EURUSD，JPYUSD 来进行匹配，6位截取就可以
+        if(profitMode.equals("Forex")){
+            if(input.contains("AUDUSD")){
+                in=input.replaceAll("AUDUSD","").trim();
+            }
+            if(input.contains("EURUSD")){
+                in=input.replaceAll("EURUSD","").trim();
+            }
+            if(input.contains("JPYUSD")){
+                in=input.replaceAll("JPYUSD","").trim();
+            }
+        }
+        return in;
+    }
+
     private void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient) {
         Long userId = SecurityUser.getUserId();
         LocalDateTime localDateTime = LocalDateTime.now();
         ThreadPoolUtils.execute(() -> {
             try {
                 String[] symbols = quoteClient.Symbols();
+                AtomicReference<String> cfd= new AtomicReference<>();
+                AtomicReference<String> forex= new AtomicReference<>();
                 Arrays.stream(symbols).forEach(o -> {
                     try {
                         SymbolInfo symbolInfo = quoteClient.GetSymbolInfo(o);
@@ -207,10 +249,26 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         followSysmbolSpecificationVO.setSpread(symbolInfo.Spread);
                         followSysmbolSpecificationVO.setMarginDivider(symbolInfo.MarginDivider);
                         followSysmbolSpecificationService.saveOrUpdate(FollowSysmbolSpecificationConvert.INSTANCE.convert(followSysmbolSpecificationVO));
+                        String op = processString(o, symbolInfo.ProfitMode.name());
+                        if(ObjectUtil.isNotEmpty(op) &&  symbolInfo.ProfitMode.name().equals("CFD")){
+                            cfd.set(op);
+                        }
+                        if(ObjectUtil.isNotEmpty(op) &&  symbolInfo.ProfitMode.name().equals("Forex")){
+                            forex.set(op);
+                        }
+
                     } catch (InvalidSymbolException |ConnectException e) {
                         log.error(entity.getId()+"添加品种规格异常"+o+"异常信息"+e.getMessage());
                     }
                 });
+                //更新品种规则
+               if(ObjectUtil.isNotEmpty(cfd.get()) || ObjectUtil.isNotEmpty(forex.get())){
+                   entity.setCfd(cfd.get());
+                   entity.setForex(forex.get());
+                   updateById(entity);
+               }
+
+
                 //查询改账号的品种规格
                 List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, entity.getId()));
                 redisCache.set(Constant.SYMBOL_SPECIFICATION + entity.getId(), list);
