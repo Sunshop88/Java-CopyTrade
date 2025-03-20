@@ -668,13 +668,15 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
                             try {
                                 //判断是否存在指定数据
-                                OrderActiveInfoVO orderActiveInfoVO = finalOrderMap.get(finalI);
+                                OrderActiveInfoVO orderActiveInfoVO = finalOrderMap.get(orderActive.get(finalI));
                                 FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId, followTraderEntity.getId()));
                                if(ObjectUtil.isNotEmpty(one)){
                                    updateCloseOrder(one, quoteClient, oc, followOrderCloseEntity);
                                }else{
+                                   log.info("外部订单平仓{},{}", orderActiveInfoVO,finalOrderMap);
                                    //增加外部平
                                    closeOrder(quoteClient, oc, followOrderCloseEntity,orderActiveInfoVO);
+                                   log.info("完成外部订单平仓{}", orderActiveInfoVO);
                                }
 
                             } catch (Exception e) {
@@ -700,7 +702,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                         int finalI = i;
                         try {
                             //判断是否存在指定数据
-                            OrderActiveInfoVO orderActiveInfoVO = finalOrderMap.get(finalI);
+                            OrderActiveInfoVO orderActiveInfoVO = finalOrderMap.get( orderActive.get(finalI));
                             //判断是否存在指定数据
                             FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId, followTraderEntity.getId()));
                             if(ObjectUtil.isNotEmpty(one)){
@@ -750,7 +752,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                 CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
                                    // updateCloseOrder(followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId,followTraderEntity.getId())), quoteClient, oc, followOrderCloseEntity);
                                     //判断是否存在指定数据
-                                    OrderActiveInfoVO orderActiveInfoVO = fOrderMap.get(finalI);
+                                    OrderActiveInfoVO orderActiveInfoVO = fOrderMap.get( orderActive.get(finalI));
                                     //判断是否存在指定数据
                                     FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId, followTraderEntity.getId()));
                                     if(ObjectUtil.isNotEmpty(one)){
@@ -808,7 +810,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             try {
                                 int finalI = i;
                                 //判断是否存在指定数据
-                                OrderActiveInfoVO orderActiveInfoVO = fOrderMap.get(finalI);
+                                OrderActiveInfoVO orderActiveInfoVO = fOrderMap.get( orderActive.get(finalI));
                                 //判断是否存在指定数据
                                 FollowOrderDetailEntity one = followOrderDetailService.getOne(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getOrderNo, orderActive.get(finalI)).eq(FollowOrderDetailEntity::getTraderId, followTraderEntity.getId()));
                                 if(ObjectUtil.isNotEmpty(one)){
@@ -1000,6 +1002,24 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
         followOrderDetailEntity.setSize(new BigDecimal(orderActiveInfoVO.getLots()));
         followOrderDetailEntity.setSymbol(orderActiveInfoVO.getSymbol());
+        if(orderActiveInfoVO.getType().equals("Buy")){
+            followOrderDetailEntity.setType(Buy.getValue());
+        }else{
+            followOrderDetailEntity.setType(Sell.getValue());
+        }
+        followOrderDetailEntity.setOrderNo(orderNo);
+        //followOrderDetailEntity.setSendNo();
+        followOrderDetailEntity.setTraderId(followOrderCloseEntity.getTraderId());
+        followOrderDetailEntity.setOpenTime(orderActiveInfoVO.getOpenTime());
+        followOrderDetailEntity.setOpenPrice(new BigDecimal(orderActiveInfoVO.getOpenPrice()));
+        followOrderDetailEntity.setTp(new BigDecimal(orderActiveInfoVO.getTakeProfit()));
+        followOrderDetailEntity.setSl(new BigDecimal(orderActiveInfoVO.getStopLoss()));
+        followOrderDetailEntity.setBrokeName(followOrderCloseEntity.getBrokeName());
+        followOrderDetailEntity.setServerName(followOrderCloseEntity.getServerName());
+        followOrderDetailEntity.setRateMargin(orderActiveInfoVO.getRateMargin());
+        followOrderDetailEntity.setCommission(new BigDecimal(orderActiveInfoVO.getCommission()));
+       followOrderDetailEntity.setComment(orderActiveInfoVO.getComment());
+        followOrderDetailEntity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
         try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
                 //订阅
