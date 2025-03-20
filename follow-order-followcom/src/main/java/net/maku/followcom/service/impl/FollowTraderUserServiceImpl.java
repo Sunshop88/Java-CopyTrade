@@ -980,7 +980,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                        entity.setServer(f.getPlatform());
                        entity.setNode(f.getServerNode());
                        entity.setAccount(f.getAccount());
-                       entity.setRemark(result.getMsg());
+                       if(result.getMsg().contains("DataIntegrityViolationException")){
+                           entity.setRemark("从库异常");
+                       }
+                       if(result.getMsg().length()>100){
+                           entity.setRemark("系统错误");
+                       }else{
+                           entity.setRemark(result.getMsg());
+                       }
+
                        entity.setRecordId(followUploadTraderUserVO.getId());
                        entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
                        errList.add(entity);
@@ -1109,10 +1117,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         entity.setServer(f.getPlatform());
                         entity.setNode(f.getServerNode());
                         entity.setAccount(f.getAccount());
+                        if(result.getMsg().contains("DataIntegrityViolationException")){
+                            entity.setRemark("从库异常");
+                        }
+                        if(result.getMsg().length()>100){
+                            entity.setRemark("系统错误");
+                        }else{
+                            entity.setRemark(result.getMsg());
+                        }
                         entity.setRemark(result.getMsg());
                         entity.setRecordId(followUploadTraderUserEntity.getId());
                         entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
-                        errList.add(entity);
+                        followFailureDetailService.save(entity);
+                     //   errList.add(entity);
                         //查找这个账号有没有
                         List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, f.getAccount()).eq(FollowTraderEntity::getPlatformId, f.getPlatformId()));
                         if(ObjectUtil.isEmpty(traders)){
@@ -1127,9 +1144,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             try {
                 //等待
                 countDownLatch.await();
-                if(ObjectUtil.isNotEmpty(errList)){
+              /*  if(ObjectUtil.isNotEmpty(errList)){
                     followFailureDetailService.saveBatch(errList);
-                }
+                }*/
                 int success = Long.valueOf(followUploadTraderUserEntity.getSuccessCount()).intValue()+ sum.get();
                 followUploadTraderUserEntity.setFailureCount(Long.valueOf(err.get()));
                 followUploadTraderUserEntity.setSuccessCount(Long.valueOf(success));
