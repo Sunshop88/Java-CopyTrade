@@ -14,6 +14,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.implementation.bytecode.Throw;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
@@ -662,31 +663,25 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
         if (ObjectUtil.isNotEmpty(followTraderEntities)) {
-//            String token = req.getHeader("Authorization");
-//            Map<String, String> headers = new HashMap<>();
-//            headers.put("Authorization", token);
-//            headers.put("Content-Type", "application/json");
 
             List<CompletableFuture<Void>> futures = new ArrayList<>();
+            List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
             for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(password);
-//                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-//                    RestTemplate restTemplate = new RestTemplate();
-
-                    // 使用提前提取的 headers 构建请求头
-//                    HttpHeaders httpHeaders = new HttpHeaders();
-//                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
-//                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
-
-//                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                     Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
 //                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+                        throw new ServerException(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+                    }
+                    } catch (Exception e) {
+                        log.error("账号重连过程中发生异常: ", e);
+                        exceptions.add(e);
                     }
                 }, ThreadPoolUtils.getExecutor());
 
@@ -695,6 +690,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
             // 等待所有异步任务完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            // 检查是否有异常发生
+            if (!exceptions.isEmpty()) {
+                // 抛出第一个异常
+                throw exceptions.get(0);
+            }
         } else {
             vo.setPassword(password);
             FollowTraderUserEntity convert = FollowTraderUserConvert.INSTANCE.convert(vo);
