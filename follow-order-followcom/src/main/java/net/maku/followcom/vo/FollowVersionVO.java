@@ -30,9 +30,6 @@ public class FollowVersionVO implements Serializable {
 	@Schema(description = "版本")
 	private String versions;
 
-	@Schema(description = "版本号")
-	private String versionNumber;
-
 	@Schema(description = "删除标识 0：正常 1：已删除")
 	private Integer deleted;
 

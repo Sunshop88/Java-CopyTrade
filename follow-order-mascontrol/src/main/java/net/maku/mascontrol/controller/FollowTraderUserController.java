@@ -99,8 +99,8 @@ public class FollowTraderUserController {
                   entity.setPassword(t.getPassword());
                   entity.setAccountType("0");
                   entity.setServerNode(collect.get(Long.parseLong(t.getPlatformId().toString())).getServerNode());
-                  entity.setGroupName("默认");
-                  entity.setGroupId(1);
+               /*   entity.setGroupName("默认");
+                  entity.setGroupId(1);*/
                   entity.setStatus(1);
                   entity.setDeleted(0);
                   ls.add(entity);

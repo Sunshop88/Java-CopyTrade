@@ -36,11 +36,6 @@ public class FollowVersionEntity {
 	@TableField(value = "version")
 	private String versions;
 
-	/**
-	* 版本号
-	*/
-	@TableField(value = "version_number")
-	private String versionNumber;
 
 	/**
 	* 删除标识 0：正常 1：已删除

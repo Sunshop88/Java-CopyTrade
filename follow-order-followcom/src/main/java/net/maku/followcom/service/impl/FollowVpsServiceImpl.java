@@ -105,7 +105,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
             Date endDate = DateUtil.date();
             long daysBetween = DateUtil.between(startDate, endDate, DateUnit.DAY);
             if (endDate.after(startDate)) {
-                o.setRemainingDay(-1); // 已过期
+                o.setRemainingDay(0); // 已过期
             } else {
                 o.setRemainingDay((int) daysBetween);
             }
@@ -119,10 +119,7 @@ public class FollowVpsServiceImpl extends BaseServiceImpl<FollowVpsDao, FollowVp
                 List<String> userList = userService.getUserId(vpsUserVO);
                 o.setUserList(userList);
             }
-            String version1 = FollowConstant.MAS_VERSION;
-            //分割
-            String[] split = version1.split("_");
-            String version = split[0];
+             String version = FollowConstant.MAS_VERSION;
              List<FollowVersionEntity> list1= followVersionService.list(new LambdaQueryWrapper<FollowVersionEntity>().eq(FollowVersionEntity::getIp, o.getIpAddress()).eq(FollowVersionEntity::getVersions, version).eq(FollowVersionEntity::getDeleted, 0));
              if(ObjectUtil.isNotEmpty(list1)){
                  FollowVersionEntity followVersionEntity = list1.get(0);

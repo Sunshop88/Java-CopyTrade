@@ -187,7 +187,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
 
 
-        wrapper.orderByDesc(FollowTraderUserEntity::getCreateTime);
+        wrapper.orderByDesc(FollowTraderUserEntity::getId);
 
 
         return wrapper;
@@ -558,7 +558,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserService.save(followUploadTraderUserVO);
         Long savedId = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
 
-        Integer uploadTotal = voList.size();
+//        Integer uploadTotal = null;
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 
@@ -643,7 +643,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         allOf.join(); // 阻塞直到所有任务完成
 
-        followUploadTraderUserVO.setUploadTotal(uploadTotal);
+        followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
         followUploadTraderUserVO.setSuccessCount(successCount.get());
         followUploadTraderUserVO.setFailureCount(failureCount.get());
         followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
