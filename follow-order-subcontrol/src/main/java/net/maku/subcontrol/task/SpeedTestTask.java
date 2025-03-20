@@ -70,7 +70,7 @@ public class SpeedTestTask {
 //            String ip = "192.168.31.40";
             String ip = FollowConstant.LOCAL_HOST;
             FollowVpsEntity vpsEntity = followVpsService.getVps(ip);
-            log.warn( "当前内容为：" +vpsEntity);
+            log.warn("当前内容为：" + vpsEntity);
 
             // 调用现有测速逻辑
             FollowTestSpeedVO overallResult = new FollowTestSpeedVO();
@@ -86,11 +86,12 @@ public class SpeedTestTask {
             followTestSpeedService.saveTestSpeed(overallResult);
 
             FollowSpeedSettingEntity settingEntity = followSpeedSettingService.getById(1);
-
-            boolean isSuccess = followTestSpeedService.measureTask(servers, vpsEntity, overallResult.getId(),overallResult.getDoTime());
-            if (isSuccess) {
-                overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
-                if (settingEntity.getDefaultServerNode() == 0) {
+            if (settingEntity.getDefaultServerNode() == 0) {
+                //以速度最快的设置为默认节点
+                boolean isSuccess = followTestSpeedService.measureTask(servers, vpsEntity, overallResult.getId(), overallResult.getDoTime());
+                if (isSuccess) {
+                    overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+//                if (settingEntity.getDefaultServerNode() == 0) {
 
                     List<FollowTestDetailEntity> allEntities = followTestDetailService.list(
                             new LambdaQueryWrapper<FollowTestDetailEntity>()
@@ -126,16 +127,28 @@ public class SpeedTestTask {
                             }
                         });
                     });
-                }
-            } else {
-                // 删除当前vps相关的数据
-                followTestDetailService.deleteByTestId(overallResult.getId());
+                } else {
+                    // 删除当前vps相关的数据
+                    followTestDetailService.deleteByTestId(overallResult.getId());
 
-                overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
-                // 延迟删除操作，确保在所有测速请求完成后再进行删除
-                followTestDetailService.deleteByTestId(overallResult.getId());
+                    overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+                    // 延迟删除操作，确保在所有测速请求完成后再进行删除
+                    followTestDetailService.deleteByTestId(overallResult.getId());
+                }
+                followTestSpeedService.update(overallResult);
+            } else if (settingEntity.getDefaultServerNode() == 1) {
+                //单纯测速
+                boolean isSuccess = followTestSpeedService.measure(servers, vpsEntity, overallResult.getId(), overallResult.getDoTime());
+                if (isSuccess) {
+                    overallResult.setStatus(VpsSpendEnum.SUCCESS.getType());
+                } else {
+                    // 删除当前vps相关的数据
+                    followTestDetailService.deleteByTestId(overallResult.getId());
+
+                    overallResult.setStatus(VpsSpendEnum.FAILURE.getType());
+                }
+                followTestSpeedService.update(overallResult);
             }
-            followTestSpeedService.update(overallResult);
             log.info("每周测速任务执行完成...");
 
             if (settingEntity.getDefaultServerNodeLogin() == 0) {
@@ -171,18 +184,18 @@ public class SpeedTestTask {
     }
 
     private Boolean reconnect(String traderId) {
-        Boolean result=false;
+        Boolean result = false;
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
-            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderEntity.getType().equals(TraderTypeEnum.BARGAIN.getType())){
+            if (followTraderEntity.getType().equals(TraderTypeEnum.MASTER_REAL.getType()) || followTraderEntity.getType().equals(TraderTypeEnum.BARGAIN.getType())) {
                 leaderApiTradersAdmin.removeTrader(traderId);
                 ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-                if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
+                if (conCodeEnum != ConCodeEnum.SUCCESS && conCodeEnum != ConCodeEnum.AGAIN) {
                     followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                     followTraderService.updateById(followTraderEntity);
                     log.error("喊单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                     throw new ServerException("重连失败");
-                }  else if (conCodeEnum == ConCodeEnum.AGAIN){
+                } else if (conCodeEnum == ConCodeEnum.AGAIN) {
                     long maxWaitTimeMillis = 10000; // 最多等待10秒
                     long startTime = System.currentTimeMillis();
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
@@ -199,27 +212,27 @@ public class SpeedTestTask {
                         leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                     }
                     //重复提交
-                    if (ObjectUtil.isNotEmpty(leaderApiTrader)){
-                        log.info(traderId+"重复提交并等待完成");
-                        result=true;
-                    }else {
-                        log.info(traderId+"重复提交并等待失败");
+                    if (ObjectUtil.isNotEmpty(leaderApiTrader)) {
+                        log.info(traderId + "重复提交并等待完成");
+                        result = true;
+                    } else {
+                        log.info(traderId + "重复提交并等待失败");
                     }
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
-                    result=true;
+                    result = true;
                 }
-            }else {
+            } else {
                 copierApiTradersAdmin.removeTrader(traderId);
                 ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(traderId));
-                if (conCodeEnum != ConCodeEnum.SUCCESS&&conCodeEnum != ConCodeEnum.AGAIN) {
+                if (conCodeEnum != ConCodeEnum.SUCCESS && conCodeEnum != ConCodeEnum.AGAIN) {
                     followTraderEntity.setStatus(TraderStatusEnum.ERROR.getValue());
                     followTraderService.updateById(followTraderEntity);
                     log.error("跟单者:[{}-{}-{}]重连失败，请校验", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName());
                     throw new ServerException("重连失败");
-                } else if (conCodeEnum == ConCodeEnum.AGAIN){
+                } else if (conCodeEnum == ConCodeEnum.AGAIN) {
                     long maxWaitTimeMillis = 10000; // 最多等待10秒
                     long startTime = System.currentTimeMillis();
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
@@ -236,21 +249,21 @@ public class SpeedTestTask {
                         copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
                     }
                     //重复提交
-                    if (ObjectUtil.isNotEmpty(copierApiTrader)){
-                        log.info(traderId+"重复提交并等待完成");
-                        result=true;
-                    }else {
-                        log.info(traderId+"重复提交并等待失败");
+                    if (ObjectUtil.isNotEmpty(copierApiTrader)) {
+                        log.info(traderId + "重复提交并等待完成");
+                        result = true;
+                    } else {
+                        log.info(traderId + "重复提交并等待失败");
                     }
-                }  else {
+                } else {
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
                     log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), AesUtils.decryptStr(followTraderEntity.getPassword()), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                     copierApiTrader.startTrade();
-                    result=true;
+                    result = true;
                 }
             }
-        }catch (Exception e){
-            result=false;
+        } catch (Exception e) {
+            result = false;
         }
         return result;
     }
