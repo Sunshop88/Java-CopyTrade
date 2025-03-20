@@ -753,7 +753,7 @@ public class FollowTraderController {
         List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
         Map<String,FollowSysmbolSpecificationEntity> map = new HashMap<>();
         list.forEach(x->{
-            String symbol = processString(x.getSymbol()).toString();
+            String symbol = processString(x.getSymbol(),query.getProfitMode()).toString();
             if(ObjectUtil.isNotEmpty(symbol)){
                 FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
                 if(ObjectUtil.isEmpty(followSysmbolSpecificationEntity)){
@@ -767,27 +767,28 @@ public class FollowTraderController {
         return Result.ok(symbols);
     }
 
-    public static String processString(String input) {
-        // 如果字符串包含 '.'，截取 . 后面的部分
-        if (input.contains(".")) {
-            return input.substring(input.indexOf("."));
-        }
+    public static String processString(String input,String profitMode) {
+        // CFD就用 XAUUSD 进行匹配，也是6位截取
+        String in="";
+      if(profitMode.equals("CFD")){
+          if(input.contains("XAUUSD")){
+              in=input.replaceAll("XAUUSD","").trim();
+          }
 
-        // 如果不包含 '.', 判断是否包含需要截取的字符
-        String[] substringsToRemove = {"@","-", "'", "zero","+", "dec24","ft","r","#","i","x"};
-        Boolean flag=true;
-        for (String substr : substringsToRemove) {
-            if (input.contains(substr)) {
-                // 一旦找到包含的字符串，截取掉
-                input = input.substring(input.indexOf(substr));
-                flag = false;
-                return input;
-            }
-        }
-         if(flag){
-             input="";
+      }
+     //   forex 就用这个货币AUDUSD ， EURUSD，JPYUSD 来进行匹配，6位截取就可以
+     if(profitMode.equals("Forex")){
+         if(input.contains("AUDUSD")){
+             in=input.replaceAll("AUDUSD","").trim();
          }
-        return input;
+         if(input.contains("EURUSD")){
+             in=input.replaceAll("EURUSD","").trim();
+         }
+         if(input.contains("JPYUSD")){
+             in=input.replaceAll("JPYUSD","").trim();
+         }
+      }
+        return in;
     }
 
   
@@ -1069,12 +1070,13 @@ public class FollowTraderController {
         QuoteClient quoteClient = null;
         Long traderId = vo.getId();
         String s = AesUtils.decryptStr(vo.getPassword());
+        String s1 = AesUtils.decryptStr(vo.getNewPassword());
         FollowTraderEntity entity = FollowTraderConvert.INSTANCE.convert(vo);
         quoteClient = followApiService.getQuoteClient(traderId, entity, quoteClient);
         log.info("账号内容：{}",quoteClient);
         try {
             if (ObjectUtil.isNotEmpty(quoteClient)) {
-                quoteClient.ChangePassword(vo.getNewPassword(), false);
+                quoteClient.ChangePassword(s1, false);
             }
         } catch (IOException e) {
             throw new ServerException("MT4修改密码异常,检查参数"+"密码："+s+"是否投资密码"+ false+",异常原因"+e);
