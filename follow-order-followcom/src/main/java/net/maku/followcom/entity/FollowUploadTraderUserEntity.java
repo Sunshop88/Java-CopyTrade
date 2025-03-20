@@ -109,7 +109,7 @@ public class FollowUploadTraderUserEntity {
 	@TableField(value = "remark")
 	private String remark;
 
-	@TableField(value = "参数")
+	@TableField(value = "params")
 	private String params;
 
 }
