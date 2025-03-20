@@ -1064,6 +1064,8 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderDetailEntity.setType(Sell.getValue());
         }
         followOrderDetailEntity.setOrderNo(orderNo);
+        followOrderDetailEntity.setAccount(followOrderCloseEntity.getAccount());
+        followOrderDetailEntity.setPlatform(followOrderCloseEntity.getServer());
         //followOrderDetailEntity.setSendNo();
         followOrderDetailEntity.setTraderId(followOrderCloseEntity.getTraderId());
         followOrderDetailEntity.setOpenTime(orderActiveInfoVO.getOpenTime());
