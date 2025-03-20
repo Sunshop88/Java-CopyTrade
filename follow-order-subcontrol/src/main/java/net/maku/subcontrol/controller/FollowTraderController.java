@@ -749,47 +749,12 @@ public class FollowTraderController {
     @GetMapping("/getSpecificationList")
     @Operation(summary = "品种规格列表")
     public Result<List<FollowSysmbolSpecificationEntity>> getSpecificationList(@ParameterObject FollowSysmbolSpecificationQuery query) {
-        List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, query.getTraderId()).eq(FollowSysmbolSpecificationEntity::getProfitMode, query.getProfitMode()));
-        List<FollowSysmbolSpecificationEntity> symbols =new ArrayList<>();
-        Map<String,FollowSysmbolSpecificationEntity> map = new HashMap<>();
-        list.forEach(x->{
-            String symbol = processString(x.getSymbol(),query.getProfitMode()).toString();
-            if(ObjectUtil.isNotEmpty(symbol)){
-                FollowSysmbolSpecificationEntity followSysmbolSpecificationEntity = map.get(symbol);
-                if(ObjectUtil.isEmpty(followSysmbolSpecificationEntity)){
-                    x.setSymbol(symbol);
-                    symbols.add(x);
-                    map.put(symbol,x);
-                }
+        List<FollowSysmbolSpecificationEntity>  symbols= followTraderService.getSpecificationList(query);
 
-            }
-        });
         return Result.ok(symbols);
     }
 
-    public static String processString(String input,String profitMode) {
-        // CFD就用 XAUUSD 进行匹配，也是6位截取
-        String in="";
-      if(profitMode.equals("CFD")){
-          if(input.contains("XAUUSD")){
-              in=input.replaceAll("XAUUSD","").trim();
-          }
 
-      }
-     //   forex 就用这个货币AUDUSD ， EURUSD，JPYUSD 来进行匹配，6位截取就可以
-     if(profitMode.equals("Forex")){
-         if(input.contains("AUDUSD")){
-             in=input.replaceAll("AUDUSD","").trim();
-         }
-         if(input.contains("EURUSD")){
-             in=input.replaceAll("EURUSD","").trim();
-         }
-         if(input.contains("JPYUSD")){
-             in=input.replaceAll("JPYUSD","").trim();
-         }
-      }
-        return in;
-    }
 
   
 

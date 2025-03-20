@@ -8,12 +8,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.implementation.bytecode.Throw;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.dao.FollowTraderUserDao;
@@ -64,6 +66,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -662,31 +665,25 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
         List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
         if (ObjectUtil.isNotEmpty(followTraderEntities)) {
-//            String token = req.getHeader("Authorization");
-//            Map<String, String> headers = new HashMap<>();
-//            headers.put("Authorization", token);
-//            headers.put("Content-Type", "application/json");
 
             List<CompletableFuture<Void>> futures = new ArrayList<>();
+            List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
             for (FollowTraderEntity followTraderEntity : followTraderEntities) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(password);
-//                    String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-//                    RestTemplate restTemplate = new RestTemplate();
-
-                    // 使用提前提取的 headers 构建请求头
-//                    HttpHeaders httpHeaders = new HttpHeaders();
-//                    httpHeaders.setAll(headers);  // 注入提前获取的请求头
-//                    HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
-
-//                    ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                     Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
 //                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+                        throw new ServerException(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+                    }
+                    } catch (Exception e) {
+                        log.error("账号重连过程中发生异常: ", e);
+                        exceptions.add(e);
                     }
                 }, ThreadPoolUtils.getExecutor());
 
@@ -695,6 +692,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
             // 等待所有异步任务完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            // 检查是否有异常发生
+            if (!exceptions.isEmpty()) {
+                // 抛出第一个异常
+                throw exceptions.get(0);
+            }
         } else {
             vo.setPassword(password);
             FollowTraderUserEntity convert = FollowTraderUserConvert.INSTANCE.convert(vo);
@@ -921,6 +923,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         ThreadPoolUtils.getExecutor().execute(()-> {
             AtomicInteger sum = new AtomicInteger(0);
             AtomicInteger err = new AtomicInteger(0);
+            Vector<Long> traderUserIds = new Vector<Long>();
 
             CountDownLatch countDownLatch = new CountDownLatch(followTraderUserEntities.size());
             Vector<FollowFailureDetailEntity> errList = new Vector<>();
@@ -971,6 +974,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                        sum.set(sum.get()+1);
                    }else{
                        err.set(err.get()+1);
+                       traderUserIds.add(f.getId());
                        FollowFailureDetailEntity entity = new FollowFailureDetailEntity();
                        entity.setPlatformType(f.getAccountType());
                        entity.setServer(f.getPlatform());
@@ -1002,6 +1006,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     followUploadTraderUserVO.setFailureCount(err.get());
                     followUploadTraderUserVO.setSuccessCount(sum.get());
                     followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+                    hangVpsVO.setTraderUserIds(traderUserIds);
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    String json = null;
+                    try {
+                        json = objectMapper.writeValueAsString(hangVpsVO);
+                    } catch (JsonProcessingException e) {
+                       log.error("挂靠参数序列异常:"+e);
+                    }
+                    followUploadTraderUserVO.setParams(json);
                     followUploadTraderUserService.update(followUploadTraderUserVO);
                     updateBatchById(followTraderUserEntities);
                     if(ObjectUtil.isNotEmpty(error)){
@@ -1010,11 +1023,138 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 } catch (InterruptedException e) {
                        log.error("挂靠失败"+e);
                 }
-
-
        });
 
     }
+
+    @Override
+    public void retryHangVps(Long uploadId,HttpServletRequest request) {
+        FollowUploadTraderUserEntity followUploadTraderUserEntity = followUploadTraderUserService.getById(uploadId);
+        String params = followUploadTraderUserEntity.getParams();
+        if (ObjectUtil.isEmpty(params)) {
+            //无法失败记录或无失败参数
+            throw new ServerException("无失败记录");
+        }
+        HangVpsVO hangVpsVO = JSON.parseObject(params, HangVpsVO.class);
+        FollowVpsEntity vps = followVpsService.getById(hangVpsVO.getVpsId());
+        if(ObjectUtil.isEmpty(vps)){
+            throw new ServerException("vps不存在");
+        }
+        if(TraderTypeEnum.SLAVE_REAL.equals(hangVpsVO.getAccountType())){
+            if(ObjectUtil.isEmpty(hangVpsVO.getTraderId())){
+                throw new ServerException("喊单账号不能为空");
+            }
+        }
+        followUploadTraderUserEntity.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+        followUploadTraderUserEntity.setFailureCount(0l);
+        followUploadTraderUserService.updateById(followUploadTraderUserEntity);
+        followFailureDetailService.remove(new LambdaQueryWrapper<FollowFailureDetailEntity>().eq(FollowFailureDetailEntity::getRecordId,followUploadTraderUserEntity.getId()));
+        List<FollowTraderUserEntity> followTraderUserEntities = listByIds(hangVpsVO.getTraderUserIds());
+        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
+        //不用等待
+        List<Long> error=new ArrayList<>();
+        ThreadPoolUtils.getExecutor().execute(()-> {
+            AtomicInteger sum = new AtomicInteger(0);
+            AtomicInteger err = new AtomicInteger(0);
+            Vector<Long> traderUserIds = new Vector<Long>();
+            CountDownLatch countDownLatch = new CountDownLatch(followTraderUserEntities.size());
+            Vector<FollowFailureDetailEntity> errList = new Vector<>();
+            followTraderUserEntities.forEach(f -> {
+                ThreadPoolUtils.getExecutor().execute(() -> {
+                    Result result = null;
+                    //不是跟单账号，走策略新增接口
+                    if (!TraderTypeEnum.SLAVE_REAL.getType().equals(hangVpsVO.getAccountType())) {
+                        FollowTraderVO vo = new FollowTraderVO();
+                        vo.setTemplateId(hangVpsVO.getTemplateId());
+                        vo.setAccount(f.getAccount());
+                        vo.setPlatformId(f.getPlatformId());
+                        vo.setPlatform(f.getPlatform());
+                        vo.setFollowStatus(hangVpsVO.getFollowStatus());
+                        vo.setPassword(f.getPassword());
+                        vo.setType(hangVpsVO.getAccountType());
+                        vo.setIsAdd(false);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
+                    } else {
+                        //策略转发
+                        FollowAddSalveVo vo = new FollowAddSalveVo();
+                        vo.setAccount(f.getAccount());
+                        vo.setFollowClose(hangVpsVO.getFollowClose());
+                        vo.setFollowDirection(hangVpsVO.getFollowDirection());
+                        vo.setFollowMode(hangVpsVO.getFollowMode());
+                        vo.setFollowOpen(hangVpsVO.getFollowOpen());
+                        vo.setFollowParam(hangVpsVO.getFollowParam());
+                        vo.setFollowRep(CloseOrOpenEnum.OPEN.getValue());
+                        vo.setFollowStatus(hangVpsVO.getFollowStatus());
+                        vo.setPassword(f.getPassword());
+                        vo.setPlacedType(hangVpsVO.getPlacedType());
+                        vo.setPlatform(f.getPlatform());
+                        vo.setRemainder(hangVpsVO.getRemainder());
+                        vo.setTemplateId(hangVpsVO.getTemplateId());
+                        vo.setTraderId(hangVpsVO.getTraderId());
+                        vo.setTemplateId(hangVpsVO.getTemplateId());
+                        vo.setFixedComment(hangVpsVO.getFixedComment());
+                        vo.setCommentType(hangVpsVO.getCommentType());
+                        vo.setDigits(hangVpsVO.getDigits());
+                        vo.setIsAdd(false);
+                        //策略新增
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
+                    }
+                    if (result.getCode()==0){
+                        sum.set(sum.get()+1);
+                    }else{
+                        err.set(err.get()+1);
+                        traderUserIds.add(f.getId());
+                        FollowFailureDetailEntity entity = new FollowFailureDetailEntity();
+                        entity.setPlatformType(f.getAccountType());
+                        entity.setServer(f.getPlatform());
+                        entity.setNode(f.getServerNode());
+                        entity.setAccount(f.getAccount());
+                        entity.setRemark(result.getMsg());
+                        entity.setRecordId(followUploadTraderUserEntity.getId());
+                        entity.setType(TraderUserTypeEnum.ATTACH_VPS.getType());
+                        errList.add(entity);
+                        //查找这个账号有没有
+                        List<FollowTraderEntity> traders = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, f.getAccount()).eq(FollowTraderEntity::getPlatformId, f.getPlatformId()));
+                        if(ObjectUtil.isEmpty(traders)){
+                            //   f.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                            error.add(f.getId());
+                        }
+                    }
+                    countDownLatch.countDown();
+                });
+                f.setStatus(CloseOrOpenEnum.OPEN.getValue());
+            });
+            try {
+                //等待
+                countDownLatch.await();
+                if(ObjectUtil.isNotEmpty(errList)){
+                    followFailureDetailService.saveBatch(errList);
+                }
+                int success = Long.valueOf(followUploadTraderUserEntity.getSuccessCount()).intValue()+ sum.get();
+                followUploadTraderUserEntity.setFailureCount(Long.valueOf(err.get()));
+                followUploadTraderUserEntity.setSuccessCount(Long.valueOf(success));
+                followUploadTraderUserEntity.setStatus(TraderUserEnum.SUCCESS.getType());
+                hangVpsVO.setTraderUserIds(traderUserIds);
+                ObjectMapper objectMapper = new ObjectMapper();
+                String json = null;
+                try {
+                    json = objectMapper.writeValueAsString(hangVpsVO);
+                } catch (JsonProcessingException e) {
+                    log.error("挂靠参数序列异常:"+e);
+                }
+                followUploadTraderUserEntity.setParams(json);
+                followUploadTraderUserService.updateById(followUploadTraderUserEntity);
+                updateBatchById(followTraderUserEntities);
+                if(ObjectUtil.isNotEmpty(error)){
+                    update(new  LambdaUpdateWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId,error).set(FollowTraderUserEntity::getStatus,CloseOrOpenEnum.CLOSE.getValue()));
+                }
+            } catch (InterruptedException e) {
+                log.error("挂靠失败"+e);
+            }
+        });
+
+    }
+
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
         FollowTraderUserEntity traderUser = baseMapper.selectById(traderUserId);
         List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, traderUser.getAccount()).eq(FollowTraderEntity::getPlatformId, traderUser.getPlatformId()));

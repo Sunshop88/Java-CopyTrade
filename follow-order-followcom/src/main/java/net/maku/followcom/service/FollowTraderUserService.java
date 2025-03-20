@@ -62,4 +62,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     FollowTraderUserEntity getByAccount(String account);
 
     void synchData(Long traderId,HttpServletRequest request);
+
+    void retryHangVps(Long uploadId,HttpServletRequest request);
 }

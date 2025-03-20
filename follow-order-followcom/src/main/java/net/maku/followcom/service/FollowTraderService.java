@@ -3,11 +3,9 @@ package net.maku.followcom.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import net.maku.followcom.dto.MasToSubOrderSendDto;
 import net.maku.followcom.entity.FollowOrderSendEntity;
+import net.maku.followcom.entity.FollowSysmbolSpecificationEntity;
 import net.maku.followcom.entity.FollowTraderEntity;
-import net.maku.followcom.query.DashboardAccountQuery;
-import net.maku.followcom.query.FollowOrderSendQuery;
-import net.maku.followcom.query.FollowOrderSpliListQuery;
-import net.maku.followcom.query.FollowTraderQuery;
+import net.maku.followcom.query.*;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.utils.PageResult;
 import net.maku.framework.mybatis.service.BaseService;
@@ -105,4 +103,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     FollowMasOrderVo masOrdersend(MasToSubOrderSendDto vo, QuoteClient quoteClient, FollowTraderVO convert, Integer contract);
 
     FollowTraderEntity getByAccount(String account);
+
+    List<FollowSysmbolSpecificationEntity> getSpecificationList(FollowSysmbolSpecificationQuery query);
 }

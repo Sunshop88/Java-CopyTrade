@@ -133,6 +133,15 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         followTraderUserService.hangVps(hangVpsVO,request);
         return Result.ok();
     }
+    //重试挂靠vps
+    @PostMapping("retryHangVps")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    @Operation(summary = "重试挂靠vps")
+    @OperateLog(type = OperateTypeEnum.INSERT)
+    public Result<String> retryHangVps(@ParameterObject Long uploadId,HttpServletRequest request){
+        followTraderUserService.retryHangVps(uploadId,request);
+        return Result.ok();
+    }
     //挂靠vps
     @PostMapping("synchData/{traderId}")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
