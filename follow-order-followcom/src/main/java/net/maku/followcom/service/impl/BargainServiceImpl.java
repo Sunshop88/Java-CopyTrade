@@ -118,6 +118,14 @@ public class BargainServiceImpl implements BargainService {
                 followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
                 followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
                 followOrderInstructService.save(followOrderInstructEntity);
+                if (doubleMap.keySet().size()!=followTraderEntityList.size()){
+                    //未分配订单直接报错记录
+                    List<FollowTraderEntity> followTraderEntities = followTraderEntityList.stream()
+                            .filter(followTraderEntity -> !doubleMap.containsKey(followTraderEntity)).toList();
+                    followTraderEntities.forEach(o->{
+                        insertOrderDetail(o, vo, orderNo, 0d,1,"未分配手数");
+                    });
+                }
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
