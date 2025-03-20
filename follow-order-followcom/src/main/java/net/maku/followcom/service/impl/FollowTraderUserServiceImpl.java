@@ -943,6 +943,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
+                        vo.setIsSyncLogin(true);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
                     } else {
                         //策略转发
@@ -967,6 +968,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setCommentType(hangVpsVO.getCommentType());
                         vo.setDigits(hangVpsVO.getDigits());
                         vo.setIsAdd(false);
+                        vo.setIsSyncLogin(true);
                         //策略新增
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
                     }
@@ -1081,6 +1083,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setPassword(f.getPassword());
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
+                        vo.setIsSyncLogin(true);
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
                     } else {
                         //策略转发
@@ -1104,6 +1107,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setCommentType(hangVpsVO.getCommentType());
                         vo.setDigits(hangVpsVO.getDigits());
                         vo.setIsAdd(false);
+                        vo.setIsSyncLogin(true);
                         //策略新增
                         result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
                     }
