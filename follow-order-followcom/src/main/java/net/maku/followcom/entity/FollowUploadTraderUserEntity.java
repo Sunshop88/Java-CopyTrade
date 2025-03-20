@@ -1,5 +1,6 @@
 package net.maku.followcom.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import com.baomidou.mybatisplus.annotation.*;
@@ -107,5 +108,8 @@ public class FollowUploadTraderUserEntity {
 	*/
 	@TableField(value = "remark")
 	private String remark;
+
+	@TableField(value = "参数")
+	private String params;
 
 }
