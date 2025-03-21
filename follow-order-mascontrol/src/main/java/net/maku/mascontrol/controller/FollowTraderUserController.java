@@ -1,6 +1,7 @@
 package net.maku.mascontrol.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -324,6 +325,15 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         } catch (Exception e) {
             return Result.error("新增失败：" + e.getMessage());
         }
+    }
+
+    @PostMapping("reimport")
+    @Operation(summary = "导入重试")
+    public Result<String> reimport(@RequestBody FollowUploadTraderUserVO vo) {
+        List<FollowTraderUserVO> followTraderUserVO = JSON.parseArray(vo.getParams(), FollowTraderUserVO.class);
+        Long id= vo.getId();
+        followTraderUserService.addExcel(id,followTraderUserVO);
+        return Result.ok("重试成功");
     }
 
     /**

@@ -64,4 +64,6 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
     void synchData(Long traderId,HttpServletRequest request);
 
     void retryHangVps(Long uploadId,HttpServletRequest request);
+
+    void addExcel(Long id, List<FollowTraderUserVO> followTraderUserVO);
 }
