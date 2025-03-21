@@ -76,6 +76,15 @@ public class SymbolChartVO {
      */
 
     private BigDecimal profit;
+    /**
+     * 净值
+     */
+    private BigDecimal equity;
+    /**
+     * 余额
+     */
+    private BigDecimal balance;
+
 
 
    //信号源

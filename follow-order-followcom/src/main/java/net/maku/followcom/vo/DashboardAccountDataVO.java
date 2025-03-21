@@ -44,6 +44,10 @@ public class DashboardAccountDataVO implements Serializable {
     private Integer type;
     //前端不用后端用
     private Long traderId;
+    //净值
+    private BigDecimal equity;
+    //余额
+    private BigDecimal balance;
 
 
 }

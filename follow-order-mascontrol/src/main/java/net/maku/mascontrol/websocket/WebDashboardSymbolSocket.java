@@ -222,6 +222,8 @@ public class WebDashboardSymbolSocket {
                     BigDecimal lots = chartVO.getLots() == null ? BigDecimal.ZERO : chartVO.getLots();
                     BigDecimal position = chartVO.getPosition() == null ? BigDecimal.ZERO : chartVO.getPosition();
                     BigDecimal profit = chartVO.getProfit() == null ? BigDecimal.ZERO : chartVO.getProfit();
+                    BigDecimal equity = chartVO.getEquity() == null ? BigDecimal.ZERO : chartVO.getEquity();
+                    BigDecimal balance = chartVO.getBalance() == null ? BigDecimal.ZERO : chartVO.getBalance();
                     BigDecimal num = chartVO.getNum() == null ? BigDecimal.ZERO : chartVO.getNum();
                     BigDecimal buyNum = chartVO.getBuyNum() == null ? BigDecimal.ZERO : chartVO.getBuyNum();
                     BigDecimal buyLots = chartVO.getBuyLots() == null ? BigDecimal.ZERO : chartVO.getBuyLots();
@@ -231,6 +233,8 @@ public class WebDashboardSymbolSocket {
                     BigDecimal sellProfit = chartVO.getSellProfit() == null ? BigDecimal.ZERO : chartVO.getSellProfit();
                     lots = o.getLots() == null ? lots : o.getLots().add(lots);
                     profit = o.getProfit() == null ? profit : profit.add(o.getProfit());
+                    equity = o.getEquity() == null ? equity : equity.add(o.getEquity());
+                    balance = o.getBalance() == null ? balance : balance.add(o.getBalance());
                     num = o.getNum() == null ? num : num.add(o.getNum());
                     buyNum = o.getBuyNum() == null ? buyNum : buyNum.add(o.getBuyNum());
                     buyLots = o.getBuyLots() == null ? buyLots : buyLots.add(o.getBuyLots());
@@ -241,6 +245,8 @@ public class WebDashboardSymbolSocket {
                     position = o.getPosition() == null ? position : position.add(o.getPosition());
                     chartVO.setLots(lots);
                     chartVO.setProfit(profit);
+                    chartVO.setEquity(equity);
+                    chartVO.setBalance(balance);
                     chartVO.setNum(num);
                     chartVO.setBuyNum(buyNum);
                     chartVO.setBuyLots(buyLots);
@@ -351,6 +357,28 @@ public class WebDashboardSymbolSocket {
                     }).toList();
                 }
             }
+            if (analysisVO.getOrder().equals("equity")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getEquity().compareTo(o2.getEquity());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getEquity().compareTo(o1.getEquity());
+                    }).toList();
+                }
+            }
+            if (analysisVO.getOrder().equals("balance")) {
+                if (analysisVO.getAsc()) {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o1.getBalance().compareTo(o2.getBalance());
+                    }).toList();
+                } else {
+                    symbolAnalysis = symbolAnalysis.stream().sorted((o1, o2) -> {
+                        return o2.getBalance().compareTo(o1.getBalance());
+                    }).toList();
+                }
+            }
 
         }
          //map
@@ -447,6 +475,24 @@ public class WebDashboardSymbolSocket {
                     return o1.getProportion().compareTo(o2.getProportion());
                 } else {
                     return o2.getProportion().compareTo(o1.getProportion());
+                }
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("equity")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getEquity().compareTo(o2.getEquity());
+                } else {
+                    return o2.getEquity().compareTo(o1.getEquity());
+                }
+            }).limit(limit).toList();
+        }
+        if (rankOrder.equals("balance")) {
+            list = ranking.stream().sorted((o1, o2) -> {
+                if (rankAsc) {
+                    return o1.getBalance().compareTo(o2.getBalance());
+                } else {
+                    return o2.getBalance().compareTo(o1.getBalance());
                 }
             }).limit(limit).toList();
         }

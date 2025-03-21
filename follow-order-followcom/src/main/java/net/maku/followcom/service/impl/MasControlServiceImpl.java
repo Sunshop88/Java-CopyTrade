@@ -269,7 +269,7 @@ public class MasControlServiceImpl implements MasControlService {
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
                         //查询新增平台的id
-                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getId)).get(0);
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer,bro)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
                         platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);
@@ -422,7 +422,7 @@ public class MasControlServiceImpl implements MasControlService {
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
                         //查询新增平台的id
-                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getId)).get(0);
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer,bro)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
                         platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);

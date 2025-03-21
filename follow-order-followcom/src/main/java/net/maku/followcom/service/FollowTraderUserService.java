@@ -2,7 +2,6 @@ package net.maku.followcom.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import net.maku.followcom.entity.FollowTraderEntity;
 import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowTraderUserQuery;
 import net.maku.followcom.vo.*;
@@ -13,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 账号初始表
@@ -39,7 +39,7 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     void addByExcel(MultipartFile file, Long savedId ,List<FollowTestDetailVO> vos);
 
-    void updateGroup(List<Long> idList, Long group);
+    void updateGroup(Set<Long> idList, Long group);
 
     void updatePasswords(List<FollowTraderUserVO> idList, String password, String confirmPassword, HttpServletRequest req) throws Exception;
 
@@ -59,11 +59,13 @@ public interface FollowTraderUserService extends BaseService<FollowTraderUserEnt
 
     String getAccountCount(String serverName);
 
-    FollowTraderUserEntity getByAccount(String account);
+    List<FollowTraderUserEntity> getByAccount(String account);
 
     void synchData(Long traderId,HttpServletRequest request);
 
     void retryHangVps(Long uploadId,HttpServletRequest request);
 
-    void addExcel(Long id, List<FollowTraderUserVO> followTraderUserVO);
+    void addExcel(Long id, List<FollowTraderUserVO> followTraderUserVO, List<FollowTestDetailVO> vos);
+
+    void reUpdatePasswords(List<FollowTraderUserVO> voList, String password, Long recordId, HttpServletRequest req);
 }

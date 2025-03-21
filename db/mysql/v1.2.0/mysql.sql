@@ -200,3 +200,5 @@ ALTER TABLE follow_upload_trader_user ADD params text NULL   COMMENT '参数' ;
 ALTER TABLE `follow-order-cp`.`follow_vps`
     AUTO_INCREMENT=191,
     ADD COLUMN `is_stop` TINYINT   NULL DEFAULT 0    COMMENT '是否已停止 0-正常 1-已停止'  AFTER `is_monitor_repair`;
+
+ALTER TABLE follow_trader_analysis ADD balance decimal(16,2) default 0  COMMENT '余额' ;

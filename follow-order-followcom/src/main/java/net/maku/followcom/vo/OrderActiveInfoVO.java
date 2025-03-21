@@ -75,7 +75,7 @@ public class OrderActiveInfoVO implements Serializable {
 	 */
 	private BigDecimal openPriceSlip;
 
-	public double rateMargin;
+	private double rateMargin;
 
 
 

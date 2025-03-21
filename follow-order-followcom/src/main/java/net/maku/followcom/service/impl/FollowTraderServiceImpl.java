@@ -1073,11 +1073,12 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         followOrderDetailEntity.setTp(new BigDecimal(orderActiveInfoVO.getTakeProfit()));
         followOrderDetailEntity.setSl(new BigDecimal(orderActiveInfoVO.getStopLoss()));
         followOrderDetailEntity.setBrokeName(followOrderCloseEntity.getBrokeName());
-        followOrderDetailEntity.setServerName(followOrderCloseEntity.getServerName());
+       // followOrderDetailEntity.setServerName(followOrderCloseEntity.getServerName());
         followOrderDetailEntity.setRateMargin(orderActiveInfoVO.getRateMargin());
         followOrderDetailEntity.setCommission(new BigDecimal(orderActiveInfoVO.getCommission()));
        followOrderDetailEntity.setComment(orderActiveInfoVO.getComment());
         followOrderDetailEntity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
+        followOrderDetailEntity.setIsExternal(1);
         try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
                 //订阅
@@ -1902,6 +1903,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         vo.setOpenPrice(order.OpenPrice);
         vo.setMagicNumber(order.MagicNumber);
         vo.setType(order.Type.name());
+        vo.setRateMargin(order.RateMargin);
         //增加五小时
         vo.setOpenTime(DateUtil.toLocalDateTime(DateUtil.offsetHour(DateUtil.date(order.OpenTime), 5)));
         vo.setStopLoss(order.StopLoss);
