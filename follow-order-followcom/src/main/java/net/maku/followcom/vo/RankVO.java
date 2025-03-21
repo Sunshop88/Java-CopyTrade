@@ -34,4 +34,13 @@ public class RankVO {
      */
 
     private BigDecimal num;
+
+    /**
+     * 净值
+     */
+    private BigDecimal equity;
+    /**
+     * 余额
+     */
+    private BigDecimal balance;
 }

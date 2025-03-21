@@ -193,4 +193,12 @@ INSERT INTO `follow_version` VALUES (9, '139.196.230.69', '1.2.0', '0001', 0, NU
 -----参数表增加语句
 INSERT INTO `follow-order-cp`.`sys_params` (id,param_name,param_type,param_key,param_value,remark,tenant_id,version,deleted,creator,create_time,updater,update_time) VALUES ('71','最低下单允许差',1,'allow_lots','0.02','最低下单允许差',NULL,'6',0,'10000','2025-03-17 17:27:22','10000','2025-03-18 14:05:21');
 
+-------------3.18发布版本后新增
 ALTER TABLE follow_upload_trader_user ADD params text NULL   COMMENT '参数' ;
+
+------vps列表
+ALTER TABLE `follow-order-cp`.`follow_vps`
+    AUTO_INCREMENT=191,
+    ADD COLUMN `is_stop` TINYINT   NULL DEFAULT 0    COMMENT '是否已停止 0-正常 1-已停止'  AFTER `is_monitor_repair`;
+
+ALTER TABLE follow_trader_analysis ADD balance decimal(16,2) default 0  COMMENT '余额' ;

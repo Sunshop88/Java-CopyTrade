@@ -136,6 +136,12 @@ public class FollowTraderAnalysisEntity {
 	@TableField(value = "free_margin")
 	private BigDecimal freeMargin;
 
+	//净值
+	@TableField(value = "equity")
+	private BigDecimal equity;
+	//余额
+	@TableField(value = "balance")
+	private BigDecimal balance;
 
 
 	@TableField(exist = false)

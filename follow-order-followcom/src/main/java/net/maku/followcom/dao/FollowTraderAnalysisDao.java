@@ -87,7 +87,7 @@ public interface FollowTraderAnalysisDao extends BaseDao<FollowTraderAnalysisEnt
             "SELECT p.broker_name as brokerName,t.platform as server,t.account as account, t.vps_name as  vpsName, t.source_platform as sourceServer ,t.source_account as  sourceAccount ," ,
             "sum(profit) as profit ,sum(num) as orderNum,sum(lots) as lots,max(t.free_margin) as  marginProportion,max(t.proportion) as  proportion FROM " ,
             "( SELECT account, platform, platform_id,  symbol, vps_id, GROUP_CONCAT( DISTINCT vps_name ) AS vps_name, GROUP_CONCAT( DISTINCT source_platform ) AS source_platform,",
-            " GROUP_CONCAT( DISTINCT source_account ) AS source_account, MAX( profit ) AS profit, MAX( num ) AS num, MAX( lots ) AS lots,  max(free_margin) AS free_margin ,  max(proportion) AS proportion  FROM  follow_trader_analysis  GROUP BY  account, platform,platform_id, symbol,vps_id ) ",
+            " GROUP_CONCAT( DISTINCT source_account ) AS source_account, MAX( profit ) AS profit, MAX( num ) AS num, MAX( lots ) AS lots,  max(free_margin) AS free_margin ,  max(proportion) AS proportion ,  max(equity) AS equity,  max(balance) AS balance FROM  follow_trader_analysis  GROUP BY  account, platform,platform_id, symbol,vps_id ) ",
             " t LEFT JOIN follow_platform p on t.platform_id=p.id" ,
             " <where>",
             "<if test='query!=null and query.brokerName != null and   query.brokerName.trim() != \"\" '>",

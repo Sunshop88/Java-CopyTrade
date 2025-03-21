@@ -49,8 +49,11 @@ public class TraderUserWebSocket {
     private final FollowTraderUserService followTraderUserService= SpringContextUtils.getBean(FollowTraderUserService.class);
     private final FollowTraderService followTraderService=SpringContextUtils.getBean(FollowTraderService.class);
     private final FollowOrderDetailService followOrderDetailService=SpringContextUtils.getBean(FollowOrderDetailService.class);
+    private Map<String, Map<String,Session>> map = new HashMap<>();
     @OnOpen
     public void onOpen(Session session) throws IOException {
+
+
     }
     // 当接收到客户端的消息时调用
     @OnMessage
@@ -60,8 +63,15 @@ public class TraderUserWebSocket {
         if (st != null) {
             st.cancel(true);
         }
+
         JSONObject jsonObj = JSONObject.parseObject(message);
         Long traderUserId = jsonObj.getLong("traderUserId");
+        Map<String, Session> sessionMap = map.get(traderUserId);
+        if(ObjectUtil.isEmpty(sessionMap)){
+            sessionMap=new HashMap<>();
+        }
+        sessionMap.put(id, session);
+        session.getUserProperties().put("traderUserId", traderUserId);
         ScheduledFuture scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(() -> {
 
         //选中当前账号的持仓
@@ -79,6 +89,27 @@ public class TraderUserWebSocket {
         scheduledFutureMap.put(id, scheduledFuture);
     }
 
+    public void pushMessage(Long traderId, List<OrderActiveInfoVO> active ){
+        FollowTraderEntity trader = followTraderService.getById(traderId);
+        String jsonString = JSON.toJSONString(active);
+        List<FollowTraderUserEntity> traderUsers = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, trader.getAccount()).eq(FollowTraderUserEntity::getPlatformId, trader.getPlatformId()));
+       if(ObjectUtil.isNotEmpty(traderUsers)){
+           traderUsers.forEach(traderUser -> {
+               Map<String, Session> sessionMap = map.get(traderUser.getId());
+               if(ObjectUtil.isNotEmpty(sessionMap)){
+                   sessionMap.values().forEach(session -> {
+                       try {
+                           session.getBasicRemote().sendText(jsonString);
+                       } catch (IOException e) {
+                           e.printStackTrace();
+                           log.error("推送异常:{}", e);
+                       }
+                   });
+
+               }
+           });
+       }
+    }
     // 当客户端断开连接时调用
     @OnClose
     public void onClose(Session session) {
@@ -87,6 +118,13 @@ public class TraderUserWebSocket {
             ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(id);
             if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
                 scheduledFuture.cancel(true);
+            }
+            Object traderUserId = session.getUserProperties().get("traderUserId");
+            if(ObjectUtil.isNotEmpty(traderUserId)){
+                Map<String, Session> sessionMap = map.get(traderUserId);
+                if(ObjectUtil.isNotEmpty(sessionMap)){
+                    sessionMap.remove(id);
+                }
             }
             if (session != null && session.getBasicRemote() != null) {
                 session.close();

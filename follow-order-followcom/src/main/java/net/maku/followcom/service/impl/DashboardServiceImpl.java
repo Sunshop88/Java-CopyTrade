@@ -93,6 +93,12 @@ public class DashboardServiceImpl implements DashboardService {
             if (vo.getOrder().equals("profit")) {
                 wrapper.orderBy(true, vo.getAsc(), FollowTraderAnalysisEntity::getProfit);
             }
+            if (vo.getOrder().equals("equity")) {
+                wrapper.orderBy(true, vo.getAsc(), FollowTraderAnalysisEntity::getEquity);
+            }
+            if (vo.getOrder().equals("balance")) {
+                wrapper.orderBy(true, vo.getAsc(), FollowTraderAnalysisEntity::getBalance);
+            }
 
         }
         return followTraderAnalysisService.list(wrapper);
