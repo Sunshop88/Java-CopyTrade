@@ -330,9 +330,19 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @PostMapping("reimport")
     @Operation(summary = "导入重试")
     public Result<String> reimport(@RequestBody FollowUploadTraderUserVO vo) {
+        //查询follow_vps最小的id
+        LambdaQueryWrapper<FollowVpsEntity> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue());
+        wrapper.orderByAsc(FollowVpsEntity::getId);
+        wrapper.last("LIMIT 1");
+        Integer id = followVpsService.getOne(wrapper).getId();
+        FollowTestServerQuery query = new FollowTestServerQuery();
+        query.setVpsId(id);
+//            query.setIsDefaultServer(CloseOrOpenEnum.CLOSE.getValue());
+        List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
         List<FollowTraderUserVO> followTraderUserVO = JSON.parseArray(vo.getParams(), FollowTraderUserVO.class);
-        Long id= vo.getId();
-        followTraderUserService.addExcel(id,followTraderUserVO);
+        Long recordId= vo.getId();
+        followTraderUserService.addExcel(recordId,followTraderUserVO,vos);
         return Result.ok("重试成功");
     }
 
@@ -380,7 +390,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updateGroup(@RequestBody FollowBatchUpdateVO vos) {
-        List<Long> idList = vos.getIdList();
+        Set<Long> idList = vos.getIdList();
         Long groupId = vos.getGroupId();
         followTraderUserService.updateGroup(idList,groupId);
 
@@ -402,7 +412,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @OperateLog(type = OperateTypeEnum.UPDATE)
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
     public Result<String> updatePasswords(@RequestBody FollowBatchUpdateVO vos, HttpServletRequest req) throws Exception {
-        List<Long> idList = vos.getIdList();
+        Set<Long> idList = vos.getIdList();
         //根据id查询信息
         List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
         List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
@@ -417,6 +427,35 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         followTraderUserService.updatePasswords(voList,password,confirmPassword,req);
 
         return Result.ok("批量修改密码成功");
+    }
+
+    @PutMapping("reUpdatePasswords")
+    @Operation(summary = "重试批量修改密码")
+    @OperateLog(type = OperateTypeEnum.UPDATE)
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    public Result<String> reUpdatePasswords(@RequestBody FollowUploadTraderUserVO vo, HttpServletRequest req) throws Exception {
+        FollowBatchUpdateVO vos = JSON.parseObject(vo.getParams(), FollowBatchUpdateVO.class);
+        Set<Long> idList = vos.getIdList();
+        //根据id查询信息
+        List<FollowTraderUserEntity> enList = followTraderUserService.listByIds(idList);
+        List<FollowTraderUserVO> voList = FollowTraderUserConvert.INSTANCE.convertList(enList);
+        String password = vos.getPassword();
+        String confirmPassword = vos.getConfirmPassword();
+        String desPassword = AesUtils.decryptStr(password);
+        //检查密码在6-16位之间
+        if (desPassword.length() < 6 || desPassword.length() > 16) {
+            return Result.error("密码长度应在6到16位之间");
+        }
+        if (!password.equals(confirmPassword)){
+            throw new ServerException("两次密码输入不一致");
+        }
+         Long recordId = vo.getId();
+        List<FollowFailureDetailEntity> list2 = followFailureDetailService.list(new LambdaQueryWrapper<FollowFailureDetailEntity>().eq(FollowFailureDetailEntity::getRecordId, recordId));
+        if (ObjectUtil.isNotEmpty(list2)){
+            followFailureDetailService.remove(new LambdaQueryWrapper<FollowFailureDetailEntity>().eq(FollowFailureDetailEntity::getRecordId,recordId));
+        }
+        followTraderUserService.reUpdatePasswords(voList,password,recordId,req);
+        return Result.ok("重试修改密码成功");
     }
 
     @PutMapping("updatePassword")
@@ -447,8 +486,8 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     @GetMapping("getAccount")
     @Operation(summary = "获取账号信息")
     @PreAuthorize("hasAuthority('mascontrol:traderUser')")
-    public Result<FollowTraderUserEntity> getAccount(@RequestParam("account") String account) {
-        FollowTraderUserEntity entity= followTraderUserService.getByAccount(account);
+    public Result<List<FollowTraderUserEntity>> getAccount(@RequestParam("account") String account) {
+        List<FollowTraderUserEntity> entity= followTraderUserService.getByAccount(account);
             return Result.ok(entity);
         }
 

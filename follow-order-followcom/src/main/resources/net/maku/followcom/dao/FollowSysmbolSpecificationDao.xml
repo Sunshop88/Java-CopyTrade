@@ -83,5 +83,10 @@
         <if test="account != null and account != ''">
             AND ft.account LIKE CONCAT('%', REPLACE(#{account}, '%', '\\%'), '%') ESCAPE '\\'
         </if>
+        GROUP BY
+        fs.symbol,
+        fp.platform_type,
+        ft.account,
+        ft.platform;
     </select>
 </mapper>
