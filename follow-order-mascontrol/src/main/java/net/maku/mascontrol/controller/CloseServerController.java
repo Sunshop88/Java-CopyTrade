@@ -37,7 +37,7 @@ public class CloseServerController {
     @Operation(summary = "关闭所有服务")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
-    public Result<?> shutdown(@RequestParam("vpsIdList") List<Integer> vpsIdList, HttpServletRequest request) {
+    public Result<?> shutdown(@RequestParam("vpsIdList") String vpsIdList, HttpServletRequest request) {
         List<FollowVpsVO> list;
         if (ObjectUtil.isEmpty(vpsIdList)) {
             list = followVpsService.listByVps();

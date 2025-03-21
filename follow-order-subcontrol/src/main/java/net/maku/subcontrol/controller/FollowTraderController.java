@@ -965,7 +965,7 @@ public class FollowTraderController {
 
 
     private List<String> getSymbolClose(QuoteClient quoteClient, Long traderId, String symbol) {
-        List<String> symbolList = List.of();
+        List<String> symbolList = new ArrayList<>();
         //查询平台信息
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
         //获取symbol信息
