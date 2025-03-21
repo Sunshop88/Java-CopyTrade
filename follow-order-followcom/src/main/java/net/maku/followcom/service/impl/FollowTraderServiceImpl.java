@@ -1253,8 +1253,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             vo.setTotalNum(orderCount);
             followOrderSendService.save(vo);
         }
-        //删除缓存
-        redisCache.delete(Constant.TRADER_ORDER + traderId);
 
         //合约比例处理
         if (pr.compareTo(BigDecimal.ONE) != 0) {
@@ -1281,11 +1279,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
     private void updateSendOrder(long traderId, String orderNo,Integer flag) {
-        //获取symbol信息
-        List<FollowSysmbolSpecificationEntity> specificationEntityMap = followSysmbolSpecificationService.getByTraderId(traderId);
         FollowOrderSendEntity sendServiceOne = followOrderSendService.getOne(new LambdaQueryWrapper<FollowOrderSendEntity>().eq(FollowOrderSendEntity::getOrderNo, orderNo));
         //查看下单所有数据
         List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getSendNo, orderNo));
+        log.info("updateSendOrder"+list.size());
         if (ObjectUtil.isEmpty(list))return;
         if (ObjectUtil.isNotEmpty(sendServiceOne)) {
             //保存修改信息
@@ -1311,12 +1308,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             //查询数据
             FollowOrderInstructEntity followOrderInstructEntity = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
             if (redissonLockUtil.tryLockForShortTime("masOrder" + orderNo, 100, 120, TimeUnit.SECONDS)) {
-              try {
+                try {
                   //增加成交订单数和手数
                   followOrderInstructEntity.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
                   followOrderInstructEntity.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
                   followOrderInstructEntity.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
-                  if (followOrderInstructEntity.getTradedOrders()==followOrderInstructEntity.getTrueTotalOrders()){
+                    log.info("updateSendOrder数量"+followOrderInstructEntity);
+
+                    if (Objects.equals(followOrderInstructEntity.getTradedOrders(), followOrderInstructEntity.getTrueTotalOrders())){
                       log.info("交易下单已完成-全部成功");
                       //完成
                       followOrderInstructEntity.setEndTime(LocalDateTime.now());
@@ -1464,35 +1463,45 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         double totalPlacedLots = 0;
         List<Double> orders = new ArrayList<>();
 
-        // 随机生成订单，直到接近 totalLots
-        while (totalPlacedLots < totalLots) {
-            double randomLots = roundToTwoDecimal(minLots.doubleValue() +
-                    (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
+        // 如果最小手数和最大手数相等，直接计算订单数量并平均分配
+        if (minLots.compareTo(maxLots) == 0) {
+            double lotSize = minLots.doubleValue();
+            int orderCount = (int)(totalLots / lotSize);
 
-            // 检查是否会超出总手数，如果是，跳出循环
-            if (totalPlacedLots + randomLots > totalLots) {
-                break;
+            // 创建固定手数的订单
+            for (int i = 0; i < orderCount; i++) {
+                orders.add(lotSize);
+                totalPlacedLots += lotSize;
             }
-            orders.add(randomLots);
-            totalPlacedLots += randomLots;
-        }
 
-        // 计算总手数差值
-        double remainingDiff = roundToTwoDecimal(totalLots - totalPlacedLots);
-        if (remainingDiff > 0 && !orders.isEmpty()) {
-            // 找到订单列表中最小的订单手数
-            int minOrderIndex = 0;
-            double minOrder = orders.get(0);
-            for (int i = 1; i < orders.size(); i++) {
-                if (orders.get(i) < minOrder) {
-                    minOrder = orders.get(i);
-                    minOrderIndex = i;
+            // 处理剩余手数（如果有）
+            double remainingLots = roundToTwoDecimal(totalLots - totalPlacedLots);
+            if (remainingLots >= minLots.doubleValue()) {
+                orders.add(remainingLots);
+            }
+        } else {
+            // 随机生成订单，直到接近 totalLots
+            while (totalPlacedLots < totalLots) {
+                double randomLots = roundToTwoDecimal(minLots.doubleValue() +
+                        (maxLots.doubleValue() - minLots.doubleValue()) * rand.nextDouble());
+
+                // 确保不会超出总手数
+                if (totalPlacedLots + randomLots > totalLots) {
+                    double remaining = roundToTwoDecimal(totalLots - totalPlacedLots);
+                    // 只有当剩余手数大于等于最小手数时才添加
+                    if (remaining >= minLots.doubleValue()) {
+                        orders.add(remaining);
+                        totalPlacedLots += remaining;
+                    }
+                    break;
                 }
+
+                orders.add(randomLots);
+                totalPlacedLots += randomLots;
             }
-            // 将差值加到最小的订单上，确保总手数完全分配
-            orders.set(minOrderIndex, roundToTwoDecimal(minOrder + remainingDiff));
         }
-        //过滤0值
+
+        // 过滤0值
         orders = orders.stream().filter(o -> !o.equals(0.0)).collect(Collectors.toList());
         int orderCount = orders.size();
         log.info("执行随机下单操作，总手数不超过 " + totalLots + "，实际下单订单数: " + orderCount);
@@ -1529,6 +1538,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
     }
 
 
+
     // 示例 3: 每笔订单的下单数量为 区间内的随机值，总订单数量固定，总手数不限
     public FollowMasOrderVo executeOrdersRandomFixedCount(String ipAdd, String serverName, BigDecimal pr, String platform, String brokerName, FollowOrderSendVO vo, long traderId, String account, Integer type, QuoteClient quoteClient, String symbol, Integer orderCount, BigDecimal minLots, BigDecimal maxLots, Integer interval, String orderNo,String remark) {
         FollowMasOrderVo followMasOrderVo = new FollowMasOrderVo();
@@ -1543,7 +1553,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         if (ObjectUtil.isNotEmpty(vo)){
             followOrderSendService.save(vo);
         }
-        redisCache.delete(Constant.TRADER_ORDER + traderId);
         if (pr.compareTo(BigDecimal.ONE) != 0) {
             // 使用索引更新列表中的值
             for (int i = 0; i < orders.size(); i++) {
@@ -1638,7 +1647,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             vo.setTotalNum(orders.size());
             followOrderSendService.save(vo);
         }
-        redisCache.delete(Constant.TRADER_ORDER + traderId);
         if (pr.compareTo(BigDecimal.ONE) != 0) {
             // 使用索引更新列表中的值
             for (int i = 0; i < orders.size(); i++) {
@@ -1759,15 +1767,9 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
                                     redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                                 }
-                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                    redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
-                                }
                             }else {
                                 if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
                                     redisCache.delete(Constant.TRADER_SEND + traderId);
-                                }
-                                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
-                                    redisCache.delete(Constant.TRADER_ORDER + traderId);
                                 }
                             }
                         } catch (InterruptedException e) {
@@ -1858,16 +1860,10 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
                                 redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
                             }
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND_MAS + orderNo))) {
-                                redisCache.delete(Constant.TRADER_SEND_MAS + orderNo);
-                            }
                         }else {
                             //删除缓存
                             if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_SEND + traderId))) {
                                 redisCache.delete(Constant.TRADER_SEND + traderId);
-                            }
-                            if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_ORDER + traderId))) {
-                                redisCache.delete(Constant.TRADER_ORDER + traderId);
                             }
                         }
                     } catch (InterruptedException e) {
