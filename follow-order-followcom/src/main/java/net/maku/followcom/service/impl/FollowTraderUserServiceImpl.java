@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +57,7 @@ import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -497,6 +500,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 ObjectMapper objectMapper = new ObjectMapper();
                 String json = null;
                 try {
+                    JavaTimeModule javaTimeModule = new JavaTimeModule();
+                    //格式化时间格式
+                    javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    objectMapper.registerModule(javaTimeModule);
                     json = objectMapper.writeValueAsString(failureList);
                 } catch (JsonProcessingException e) {
                     log.error("挂靠参数序列异常:"+e);
@@ -676,6 +683,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             ObjectMapper objectMapper = new ObjectMapper();
             String json = null;
             try {
+                JavaTimeModule javaTimeModule = new JavaTimeModule();
+                //格式化时间格式
+                javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                objectMapper.registerModule(javaTimeModule);
                 json = objectMapper.writeValueAsString(batchUpdateVO);
             } catch (JsonProcessingException e) {
                 log.error("批量新增参数序列异常:" + e);
