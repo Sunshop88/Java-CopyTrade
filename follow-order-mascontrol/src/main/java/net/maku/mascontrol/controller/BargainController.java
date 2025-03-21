@@ -81,7 +81,7 @@ public class BargainController {
         }*/
         followOrderHistoryQuery.setTraderId(list.get(0).getId());
 
-        Result result = RestUtil.sendRequest(request,   list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null);
+        Result result = RestUtil.sendRequest(request,   list.get(0).getIpAddr(), HttpMethod.GET, FollowConstant.HISTOTY_ORDER_LIST, followOrderHistoryQuery,null, FollowConstant.VPS_PORT);
         return result;
     }
 
@@ -109,7 +109,7 @@ public class BargainController {
             ThreadPoolUtils.getExecutor().execute(()->{
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("traderId", user.getId());
-                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
             });
 
         });
@@ -129,7 +129,7 @@ public class BargainController {
                     ThreadPoolUtils.getExecutor().execute(()->{
                         JSONObject jsonObject = new JSONObject();
                         jsonObject.put("traderId", user.getId());
-                        Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken);
+                        Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.GET, FollowConstant.RECONNECTION, jsonObject,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     });
 
                 });
@@ -153,7 +153,7 @@ public class BargainController {
             closeVO.setTraderId(user.getId());
             closeVO.setAccount(user.getAccount());
             BeanUtil.copyProperties(vo, closeVO);
-            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ORDERCLOSE, closeVO,null);
+            Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ORDERCLOSE, closeVO,null, FollowConstant.VPS_PORT);
         });
         return Result.ok();
     }
@@ -174,7 +174,7 @@ public class BargainController {
                 closeVO.setSlaveId(user.getId());
                 closeVO.setVpsId(user.getServerId());
                 repairCloseVO.add(closeVO);
-                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken);
+                Result result = RestUtil.sendRequest(request, user.getIpAddr(), HttpMethod.POST, FollowConstant.FOLLOW_ALL_ORDERCLOSE, repairCloseVO,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
             });
 
         });

@@ -662,16 +662,8 @@ public class FollowTraderController {
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())) {
-            String symbol1 = getSymbol(quoteClient,vo.getTraderId(), vo.getSymbol());
-            vo.setSymbol(symbol1);
-            try {
-                // 获取报价信息
-                double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
-            } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-                throw new ServerException(followTraderVO.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
-            } catch (InterruptedException e) {
-                throw new ServerException(followTraderVO.getAccount() + " 操作被中断", e);
-            }
+            List<String> symbol1 = getSymbolClose(quoteClient,vo.getTraderId(), vo.getSymbol());
+            vo.setSymbolList(symbol1);
         }
         boolean result = followTraderService.orderClose(vo, quoteClient);
         if (!result) {
@@ -962,6 +954,77 @@ public class FollowTraderController {
             }
         }
         return symbol;
+    }
+
+
+    private List<String> getSymbolClose(QuoteClient quoteClient, Long traderId, String symbol) {
+        List<String> symbolList = List.of();
+        //查询平台信息
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
+        //获取symbol信息
+        List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(traderId);
+
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        if (ObjectUtil.isNotEmpty(symbol)) {
+            //增加forex
+            int flag=0;
+            String forex = symbol+followTraderEntity.getForex();
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getForex()) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        symbolList.add(o.getSymbol());
+                    }
+                }
+                flag=1;
+            }
+            String cfd =  symbol+followTraderEntity.getCfd();
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getCfd()) && cfd.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        symbolList.add(o.getSymbol());
+                    }
+                }
+                flag=1;
+            }
+            if (flag==1){
+                log.info("未精准匹配成功"+traderId);
+            }else {
+                // 先查品种规格
+                List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
+                if (ObjectUtil.isNotEmpty(specificationEntity)){
+                    for (FollowSysmbolSpecificationEntity o : specificationEntity) {
+                        log.info("品种规格获取报价"+o.getSymbol());
+                        //获取报价
+                        QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                        if (ObjectUtil.isNotEmpty(eventArgs)) {
+                            symbolList.add(o.getSymbol());
+                        }
+                    }
+                }
+            }
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+            List<FollowVarietyEntity> list = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&& o.getBrokerName().equals(followPlatform.getBrokerName()) && o.getStdSymbol().equals(symbol)).toList();
+            QuoteEventArgs eventArgs;
+            for (FollowVarietyEntity o : list) {
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
+                    //获取报价
+                    eventArgs= getEventArgs(quoteClient,o.getBrokerSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)){
+                        symbolList.add(o.getBrokerSymbol());
+                    }
+                }
+            }
+        }
+        return symbolList;
     }
 
     private QuoteEventArgs getEventArgs(QuoteClient quoteClient,String symbol){

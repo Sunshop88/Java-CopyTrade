@@ -47,7 +47,7 @@ public class CloseServerController {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         list.forEach(o->{
             try {
-                RestUtil.sendRequest(request, o.getIpAddress(), HttpMethod.DELETE, FollowConstant.SHUT_DOWN, null,headerApplicationJsonAndToken);
+                RestUtil.sendRequest(request, o.getIpAddress(), HttpMethod.DELETE, FollowConstant.SHUT_DOWN, null,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
             }catch (Exception e){
                 log.info("关闭VPS"+o.getIpAddress());
             }

@@ -8,6 +8,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 平仓
@@ -70,5 +71,8 @@ public class FollowOrderSendCloseVO implements Serializable {
 
     @Schema(description = "是否交易下单")
     private Boolean masType=false;
+
+    @Schema(description = "品种列表")
+    private List<String> symbolList;
 
 }

@@ -143,7 +143,7 @@ public class BargainServiceImpl implements BargainService {
                             masToSubOrderSendDto.setTradeType(FollowInstructEnum.DISTRIBUTION.getValue());
                             masToSubOrderSendDto.setTotalSzie(BigDecimal.valueOf(aDouble));
                             masToSubOrderSendDto.setSendNo(orderNo);
-                            Result result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
+                            Result result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                             if (result.getCode() != 0) {
                                 //增加子指令数据
                                 insertOrderDetail(followTraderEntity, vo, orderNo, aDouble,1,result.getMsg());
@@ -191,7 +191,7 @@ public class BargainServiceImpl implements BargainService {
                             masToSubOrderSendDto.setSendNo(orderNo);
 
                             // 需等待发起请求
-                            Result<?> result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken);
+                            Result<?> result = sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERSEND, masToSubOrderSendDto, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                             FollowMasOrderVo data = JSONObject.parseObject(result.getData().toString(),FollowMasOrderVo.class);
                             if (result.getCode() == 0) {
                                 totalOrders.updateAndGet(v -> v + data.getTotalNum());
@@ -316,7 +316,7 @@ public class BargainServiceImpl implements BargainService {
                     followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
                     followOrderSendCloseVO.setMasType(true);
                     // 需等待发起请求
-                    sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
+                    sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                 } catch (Exception e) {
                     log.error("订单处理异常", e);
                     throw new RuntimeException(e); // 抛出异常让 allOf 感知

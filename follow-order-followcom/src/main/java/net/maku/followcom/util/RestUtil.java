@@ -352,9 +352,9 @@ public class RestUtil {
     /**
      * 远程调用方法封装
      */
-    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t,HttpHeaders header) {
+    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t,HttpHeaders header,String port) {
         //远程调用
-        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, port, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers =null;
         if(ObjectUtil.isNotEmpty(header)) {
