@@ -381,19 +381,11 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
                         errorMsg.append("账号类型必须是MT4或MT5; ");
                     }
-//                    }else {
-//                        if (accountType.equals("MT5")) {
-//                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
-//                        }
-//                        if (accountType.equals("MT4")) {
-//                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
-//                        }
-//                    }
 
                     List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
                     if (ObjectUtil.isNotEmpty(entities)) {
                         String errorRemark = "账号已存在;";
-                        failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId));
+                        failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId,CloseOrOpenEnum.OPEN.getValue()));
                         failureCount++;
                         continue;
                     }
@@ -445,7 +437,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             if (ObjectUtil.isNotEmpty(list1)){
                             node = list1.get(0).getServerNode();
                             }else {
-                                node = list.get(0).getServerNode();
+                                //选一个速度最小的
+                                List<FollowTestDetailVO> list2 = list.stream()
+                                        .sorted(Comparator.comparingInt(vo -> ObjectUtil.isEmpty(vo.getSpeed()) ? Integer.MAX_VALUE : vo.getSpeed()))
+                                        .collect(Collectors.toList());
+                                // 获取速度最小的对象
+                                if (!list2.isEmpty()) {
+                                    FollowTestDetailVO fastestServer = list2.get(0);
+                                    node = fastestServer.getServerNode();
+                                }
                             }
                         }
                     }
@@ -455,6 +455,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     // 如果有错误，设置 upload_status 为 0
 //                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
                     if (errorMsg.length() == 0) {
+                        Integer status = CloseOrOpenEnum.CLOSE.getValue();
+                        failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId,status));
                         if (accountType.equals("MT5")) {
                             accountType = CloseOrOpenEnum.OPEN.getValue() + "";
                         }
@@ -464,7 +466,8 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, sort));
                         successCount++;
                     } else {
-                        failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId));
+                        Integer status = CloseOrOpenEnum.OPEN.getValue();
+                        failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId,status));
                         failureCount++;
                     }
                 }
@@ -505,7 +508,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
 
     // 插入失败详情
-    private FollowFailureDetailEntity insertFailureDetail(String account, String accountType, String platform, String node, String errorRemark, Long savedId) {
+    private FollowFailureDetailEntity insertFailureDetail(String account, String accountType, String platform, String node, String errorRemark, Long savedId, Integer status) {
         FollowFailureDetailEntity entity = new FollowFailureDetailEntity();
         entity.setPlatformType(accountType);
         entity.setServer(platform);
@@ -514,6 +517,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         entity.setRemark(errorRemark);
         entity.setRecordId(savedId);
         entity.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
+        entity.setStatus(status);
         return entity;
     }
 
@@ -1257,7 +1261,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
             if (ObjectUtil.isNotEmpty(entities)) {
                 String errorRemark = "账号已存在;";
-                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, id));
+                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, id,CloseOrOpenEnum.OPEN.getValue()));
                 failureCount++;
                 continue;
             }
@@ -1304,8 +1308,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     if (ObjectUtil.isNotEmpty(list1)){
                         node = list1.get(0).getServerNode();
                     }else {
-                        if (ObjectUtil.isNotEmpty(list.get(0).getServerNode())){
-                        node = list.get(0).getServerNode();
+                        //选一个速度最小的
+                        List<FollowTestDetailVO> list3 = list.stream()
+                                .sorted(Comparator.comparingInt(vo2 -> ObjectUtil.isEmpty(vo2.getSpeed()) ? Integer.MAX_VALUE : vo2.getSpeed()))
+                                .collect(Collectors.toList());
+                        // 获取速度最小的对象
+                        if (!list3.isEmpty()) {
+                            FollowTestDetailVO fastestServer = list3.get(0);
+                            node = fastestServer.getServerNode();
                         }
                     }
                 }
@@ -1316,16 +1326,19 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             // 如果有错误，设置 upload_status 为 0
 //                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
             if (errorMsg.length() == 0) {
+                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, sort));
+                Integer status = CloseOrOpenEnum.CLOSE.getValue();
                 if (accountType.equals("MT5")) {
                     accountType = CloseOrOpenEnum.OPEN.getValue() + "";
                 }
                 if (accountType.equals("MT4")) {
                     accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
                 }
-                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, sort));
+                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, id,status));
                 successCount++;
             } else {
-                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, id));
+                Integer status = CloseOrOpenEnum.OPEN.getValue();
+                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, id,status));
                 failureCount++;
             }
         }
