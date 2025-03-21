@@ -131,4 +131,10 @@ public class FollowVpsEntity {
 	@TableField(value = "is_monitor_repair")
 	private Integer isMonitorRepair;
 
+	/**
+	 * 是否已停止 0-正常 1-已停止
+	 */
+	@TableField(value = "is_stop")
+	private Integer isStop;
+
 }

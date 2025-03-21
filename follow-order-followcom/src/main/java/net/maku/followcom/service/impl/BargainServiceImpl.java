@@ -70,9 +70,12 @@ public class BargainServiceImpl implements BargainService {
         if (vo.getStartSize().compareTo(vo.getEndSize())>0) {
             throw new ServerException("开始手数不能大于结束手数");
         }
-        if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
-            throw new ServerException("总手数不能低于最低手数");
+        if (ObjectUtil.isNotEmpty(vo.getTotalSzie())){
+            if (vo.getStartSize().compareTo(vo.getTotalSzie())>0) {
+                throw new ServerException("总手数不能低于最低手数");
+            }
         }
+
         //现在找出可下单账号
         List<FollowTraderEntity> followTraderEntityList=new ArrayList<>();
         vo.getTraderList().forEach(o->{
@@ -115,6 +118,14 @@ public class BargainServiceImpl implements BargainService {
                 followOrderInstructEntity.setTrueTotalOrders(doubleMap.size());
                 followOrderInstructEntity.setTrueTotalLots(vo.getTotalSzie());
                 followOrderInstructService.save(followOrderInstructEntity);
+                if (doubleMap.keySet().size()!=followTraderEntityList.size()){
+                    //未分配订单直接报错记录
+                    List<FollowTraderEntity> followTraderEntities = followTraderEntityList.stream()
+                            .filter(followTraderEntity -> !doubleMap.containsKey(followTraderEntity)).toList();
+                    followTraderEntities.forEach(o->{
+                        insertOrderDetail(o, vo, orderNo, 0d,1,"未分配手数");
+                    });
+                }
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 doubleMap.forEach((followTraderEntity, aDouble) -> {
                     CompletableFuture<Void> orderFuture = CompletableFuture.runAsync(() -> {
@@ -228,7 +239,7 @@ public class BargainServiceImpl implements BargainService {
                 followOrderInstruct.setTradedOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).count());
                 followOrderInstruct.setTradedLots((list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getOpenTime())).map(FollowOrderDetailEntity::getSize).reduce(BigDecimal.ZERO, BigDecimal::add)));
                 followOrderInstruct.setFailOrders((int) list.stream().filter(o -> ObjectUtil.isNotEmpty(o.getRemark())).count());
-                if (followOrderInstruct.getTradedOrders()==followOrderInstruct.getTrueTotalOrders()){
+                if (Objects.equals(followOrderInstruct.getTradedOrders(), followOrderInstruct.getTrueTotalOrders())){
                     log.info("交易下单已完成-全部成功");
                     followOrderInstruct.setEndTime(LocalDateTime.now());
                     followOrderInstruct.setStatus(FollowMasOrderStatusEnum.ALLSUCCESS.getValue());
@@ -303,7 +314,6 @@ public class BargainServiceImpl implements BargainService {
                     FollowOrderSendCloseVO followOrderSendCloseVO = new FollowOrderSendCloseVO();
                     BeanUtil.copyProperties(vo,followOrderSendCloseVO);
                     followOrderSendCloseVO.setTraderId(followTraderEntity.getId());
-                    followOrderSendCloseVO.setCloseType(0);
                     followOrderSendCloseVO.setMasType(true);
                     // 需等待发起请求
                     sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.MASORDERCLOSE, followOrderSendCloseVO, headerApplicationJsonAndToken);
@@ -328,7 +338,7 @@ public class BargainServiceImpl implements BargainService {
     }
 
     @Override
-    public void stopOrder(Integer type, String orderNo) {
+    public void stopOrder(Integer type, String orderNo,String traderList) {
         //指令停止
         if (type == 0) {
             FollowOrderInstructEntity orderInstructServiceOne = followOrderInstructService.getOne(new LambdaQueryWrapper<FollowOrderInstructEntity>().eq(FollowOrderInstructEntity::getOrderNo, orderNo));
@@ -345,13 +355,16 @@ public class BargainServiceImpl implements BargainService {
                 throw new ServerException("不存在正在执行订单");
             }
         } else {
-            List<FollowOrderDetailEntity> list=followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().select(FollowOrderDetailEntity::getTraderId).eq(FollowOrderDetailEntity::getSendNo, orderNo).groupBy(FollowOrderDetailEntity::getTraderId));
+            List<FollowTraderUserEntity> list=followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().in(FollowTraderUserEntity::getId, traderList));
             list.forEach(o->{
-                if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS +o.getTraderId() ))) {
-                    redisCache.set(Constant.TRADER_CLOSE_MAS + o.getTraderId(), 2);
-                }else {
-                    throw new ServerException("不存在正在平仓订单");
-                }
+                List<FollowTraderEntity> followTraderEntityList = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, o.getAccount()).eq(FollowTraderEntity::getPlatform, o.getPlatform()));
+                followTraderEntityList.forEach(item->{
+                    if (ObjectUtil.isNotEmpty(redisCache.get(Constant.TRADER_CLOSE_MAS +item.getId()))) {
+                        redisCache.set(Constant.TRADER_CLOSE_MAS + item.getId(), 2);
+                    }else {
+                        throw new ServerException("不存在正在平仓订单");
+                    }
+                });
             });
         }
     }

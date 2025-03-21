@@ -1208,13 +1208,16 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         //失败
         List<FollowFailureDetailEntity> failureList = new ArrayList<>();
         for (FollowTraderUserVO vo : followTraderUserVO) {
-            String password = AesUtils.aesEncryptStr(vo.getPassword());
+            String password = vo.getPassword();
+            if (ObjectUtil.isNotEmpty(password)){
+                password = AesUtils.aesEncryptStr(vo.getPassword());
+            }
             String account = vo.getAccount();
-            String accountType = vo.getAccountType().isEmpty() ? "MT4" : vo.getAccountType();
+            String accountType = ObjectUtil.isEmpty(vo.getAccountType()) ? "MT4" : vo.getAccountType();
             String platform = vo.getPlatform();
             String node = vo.getServerNode();
             String remark = vo.getRemark();
-            String sort = String.valueOf(vo.getSort()).isEmpty() ? "1" : String.valueOf(vo.getSort());
+            String sort = ObjectUtil.isEmpty(String.valueOf(vo.getSort())) ? "1" : String.valueOf(vo.getSort());
             StringBuilder errorMsg = new StringBuilder();
             if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
                 errorMsg.append("账号类型必须是MT4或MT5; ");
@@ -1230,17 +1233,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
 
             // 校验必填字段
 //                    StringBuilder errorMsg = new StringBuilder();
-            if (account.isEmpty()) {
+            if (ObjectUtil.isEmpty(account)) {
                 errorMsg.append("账号不能为空; ");
             }else if (!NumberUtils.isDigits(account)){
                 errorMsg.append("账号需为数字; ");
             }
-            if (password.isEmpty()) {
+            if (ObjectUtil.isEmpty(password)) {
                 errorMsg.append("密码不能为空; ");
-            } else if (vo.getPassword().length() < 6 || vo.getPassword().length() > 16) {
+            } else if (vo.getPassword().length() < 6 || vo.getPassword().length() > 16 && ObjectUtil.isNotEmpty(password)) {
                 errorMsg.append("密码需在6 ~ 16位之间; ");
             }
-            if (platform.isEmpty()) {
+            if (ObjectUtil.isEmpty(platform)) {
                 errorMsg.append("服务器不能为空; ");
             } else {
                 if (followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform)).size() == 0) {

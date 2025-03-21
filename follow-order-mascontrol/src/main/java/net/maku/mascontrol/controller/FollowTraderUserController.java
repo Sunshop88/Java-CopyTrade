@@ -327,7 +327,7 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         }
     }
 
-    @PostMapping("reimport")
+    @PostMapping("reImport")
     @Operation(summary = "导入重试")
     public Result<String> reimport(@RequestBody FollowUploadTraderUserVO vo) {
         //查询follow_vps最小的id

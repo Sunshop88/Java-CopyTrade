@@ -102,4 +102,7 @@ public class FollowVpsVO implements Serializable {
 
 	private String versions;
 
+	@Schema(description = "是否已停止 0-正常 1-已停止")
+	private Integer isStop;
+
 }

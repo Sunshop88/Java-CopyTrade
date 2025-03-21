@@ -749,10 +749,14 @@ public class FollowTraderController {
     @Operation(summary = "重连账号")
     @PreAuthorize("hasAuthority('mascontrol:trader')")
     public Result<Boolean> reconnection(@Parameter(description = "traderId") String traderId) {
-        Boolean reconnect = reconnect(traderId);
-        if (!reconnect){
-            throw new ServerException("请检查账号密码，稍后再试");
-        }
+        //批量重连
+        String[] split = traderId.split(",");
+        Arrays.asList(split).forEach(o->{
+            Boolean reconnect = reconnect(o);
+            if (!reconnect){
+                log.info("重连失败，请检查账号密码"+o);
+            }
+        });
         return Result.ok();
     }
     @GetMapping("/specificationList")
@@ -907,6 +911,7 @@ public class FollowTraderController {
         FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
         if (ObjectUtil.isNotEmpty(symbol)) {
             //增加forex
+            int flag=0;
             String forex = symbol+followTraderEntity.getForex();
             if(ObjectUtil.isNotEmpty(followTraderEntity.getForex()) && forex.contains(symbol)){
                 List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
@@ -918,6 +923,7 @@ public class FollowTraderController {
                         return o.getSymbol();
                     }
                 }
+                flag=1;
             }
             String cfd =  symbol+followTraderEntity.getCfd();
             if(ObjectUtil.isNotEmpty(followTraderEntity.getCfd()) && cfd.contains(symbol)){
@@ -930,31 +936,34 @@ public class FollowTraderController {
                         return o.getSymbol();
                     }
                 }
+                flag=1;
             }
-            
-            // 先查品种规格
-            List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
-            if (ObjectUtil.isNotEmpty(specificationEntity)){
-                for (FollowSysmbolSpecificationEntity o : specificationEntity) {
-                    log.info("品种规格获取报价"+o.getSymbol());
-                    //获取报价
-                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
-                    if (ObjectUtil.isNotEmpty(eventArgs)) {
-                        return o.getSymbol();
-                    }
-                };
+            if (flag==1){
+                log.info("未精准匹配成功"+traderId);
             }else {
-                // 查看品种匹配 模板
-                List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
-                List<FollowVarietyEntity> list = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&& o.getBrokerName().equals(followPlatform.getBrokerName()) && o.getStdSymbol().equals(symbol)).toList();
-                QuoteEventArgs eventArgs;
-                for (FollowVarietyEntity o : list) {
-                    if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
+                // 先查品种规格
+                List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
+                if (ObjectUtil.isNotEmpty(specificationEntity)){
+                    for (FollowSysmbolSpecificationEntity o : specificationEntity) {
+                        log.info("品种规格获取报价"+o.getSymbol());
                         //获取报价
-                        eventArgs= getEventArgs(quoteClient,o.getBrokerSymbol());
-                        if (ObjectUtil.isNotEmpty(eventArgs)){
-                            return o.getBrokerSymbol();
+                        QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                        if (ObjectUtil.isNotEmpty(eventArgs)) {
+                            return o.getSymbol();
                         }
+                    }
+                }
+            }
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+            List<FollowVarietyEntity> list = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&& o.getBrokerName().equals(followPlatform.getBrokerName()) && o.getStdSymbol().equals(symbol)).toList();
+            QuoteEventArgs eventArgs;
+            for (FollowVarietyEntity o : list) {
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
+                    //获取报价
+                    eventArgs= getEventArgs(quoteClient,o.getBrokerSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)){
+                        return o.getBrokerSymbol();
                     }
                 }
             }
