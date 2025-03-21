@@ -25,4 +25,8 @@ public class VpsDescVO {
     private String forex;
 
     private String cfd;
+
+    public Long traderId;
+
+    public  String ipAddress;
 }

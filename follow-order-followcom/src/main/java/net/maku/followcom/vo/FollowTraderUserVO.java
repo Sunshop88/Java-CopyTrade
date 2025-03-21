@@ -120,6 +120,6 @@ public class FollowTraderUserVO implements Serializable {
 	private String  groupColor;
 	@Schema(description = "失败记录id")
 	private Long recordId;
-
-
+	@Schema(description = "cdf和forex")
+   private List<VpsDescVO> vpsDescs;
 }
