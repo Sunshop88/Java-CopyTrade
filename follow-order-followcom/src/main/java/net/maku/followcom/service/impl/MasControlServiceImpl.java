@@ -65,19 +65,15 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("插入 FollowVps 失败");
             return false;
         }
-        clientService.insert(vo);
+        //查询vps最新id
+        FollowVpsEntity vpsEntity = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByDesc(FollowVpsEntity::getId)).get(0);
+        if (ObjectUtil.isNotEmpty(vpsEntity)){
+            vo.setId(vpsEntity.getId());
+            clientService.insert(vo);
+        }
+//        clientService.insert(vo);
 //        clientServicePt.insert(vo);
         log.info("成功插入 FollowVps 和 Client");
-        String version1 = FollowConstant.MAS_VERSION;
-        //分割
-//        String[] split = version1.split("_");
-//        String version = split[0];
-//        FollowVersionEntity entity = new FollowVersionEntity();
-//        entity.setIp(vo.getIpAddress());
-//        entity.setVersions(version);
-//        entity.setVersionNumber("0001");
-//        entity.setDeleted(0);
-//        followVersionService.save(entity);
         return true;
     }
 
@@ -272,7 +268,10 @@ public class MasControlServiceImpl implements MasControlService {
                     //外部接口
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
+                        //查询新增平台的id
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getId)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
+                        platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);
                         platformEntity.setType(vo.getPlatformType());
                         platformService.save(platformEntity);
@@ -422,7 +421,10 @@ public class MasControlServiceImpl implements MasControlService {
                     //外部接口
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
+                        //查询新增平台的id
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().orderByDesc(FollowPlatformEntity::getId)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
+                        platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);
                         platformEntity.setType(vo.getPlatformType());
                         platformService.save(platformEntity);

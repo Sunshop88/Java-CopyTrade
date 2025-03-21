@@ -118,6 +118,8 @@ public class FollowTraderUserVO implements Serializable {
 	private Integer leverage;
 	@Schema(description = "组别颜色")
 	private String  groupColor;
+	@Schema(description = "失败记录id")
+	private Long recordId;
 
 
 }

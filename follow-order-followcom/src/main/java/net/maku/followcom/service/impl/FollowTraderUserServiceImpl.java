@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.implementation.bytecode.Throw;
 import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
+import net.maku.followcom.dao.FollowOrderCloseDao;
 import net.maku.followcom.dao.FollowTraderUserDao;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
@@ -91,6 +92,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     private final FollowVpsService followVpsService;
     private final RedisCache redisCache;
     private final FollowBrokeServerService followBrokeServerService;
+    private final FollowOrderCloseDao followOrderCloseDao;
 
 
     @Override
@@ -287,8 +289,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 //查看喊单账号是否存在用户
                 List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
                 if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
-                    throw new ServerException("请先删除跟单用户");
-//                    continue;
+                    log.info("跟单账号有绑定:{}", List.getFirst().getAccount());
+//                    throw new ServerException("请先删除跟单用户:{}");
+                    continue;
                 }
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
@@ -299,8 +302,9 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     log.info("删除成功:{}", result);
                 }
             }
+            removeById(id);
         }
-        removeByIds(idList);
+//        removeByIds(idList);
 
     }
 
@@ -356,6 +360,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             List<FollowTraderUserEntity> entityList = new ArrayList<>();
             //失败
             List<FollowFailureDetailEntity> failureList = new ArrayList<>();
+            List<FollowTraderUserVO> paramsList = new ArrayList<>();
             long successCount = 0;
             long failureCount = 0;
             try (InputStream inputStream = file.getInputStream();
@@ -478,17 +483,26 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 if (ObjectUtil.isNotEmpty(failureList)) {
                     followFailureDetailService.saveBatch(failureList);
                 }
+                ObjectMapper objectMapper = new ObjectMapper();
+                String json = null;
+                try {
+                    json = objectMapper.writeValueAsString(failureList);
+                } catch (JsonProcessingException e) {
+                    log.error("挂靠参数序列异常:"+e);
+                }
                 LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
                 updateWrapper.set(FollowUploadTraderUserEntity::getSuccessCount, successCount)
                         .set(FollowUploadTraderUserEntity::getFailureCount, failureCount)
                         .set(FollowUploadTraderUserEntity::getUploadTotal, failureCount + successCount)
                         .set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.SUCCESS.getType())
+                        .set(FollowUploadTraderUserEntity::getParams,json)
                         .eq(FollowUploadTraderUserEntity::getId, savedId);
                 followUploadTraderUserService.update(updateWrapper);
         }catch (Exception e) {
             log.error("处理Excel文件时发生错误: ", e);
         }
     }
+
 
     // 插入失败详情
     private FollowFailureDetailEntity insertFailureDetail(String account, String accountType, String platform, String node, String errorRemark, Long savedId) {
@@ -1175,6 +1189,150 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         });
 
     }
+
+    @Override
+    public void addExcel(Long id, List<FollowTraderUserVO> followTraderUserVO) {
+//        followFailureDetailService.list(new LambdaQueryWrapper<FollowFailureDetailEntity>().eq(FollowFailureDetailEntity::getRecordId,id));
+//        if (ObjectUtil.isNotEmpty(followTraderUserVO)){
+//            followFailureDetailService.remove(new LambdaQueryWrapper<FollowFailureDetailEntity>().eq(FollowFailureDetailEntity::getRecordId,id));
+//        }
+//        //成功
+//        List<FollowTraderUserEntity> entityList = new ArrayList<>();
+//        //失败
+//        List<FollowFailureDetailEntity> failureList = new ArrayList<>();
+//        for (FollowTraderUserVO vo : followTraderUserVO) {
+//            String password = AesUtils.aesEncryptStr(vo.getPassword());
+//            String account = vo.getAccount();
+//            String accountType = vo.getAccountType().isEmpty() ? "MT4" : vo.getAccountType();
+//            String platform = vo.getPlatform();
+//            String node = vo.getServerNode();
+//            String remark = vo.getRemark();
+//            String sort = String.valueOf(vo.getSort()).isEmpty() ? "1" : String.valueOf(vo.getSort());
+//            StringBuilder errorMsg = new StringBuilder();
+//            if (!accountType.equals("MT4") && !accountType.equals("MT5")) {
+//                errorMsg.append("账号类型必须是MT4或MT5; ");
+//            }
+////                    }else {
+////                        if (accountType.equals("MT5")) {
+////                            accountType = CloseOrOpenEnum.OPEN.getValue() + "";
+////                        }
+////                        if (accountType.equals("MT4")) {
+////                            accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
+////                        }
+////                    }
+//
+//            List<FollowTraderUserEntity> entities = list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, account).eq(FollowTraderUserEntity::getPlatform, platform));
+//            if (ObjectUtil.isNotEmpty(entities)) {
+//                String errorRemark = "账号已存在;";
+//                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId));
+//                failureCount++;
+//                continue;
+//            }
+//
+//            // 校验必填字段
+////                    StringBuilder errorMsg = new StringBuilder();
+//            if (account.isEmpty()) {
+//                errorMsg.append("账号不能为空; ");
+//            }else if (!NumberUtils.isDigits(account)){
+//                errorMsg.append("账号需为数字; ");
+//            }
+////                }else {
+////                    if (followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, account)).size() > 0) {
+////                        errorMsg.append("账号已存在; ");
+////                    }
+////                }
+//            if (password.isEmpty()) {
+//                errorMsg.append("密码不能为空; ");
+//            } else if (record.get(1).length() < 6 || record.get(1).length() > 16) {
+//                errorMsg.append("密码需在6 ~ 16位之间; ");
+//            }
+//            if (platform.isEmpty()) {
+//                errorMsg.append("服务器不能为空; ");
+//            } else {
+//                if (followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, platform)).size() == 0) {
+//                    errorMsg.append("服务器不存在; ");
+//                }
+//            }
+////                    if (!accountType.equals("0") && !accountType.equals("1")) {
+////                        errorMsg.append("账号类型必须是MT4或MT5; ");
+////                    }
+//            if (ObjectUtil.isNotEmpty(node) && ObjectUtil.isNotEmpty(platform)) {
+//                //将node拆分
+//                String[] split = node.split(":");
+//                if (split.length != 2) {
+//                    errorMsg.append("节点格式不正确; ");
+//                } else if (followBrokeServerService.list(new LambdaQueryWrapper<FollowBrokeServerEntity>()
+//                        .eq(FollowBrokeServerEntity::getServerName, platform)
+//                        .eq(FollowBrokeServerEntity::getServerNode, split[0])
+//                        .eq(FollowBrokeServerEntity::getServerPort, split[1])).size() == 0) {
+//                    errorMsg.append("节点不存在; ");
+//                }
+//            }
+//            if (ObjectUtil.isEmpty(node) && ObjectUtil.isNotEmpty(platform)){
+//                //根据platform 查询默认节点
+//                List<FollowTestDetailVO> list = vos.stream().filter(vo -> vo.getServerName().equals(platform)).toList();
+//                if (ObjectUtil.isNotEmpty(list)){
+//                    List<FollowTestDetailVO> list1 = list.stream().filter(vo -> vo.getIsDefaultServer() == 0).toList();
+//                    if (ObjectUtil.isNotEmpty(list1)){
+//                        node = list1.get(0).getServerNode();
+//                    }else {
+//                        node = list.get(0).getServerNode();
+//                    }
+//                }
+//            }
+//
+//            // 生成备注信息
+//            String errorRemark = errorMsg.length() > 0 ? errorMsg.toString() : remark;
+//            // 如果有错误，设置 upload_status 为 0
+////                int uploadStatus = errorMsg.length() > 0 ? 0 : 1;
+//            if (errorMsg.length() == 0) {
+//                if (accountType.equals("MT5")) {
+//                    accountType = CloseOrOpenEnum.OPEN.getValue() + "";
+//                }
+//                if (accountType.equals("MT4")) {
+//                    accountType = CloseOrOpenEnum.CLOSE.getValue() + "";
+//                }
+//                entityList.add(insertAccount(account, password, accountType, platform, node, errorRemark, sort));
+//                successCount++;
+//            } else {
+//                failureList.add(insertFailureDetail(account, accountType, platform, node, errorRemark, savedId));
+//                failureCount++;
+//            }
+//        }
+//        if (ObjectUtil.isNotEmpty(entityList)) {
+//            //批量保存前还要检查一次并发重复的数据，platform和account同时相等的情况
+//            entityList = entityList.stream()
+//                    .collect(Collectors.toMap(
+//                            entity -> entity.getAccount() + "_" + entity.getPlatform(),
+//                            entity -> entity,
+//                            (existing, replacement) -> existing))
+//                    .values()
+//                    .stream()
+//                    .collect(Collectors.toList());  // 最终转换成 list
+//            this.saveBatch(entityList);
+//        }
+//        if (ObjectUtil.isNotEmpty(failureList)) {
+//            followFailureDetailService.saveBatch(failureList);
+//        }
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        String json = null;
+//        try {
+//            json = objectMapper.writeValueAsString(failureList);
+//        } catch (JsonProcessingException e) {
+//            log.error("挂靠参数序列异常:"+e);
+//        }
+//        LambdaUpdateWrapper<FollowUploadTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+//        updateWrapper.set(FollowUploadTraderUserEntity::getSuccessCount, successCount)
+//                .set(FollowUploadTraderUserEntity::getFailureCount, failureCount)
+//                .set(FollowUploadTraderUserEntity::getUploadTotal, failureCount + successCount)
+//                .set(FollowUploadTraderUserEntity::getStatus, TraderUserEnum.SUCCESS.getType())
+//                .set(FollowUploadTraderUserEntity::getParams,json)
+//                .eq(FollowUploadTraderUserEntity::getId, savedId);
+//        followUploadTraderUserService.update(updateWrapper);
+//    }catch (Exception e) {
+//        log.error("处理Excel文件时发生错误: ", e);
+//    }
+}
 
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
         FollowTraderUserEntity traderUser = baseMapper.selectById(traderUserId);
