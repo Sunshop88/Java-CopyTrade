@@ -20,4 +20,9 @@ public class VpsDescVO {
     private Integer status;
     //异常信息
     private String statusExtra;
+
+
+    private String forex;
+
+    private String cfd;
 }
