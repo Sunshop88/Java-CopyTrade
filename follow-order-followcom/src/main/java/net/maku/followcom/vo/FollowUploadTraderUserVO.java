@@ -1,5 +1,7 @@
 package net.maku.followcom.vo;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import io.micrometer.common.lang.Nullable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -34,9 +36,11 @@ public class FollowUploadTraderUserVO implements Serializable {
 	private Integer status;
 
 	@Schema(description = "上传数据数量")
+	@TableField(update = "null")
 	private Integer uploadTotal;
 
 	@Schema(description = "成功数量")
+	@TableField(update = "null")
 	private Integer successCount;
 
 	@Schema(description = "失败数量")

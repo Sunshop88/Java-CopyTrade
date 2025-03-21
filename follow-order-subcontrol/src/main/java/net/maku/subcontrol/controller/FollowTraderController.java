@@ -850,13 +850,17 @@ public class FollowTraderController {
                 }  else {
 
                     CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+
+                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                    copierApiTrader.startTrade();
                     //判断是否获取过品种规格
                     List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
                     if(ObjectUtil.isEmpty(list)) {
+                        if(copierApiTrader.quoteClient==null){
+                            log.error("获取品种规格失败");
+                        }
                         followTraderService.addSysmbolSpecification(followTraderEntity,copierApiTrader.quoteClient);
                     }
-                    log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
-                    copierApiTrader.startTrade();
                     result=true;
                 }
             }
@@ -1172,7 +1176,11 @@ public class FollowTraderController {
         //修改密码
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(FollowTraderEntity::getId, traderId)
-                .set(FollowTraderEntity::getPassword, vo.getNewPassword());
+                .set(FollowTraderEntity::getPassword, vo.getNewPassword())
+                .set(FollowTraderEntity::getForex, vo.getForex())
+                .set(FollowTraderEntity::getCfd, vo.getCfd())
+        ;
+
         followTraderService.update(updateWrapper);
         reconnect(String.valueOf(traderId));
         return Result.ok();

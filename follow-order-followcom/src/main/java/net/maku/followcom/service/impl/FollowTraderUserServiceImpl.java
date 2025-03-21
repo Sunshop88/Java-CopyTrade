@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +57,7 @@ import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -290,30 +293,36 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> idList, HttpServletRequest request) {
         for (Long id : idList) {
-            FollowTraderUserVO vo = get(id);
-            //根据账号删除
-            List<FollowTraderEntity> List= followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getAccount, vo.getAccount()).eq(FollowTraderEntity::getPlatformId, vo.getPlatformId()));
-            if (ObjectUtil.isNotEmpty(List)){
-                //查看喊单账号是否存在用户
-                List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
-                if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
-                    log.info("跟单账号有绑定:{}", List.getFirst().getAccount());
-//                    throw new ServerException("请先删除跟单用户:{}");
-                    continue;
-                }
-                for (FollowTraderEntity entity : List) {
-                    List<Long> account = Collections.singletonList(entity.getId());
-                    Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null, FollowConstant.VPS_PORT);
-                    if(result.getCode()!=CloseOrOpenEnum.CLOSE.getValue()){
-                        throw new ServerException(result.getMsg());
+            try {
+                FollowTraderUserVO vo = get(id);
+                // 根据账号删除
+                List<FollowTraderEntity> List = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>()
+                        .eq(FollowTraderEntity::getAccount, vo.getAccount())
+                        .eq(FollowTraderEntity::getPlatformId, vo.getPlatformId()));
+                if (ObjectUtil.isNotEmpty(List)) {
+                    // 查看喊单账号是否存在用户
+                    List<FollowTraderSubscribeEntity> followTraderSubscribeEntityList = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>()
+                            .in(FollowTraderSubscribeEntity::getMasterId, List.stream().map(FollowTraderEntity::getId).toList()));
+                    if (ObjectUtil.isNotEmpty(followTraderSubscribeEntityList)) {
+                        log.info("跟单账号有绑定:{}", List.get(0).getAccount());
+                        continue;
                     }
-                    log.info("删除成功:{}", result);
+                    for (FollowTraderEntity entity : List) {
+                        List<Long> account = Collections.singletonList(entity.getId());
+                        Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account, null, FollowConstant.VPS_PORT);
+                        if (result.getCode() != CloseOrOpenEnum.CLOSE.getValue()) {
+                            throw new ServerException(result.getMsg());
+                        }
+                        log.info("删除成功:{}", result);
+                    }
                 }
+                removeById(id);
+            } catch (Exception e) {
+                log.error("删除账号失败: ", e);
+                // 处理异常,例如记录日志或者继续下一个账号的删除
             }
-            removeById(id);
+//        removeByIds(idList)
         }
-//        removeByIds(idList);
-
     }
 
     @Override
@@ -497,6 +506,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 ObjectMapper objectMapper = new ObjectMapper();
                 String json = null;
                 try {
+                    JavaTimeModule javaTimeModule = new JavaTimeModule();
+                    //格式化时间格式
+                    javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    objectMapper.registerModule(javaTimeModule);
                     json = objectMapper.writeValueAsString(failureList);
                 } catch (JsonProcessingException e) {
                     log.error("挂靠参数序列异常:"+e);
@@ -676,6 +689,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             ObjectMapper objectMapper = new ObjectMapper();
             String json = null;
             try {
+                JavaTimeModule javaTimeModule = new JavaTimeModule();
+                //格式化时间格式
+                javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                objectMapper.registerModule(javaTimeModule);
                 json = objectMapper.writeValueAsString(batchUpdateVO);
             } catch (JsonProcessingException e) {
                 log.error("批量新增参数序列异常:" + e);
