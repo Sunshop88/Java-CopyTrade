@@ -312,7 +312,7 @@ public class FollowSlaveController {
             //修改内存缓存
             followTraderSubscribeService.updateSubCache(vo.getId());
             //重连
-            if(ObjectUtil.isNotEmpty(vo.getPassword()) && password.equals(vo.getPassword())){
+            if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
                 reconnect(vo.getId().toString());
             }
             //编辑从库
