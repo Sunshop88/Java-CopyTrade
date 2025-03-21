@@ -46,19 +46,19 @@ public class FollowUploadTraderUserEntity {
 	/**
 	* 上传数据数量
 	*/
-	@TableField(value = "upload_total")
+	@TableField(value = "upload_total",updateStrategy = FieldStrategy.IGNORED)
 	private Long uploadTotal;
 
 	/**
 	* 成功数量
 	*/
-	@TableField(value = "success_count")
+	@TableField(value = "success_count",updateStrategy = FieldStrategy.IGNORED)
 	private Long successCount;
 
 	/**
 	* 失败数量
 	*/
-	@TableField(value = "failure_count")
+	@TableField(value = "failure_count",updateStrategy = FieldStrategy.IGNORED)
 	private Long failureCount;
 
 	/**
