@@ -105,4 +105,6 @@ public interface FollowTraderService extends BaseService<FollowTraderEntity> {
     FollowTraderEntity getByAccount(String account);
 
     List<FollowSysmbolSpecificationEntity> getSpecificationList(FollowSysmbolSpecificationQuery query);
+
+    public void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient);
 }
