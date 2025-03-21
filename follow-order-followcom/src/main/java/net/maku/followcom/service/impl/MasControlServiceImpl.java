@@ -67,6 +67,42 @@ public class MasControlServiceImpl implements MasControlService {
         }
         //查询vps最新id
         FollowVpsEntity vpsEntity = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByDesc(FollowVpsEntity::getId)).get(0);
+        vo.setId(vpsEntity.getId());
+
+        followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
+        //查询vpsid下的用户
+        List<Long> userIdList = userService.getUserNameId(vo.getUserList());
+        // 确保 vpsUserVO 和 userIdList 不为 null
+        List<Long> safeUserIdList = (userIdList == null) ? new ArrayList<>() : userIdList;
+
+        for (Long id : safeUserIdList) {
+            redisCache.delete(Constant.SYSTEM_VPS_USER+id);
+        }
+        if (ObjectUtil.isNotEmpty(userIdList)) {
+            for (Long userId : userIdList) {
+                FollowVpsUserEntity entity = new FollowVpsUserEntity();
+                entity.setUserId(userId);
+                entity.setVpsId(vo.getId());
+                entity.setVpsName(vo.getName());
+                followVpsUserService.save(entity);
+            }
+        }
+        //添加缓存
+        for (Long id : userIdList) {
+            List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, id));
+            if (ObjectUtil.isNotEmpty(list)){
+                //存vps名称和vpsid
+                List<VpsUserVO> vpsList = list.stream().map(o -> {
+                    VpsUserVO vo1 = new VpsUserVO();
+                    vo1.setName(o.getVpsName());
+                    vo1.setId(o.getVpsId());
+                    return vo1;
+                }).collect(Collectors.toList());
+                redisCache.set(Constant.SYSTEM_VPS_USER+id,vpsList);
+            }
+        }
+//        //查询vps最新id
+//        FollowVpsEntity vpsEntity = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByDesc(FollowVpsEntity::getId)).get(0);
         if (ObjectUtil.isNotEmpty(vpsEntity)){
             vo.setId(vpsEntity.getId());
             clientService.insert(vo);
