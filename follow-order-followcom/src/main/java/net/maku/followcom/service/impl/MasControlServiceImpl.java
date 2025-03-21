@@ -14,6 +14,8 @@ import net.maku.followcom.service.*;
 import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.*;
+import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.framework.security.user.SecurityUser;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static net.maku.followcom.util.RestUtil.getHeader;
 
@@ -51,6 +54,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final FollowTestDetailService followTestDetailService;
     private final FollowVpsUserService followVpsUserService;
     private final UserService userService;
+    private final RedisCache redisCache;
 //    private final FollowVersionService followVersionService;
 
     @Override
@@ -86,16 +90,55 @@ public class MasControlServiceImpl implements MasControlService {
             log.error("更新 Client 失败");
             return false;
         }
-
+        //查询原vps其下的用户
+        List<Long> vpsUserVO = new ArrayList<>();
+        List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
+        if (ObjectUtil.isNotEmpty(vpsUserEntities)){
+            vpsUserEntities.forEach(o1->{
+                vpsUserVO.add(o1.getUserId());
+            });
+        }
+        //查询vpsid下的用户
+//        List<Long> userIdList = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId())).stream().map(o -> o.getUserId()).toList();
         followVpsUserService.remove(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
         List<Long> userIdList = userService.getUserNameId(vo.getUserList());
-        for (Long userId : userIdList) {
-            FollowVpsUserEntity entity = new FollowVpsUserEntity();
-            entity.setUserId(userId);
-            entity.setVpsId(vo.getId());
-            entity.setVpsName(vo.getName());
-            followVpsUserService.save(entity);
+        //vpsUserVO和userIdList 合并且不能重复
+        // 确保 vpsUserVO 和 userIdList 不为 null
+        List<Long> safeVpsUserVO = (vpsUserVO == null) ? new ArrayList<>() : vpsUserVO;
+        List<Long> safeUserIdList = (userIdList == null) ? new ArrayList<>() : userIdList;
+
+// 使用 Stream.concat 拼接两个列表
+        List<Long> set = Stream.concat(safeVpsUserVO.stream(), safeUserIdList.stream())
+                .distinct()
+                .collect(Collectors.toList());
+        for (Long id : set) {
+            redisCache.delete(Constant.SYSTEM_VPS_USER+id);
         }
+        if (ObjectUtil.isNotEmpty(userIdList)) {
+            for (Long userId : userIdList) {
+                FollowVpsUserEntity entity = new FollowVpsUserEntity();
+                entity.setUserId(userId);
+                entity.setVpsId(vo.getId());
+                entity.setVpsName(vo.getName());
+                followVpsUserService.save(entity);
+            }
+        }
+        //添加缓存
+        for (Long id : set) {
+            List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, id));
+            if (ObjectUtil.isNotEmpty(list)){
+                //存vps名称和vpsid
+                List<VpsUserVO> vpsList = list.stream().map(o -> {
+                    VpsUserVO vo1 = new VpsUserVO();
+                    vo1.setName(o.getVpsName());
+                    vo1.setId(o.getVpsId());
+                    return vo1;
+                }).collect(Collectors.toList());
+                redisCache.set(Constant.SYSTEM_VPS_USER+id,vpsList);
+            }
+        }
+
+
         FollowVpsVO followVpsVO = followVpsService.get(Long.valueOf(vo.getId()));
         followVpsService.update(vo);
         if (!vo.getName().equals(followVpsVO.getName())) {

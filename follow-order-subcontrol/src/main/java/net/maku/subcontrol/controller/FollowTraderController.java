@@ -127,23 +127,25 @@ public class FollowTraderController {
             newId=followTraderVO.getId();
             FollowTraderEntity convert = FollowTraderConvert.INSTANCE.convert(followTraderVO);
             convert.setId(followTraderVO.getId());
-            ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
-            if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                followTraderService.removeById(followTraderVO.getId());
-                return Result.error("账号无法连接");
+            if(ObjectUtil.isEmpty(vo.getIsSyncLogin())){
+                ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
+                if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
+                    followTraderService.removeById(followTraderVO.getId());
+                    return Result.error("账号无法连接");
+                }
+                exec(followTraderVO, convert);
+            }else{
+                ThreadPoolUtils.execute(()->{
+                    ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
+                    if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
+                    //    followTraderService.removeById(followTraderVO.getId());
+                    }else{
+                        exec(followTraderVO, convert);
+                    }
+
+                });
             }
-            LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-            leaderApiTrader1.startTrade();
-            //添加订单数据
-            List<FollowTraderEntity> newList = new ArrayList<>();
-            convert.setIsFirstSync(1);
-            obtainOrderHistoryTask.update(convert,newList);
-            ThreadPoolUtils.execute(() -> {
-                LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
-                leaderApiTradersAdmin.pushRedisData(followTraderVO,leaderApiTrader.quoteClient);
-                leaderApiTrader.startTrade();
-                followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
-            });
+
             //添加trader_user
             if (ObjectUtil.isEmpty(vo.getIsAdd()) || vo.getIsAdd()) {
                 List<FollowTraderUserEntity> entities = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, vo.getAccount()).eq(FollowTraderUserEntity::getPlatform, vo.getPlatform()));
@@ -202,6 +204,21 @@ public class FollowTraderController {
         }
 
         return Result.ok();
+    }
+
+    private void exec(FollowTraderVO followTraderVO, FollowTraderEntity convert) {
+        LeaderApiTrader leaderApiTrader1 = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+        leaderApiTrader1.startTrade();
+        //添加订单数据
+        List<FollowTraderEntity> newList = new ArrayList<>();
+        convert.setIsFirstSync(1);
+        obtainOrderHistoryTask.update(convert,newList);
+        ThreadPoolUtils.execute(() -> {
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(followTraderVO.getId().toString());
+            leaderApiTradersAdmin.pushRedisData(followTraderVO,leaderApiTrader.quoteClient);
+            leaderApiTrader.startTrade();
+            followTraderService.saveQuo(leaderApiTrader.quoteClient, convert);
+        });
     }
 
 

@@ -195,4 +195,7 @@ public class FollowTraderVO implements Serializable {
 	private String forex;
 	@Schema(description = "cfd")
 	private String cfd;
+
+	//用于挂号vps true
+	private Boolean isSyncLogin;
 }
