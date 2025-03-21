@@ -575,13 +575,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if (!password.equals(confirmPassword)) {
             throw new ServerException("两次密码输入不一致");
         }
-        // 加密后
-//        String s = AesUtils.aesEncryptStr(password);
 
         FollowBatchUpdateVO batchUpdateVO = new FollowBatchUpdateVO();
         batchUpdateVO.setPassword(password);
         batchUpdateVO.setConfirmPassword(confirmPassword);
-        Set<Long>ids = new HashSet<>();
+        Set<Long> ids = new HashSet<>();
+
         // 设置状态
         FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
         followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
@@ -591,21 +590,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         followUploadTraderUserService.save(followUploadTraderUserVO);
         Long savedId = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
 
-//        Integer uploadTotal = null;
+        // 提前在主线程中获取 Token 和其他需要的头信息
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 
-//        // 提前在主线程中获取 Token 和其他需要的头信息
-//        String token = req.getHeader("Authorization");
-//        Map<String, String> headers = new HashMap<>();
-//        headers.put("Authorization", token);
-//        headers.put("Content-Type", "application/json");
-
         // 使用 CompletableFuture 处理异步任务
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        for (FollowTraderUserVO vo : voList) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            for (FollowTraderUserVO vo : voList) {
                 try {
                     // 查询账号状态
                     LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
@@ -617,17 +608,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             // 账号正常登录
                             FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                             followTraderVO.setNewPassword(password);
-//                            String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
-//                            RestTemplate restTemplate = new RestTemplate();
-
-                            // 使用提前提取的 headers 构建请求头
-//                            HttpHeaders httpHeaders = new HttpHeaders();
-//                            httpHeaders.setAll(headers);  // 注入提前获取的请求头
-//                            HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
-
-//                            ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
                             Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
-//                            if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
                             if (response != null && !response.getMsg().equals("success")) {
                                 log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                                 FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
@@ -637,14 +618,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 failureDetail.setAccount(vo.getAccount());
                                 failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
                                 failureDetail.setRecordId(savedId);
-                                // 报错内容
                                 failureDetail.setRemark(response.getMsg());
                                 failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                                 followFailureDetailService.save(failureDetail);
-                                failureCount.incrementAndGet(); // 数据库更新失败算作失败
+                                failureCount.incrementAndGet();
                                 ids.add(vo.getId());
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
-                            }else{
+                            } else {
                                 FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
                                 failureDetail.setPlatformType(vo.getAccountType());
                                 failureDetail.setServer(vo.getPlatform());
@@ -654,7 +634,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 failureDetail.setRecordId(savedId);
                                 failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
                                 followFailureDetailService.save(failureDetail);
-                                successCount.incrementAndGet(); // 数据库更新成功算作成功
+                                successCount.incrementAndGet();
                             }
                         }
                     } else {
@@ -672,7 +652,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         failureDetail.setRecordId(savedId);
                         failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
                         followFailureDetailService.save(failureDetail);
-                        successCount.incrementAndGet(); // 数据库更新成功算作成功
+                        successCount.incrementAndGet();
                     }
                 } catch (Exception e) {
                     log.error("数据库更新失败: ", e);
@@ -686,34 +666,305 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureDetail.setRemark("数据库更新失败" + e);
                     failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     followFailureDetailService.save(failureDetail);
-                    failureCount.incrementAndGet(); // 数据库更新失败算作失败
+                    failureCount.incrementAndGet();
                     ids.add(vo.getId());
                 }
-            });
+            }
 
-            futures.add(future);
-        }
+            // 更新最终结果
+            batchUpdateVO.setIdList(ids);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = null;
+            try {
+                json = objectMapper.writeValueAsString(batchUpdateVO);
+            } catch (JsonProcessingException e) {
+                log.error("批量新增参数序列异常:" + e);
+            }
+            followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
+            followUploadTraderUserVO.setSuccessCount(successCount.get());
+            followUploadTraderUserVO.setFailureCount(failureCount.get());
+            followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+            followUploadTraderUserVO.setId(savedId);
+            followUploadTraderUserVO.setParams(json);
+            followUploadTraderUserService.update(followUploadTraderUserVO);
+        });
 
-        // 等待所有任务完成
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
-        allOf.join(); // 阻塞直到所有任务完成
-
-        batchUpdateVO.setIdList(ids);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String json = null;
-        try {
-            json = objectMapper.writeValueAsString(batchUpdateVO);
-        } catch (JsonProcessingException e) {
-            log.error("批量新增参数序列异常:"+e);
-        }
-        followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
-        followUploadTraderUserVO.setSuccessCount(successCount.get());
-        followUploadTraderUserVO.setFailureCount(failureCount.get());
-        followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
-        followUploadTraderUserVO.setId(savedId);
-        followUploadTraderUserVO.setParams(json);
-        followUploadTraderUserService.update(followUploadTraderUserVO);
     }
+
+
+//    public void updatePasswords(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) throws Exception {
+//            try {
+//                HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
+//                if (!password.equals(confirmPassword)) {
+//                    throw new ServerException("两次密码输入不一致");
+//                }
+//
+//                FollowBatchUpdateVO batchUpdateVO = new FollowBatchUpdateVO();
+//                batchUpdateVO.setPassword(password);
+//                batchUpdateVO.setConfirmPassword(confirmPassword);
+//                Set<Long> ids = new HashSet<>();
+//
+//                // 设置状态
+//                FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+//                followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+//                followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
+//                followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+//                followUploadTraderUserVO.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                followUploadTraderUserService.save(followUploadTraderUserVO);
+//                Long savedId = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
+//
+//                AtomicInteger successCount = new AtomicInteger(0);
+//                AtomicInteger failureCount = new AtomicInteger(0);
+//
+//                List<CompletableFuture<Void>> futures = new ArrayList<>();
+//                CompletableFuture.runAsync(() -> {
+//                for (FollowTraderUserVO vo : voList) {
+////                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//                        try {
+//                            // 查询账号状态
+//                            LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
+//                            queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
+//                            List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
+//
+//                            if (ObjectUtil.isNotEmpty(followTraderEntities)) {
+//                                for (FollowTraderEntity followTraderEntity : followTraderEntities) {
+//                                    FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+//                                    followTraderVO.setNewPassword(password);
+//
+//                                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+//
+//                                    if (response != null && !response.getMsg().equals("success")) {
+//                                        log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+//                                        FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                                        failureDetail.setPlatformType(vo.getAccountType());
+//                                        failureDetail.setServer(vo.getPlatform());
+//                                        failureDetail.setNode(vo.getServerNode());
+//                                        failureDetail.setAccount(vo.getAccount());
+//                                        failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                                        failureDetail.setRecordId(savedId);
+//                                        failureDetail.setRemark(response.getMsg());
+//                                        failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
+//                                        followFailureDetailService.save(failureDetail);
+//                                        failureCount.incrementAndGet();
+//                                        ids.add(vo.getId());
+//                                        log.error("账号重连失败: " + followTraderEntity.getAccount());
+//                                    } else {
+//                                        FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                                        failureDetail.setPlatformType(vo.getAccountType());
+//                                        failureDetail.setServer(vo.getPlatform());
+//                                        failureDetail.setNode(vo.getServerNode());
+//                                        failureDetail.setAccount(vo.getAccount());
+//                                        failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                                        failureDetail.setRecordId(savedId);
+//                                        failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+//                                        followFailureDetailService.save(failureDetail);
+//                                        successCount.incrementAndGet();
+//                                    }
+//                                }
+//                            } else {
+//                                LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+//                                updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
+//                                        .set(FollowTraderUserEntity::getPassword, password);
+//                                baseMapper.update(updateWrapper);
+//                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                                failureDetail.setPlatformType(vo.getAccountType());
+//                                failureDetail.setServer(vo.getPlatform());
+//                                failureDetail.setNode(vo.getServerNode());
+//                                failureDetail.setAccount(vo.getAccount());
+//                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                                failureDetail.setRecordId(savedId);
+//                                failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+//                                followFailureDetailService.save(failureDetail);
+//                                successCount.incrementAndGet();
+//                            }
+//                        } catch (Exception e) {
+//                            log.error("数据库更新失败: ", e);
+//                            FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                            failureDetail.setPlatformType(vo.getAccountType());
+//                            failureDetail.setServer(vo.getPlatform());
+//                            failureDetail.setNode(vo.getServerNode());
+//                            failureDetail.setAccount(vo.getAccount());
+//                            failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                            failureDetail.setRecordId(savedId);
+//                            failureDetail.setRemark("数据库更新失败" + e);
+//                            failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
+//                            followFailureDetailService.save(failureDetail);
+//                            failureCount.incrementAndGet();
+//                            ids.add(vo.getId());
+//                        }
+////                    });
+//
+////                    futures.add(future);
+//                }
+//
+//                // 等待所有任务完成
+//                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+//                allOf.join(); // 阻塞直到所有任务完成
+//                });
+//                batchUpdateVO.setIdList(ids);
+//                ObjectMapper objectMapper = new ObjectMapper();
+//                String json = objectMapper.writeValueAsString(batchUpdateVO);
+//                followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
+//                followUploadTraderUserVO.setSuccessCount(successCount.get());
+//                followUploadTraderUserVO.setFailureCount(failureCount.get());
+//                followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+//                followUploadTraderUserVO.setId(savedId);
+//                followUploadTraderUserVO.setParams(json);
+//                followUploadTraderUserService.update(followUploadTraderUserVO);
+//
+//            } catch (Exception e) {
+//                log.error("更新密码过程中出现异常: ", e);
+//            }
+////        });
+//
+//        // 返回成功响应
+//        // 这里可以设置响应状态和消息
+//    }
+
+//    public void updatePasswords(List<FollowTraderUserVO> voList, String password, String confirmPassword, HttpServletRequest req) throws Exception {
+//        HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(req);
+//        if (!password.equals(confirmPassword)) {
+//            throw new ServerException("两次密码输入不一致");
+//        }
+//        // 加密后
+////        String s = AesUtils.aesEncryptStr(password);
+//
+//        FollowBatchUpdateVO batchUpdateVO = new FollowBatchUpdateVO();
+//        batchUpdateVO.setPassword(password);
+//        batchUpdateVO.setConfirmPassword(confirmPassword);
+//        Set<Long>ids = new HashSet<>();
+//        // 设置状态
+//        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+//        followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+//        followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
+//        followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+//        followUploadTraderUserVO.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//        followUploadTraderUserService.save(followUploadTraderUserVO);
+//        Long savedId = followUploadTraderUserService.getOne(new QueryWrapper<FollowUploadTraderUserEntity>().orderByDesc("id").last("limit 1")).getId();
+//
+////        Integer uploadTotal = null;
+//        AtomicInteger successCount = new AtomicInteger(0);
+//        AtomicInteger failureCount = new AtomicInteger(0);
+//
+////        // 提前在主线程中获取 Token 和其他需要的头信息
+////        String token = req.getHeader("Authorization");
+////        Map<String, String> headers = new HashMap<>();
+////        headers.put("Authorization", token);
+////        headers.put("Content-Type", "application/json");
+//
+//        // 使用 CompletableFuture 处理异步任务
+//        List<CompletableFuture<Void>> futures = new ArrayList<>();
+//
+//        for (FollowTraderUserVO vo : voList) {
+//            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//                try {
+//                    // 查询账号状态
+//                    LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
+//                    queryWrapper.eq(FollowTraderEntity::getAccount, vo.getAccount());
+//                    List<FollowTraderEntity> followTraderEntities = followTraderService.list(queryWrapper);
+//
+//                    if (ObjectUtil.isNotEmpty(followTraderEntities)) {
+//                        for (FollowTraderEntity followTraderEntity : followTraderEntities) {
+//                            // 账号正常登录
+//                            FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
+//                            followTraderVO.setNewPassword(password);
+////                            String url = MessageFormat.format("http://{0}:{1}{2}", followTraderEntity.getIpAddr(), FollowConstant.VPS_PORT, FollowConstant.VPS_RECONNECTION_Trader);
+////                            RestTemplate restTemplate = new RestTemplate();
+//
+//                            // 使用提前提取的 headers 构建请求头
+////                            HttpHeaders httpHeaders = new HttpHeaders();
+////                            httpHeaders.setAll(headers);  // 注入提前获取的请求头
+////                            HttpEntity<FollowTraderVO> entity = new HttpEntity<>(followTraderVO, httpHeaders);
+//
+////                            ResponseEntity<JSONObject> response = restTemplate.exchange(url, HttpMethod.POST, entity, JSONObject.class);
+//                            Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+////                            if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
+//                            if (response != null && !response.getMsg().equals("success")) {
+//                                log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
+//                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                                failureDetail.setPlatformType(vo.getAccountType());
+//                                failureDetail.setServer(vo.getPlatform());
+//                                failureDetail.setNode(vo.getServerNode());
+//                                failureDetail.setAccount(vo.getAccount());
+//                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                                failureDetail.setRecordId(savedId);
+//                                // 报错内容
+//                                failureDetail.setRemark(response.getMsg());
+//                                failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
+//                                followFailureDetailService.save(failureDetail);
+//                                failureCount.incrementAndGet(); // 数据库更新失败算作失败
+//                                ids.add(vo.getId());
+//                                log.error("账号重连失败: " + followTraderEntity.getAccount());
+//                            }else{
+//                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                                failureDetail.setPlatformType(vo.getAccountType());
+//                                failureDetail.setServer(vo.getPlatform());
+//                                failureDetail.setNode(vo.getServerNode());
+//                                failureDetail.setAccount(vo.getAccount());
+//                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                                failureDetail.setRecordId(savedId);
+//                                failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+//                                followFailureDetailService.save(failureDetail);
+//                                successCount.incrementAndGet(); // 数据库更新成功算作成功
+//                            }
+//                        }
+//                    } else {
+//                        // 更新traderUser密码并记录备注
+//                        LambdaUpdateWrapper<FollowTraderUserEntity> updateWrapper = new LambdaUpdateWrapper<>();
+//                        updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
+//                                .set(FollowTraderUserEntity::getPassword, password);
+//                        baseMapper.update(updateWrapper);
+//                        FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                        failureDetail.setPlatformType(vo.getAccountType());
+//                        failureDetail.setServer(vo.getPlatform());
+//                        failureDetail.setNode(vo.getServerNode());
+//                        failureDetail.setAccount(vo.getAccount());
+//                        failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                        failureDetail.setRecordId(savedId);
+//                        failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+//                        followFailureDetailService.save(failureDetail);
+//                        successCount.incrementAndGet(); // 数据库更新成功算作成功
+//                    }
+//                } catch (Exception e) {
+//                    log.error("数据库更新失败: ", e);
+//                    FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+//                    failureDetail.setPlatformType(vo.getAccountType());
+//                    failureDetail.setServer(vo.getPlatform());
+//                    failureDetail.setNode(vo.getServerNode());
+//                    failureDetail.setAccount(vo.getAccount());
+//                    failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+//                    failureDetail.setRecordId(savedId);
+//                    failureDetail.setRemark("数据库更新失败" + e);
+//                    failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
+//                    followFailureDetailService.save(failureDetail);
+//                    failureCount.incrementAndGet(); // 数据库更新失败算作失败
+//                    ids.add(vo.getId());
+//                }
+//            });
+//
+//            futures.add(future);
+//        }
+//
+//        // 等待所有任务完成
+//        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+//        allOf.join(); // 阻塞直到所有任务完成
+//
+//        batchUpdateVO.setIdList(ids);
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        String json = null;
+//        try {
+//            json = objectMapper.writeValueAsString(batchUpdateVO);
+//        } catch (JsonProcessingException e) {
+//            log.error("批量新增参数序列异常:"+e);
+//        }
+//        followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
+//        followUploadTraderUserVO.setSuccessCount(successCount.get());
+//        followUploadTraderUserVO.setFailureCount(failureCount.get());
+//        followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
+//        followUploadTraderUserVO.setId(savedId);
+//        followUploadTraderUserVO.setParams(json);
+//        followUploadTraderUserService.update(followUploadTraderUserVO);
+//    }
 
 
 
@@ -1410,6 +1661,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         // 加密后
 //        String s = AesUtils.aesEncryptStr(password);
 
+
+        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+        followUploadTraderUserVO.setUploadTotal(null);
+        followUploadTraderUserVO.setSuccessCount(null);
+        followUploadTraderUserVO.setFailureCount(null);
+        followUploadTraderUserVO.setStatus(TraderUserEnum.IN_PROGRESS.getType());
+        followUploadTraderUserVO.setId(recordId);
+        followUploadTraderUserService.update(followUploadTraderUserVO);
+
         FollowBatchUpdateVO batchUpdateVO = new FollowBatchUpdateVO();
         batchUpdateVO.setPassword(password);
         batchUpdateVO.setConfirmPassword(password);
@@ -1418,10 +1678,12 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
         // 使用 CompletableFuture 处理异步任务
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+//        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        for (FollowTraderUserVO vo : voList) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+//        for (FollowTraderUserVO vo : voList) {
+//            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    for (FollowTraderUserVO vo : voList) {
                 try {
                     // 查询账号状态
                     LambdaQueryWrapper<FollowTraderEntity> queryWrapper = new LambdaQueryWrapper<>();
@@ -1496,14 +1758,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     ids.add(vo.getId());
                     failureCount.incrementAndGet(); // 数据库更新失败算作失败
                 }
-            });
+//            });
 
-            futures.add(future);
+//            futures.add(future);
         }
 
         // 等待所有任务完成
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
-        allOf.join(); // 阻塞直到所有任务完成
+//        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+//        allOf.join(); // 阻塞直到所有任务完成
 
         batchUpdateVO.setIdList(ids);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -1514,13 +1776,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             log.error("批量新增参数序列异常:"+e);
         }
 
-        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+//        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
         followUploadTraderUserVO.setUploadTotal(successCount.get() + failureCount.get());
         followUploadTraderUserVO.setSuccessCount(successCount.get());
         followUploadTraderUserVO.setFailureCount(failureCount.get());
         followUploadTraderUserVO.setStatus(TraderUserEnum.SUCCESS.getType());
         followUploadTraderUserVO.setId(recordId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
+    });
     }
 
     private List<FollowTraderEntity> getByUserId(Long traderUserId) {
