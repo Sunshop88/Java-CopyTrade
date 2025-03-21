@@ -166,9 +166,34 @@ public class FollowSlaveController {
                ThreadPoolUtils.execute(()->{
                    ConCodeEnum conCodeEnum = copierApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
                    if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                       followTraderService.removeById(followTraderVO.getId());
+                     //  followTraderService.removeById(followTraderVO.getId());
+                       //保存从表数据
+                       FollowInsertVO followInsertVO = followService.convert(followTraderVO, vo);
+                       //修改从库
+                       followInsertVO.setPassword(AesUtils.decryptStr(followInsertVO.getPassword()));
+                       followService.add(followInsertVO);
+                       //建立跟单关系
+                       vo.setSlaveId(followTraderVO.getId());
+                       vo.setSlaveAccount(vo.getAccount());
+                       vo.setMasterAccount(followTraderEntity.getAccount());
+                       followTraderSubscribeService.addSubscription(vo);
+                       //保存状态到redis
+                       Map<String, Object> map = new HashMap<>();
+                       map.put("followStatus", vo.getFollowStatus());
+                       map.put("followOpen", vo.getFollowOpen());
+                       map.put("followClose", vo.getFollowClose());
+                       map.put("followRep", vo.getFollowRep());
+                       //设置跟单关系缓存值 保存状态
+                       redisCache.set(Constant.FOLLOW_MASTER_SLAVE + followTraderEntity.getId() + ":" + vo.getSlaveId(), JSONObject.toJSON(map));
+                       //移除喊单的跟单缓存
+                       Cache cache = cacheManager.getCache("followSubOrderCache");
+                       if (cache != null) {
+                           cache.evict(vo.getTraderId()); // 移除指定缓存条目
+                       }
+                   }else{
+                       exec(vo, convert, followTraderVO, followTraderEntity, leaderApiTrader);
                    }
-                   exec(vo, convert, followTraderVO, followTraderEntity, leaderApiTrader);
+
                });
             }
 

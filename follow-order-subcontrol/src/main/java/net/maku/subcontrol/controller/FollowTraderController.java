@@ -138,9 +138,11 @@ public class FollowTraderController {
                 ThreadPoolUtils.execute(()->{
                     ConCodeEnum conCodeEnum = leaderApiTradersAdmin.addTrader(followTraderService.getById(followTraderVO.getId()));
                     if (!conCodeEnum.equals(ConCodeEnum.SUCCESS)) {
-                        followTraderService.removeById(followTraderVO.getId());
+                    //    followTraderService.removeById(followTraderVO.getId());
+                    }else{
+                        exec(followTraderVO, convert);
                     }
-                    exec(followTraderVO, convert);
+
                 });
             }
 
