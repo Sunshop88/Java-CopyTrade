@@ -29,4 +29,7 @@ public class VpsDescVO {
     public Long traderId;
 
     public  String ipAddress;
+    private Long sourceId;
+    private String sourceAccount;
+    private String sourceName;
 }

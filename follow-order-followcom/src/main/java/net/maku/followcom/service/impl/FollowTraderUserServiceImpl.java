@@ -103,7 +103,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
        wrapper.eq(ObjectUtil.isNotEmpty(query.getHangStatus()),FollowTraderUserEntity::getStatus,query.getHangStatus());
         //挂号的vpsId和连接状态和账号类型
-        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus())){
+        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus()) || ObjectUtil.isNotEmpty(query.getSourceId())){
             LambdaQueryWrapper<FollowTraderEntity> wp = new LambdaQueryWrapper<>();
             wp.in(ObjectUtil.isNotEmpty(query.getVpsIds()),FollowTraderEntity::getServerId, query.getVpsIds());
             if (ObjectUtil.isNotEmpty(query.getAccountType())){
@@ -126,6 +126,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     statusExtra.add("经纪商异常");
                 }
                 wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
+            }
+            if(ObjectUtil.isNotEmpty(query.getSourceId())){
+                List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(query.getSourceId());
+                if(ObjectUtil.isNotEmpty(subscribeOrder)){
+                    List<Long> list = subscribeOrder.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+                    list.add(query.getSourceId());
+                    wp.in(FollowTraderEntity::getId,list);
+                }
             }
             List<FollowTraderEntity> list = followTraderService.list(wp);
             if(ObjectUtil.isNotEmpty(list)){
@@ -631,11 +639,21 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 failureDetail.setRecordId(savedId);
                                 // 报错内容
                                 failureDetail.setRemark(response.getMsg());
+                                failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                                 followFailureDetailService.save(failureDetail);
                                 failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 ids.add(vo.getId());
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
                             }else{
+                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+                                failureDetail.setPlatformType(vo.getAccountType());
+                                failureDetail.setServer(vo.getPlatform());
+                                failureDetail.setNode(vo.getServerNode());
+                                failureDetail.setAccount(vo.getAccount());
+                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+                                failureDetail.setRecordId(savedId);
+                                failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                                followFailureDetailService.save(failureDetail);
                                 successCount.incrementAndGet(); // 数据库更新成功算作成功
                             }
                         }
@@ -645,6 +663,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
                                 .set(FollowTraderUserEntity::getPassword, password);
                         baseMapper.update(updateWrapper);
+                        FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+                        failureDetail.setPlatformType(vo.getAccountType());
+                        failureDetail.setServer(vo.getPlatform());
+                        failureDetail.setNode(vo.getServerNode());
+                        failureDetail.setAccount(vo.getAccount());
+                        failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+                        failureDetail.setRecordId(savedId);
+                        failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                        followFailureDetailService.save(failureDetail);
                         successCount.incrementAndGet(); // 数据库更新成功算作成功
                     }
                 } catch (Exception e) {
@@ -657,6 +684,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
                     failureDetail.setRecordId(savedId);
                     failureDetail.setRemark("数据库更新失败" + e);
+                    failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     followFailureDetailService.save(failureDetail);
                     failureCount.incrementAndGet(); // 数据库更新失败算作失败
                     ids.add(vo.getId());
@@ -861,6 +889,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             }
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
+
             List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
             if(o.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
                 AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
@@ -876,9 +905,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).build();
                             vpsDesc.add(vo);
                         } else {
-                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).build();
+                            FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(f.getId());
+                            FollowTraderEntity master = followTraderService.getFollowById(followSub.getMasterId());
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).sourceId(master.getId()).sourceAccount(master.getAccount()).sourceName(master.getRemark()).build();
                             vpsDesc.add(vo);
-
                         }
                     });
                 }
@@ -1416,11 +1446,21 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 failureDetail.setRecordId(recordId);
                                 // 报错内容
                                 failureDetail.setRemark(response.getMsg());
+                                failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                                 followFailureDetailService.save(failureDetail);
                                 failureCount.incrementAndGet(); // 数据库更新失败算作失败
                                 ids.add(vo.getId());
                                 log.error("账号重连失败: " + followTraderEntity.getAccount());
                             }else{
+                                FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+                                failureDetail.setPlatformType(vo.getAccountType());
+                                failureDetail.setServer(vo.getPlatform());
+                                failureDetail.setNode(vo.getServerNode());
+                                failureDetail.setAccount(vo.getAccount());
+                                failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+                                failureDetail.setRecordId(recordId);
+                                failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                                followFailureDetailService.save(failureDetail);
                                 successCount.incrementAndGet(); // 数据库更新成功算作成功
                             }
                         }
@@ -1430,6 +1470,15 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         updateWrapper.eq(FollowTraderUserEntity::getId, vo.getId())
                                 .set(FollowTraderUserEntity::getPassword, password);
                         baseMapper.update(updateWrapper);
+                        FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
+                        failureDetail.setPlatformType(vo.getAccountType());
+                        failureDetail.setServer(vo.getPlatform());
+                        failureDetail.setNode(vo.getServerNode());
+                        failureDetail.setAccount(vo.getAccount());
+                        failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
+                        failureDetail.setRecordId(recordId);
+                        failureDetail.setStatus(CloseOrOpenEnum.CLOSE.getValue());
+                        followFailureDetailService.save(failureDetail);
                         successCount.incrementAndGet(); // 数据库更新成功算作成功
                     }
                 } catch (Exception e) {
@@ -1442,6 +1491,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     failureDetail.setType(TraderUserTypeEnum.MODIFY_PASSWORD.getType());
                     failureDetail.setRecordId(recordId);
                     failureDetail.setRemark("数据库更新失败" + e);
+                    failureDetail.setStatus(CloseOrOpenEnum.OPEN.getValue());
                     followFailureDetailService.save(failureDetail);
                     ids.add(vo.getId());
                     failureCount.incrementAndGet(); // 数据库更新失败算作失败

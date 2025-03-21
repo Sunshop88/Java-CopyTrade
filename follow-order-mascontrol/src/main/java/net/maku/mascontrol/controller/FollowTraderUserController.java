@@ -16,6 +16,7 @@ import net.maku.followcom.convert.FollowTraderConvert;
 import net.maku.followcom.convert.FollowTraderUserConvert;
 import net.maku.followcom.entity.*;
 import net.maku.followcom.enums.CloseOrOpenEnum;
+import net.maku.followcom.enums.TraderTypeEnum;
 import net.maku.followcom.enums.TraderUserEnum;
 import net.maku.followcom.enums.TraderUserTypeEnum;
 import net.maku.followcom.query.FollowFailureDetailQuery;
@@ -123,6 +124,14 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
     public Result<TraderUserStatVO> page(@ParameterObject @Valid FollowTraderUserQuery query){
         TraderUserStatVO traderUserStatVO = followTraderUserService.searchPage(query);
         return Result.ok(traderUserStatVO);
+    }
+
+    @GetMapping("getSources")
+    @PreAuthorize("hasAuthority('mascontrol:traderUser')")
+    @Operation(summary = "获取信号源")
+    public Result<List<FollowTraderEntity>> getSources(){
+        List<FollowTraderEntity> list = followTraderService.list(new LambdaQueryWrapper<FollowTraderEntity>().eq(FollowTraderEntity::getType, TraderTypeEnum.MASTER_REAL.getType()));
+        return Result.ok(list);
     }
 
     //挂靠vps
