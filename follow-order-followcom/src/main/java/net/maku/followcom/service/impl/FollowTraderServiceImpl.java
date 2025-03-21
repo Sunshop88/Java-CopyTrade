@@ -216,7 +216,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return in;
     }
 
-    private void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient) {
+    public void addSysmbolSpecification(FollowTraderEntity entity, QuoteClient quoteClient) {
         Long userId = SecurityUser.getUserId();
         LocalDateTime localDateTime = LocalDateTime.now();
         ThreadPoolUtils.execute(() -> {

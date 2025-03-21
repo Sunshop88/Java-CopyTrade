@@ -79,6 +79,7 @@ public class FollowSlaveController {
     private final MessagesService messagesService;
     private final FollowService followService;
     private final FollowTraderUserService followTraderUserService;
+    private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
 
     @PostMapping("addSlave")
     @Operation(summary = "新增跟单账号")
@@ -474,6 +475,8 @@ public class FollowSlaveController {
     }
 
     private void reconnect(String traderId) {
+
+
         try {
             FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
             copierApiTradersAdmin.removeTrader(traderId);
@@ -506,6 +509,11 @@ public class FollowSlaveController {
                 }
             } else {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+                //判断是否获取过品种规格
+                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
+                if(ObjectUtil.isEmpty(list)) {
+                    followTraderService.addSysmbolSpecification(followTraderEntity,copierApiTrader.quoteClient);
+                }
                 log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
                 copierApiTrader.startTrade();
             }

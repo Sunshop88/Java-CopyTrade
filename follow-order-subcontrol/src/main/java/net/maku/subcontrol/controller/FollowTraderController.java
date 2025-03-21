@@ -304,8 +304,7 @@ public class FollowTraderController {
         });
 
         slaveList.forEach(o->{
-            //删除订阅关系
-            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
+
             List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
 
             //跟单关系缓存删除
@@ -334,6 +333,9 @@ public class FollowTraderController {
                 }
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
+
+            //删除订阅关系
+            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
         });
 
         //删除订阅关系
@@ -805,6 +807,11 @@ public class FollowTraderController {
                     result=true;
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
+                    //判断是否获取过品种规格
+                    List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
+                    if(ObjectUtil.isEmpty(list)) {
+                        followTraderService.addSysmbolSpecification(followTraderEntity,leaderApiTrader.quoteClient);
+                    }
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
                     result=true;

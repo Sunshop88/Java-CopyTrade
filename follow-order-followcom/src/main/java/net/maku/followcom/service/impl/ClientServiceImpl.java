@@ -45,6 +45,7 @@ public class ClientServiceImpl extends BaseServiceImpl<ClientDao, ClientEntity> 
             throw new ServerException("重复名称或ip地址,请重新输入");
         }
         ClientEntity clientEntity = new ClientEntity();
+        clientEntity.setId(vo.getId());
         clientEntity.setName(vo.getName());
         clientEntity.setIp(vo.getIpAddress() + ":" + FollowConstant.VPS_PORT);
         save(clientEntity);

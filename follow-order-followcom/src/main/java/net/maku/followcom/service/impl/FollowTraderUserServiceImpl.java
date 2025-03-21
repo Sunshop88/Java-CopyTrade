@@ -768,20 +768,20 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
     @Override
     public TraderUserStatVO searchPage(FollowTraderUserQuery query) {
       //  long startTime = System.currentTimeMillis();
-        CountDownLatch countDownLatch = new CountDownLatch(5);
+        CountDownLatch countDownLatch = new CountDownLatch(4);
         AtomicReference<PageResult<FollowTraderUserVO>> pageAtomic= new AtomicReference<>();
         ThreadPoolUtils.getExecutor().execute(()->{
             pageAtomic.set(page(query));
             countDownLatch.countDown();
         });
-        Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
+   /*     Map<Long,FollowTraderSubscribeEntity> subscribeMap=new HashMap<>();
         ThreadPoolUtils.getExecutor().execute(()->{
             List<FollowTraderSubscribeEntity> subscribes = followTraderSubscribeService.list();
             subscribes.stream().forEach(s->{
                 subscribeMap.put(s.getSlaveId(),s);
             });
             countDownLatch.countDown();
-                });
+            });*/
         Map<String,List<FollowTraderEntity>> traderMap=new ConcurrentHashMap<>();
 
        ThreadPoolUtils.getExecutor().execute(()->{
@@ -856,13 +856,13 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             followRedisTraderVO.set((FollowRedisTraderVO) redisCache.get(Constant.TRADER_USER + f.getId()));
                         }
                         if (f.getType().equals(TraderTypeEnum.MASTER_REAL.getType())) {
-                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单策略").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).build();
                             vpsDesc.add(vo);
                         } else if (f.getType().equals(TraderTypeEnum.BARGAIN.getType())) {
-                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).build();
                             vpsDesc.add(vo);
                         } else {
-                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).build();
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).build();
                             vpsDesc.add(vo);
 
                         }
