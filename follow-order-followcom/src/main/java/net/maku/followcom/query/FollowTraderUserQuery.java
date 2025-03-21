@@ -57,7 +57,7 @@ public class FollowTraderUserQuery extends Query {
     @Schema(description = "挂靠状态 0未挂 1已")
     private Integer hangStatus;
 
-    private Long sourceId;
+    private List<Long> sourceId;
 
 
 

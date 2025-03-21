@@ -248,6 +248,15 @@ public class FollowTraderController {
             if (!reconnect){
                 throw new ServerException("请检查账号密码，稍后再试");
             }
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getId().toString());
+            //判断是否获取过品种规格
+            List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, vo.getId()));
+            if(ObjectUtil.isEmpty(list)) {
+                if(leaderApiTrader.quoteClient==null){
+                    log.error("获取品种规格失败");
+                }
+                followTraderService.addSysmbolSpecification(leaderApiTrader.getTrader(),leaderApiTrader.quoteClient);
+            }
         }
       //  Boolean reconnect = reconnect(vo.getId().toString());
 

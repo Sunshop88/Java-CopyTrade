@@ -131,12 +131,17 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
             }
             if(ObjectUtil.isNotEmpty(query.getSourceId())){
-                List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(query.getSourceId());
-                if(ObjectUtil.isNotEmpty(subscribeOrder)){
-                    List<Long> list = subscribeOrder.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
-                    list.add(query.getSourceId());
-                    wp.in(FollowTraderEntity::getId,list);
-                }
+                List<Long> ls=new ArrayList<>();
+                query.getSourceId().forEach(o-> {
+                    List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(o);
+                    if (ObjectUtil.isNotEmpty(subscribeOrder)) {
+                        List<Long> list = subscribeOrder.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+                        ls.addAll(list);
+                        ls.add(o);
+                    }
+                });
+                    wp.in(FollowTraderEntity::getId,ls);
+
             }
             List<FollowTraderEntity> list = followTraderService.list(wp);
             if(ObjectUtil.isNotEmpty(list)){
