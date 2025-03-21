@@ -1176,7 +1176,11 @@ public class FollowTraderController {
         //修改密码
         LambdaUpdateWrapper<FollowTraderEntity> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(FollowTraderEntity::getId, traderId)
-                .set(FollowTraderEntity::getPassword, vo.getNewPassword());
+                .set(FollowTraderEntity::getPassword, vo.getNewPassword())
+                .set(FollowTraderEntity::getForex, vo.getForex())
+                .set(FollowTraderEntity::getCfd, vo.getCfd())
+        ;
+
         followTraderService.update(updateWrapper);
         reconnect(String.valueOf(traderId));
         return Result.ok();
