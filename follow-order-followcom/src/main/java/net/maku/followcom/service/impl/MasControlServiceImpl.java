@@ -48,7 +48,7 @@ public class MasControlServiceImpl implements MasControlService {
     private final ServerService serverService;
     private final FollowPlatformService followPlatformService;
     private final FollowBrokeServerService followBrokeServerService;
-//    private final ClientServicePt clientServicePt;
+    //    private final ClientServicePt clientServicePt;
 //    private final PlatformServicePt platformServicePt;
 //    private final ServerServicePt serverServicePt;
     private final FollowTestDetailService followTestDetailService;
@@ -74,36 +74,37 @@ public class MasControlServiceImpl implements MasControlService {
         List<Long> userIdList = userService.getUserNameId(vo.getUserList());
         // 确保 vpsUserVO 和 userIdList 不为 null
         List<Long> safeUserIdList = (userIdList == null) ? new ArrayList<>() : userIdList;
-
-        for (Long id : safeUserIdList) {
-            redisCache.delete(Constant.SYSTEM_VPS_USER+id);
-        }
         if (ObjectUtil.isNotEmpty(userIdList)) {
-            for (Long userId : userIdList) {
-                FollowVpsUserEntity entity = new FollowVpsUserEntity();
-                entity.setUserId(userId);
-                entity.setVpsId(vo.getId());
-                entity.setVpsName(vo.getName());
-                followVpsUserService.save(entity);
+            for (Long id : safeUserIdList) {
+                redisCache.delete(Constant.SYSTEM_VPS_USER + id);
             }
-        }
-        //添加缓存
-        for (Long id : userIdList) {
-            List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, id));
-            if (ObjectUtil.isNotEmpty(list)){
-                //存vps名称和vpsid
-                List<VpsUserVO> vpsList = list.stream().map(o -> {
-                    VpsUserVO vo1 = new VpsUserVO();
-                    vo1.setName(o.getVpsName());
-                    vo1.setId(o.getVpsId());
-                    return vo1;
-                }).collect(Collectors.toList());
-                redisCache.set(Constant.SYSTEM_VPS_USER+id,vpsList);
+            if (ObjectUtil.isNotEmpty(userIdList)) {
+                for (Long userId : userIdList) {
+                    FollowVpsUserEntity entity = new FollowVpsUserEntity();
+                    entity.setUserId(userId);
+                    entity.setVpsId(vo.getId());
+                    entity.setVpsName(vo.getName());
+                    followVpsUserService.save(entity);
+                }
+            }
+            //添加缓存
+            for (Long id : userIdList) {
+                List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, id));
+                if (ObjectUtil.isNotEmpty(list)) {
+                    //存vps名称和vpsid
+                    List<VpsUserVO> vpsList = list.stream().map(o -> {
+                        VpsUserVO vo1 = new VpsUserVO();
+                        vo1.setName(o.getVpsName());
+                        vo1.setId(o.getVpsId());
+                        return vo1;
+                    }).collect(Collectors.toList());
+                    redisCache.set(Constant.SYSTEM_VPS_USER + id, vpsList);
+                }
             }
         }
 //        //查询vps最新id
 //        FollowVpsEntity vpsEntity = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByDesc(FollowVpsEntity::getId)).get(0);
-        if (ObjectUtil.isNotEmpty(vpsEntity)){
+        if (ObjectUtil.isNotEmpty(vpsEntity)) {
             vo.setId(vpsEntity.getId());
             clientService.insert(vo);
         }
@@ -125,8 +126,8 @@ public class MasControlServiceImpl implements MasControlService {
         //查询原vps其下的用户
         List<Long> vpsUserVO = new ArrayList<>();
         List<FollowVpsUserEntity> vpsUserEntities = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getVpsId, vo.getId()));
-        if (ObjectUtil.isNotEmpty(vpsUserEntities)){
-            vpsUserEntities.forEach(o1->{
+        if (ObjectUtil.isNotEmpty(vpsUserEntities)) {
+            vpsUserEntities.forEach(o1 -> {
                 vpsUserVO.add(o1.getUserId());
             });
         }
@@ -144,7 +145,7 @@ public class MasControlServiceImpl implements MasControlService {
                 .distinct()
                 .collect(Collectors.toList());
         for (Long id : set) {
-            redisCache.delete(Constant.SYSTEM_VPS_USER+id);
+            redisCache.delete(Constant.SYSTEM_VPS_USER + id);
         }
         if (ObjectUtil.isNotEmpty(userIdList)) {
             for (Long userId : userIdList) {
@@ -158,7 +159,7 @@ public class MasControlServiceImpl implements MasControlService {
         //添加缓存
         for (Long id : set) {
             List<FollowVpsUserEntity> list = followVpsUserService.list(new LambdaQueryWrapper<FollowVpsUserEntity>().eq(FollowVpsUserEntity::getUserId, id));
-            if (ObjectUtil.isNotEmpty(list)){
+            if (ObjectUtil.isNotEmpty(list)) {
                 //存vps名称和vpsid
                 List<VpsUserVO> vpsList = list.stream().map(o -> {
                     VpsUserVO vo1 = new VpsUserVO();
@@ -166,7 +167,7 @@ public class MasControlServiceImpl implements MasControlService {
                     vo1.setId(o.getVpsId());
                     return vo1;
                 }).collect(Collectors.toList());
-                redisCache.set(Constant.SYSTEM_VPS_USER+id,vpsList);
+                redisCache.set(Constant.SYSTEM_VPS_USER + id, vpsList);
             }
         }
 
@@ -305,7 +306,7 @@ public class MasControlServiceImpl implements MasControlService {
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
                         //查询新增平台的id
-                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer,bro)).get(0);
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
                         platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);
@@ -458,7 +459,7 @@ public class MasControlServiceImpl implements MasControlService {
                     List<PlatformEntity> platformEntityList = platformService.list(new LambdaQueryWrapper<PlatformEntity>().eq(PlatformEntity::getName, bro));
                     if (ObjectUtil.isEmpty(platformEntityList)) {
                         //查询新增平台的id
-                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer,bro)).get(0);
+                        FollowPlatformEntity entity = followPlatformService.list(new LambdaQueryWrapper<FollowPlatformEntity>().eq(FollowPlatformEntity::getServer, bro)).get(0);
                         PlatformEntity platformEntity = new PlatformEntity();
                         platformEntity.setId(Math.toIntExact(entity.getId()));
                         platformEntity.setName(bro);
