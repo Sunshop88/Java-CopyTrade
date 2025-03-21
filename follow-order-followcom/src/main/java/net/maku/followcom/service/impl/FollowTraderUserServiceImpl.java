@@ -103,7 +103,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         }
        wrapper.eq(ObjectUtil.isNotEmpty(query.getHangStatus()),FollowTraderUserEntity::getStatus,query.getHangStatus());
         //挂号的vpsId和连接状态和账号类型
-        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus())){
+        if (ObjectUtil.isNotEmpty(query.getVpsIds()) || ObjectUtil.isNotEmpty(query.getAccountType()) || ObjectUtil.isNotEmpty(query.getStatus()) || ObjectUtil.isNotEmpty(query.getSourceId())){
             LambdaQueryWrapper<FollowTraderEntity> wp = new LambdaQueryWrapper<>();
             wp.in(ObjectUtil.isNotEmpty(query.getVpsIds()),FollowTraderEntity::getServerId, query.getVpsIds());
             if (ObjectUtil.isNotEmpty(query.getAccountType())){
@@ -126,6 +126,14 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     statusExtra.add("经纪商异常");
                 }
                 wp.in(FollowTraderEntity::getStatusExtra,statusExtra);
+            }
+            if(ObjectUtil.isNotEmpty(query.getSourceId())){
+                List<FollowTraderSubscribeEntity> subscribeOrder = followTraderSubscribeService.getSubscribeOrder(query.getSourceId());
+                if(ObjectUtil.isNotEmpty(subscribeOrder)){
+                    List<Long> list = subscribeOrder.stream().map(FollowTraderSubscribeEntity::getSlaveId).toList();
+                    list.add(query.getSourceId());
+                    wp.in(FollowTraderEntity::getId,list);
+                }
             }
             List<FollowTraderEntity> list = followTraderService.list(wp);
             if(ObjectUtil.isNotEmpty(list)){
@@ -881,6 +889,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
             }
             String key=o.getAccount() + "-" + o.getPlatformId();
             ArrayList<VpsDescVO> vpsDesc = new ArrayList<>();
+
             List<FollowTraderEntity> followTraderEntities = traderMap.get(key);
             if(o.getStatus().equals(CloseOrOpenEnum.OPEN.getValue())){
                 AtomicReference<FollowRedisTraderVO> followRedisTraderVO = new AtomicReference<>();
@@ -896,9 +905,10 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-交易分配").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).build();
                             vpsDesc.add(vo);
                         } else {
-                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).build();
+                            FollowTraderSubscribeEntity followSub = followTraderSubscribeService.getFollowSub(f.getId());
+                            FollowTraderEntity master = followTraderService.getFollowById(followSub.getMasterId());
+                            VpsDescVO vo = VpsDescVO.builder().desc(f.getIpAddr() + "-" + vpsMap.get(f.getServerId()).getName() + "-跟单账号").statusExtra(f.getStatusExtra()).status(f.getStatus()).cfd(f.getCfd()).forex(f.getForex()).traderId(f.getId()).ipAddress(f.getIpAddr()).sourceId(master.getId()).sourceAccount(master.getAccount()).sourceName(master.getRemark()).build();
                             vpsDesc.add(vo);
-
                         }
                     });
                 }

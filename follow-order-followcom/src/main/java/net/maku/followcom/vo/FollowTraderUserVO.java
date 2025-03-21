@@ -122,4 +122,6 @@ public class FollowTraderUserVO implements Serializable {
 	private Long recordId;
 	@Schema(description = "cdf和forex")
    private List<VpsDescVO> vpsDescs;
+
+
 }

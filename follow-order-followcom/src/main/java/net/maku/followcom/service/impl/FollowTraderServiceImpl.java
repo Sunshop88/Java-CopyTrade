@@ -1079,6 +1079,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
        followOrderDetailEntity.setComment(orderActiveInfoVO.getComment());
         followOrderDetailEntity.setServerHost(quoteClient.Host+":"+ quoteClient.Port);
         followOrderDetailEntity.setIsExternal(1);
+        followOrderDetailEntity.setPlacedType(null);
         try {
             if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
                 //订阅
