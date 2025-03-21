@@ -256,16 +256,18 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                                 new LambdaQueryWrapper<FollowTraderEntity>()
                                         .eq(FollowTraderEntity::getAccount, vo.getAccount())
                                         .eq(FollowTraderEntity::getPlatform, vo.getPlatform()));
-
+                FollowTraderEntity followTraderEntity = followTraderEntities.getFirst();
+                VpsDescVO vpsDescVO = finalVpsDescVOMap.get(followTraderEntity.getId());
+                if(ObjectUtil.isNotEmpty(vpsDescVO)){
+                    followTraderEntity.setCfd(vpsDescVO.getCfd());
+                    followTraderEntity.setForex(vpsDescVO.getForex());
+                   followTraderService.updateById(followTraderEntity);
+                }
                 if (ObjectUtil.isNotEmpty(followTraderEntities) && !followTraderEntities.getFirst().getPassword().equals(vo.getPassword())) {
-                    FollowTraderEntity followTraderEntity = followTraderEntities.getFirst();
+
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(vo.getPassword());
-                    VpsDescVO vpsDescVO = finalVpsDescVOMap.get(followTraderEntity.getId());
-                    if(ObjectUtil.isNotEmpty(vpsDescVO)){
-                        followTraderVO.setCfd(vpsDescVO.getCfd());
-                        followTraderVO.setForex(vpsDescVO.getForex());
-                    }
+
 
                     Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_UPDATE_TRADER, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     if (response != null && !response.getMsg().equals("success")) {
