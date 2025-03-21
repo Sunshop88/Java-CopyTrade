@@ -11,6 +11,8 @@ import net.maku.followcom.entity.FollowTraderUserEntity;
 import net.maku.followcom.query.FollowGroupQuery;
 import net.maku.followcom.service.FollowGroupService;
 import net.maku.followcom.service.FollowTraderUserService;
+import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.FollowGroupVO;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -18,6 +20,7 @@ import net.maku.framework.common.utils.Result;
 import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -139,5 +142,11 @@ public class FollowGroupController {
             }
         }
         return Result.ok(followGroupService.list());
+    }
+
+    public static void main(String[] args) { cn.hutool.json.JSONObject jsonObject = new cn.hutool.json.JSONObject();
+        jsonObject.put("traderId", 22);
+        Result result = RestUtil.sendRequest(null, "127.0.0.1", HttpMethod.GET, FollowConstant.PUSH_ORDER, jsonObject, null, FollowConstant.REQUEST_PORT);
+
     }
 }

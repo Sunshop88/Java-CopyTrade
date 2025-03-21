@@ -2,5 +2,6 @@
 auth:
   ignore_urls:
     - /api/**
+    - /bargain/pushOrder
     - /sys/auth/mfaVerifyShow
     - /sys/params/**

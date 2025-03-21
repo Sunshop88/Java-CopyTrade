@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import net.maku.followcom.vo.ExternalSysmbolSpecificationVO;
 import net.maku.followcom.vo.OpenOrderInfoVO;
 import net.maku.followcom.vo.OrderClosePageVO;
+import net.maku.framework.common.utils.Result;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class ResponseFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
         //排除路径
         String uri = httpRequest.getRequestURI();
-        if (uri.startsWith("/api/v1")) {
+        if (uri.startsWith("/api/v1")||uri.startsWith("/bargain/pushOrder")) {
             // 这里是修改响应内容的部分
             HttpServletResponse httpResponse = (HttpServletResponse) servletResponse;
             // 定义一个可修改的响应包装类
