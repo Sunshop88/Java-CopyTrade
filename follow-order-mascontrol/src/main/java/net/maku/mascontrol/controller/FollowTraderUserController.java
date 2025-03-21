@@ -356,6 +356,9 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
         followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
         followUploadTraderUserVO.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
+        followUploadTraderUserVO.setFailureCount(null);
+        followUploadTraderUserVO.setSuccessCount(null);
+        followUploadTraderUserVO.setUploadTotal(null);
         followUploadTraderUserVO.setId(recordId);
         followUploadTraderUserService.update(followUploadTraderUserVO);
         followTraderUserService.addExcel(recordId,followTraderUserVO,vos);
