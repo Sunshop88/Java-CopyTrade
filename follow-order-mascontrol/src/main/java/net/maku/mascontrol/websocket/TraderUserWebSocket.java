@@ -156,13 +156,9 @@ public class TraderUserWebSocket {
                     if(followOrderDetailEntity!=null){
                         o.setOpenPriceDifference(followOrderDetailEntity.getOpenPriceDifference());
                         o.setOpenPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
-                        if(followOrderDetailEntity.getType().equals(TraderCloseEnum.BUY.getType())){
-                            o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
-                            o.setOpenTimeDifference(followOrderDetailEntity.getOpenTimeDifference());
-                        }else{
-                            o.setPriceSlip(followOrderDetailEntity.getClosePriceSlip());
-                            o.setOpenTimeDifference(followOrderDetailEntity.getCloseTimeDifference());
-                        }
+                        o.setPriceSlip(followOrderDetailEntity.getOpenPriceSlip());
+                        o.setOpenTimeDifference(followOrderDetailEntity.getOpenTimeDifference());
+
 
                     }
                 });
