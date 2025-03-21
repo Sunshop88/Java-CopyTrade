@@ -37,7 +37,7 @@ public class CloseServerController {
     @Operation(summary = "关闭所有服务")
     @OperateLog(type = OperateTypeEnum.DELETE)
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
-    public Result<?> shutdown(@RequestParam("vpsIdList") List<Integer> vpsIdList, HttpServletRequest request) {
+    public Result<?> shutdown(@RequestParam("vpsIdList") String vpsIdList, HttpServletRequest request) {
         List<FollowVpsVO> list;
         if (ObjectUtil.isEmpty(vpsIdList)) {
             list = followVpsService.listByVps();
@@ -47,7 +47,7 @@ public class CloseServerController {
         HttpHeaders headerApplicationJsonAndToken = RestUtil.getHeaderApplicationJsonAndToken(request);
         list.forEach(o->{
             try {
-                RestUtil.sendRequest(request, o.getIpAddress(), HttpMethod.DELETE, FollowConstant.SHUT_DOWN, null,headerApplicationJsonAndToken);
+                RestUtil.sendRequest(request, o.getIpAddress(), HttpMethod.DELETE, FollowConstant.SHUT_DOWN, null,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
             }catch (Exception e){
                 log.info("关闭VPS"+o.getIpAddress());
             }

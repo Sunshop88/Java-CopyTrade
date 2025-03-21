@@ -189,9 +189,9 @@ public class FollowApiServiceImpl implements FollowApiService {
         });
 
         slaveList.forEach(o->{
+            List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
             //删除订阅关系
             followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
-            List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
                 String cacheKey = generateCacheKey(o1.getSlaveId(), o1.getMasterId());

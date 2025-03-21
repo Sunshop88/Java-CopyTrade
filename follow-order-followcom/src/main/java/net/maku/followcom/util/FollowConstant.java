@@ -32,7 +32,7 @@ public class FollowConstant {
             in.close();
 
           //  LOCAL_HOST = "39.101.133.150";
-            LOCAL_HOST =publicIP;
+            LOCAL_HOST ="39.99.136.49";
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -116,6 +116,7 @@ public class FollowConstant {
     public static String DEL_TRADER = "/subcontrol/trader";
     public static String SYNCH_DATA = "/subcontrol/trader/synchData/";
     public static String SHUT_DOWN = "/subcontrol/closeServer/shutdown";
+    public static String PUSH_ORDER = "/bargain/pushOrder";
 
 
 

@@ -1,8 +1,7 @@
-package net.maku.mascontrol.filter;
+package net.maku.mascontrol;
 
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.entity.FollowVersionEntity;
 import net.maku.followcom.service.FollowVersionService;

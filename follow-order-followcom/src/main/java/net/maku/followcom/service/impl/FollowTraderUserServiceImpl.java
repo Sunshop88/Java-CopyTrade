@@ -259,7 +259,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         followTraderVO.setForex(vpsDescVO.getForex());
                     }
 
-                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_UPDATE_TRADER, followTraderVO, headerApplicationJsonAndToken);
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_UPDATE_TRADER, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                     } else {
@@ -303,7 +303,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                 }
                 for (FollowTraderEntity entity : List) {
                     List<Long> account = Collections.singletonList(entity.getId());
-                    Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null);
+                    Result result = RestUtil.sendRequest(request, entity.getIpAddr(), HttpMethod.DELETE, FollowConstant.DEL_TRADER, account,null, FollowConstant.VPS_PORT);
                     if(result.getCode()!=CloseOrOpenEnum.CLOSE.getValue()){
                         throw new ServerException(result.getMsg());
                     }
@@ -608,8 +608,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             // 账号正常登录
                             FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                             followTraderVO.setNewPassword(password);
-
-                            Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                            Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                             if (response != null && !response.getMsg().equals("success")) {
                                 log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                                 FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
@@ -988,7 +987,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                     // 账号正常登录
                     FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                     followTraderVO.setNewPassword(password);
-                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                    Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
 //                    if (response.getBody() != null && !response.getBody().getString("msg").equals("success")) {
                     if (response != null && !response.getMsg().equals("success")) {
                         log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
@@ -1207,7 +1206,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         List<FollowTraderEntity> list = getByUserId(traderId);
         if(ObjectUtil.isNotEmpty(list)){
             FollowTraderEntity followTraderEntity = list.get(0);
-            Result result = RestUtil.sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.SYNCH_DATA+followTraderEntity.getId(), null, null);
+            Result result = RestUtil.sendRequest(request, followTraderEntity.getIpAddr(), HttpMethod.POST, FollowConstant.SYNCH_DATA+followTraderEntity.getId(), null, null, FollowConstant.VPS_PORT);
         }
     }
 
@@ -1259,7 +1258,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
                         vo.setIsSyncLogin(true);
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     } else {
                         //策略转发
                         FollowAddSalveVo vo = new FollowAddSalveVo();
@@ -1285,7 +1284,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setIsAdd(false);
                         vo.setIsSyncLogin(true);
                         //策略新增
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     }
                    if (result.getCode()==0){
                        sum.set(sum.get()+1);
@@ -1410,7 +1409,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setType(hangVpsVO.getAccountType());
                         vo.setIsAdd(false);
                         vo.setIsSyncLogin(true);
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_TRADER, vo,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     } else {
                         //策略转发
                         FollowAddSalveVo vo = new FollowAddSalveVo();
@@ -1435,7 +1434,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                         vo.setIsAdd(false);
                         vo.setIsSyncLogin(true);
                         //策略新增
-                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken);
+                        result = RestUtil.sendRequest(request, vps.getIpAddress(), HttpMethod.POST, FollowConstant.ADD_SLAVE, vo,headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                     }
                     if (result.getCode()==0){
                         sum.set(sum.get()+1);
@@ -1697,7 +1696,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
                             FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);
                             followTraderVO.setNewPassword(password);
 
-                            Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken);
+                            Result response = RestUtil.sendRequest(req, followTraderVO.getIpAddr(), HttpMethod.POST, FollowConstant.VPS_RECONNECTION_Trader, followTraderVO, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                             if (response != null && !response.getMsg().equals("success")) {
                                 log.error(followTraderEntity.getAccount() + "账号重连失败: " + response.getMsg());
                                 FollowFailureDetailEntity failureDetail = new FollowFailureDetailEntity();
@@ -1825,7 +1824,7 @@ public class FollowTraderUserServiceImpl extends BaseServiceImpl<FollowTraderUse
         if(ObjectUtil.isNotEmpty(map)){
             map.forEach((k,v)->{
                 ThreadPoolUtils.getExecutor().execute(() -> {
-                    Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.DEL_TRADER, v, headerApplicationJsonAndToken);
+                    Result result = RestUtil.sendRequest(request, k, HttpMethod.DELETE, FollowConstant.DEL_TRADER, v, headerApplicationJsonAndToken, FollowConstant.VPS_PORT);
                 });
             });
         }
