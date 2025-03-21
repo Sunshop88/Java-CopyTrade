@@ -63,7 +63,7 @@ public class InitRunner implements ApplicationRunner {
                 List<FollowVpsEntity> list = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().eq(FollowVpsEntity::getDeleted, CloseOrOpenEnum.CLOSE.getValue()));
                 list.forEach(o->{
                     boolean connected = ServersDatIniUtil.connected(o.getIpAddress(), Integer.parseInt(FollowConstant.VPS_PORT));
-                    followVpsService.update(new LambdaUpdateWrapper<FollowVpsEntity>().set(FollowVpsEntity::getIsStop, connected?CloseOrOpenEnum.CLOSE.getValue():CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIpAddress, FollowConstant.LOCAL_HOST));
+                    followVpsService.update(new LambdaUpdateWrapper<FollowVpsEntity>().set(FollowVpsEntity::getIsStop, connected?CloseOrOpenEnum.CLOSE.getValue():CloseOrOpenEnum.OPEN.getValue()).eq(FollowVpsEntity::getIpAddress, o.getIpAddress()));
                 });
             } catch (Exception e) {
                 log.error("定时任务执行出错", e);
