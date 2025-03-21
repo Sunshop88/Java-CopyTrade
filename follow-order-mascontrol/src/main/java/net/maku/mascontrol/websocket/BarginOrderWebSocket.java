@@ -93,7 +93,8 @@ public class BarginOrderWebSocket {
                         }
                     }
                 }
-                if (ObjectUtil.isEmpty(eventArgs)){
+                eventArgs = getEventArgs(symbol,quoteClient);
+                if (ObjectUtil.isNotEmpty(eventArgs)) {
                     return "";
                 }
             }

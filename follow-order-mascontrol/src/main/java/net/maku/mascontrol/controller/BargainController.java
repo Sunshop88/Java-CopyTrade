@@ -24,6 +24,7 @@ import net.maku.followcom.util.FollowConstant;
 import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.vo.*;
 import net.maku.framework.common.cache.RedisCache;
+import net.maku.framework.common.cache.RedisUtil;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.exception.ServerException;
 import net.maku.framework.common.utils.PageResult;
@@ -33,6 +34,8 @@ import net.maku.framework.operatelog.annotations.OperateLog;
 import net.maku.framework.operatelog.enums.OperateTypeEnum;
 import net.maku.mascontrol.vo.FollowOrderHistoryQuery;
 import net.maku.mascontrol.vo.FollowOrderHistoryVO;
+import net.maku.mascontrol.websocket.TraderUserWebSocket;
+import org.jacoco.agent.rt.internal_43f5073.core.internal.flow.IFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -58,13 +61,14 @@ import java.util.List;
 public class BargainController {
     private static final Logger log = LoggerFactory.getLogger(BargainController.class);
     private final FollowVpsService followVpsService;
+    private final RedisUtil redisUtil;
     private BargainService bargainService;
     private final FollowTraderUserService followTraderUserService;
     private final FollowTraderService followTraderService;
     private final FollowOrderInstructService followOrderInstructService;
     private final FollowSysmbolSpecificationService followSysmbolSpecificationService;
     private final  FollowOrderDetailService followOrderDetailService;
-    private final RedisCache redisCache;
+    private final TraderUserWebSocket traderUserWebSocket;
     @GetMapping("histotyOrderList")
     @Operation(summary = "历史订单")
     @PreAuthorize("hasAuthority('mascontrol:bargain')")
@@ -265,5 +269,23 @@ public class BargainController {
         }
 
         return Result.ok(page);
+    }
+
+    @GetMapping("/pushOrder")
+    @Operation(summary = "推送持仓数据")
+    @OperateLog(type = OperateTypeEnum.GET)
+    public Result<Boolean> pushOrder(@Parameter(description = "traderId") String traderId) {
+        FollowTraderEntity followById = followTraderService.getFollowById(Long.valueOf(traderId));
+        FollowTraderUserEntity traderUserServiceOne = followTraderUserService.getOne(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, followById.getAccount()).eq(FollowTraderUserEntity::getPlatform, followById.getPlatform()));
+        if (ObjectUtil.isNotEmpty(traderUserServiceOne)){
+            //推送
+            Object o1 = redisUtil.get(Constant.TRADER_ACTIVE + traderId);
+            List<OrderActiveInfoVO> orderActiveInfoList = new ArrayList<>();
+            if (ObjectUtil.isNotEmpty(o1)) {
+                orderActiveInfoList = com.alibaba.fastjson.JSONObject.parseArray(o1.toString(), OrderActiveInfoVO.class);
+            }
+            traderUserWebSocket.pushMessage(traderUserServiceOne.getId(),orderActiveInfoList);
+        }
+        return Result.ok();
     }
 }

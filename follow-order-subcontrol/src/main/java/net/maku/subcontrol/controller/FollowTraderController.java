@@ -36,6 +36,7 @@ import net.maku.followcom.vo.FollowSendAccountListVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
+import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.checkerframework.checker.units.qual.A;
@@ -258,6 +259,12 @@ public class FollowTraderController {
         sourceUpdateVO.setStatus(vo.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()));
         sourceUpdateVO.setId(vo.getId());
         sourceService.edit(sourceUpdateVO);
+
+        ThreadPoolUtils.execute(() -> {
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getId().toString());
+            //重置账号信息
+            leaderApiTrader.setTrader(FollowTraderConvert.INSTANCE.convert(vo));
+        });
         return Result.ok();
     }
 
@@ -304,8 +311,8 @@ public class FollowTraderController {
         });
 
         slaveList.forEach(o->{
-
-            List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
+            //删除订阅关系
+            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));  List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
 
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
@@ -333,9 +340,6 @@ public class FollowTraderController {
                 }
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
-
-            //删除订阅关系
-            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
         });
 
         //删除订阅关系
@@ -807,11 +811,6 @@ public class FollowTraderController {
                     result=true;
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    //判断是否获取过品种规格
-                    List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-                    if(ObjectUtil.isEmpty(list)) {
-                        followTraderService.addSysmbolSpecification(followTraderEntity,leaderApiTrader.quoteClient);
-                    }
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
                     result=true;
@@ -965,7 +964,7 @@ public class FollowTraderController {
 
 
     private List<String> getSymbolClose(QuoteClient quoteClient, Long traderId, String symbol) {
-        List<String> symbolList = new ArrayList<>();
+        List<String> symbolList = List.of();
         //查询平台信息
         FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
         //获取symbol信息

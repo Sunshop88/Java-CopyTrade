@@ -90,25 +90,18 @@ public class TraderUserWebSocket {
     }
 
     public void pushMessage(Long traderId, List<OrderActiveInfoVO> active ){
-        FollowTraderEntity trader = followTraderService.getById(traderId);
         String jsonString = JSON.toJSONString(active);
-        List<FollowTraderUserEntity> traderUsers = followTraderUserService.list(new LambdaQueryWrapper<FollowTraderUserEntity>().eq(FollowTraderUserEntity::getAccount, trader.getAccount()).eq(FollowTraderUserEntity::getPlatformId, trader.getPlatformId()));
-       if(ObjectUtil.isNotEmpty(traderUsers)){
-           traderUsers.forEach(traderUser -> {
-               Map<String, Session> sessionMap = map.get(traderUser.getId());
-               if(ObjectUtil.isNotEmpty(sessionMap)){
-                   sessionMap.values().forEach(session -> {
-                       try {
-                           session.getBasicRemote().sendText(jsonString);
-                       } catch (IOException e) {
-                           e.printStackTrace();
-                           log.error("推送异常:{}", e);
-                       }
-                   });
-
-               }
-           });
-       }
+        Map<String, Session> sessionMap = map.get(traderId);
+        if(ObjectUtil.isNotEmpty(sessionMap)){
+            sessionMap.values().forEach(session -> {
+                try {
+                    session.getBasicRemote().sendText(jsonString);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    log.error("推送异常:{}", e);
+                }
+            });
+        }
     }
     // 当客户端断开连接时调用
     @OnClose

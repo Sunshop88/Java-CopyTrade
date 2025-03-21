@@ -149,9 +149,19 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info("发送消息"+leader.getId());
                 //存入redis
                 redisUtil.set(Constant.TRADER_ACTIVE + abstractApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoVOS));
-                //远程调用推送websocket
-//                HttpServletRequest request = new HttpServletRequest();
-//                RestUtil.sendRequest(new )
+                //远程调用推送websocket 默认第一个VPS为主VPS
+                Optional<FollowVpsEntity> followVps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByAsc(FollowVpsEntity::getId)).stream().findFirst();
+                try {
+                    if (followVps.isPresent()){
+                        cn.hutool.json.JSONObject jsonObject = new cn.hutool.json.JSONObject();
+                        jsonObject.put("traderId", leader.getId());
+                        log.info("开始leader Result");
+                        Result result = RestUtil.sendRequest(null, followVps.get().getIpAddress(), HttpMethod.GET, FollowConstant.PUSH_ORDER, jsonObject, null, FollowConstant.REQUEST_PORT);
+                        log.info("leader Result"+result);
+                    }
+                }catch (Exception e){
+                    log.info("远程推送持仓"+e.getMessage());
+                }
                 traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
                 pendingMessages.remove(leader.getId().toString());
             }, 50, TimeUnit.MILLISECONDS);

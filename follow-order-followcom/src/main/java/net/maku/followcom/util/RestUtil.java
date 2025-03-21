@@ -360,7 +360,12 @@ public class RestUtil {
         if(ObjectUtil.isNotEmpty(header)) {
              headers =header;
         }else{
-             headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+            if (ObjectUtil.isEmpty(req)&&port.equals(FollowConstant.REQUEST_PORT)){
+                headers = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
+            }else {
+                headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+            }
         }
         headers.setContentType(MediaType.APPLICATION_JSON);
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
