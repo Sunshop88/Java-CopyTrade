@@ -314,6 +314,15 @@ public class FollowSlaveController {
             //重连
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
                 reconnect(vo.getId().toString());
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                //判断是否获取过品种规格
+                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, followTraderEntity.getId()));
+                if(ObjectUtil.isEmpty(list)) {
+                    if(copierApiTrader.quoteClient==null){
+                        log.error("获取品种规格失败");
+                    }
+                    followTraderService.addSysmbolSpecification(followTraderEntity,copierApiTrader.quoteClient);
+                }
             }
             //编辑从库
             FollowUpdateVO followUpdateVO = followService.convert(vo);
