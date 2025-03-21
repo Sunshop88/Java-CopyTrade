@@ -423,6 +423,7 @@ public class CopierApiTradersAdmin extends AbstractApiTradersAdmin {
                     redissonLockUtil.unlock("call" + leader.getId());
                 }
             }
+       
             log.info("[MT4跟单者{}-{}-{}]连接服务器成功", leader.getId(), leader.getAccount(), leader.getServerName());
             return new ConnectionResult(this.copierApiTrader, ConCodeEnum.SUCCESS);
         }

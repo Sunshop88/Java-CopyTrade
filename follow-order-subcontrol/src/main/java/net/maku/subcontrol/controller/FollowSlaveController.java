@@ -314,6 +314,15 @@ public class FollowSlaveController {
             //重连
             if(ObjectUtil.isNotEmpty(vo.getPassword()) && !password.equals(vo.getPassword())){
                 reconnect(vo.getId().toString());
+                CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                //判断是否获取过品种规格
+                List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, followTraderEntity.getId()));
+                if(ObjectUtil.isEmpty(list)) {
+                    if(copierApiTrader.quoteClient==null){
+                        log.error("获取品种规格失败");
+                    }
+                    followTraderService.addSysmbolSpecification(followTraderEntity,copierApiTrader.quoteClient);
+                }
             }
             //编辑从库
             FollowUpdateVO followUpdateVO = followService.convert(vo);
@@ -511,13 +520,17 @@ public class FollowSlaveController {
                 }
             } else {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(traderId);
+
+                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
+                copierApiTrader.startTrade();
                 //判断是否获取过品种规格
                 List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
                 if(ObjectUtil.isEmpty(list)) {
+                    if(copierApiTrader.quoteClient==null){
+                        log.error("获取品种规格失败");
+                    }
                     followTraderService.addSysmbolSpecification(followTraderEntity,copierApiTrader.quoteClient);
                 }
-                log.info("跟单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), copierApiTrader.quoteClient.Host, copierApiTrader.quoteClient.Port);
-                copierApiTrader.startTrade();
             }
 
         } catch (RuntimeException e) {
