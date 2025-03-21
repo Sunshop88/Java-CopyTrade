@@ -352,15 +352,20 @@ public class RestUtil {
     /**
      * 远程调用方法封装
      */
-    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t,HttpHeaders header) {
+    public static <T> Result sendRequest(HttpServletRequest req, String host, HttpMethod method, String uri, T t,HttpHeaders header,String port) {
         //远程调用
-        String url = MessageFormat.format("http://{0}:{1}{2}", host, FollowConstant.VPS_PORT, uri);
+        String url = MessageFormat.format("http://{0}:{1}{2}", host, port, uri);
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers =null;
         if(ObjectUtil.isNotEmpty(header)) {
              headers =header;
         }else{
-             headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+            if (ObjectUtil.isEmpty(req)&&port.equals(FollowConstant.REQUEST_PORT)){
+                headers = getHeader(MediaType.APPLICATION_JSON_UTF8_VALUE);
+                headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");
+            }else {
+                headers = RestUtil.getHeaderApplicationJsonAndToken(req);
+            }
         }
         headers.setContentType(MediaType.APPLICATION_JSON);
        // headers.add("x-sign","417B110F1E71BD2CFE96366E67849B0B");

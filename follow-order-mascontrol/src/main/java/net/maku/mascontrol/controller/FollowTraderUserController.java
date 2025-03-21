@@ -351,6 +351,13 @@ public Result<List<FollowTraderEntity> > getTrader(@RequestParam("type") Integer
         List<FollowTestDetailVO> vos = followTestDetailService.selectServerNode(query);
         List<FollowTraderUserVO> followTraderUserVO = JSON.parseArray(vo.getParams(), FollowTraderUserVO.class);
         Long recordId= vo.getId();
+        FollowUploadTraderUserVO followUploadTraderUserVO = new FollowUploadTraderUserVO();
+        followUploadTraderUserVO.setStatus(0);
+        followUploadTraderUserVO.setOperator(SecurityUser.getUser().getUsername());
+        followUploadTraderUserVO.setUploadTime(LocalDateTime.now());
+        followUploadTraderUserVO.setType(TraderUserTypeEnum.ADD_ACCOUNT.getType());
+        followUploadTraderUserVO.setId(recordId);
+        followUploadTraderUserService.update(followUploadTraderUserVO);
         followTraderUserService.addExcel(recordId,followTraderUserVO,vos);
         return Result.ok("重试成功");
     }

@@ -321,6 +321,8 @@ public class FollowSlaveController {
 
             ThreadPoolUtils.execute(() -> {
                 CopierApiTrader copierApiTrader = copierApiTradersAdmin.getCopier4ApiTraderConcurrentHashMap().get(followTraderEntity.getId().toString());
+                //重置账号信息
+                copierApiTrader.setTrader(followTraderEntity);
                 //设置下单方式
                 copierApiTrader.orderClient.PlacedType = PlacedType.forValue(vo.getPlacedType());
                 FollowTraderVO followTraderVO = FollowTraderConvert.INSTANCE.convert(followTraderEntity);

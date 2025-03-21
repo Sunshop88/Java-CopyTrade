@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.maku.followcom.convert.FollowTraderConvert;
@@ -17,6 +18,7 @@ import net.maku.followcom.pojo.EaOrderInfo;
 import net.maku.followcom.service.*;
 import net.maku.followcom.service.impl.*;
 import net.maku.followcom.util.FollowConstant;
+import net.maku.followcom.util.RestUtil;
 import net.maku.followcom.util.SpringContextUtils;
 import net.maku.followcom.vo.AccountCacheVO;
 import net.maku.followcom.vo.FollowTraderCacheVO;
@@ -27,6 +29,7 @@ import net.maku.framework.common.cache.RedissonLockUtil;
 import net.maku.framework.common.config.JacksonConfig;
 import net.maku.framework.common.constant.Constant;
 import net.maku.framework.common.utils.JsonUtils;
+import net.maku.framework.common.utils.Result;
 import net.maku.framework.common.utils.ThreadPoolUtils;
 import net.maku.subcontrol.service.FollowOrderHistoryService;
 import net.maku.subcontrol.service.impl.FollowOrderHistoryServiceImpl;
@@ -35,6 +38,8 @@ import net.maku.subcontrol.trader.strategy.*;
 import net.maku.subcontrol.vo.FollowOrderActiveSocketVO;
 import online.mtapi.mt4.*;
 import cn.hutool.core.date.DateUtil;
+import org.springframework.http.HttpMethod;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -144,6 +149,19 @@ public class LeaderOrderUpdateEventHandlerImpl extends OrderUpdateHandler {
                 log.info("发送消息"+leader.getId());
                 //存入redis
                 redisUtil.set(Constant.TRADER_ACTIVE + abstractApiTrader.getTrader().getId(), JSONObject.toJSON(orderActiveInfoVOS));
+                //远程调用推送websocket 默认第一个VPS为主VPS
+                Optional<FollowVpsEntity> followVps = followVpsService.list(new LambdaQueryWrapper<FollowVpsEntity>().orderByAsc(FollowVpsEntity::getId)).stream().findFirst();
+                try {
+                    if (followVps.isPresent()){
+                        cn.hutool.json.JSONObject jsonObject = new cn.hutool.json.JSONObject();
+                        jsonObject.put("traderId", leader.getId());
+                        log.info("开始leader Result");
+                        Result result = RestUtil.sendRequest(null, followVps.get().getIpAddress(), HttpMethod.GET, FollowConstant.PUSH_ORDER, jsonObject, null, FollowConstant.REQUEST_PORT);
+                        log.info("leader Result"+result);
+                    }
+                }catch (Exception e){
+                    log.info("远程推送持仓"+e.getMessage());
+                }
                 traderOrderActiveWebSocket.pushMessage(leader.toString(),"0", JsonUtils.toJsonString(followOrderActiveSocketVO));
                 pendingMessages.remove(leader.getId().toString());
             }, 50, TimeUnit.MILLISECONDS);

@@ -36,6 +36,7 @@ import net.maku.followcom.vo.FollowSendAccountListVO;
 import online.mtapi.mt4.Exception.ConnectException;
 import online.mtapi.mt4.Exception.InvalidSymbolException;
 import online.mtapi.mt4.Exception.TimeoutException;
+import online.mtapi.mt4.PlacedType;
 import online.mtapi.mt4.QuoteClient;
 import online.mtapi.mt4.QuoteEventArgs;
 import org.checkerframework.checker.units.qual.A;
@@ -258,6 +259,12 @@ public class FollowTraderController {
         sourceUpdateVO.setStatus(vo.getFollowStatus().equals(CloseOrOpenEnum.OPEN.getValue()));
         sourceUpdateVO.setId(vo.getId());
         sourceService.edit(sourceUpdateVO);
+
+        ThreadPoolUtils.execute(() -> {
+            LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(vo.getId().toString());
+            //重置账号信息
+            leaderApiTrader.setTrader(FollowTraderConvert.INSTANCE.convert(vo));
+        });
         return Result.ok();
     }
 
@@ -304,8 +311,8 @@ public class FollowTraderController {
         });
 
         slaveList.forEach(o->{
-
-            List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
+            //删除订阅关系
+            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));  List<FollowTraderSubscribeEntity> followTraderSubscribeEntities = followTraderSubscribeService.list(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
 
             //跟单关系缓存删除
             followTraderSubscribeEntities.forEach(o1->{
@@ -333,9 +340,6 @@ public class FollowTraderController {
                 }
                 followTraderService.removeRelation(o,o1.getMasterAccount(),master.getPlatformId());
             });
-
-            //删除订阅关系
-            followTraderSubscribeService.remove(new LambdaQueryWrapper<FollowTraderSubscribeEntity>().eq(FollowTraderSubscribeEntity::getSlaveId, o.getId()));
         });
 
         //删除订阅关系
@@ -664,16 +668,8 @@ public class FollowTraderController {
         }
 
         if (ObjectUtil.isNotEmpty(vo.getSymbol())) {
-            String symbol1 = getSymbol(quoteClient,vo.getTraderId(), vo.getSymbol());
-            vo.setSymbol(symbol1);
-            try {
-                // 获取报价信息
-                double ask = getQuoteOrRetry(quoteClient, vo.getSymbol());
-            } catch (InvalidSymbolException | TimeoutException | ConnectException e) {
-                throw new ServerException(followTraderVO.getAccount() + " 获取报价失败, 品种不正确, 请先配置品种", e);
-            } catch (InterruptedException e) {
-                throw new ServerException(followTraderVO.getAccount() + " 操作被中断", e);
-            }
+            List<String> symbol1 = getSymbolClose(quoteClient,vo.getTraderId(), vo.getSymbol());
+            vo.setSymbolList(symbol1);
         }
         boolean result = followTraderService.orderClose(vo, quoteClient);
         if (!result) {
@@ -815,11 +811,6 @@ public class FollowTraderController {
                     result=true;
                 } else {
                     LeaderApiTrader leaderApiTrader = leaderApiTradersAdmin.getLeader4ApiTraderConcurrentHashMap().get(traderId);
-                    //判断是否获取过品种规格
-                    List<FollowSysmbolSpecificationEntity> list = followSysmbolSpecificationService.list(new LambdaQueryWrapper<FollowSysmbolSpecificationEntity>().eq(FollowSysmbolSpecificationEntity::getTraderId, traderId));
-                    if(ObjectUtil.isEmpty(list)) {
-                        followTraderService.addSysmbolSpecification(followTraderEntity,leaderApiTrader.quoteClient);
-                    }
                     log.info("喊单者:[{}-{}-{}-{}]在[{}:{}]重连成功", followTraderEntity.getId(), followTraderEntity.getAccount(), followTraderEntity.getServerName(), followTraderEntity.getPassword(), leaderApiTrader.quoteClient.Host, leaderApiTrader.quoteClient.Port);
                     leaderApiTrader.startTrade();
                     result=true;
@@ -975,6 +966,77 @@ public class FollowTraderController {
             }
         }
         return symbol;
+    }
+
+
+    private List<String> getSymbolClose(QuoteClient quoteClient, Long traderId, String symbol) {
+        List<String> symbolList = List.of();
+        //查询平台信息
+        FollowPlatformEntity followPlatform = followPlatformService.getPlatFormById(followTraderService.getFollowById(traderId).getPlatformId().toString());
+        //获取symbol信息
+        List<FollowSysmbolSpecificationEntity> specificationServiceByTraderId = followSysmbolSpecificationService.getByTraderId(traderId);
+
+        FollowTraderEntity followTraderEntity = followTraderService.getById(traderId);
+        if (ObjectUtil.isNotEmpty(symbol)) {
+            //增加forex
+            int flag=0;
+            String forex = symbol+followTraderEntity.getForex();
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getForex()) && forex.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(forex)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        symbolList.add(o.getSymbol());
+                    }
+                }
+                flag=1;
+            }
+            String cfd =  symbol+followTraderEntity.getCfd();
+            if(ObjectUtil.isNotEmpty(followTraderEntity.getCfd()) && cfd.contains(symbol)){
+                List<FollowSysmbolSpecificationEntity> list = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().equals(cfd)).toList();
+                for (FollowSysmbolSpecificationEntity o : list) {
+                    log.info("品种规格获取报价"+o.getSymbol());
+                    //获取报价
+                    QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)) {
+                        symbolList.add(o.getSymbol());
+                    }
+                }
+                flag=1;
+            }
+            if (flag==1){
+                log.info("未精准匹配成功"+traderId);
+            }else {
+                // 先查品种规格
+                List<FollowSysmbolSpecificationEntity> specificationEntity = specificationServiceByTraderId.stream().filter(item -> item.getSymbol().contains(symbol)).toList();
+                if (ObjectUtil.isNotEmpty(specificationEntity)){
+                    for (FollowSysmbolSpecificationEntity o : specificationEntity) {
+                        log.info("品种规格获取报价"+o.getSymbol());
+                        //获取报价
+                        QuoteEventArgs eventArgs= getEventArgs(quoteClient,o.getSymbol());
+                        if (ObjectUtil.isNotEmpty(eventArgs)) {
+                            symbolList.add(o.getSymbol());
+                        }
+                    }
+                }
+            }
+            // 查看品种匹配 模板
+            List<FollowVarietyEntity> followVarietyEntityList = followVarietyService.getListByTemplated(followTraderEntity.getTemplateId());
+            List<FollowVarietyEntity> list = followVarietyEntityList.stream().filter(o ->ObjectUtil.isNotEmpty(o.getBrokerName())&& o.getBrokerName().equals(followPlatform.getBrokerName()) && o.getStdSymbol().equals(symbol)).toList();
+            QuoteEventArgs eventArgs;
+            for (FollowVarietyEntity o : list) {
+                if (ObjectUtil.isNotEmpty(o.getBrokerSymbol())) {
+                    //获取报价
+                    eventArgs= getEventArgs(quoteClient,o.getBrokerSymbol());
+                    if (ObjectUtil.isNotEmpty(eventArgs)){
+                        symbolList.add(o.getBrokerSymbol());
+                    }
+                }
+            }
+        }
+        return symbolList;
     }
 
     private QuoteEventArgs getEventArgs(QuoteClient quoteClient,String symbol){

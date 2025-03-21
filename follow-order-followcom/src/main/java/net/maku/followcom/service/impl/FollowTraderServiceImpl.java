@@ -519,14 +519,14 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     updateCloseOrder(detailServiceOne, quoteClient, oc, null);
                     ThreadPoolUtils.execute(() -> {
                         //进行平仓滑点分析
-                        updateCloseSlip(vo.getTraderId(), vo.getSymbol(), null, 2);
+                        updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), null, 2);
                     });
                 });
             }else {
                 detailServiceOnes.forEach(detailServiceOne->{
                     updateCloseOrder(detailServiceOne, quoteClient, oc, null);
                     //进行平仓滑点分析
-                    updateCloseSlip(vo.getTraderId(), vo.getSymbol(), null, 2);
+                    updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), null, 2);
                 });
             }
         } else {
@@ -672,18 +672,18 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             followOrderCloseEntity.setTotalNum(orderActive.size());
         } else {
             followOrderCloseEntity.setType(vo.getType());
-            followOrderCloseEntity.setSymbol(vo.getSymbol());
+            followOrderCloseEntity.setSymbol(vo.getSymbolList().get(0));
             //指定平仓
             if (vo.getType().equals(TraderCloseEnum.BUYANDSELL.getType())) {
                 //平仓buy和sell
-                orderActive = orderActiveInfoVOS.stream().filter(o -> o.getSymbol().equals(vo.getSymbol())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
+                orderActive = orderActiveInfoVOS.stream().filter(o -> vo.getSymbolList().contains(o.getSymbol())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
             } else {
-                orderActive = orderActiveInfoVOS.stream().filter(o -> o.getSymbol().equals(vo.getSymbol()) && o.getType().equals(Op.forValue(vo.getType()).name())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
+                orderActive = orderActiveInfoVOS.stream().filter(o -> vo.getSymbolList().contains(o.getSymbol()) && o.getType().equals(Op.forValue(vo.getType()).name())).sorted(Comparator.comparing(OrderActiveInfoVO::getOpenTime)).map(o -> o.getOrderNo()).collect(Collectors.toList());
             }
             orderCount =ObjectUtil.isNotEmpty(vo.getNum())?vo.getNum():orderActive.size();
             LambdaQueryWrapper<FollowOrderDetailEntity> followOrderDetailw = new LambdaQueryWrapper<>();
             followOrderDetailw.eq(FollowOrderDetailEntity::getTraderId, vo.getTraderId())
-                    .eq(FollowOrderDetailEntity::getSymbol, vo.getSymbol()).isNotNull(FollowOrderDetailEntity::getOpenTime)
+                    .in(FollowOrderDetailEntity::getSymbol, vo.getSymbolList()).isNotNull(FollowOrderDetailEntity::getOpenTime)
                     .eq(FollowOrderDetailEntity::getIsExternal,CloseOrOpenEnum.CLOSE.getValue())
                     .isNull(FollowOrderDetailEntity::getCloseTime).orderByAsc(FollowOrderDetailEntity::getOpenTime);
             if (!vo.getType().equals(2)) {
@@ -747,7 +747,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     allOrdersCompleted.thenRun(() -> {
                         try {
                             log.info("所有平仓任务已完成");
-                            updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity,0);
+                            updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), followOrderCloseEntity,0);
                         } catch (Exception e) {
                             log.error("平仓任务出错", e);
                         }
@@ -773,7 +773,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                     }
                     try {
                         log.info("所有平仓任务已完成");
-                        updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 0);
+                        updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), followOrderCloseEntity, 0);
                     } catch (Exception e) {
                         log.error("平仓任务出错", e);
                     }
@@ -818,7 +818,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                         closeOrder(quoteClient, oc, followOrderCloseEntity,orderActiveInfoVO);
                                     }
                                     //进行平仓滑点分析
-                                    updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
+                                    updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), followOrderCloseEntity, 1);
                                 }, ThreadPoolUtils.getExecutor());
                                 futures.add(orderFuture);
 
@@ -876,7 +876,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                                     closeOrder(quoteClient, oc, followOrderCloseEntity,orderActiveInfoVO);
                                 }
                                 //进行平仓滑点分析
-                                updateCloseSlip(vo.getTraderId(), vo.getSymbol(), followOrderCloseEntity, 1);
+                                updateCloseSlip(vo.getTraderId(), vo.getSymbolList(), followOrderCloseEntity, 1);
 
                                 count.getAndIncrement();
                                 if (count.get() != finalOrderCount1.intValue()) {
@@ -1010,7 +1010,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         return true;
     }
 
-    private void updateCloseSlip(long traderId, String symbol, FollowOrderCloseEntity followOrderCloseEntity, Integer flag) {
+    private void updateCloseSlip(long traderId, List<String> symbol, FollowOrderCloseEntity followOrderCloseEntity, Integer flag) {
         if (flag != 2) {
             //查看平仓所有数据
             List<FollowOrderDetailEntity> list = followOrderDetailService.list(new LambdaQueryWrapper<FollowOrderDetailEntity>().eq(FollowOrderDetailEntity::getCloseId, followOrderCloseEntity.getId()));
@@ -1038,7 +1038,7 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
                 .isNull(FollowOrderDetailEntity::getClosePriceDifference);
         //查询需要滑点分析的数据 有平仓价格但是无平仓滑点
         if (ObjectUtil.isNotEmpty(symbol)) {
-            followLambdaQueryWrapper.eq(FollowOrderDetailEntity::getSymbol, symbol);
+            followLambdaQueryWrapper.in(FollowOrderDetailEntity::getSymbol, symbol);
         }
         List<FollowOrderDetailEntity> list = followOrderDetailService.list(followLambdaQueryWrapper);
         list.forEach(o -> {
@@ -1053,7 +1053,6 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         });
     }
     private  void closeOrder(QuoteClient quoteClient, OrderClient oc, FollowOrderCloseEntity followOrderCloseEntity,OrderActiveInfoVO orderActiveInfoVO){
-        String symbol = followOrderCloseEntity.getSymbol();
         Integer orderNo = orderActiveInfoVO.getOrderNo();
         FollowOrderDetailEntity followOrderDetailEntity = new FollowOrderDetailEntity();
         followOrderDetailEntity.setSize(new BigDecimal(orderActiveInfoVO.getLots()));
@@ -1081,16 +1080,16 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
         followOrderDetailEntity.setIsExternal(1);
         followOrderDetailEntity.setPlacedType(null);
         try {
-            if (ObjectUtil.isEmpty(quoteClient.GetQuote(symbol))) {
+            if (ObjectUtil.isEmpty(quoteClient.GetQuote(orderActiveInfoVO.getSymbol()))) {
                 //订阅
-                quoteClient.Subscribe(symbol);
+                quoteClient.Subscribe(orderActiveInfoVO.getSymbol());
             }
             double bid =0;
             double ask =0;
             int loopTimes=1;
             QuoteEventArgs quoteEventArgs = null;
             while (quoteEventArgs == null && quoteClient.Connected()) {
-                quoteEventArgs = quoteClient.GetQuote(symbol);
+                quoteEventArgs = quoteClient.GetQuote(orderActiveInfoVO.getSymbol());
                 if (++loopTimes > 20) {
                     break;
                 } else {
@@ -1100,20 +1099,20 @@ public class FollowTraderServiceImpl extends BaseServiceImpl<FollowTraderDao, Fo
             bid =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Bid:0;
             ask =ObjectUtil.isNotEmpty(quoteEventArgs)?quoteEventArgs.Ask:0;
             LocalDateTime nowdate = LocalDateTime.now();
-            log.info("平仓信息{},{},{},{},{}", symbol, orderNo, orderActiveInfoVO.getLots(), bid, ask);
+            log.info("平仓信息{},{},{},{},{}", orderActiveInfoVO.getSymbol(), orderNo, orderActiveInfoVO.getLots(), bid, ask);
             if (ObjectUtil.isNotEmpty(followOrderCloseEntity)) {
                 followOrderDetailEntity.setCloseId(followOrderCloseEntity.getId());
             }
             Order orderResult;
             if (orderActiveInfoVO.getType().equals("Buy")) {
                 long start = System.currentTimeMillis();
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
+                orderResult = oc.OrderClose(orderActiveInfoVO.getSymbol(), orderNo, followOrderDetailEntity.getSize().doubleValue(), bid, 0);
                 long end = System.currentTimeMillis();
                 log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(bid));
             } else {
                 long start = System.currentTimeMillis();
-                orderResult = oc.OrderClose(symbol, orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
+                orderResult = oc.OrderClose(orderActiveInfoVO.getSymbol(), orderNo, followOrderDetailEntity.getSize().doubleValue(), ask, 0);
                 long end = System.currentTimeMillis();
                 log.info("MT4平仓时间差 订单:"+orderResult.Ticket+"内部时间差:"+orderResult.sendTimeDifference+"外部时间差:"+(end-start));
                 followOrderDetailEntity.setRequestClosePrice(BigDecimal.valueOf(ask));

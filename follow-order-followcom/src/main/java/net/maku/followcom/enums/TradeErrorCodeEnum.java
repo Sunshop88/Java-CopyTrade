@@ -26,7 +26,8 @@ public enum TradeErrorCodeEnum implements IEnum<String> {
     SEVICE_ERRROR("服务器异常", "服务器异常"),
     LOTS_NUM_ERROR("超过最大手数限制", "超过最大手数限制"),
     LOTS_NUM_LOWER("低于最低手数限制", "低于最低手数限制"),
-    LOTS_NUM_ALLOW("超过最低下单允许差", "超过最低下单允许差");
+    LOTS_NUM_ALLOW("超过最低下单允许差", "超过最低下单允许差"),
+    NOT_DISTRIBUTION("未分配手数", "未分配手数");
 
 
 
